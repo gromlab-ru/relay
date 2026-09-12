@@ -1,5 +1,9 @@
 # История изменений
 
+## 0.1.1
+
+Первый выпуск через GitHub Actions с npm Trusted Publishing (OIDC) и provenance.
+
 ## 0.1.0
 
 Первый публичный выпуск.
