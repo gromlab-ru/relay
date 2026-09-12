@@ -1,19 +1,16 @@
 import { toText } from "../domain/markdown.js";
+import { safeText } from "./safe.js";
+import { defaultTextOptions, palette } from "./theme.js";
+import type { TextOptions } from "./theme.js";
+import { renderMarkdown } from "./markdown.js";
+import { section, wrap } from "./layout.js";
+export { safeText } from "./safe.js";
 
-/** Сохраняем абзацы и отступы, но непечатные управляющие символы делаем видимыми. */
-export function safeText(value: string): string {
-  return value.replace(
-    /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,
-    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  );
-}
-
-export function markdownText(lines: readonly string[]): string {
-  return safeText(toText(lines));
-}
-
-export function section(title: string, body: string): string {
-  return `## ${title}\n\n${body || "—"}`;
+export function markdownText(
+  lines: readonly string[],
+  options: TextOptions = defaultTextOptions,
+): string {
+  return renderMarkdown(toText(lines), options);
 }
 
 /** Короткий фрагмент не разрывает Unicode-символы и не меняет оригинал записи. */
@@ -22,16 +19,35 @@ export function previewText(value: string, limit = 160): string {
   return characters.slice(0, limit).join("") + (characters.length > limit ? "…" : "");
 }
 
-export function fieldsText(fields: Record<string, unknown>): string {
+export function valueText(value: unknown, options: TextOptions = defaultTextOptions): string {
+  const colors = palette(options);
+  if (value === null || value === undefined) return colors.dim("—");
+  if (typeof value === "boolean") return value ? "да" : "нет";
+  if (Array.isArray(value))
+    return value.map((item) => `• ${valueText(item, options)}`).join("\n") || colors.dim("—");
+  if (typeof value === "object")
+    return Object.entries(value)
+      .map(
+        ([name, item]) =>
+          `${colors.dim(safeText(name) + ":")} ${valueText(item, options).replaceAll("\n", "\n  ")}`,
+      )
+      .join("\n");
+  return safeText(String(value));
+}
+
+export function fieldsText(
+  fields: Record<string, unknown>,
+  options: TextOptions = defaultTextOptions,
+): string {
   return Object.entries(fields)
-    .map(([name, value]) => {
-      const body =
-        Array.isArray(value) && value.every((line) => typeof line === "string")
-          ? markdownText(value)
-          : typeof value === "string"
-            ? safeText(value)
-            : JSON.stringify(value, null, 2);
-      return section(name, body ?? "—");
-    })
+    .map(([name, value]) =>
+      section(
+        safeText(name),
+        ["description", "summary", "body"].includes(name) && Array.isArray(value)
+          ? markdownText(value as string[], options)
+          : wrap(valueText(value, options), options.width),
+        options,
+      ),
+    )
     .join("\n\n");
 }

@@ -1,6 +1,6 @@
 {
   "name": "@gromlab/tasks-cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Локальный CLI-трекер задач для AI-оркестраторов и агентов",
   "repository": {
     "type": "git",
@@ -45,7 +45,10 @@
   },
   "dependencies": {
     "commander": "^14.0.0",
+    "picocolors": "^1.1.1",
     "proper-lockfile": "^4.1.2",
+    "string-width": "^8.2.2",
+    "wrap-ansi": "^10.0.1",
     "zod": "^4.1.0"
   },
   "devDependencies": {

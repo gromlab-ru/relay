@@ -1,6 +1,8 @@
 import type { Command } from "commander";
 import { getTask, listTasks, taskLinks, taskMarkdown } from "../../application/tasks/queries.js";
 import { taskTree } from "../../application/tasks/tree.js";
+import { numberTasks } from "../../application/tasks/numbering.js";
+import { numberedText } from "../../presentation/project.js";
 import type { TaskFilters } from "../../application/tasks/queries.js";
 import { invariant } from "../../shared/errors.js";
 import { action, argument, author, changed, mutation } from "../context.js";
@@ -9,6 +11,14 @@ import { csv, integer, pageFrom, pageOptions, revisionOption } from "../options.
 import { fieldOptions, taskFields } from "../task-fields.js";
 
 export function registerTasks(program: Command, runtime: Runtime): void {
+  const number = program
+    .command("number")
+    .description("Назначить постоянные номера старым задачам и устранить совпадения после слияния");
+  action(number, runtime, async (context) => {
+    const data = await numberTasks(context.tasks, author(context));
+    return { data, text: (options) => numberedText(data, options) };
+  });
+
   const create = fieldOptions(program.command("create").description("Создать задачу"), true);
   action(create, runtime, async (context) => {
     const actor = author(context);

@@ -2,10 +2,11 @@ import type { Command } from "commander";
 import { validateWorkspace } from "../../application/validate.js";
 import { listGroups } from "../../application/groups.js";
 import { initialize } from "../../storage/workspace.js";
-import { action } from "../context.js";
+import { action, outputOptions } from "../context.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { printResult } from "../output.js";
 import { pageFrom, pageOptions } from "../options.js";
+import { configText, initializedText } from "../../presentation/project.js";
 
 export function registerProject(program: Command, runtime: Runtime): void {
   const init = program
@@ -19,13 +20,13 @@ export function registerProject(program: Command, runtime: Runtime): void {
       init.opts<{ storage: string }>().storage,
       globals.config,
     );
-    runtime.output = {
-      format: globals.format ?? workspace.config.output.format,
-      maxBytes: globals.maxBytes ?? 16384,
-    };
+    runtime.output = outputOptions(runtime, globals, workspace.config.output);
     printResult(
       runtime.stdout,
-      { data: { configPath: workspace.configPath, storageDir: workspace.root } },
+      {
+        data: { configPath: workspace.configPath, storageDir: workspace.root },
+        text: (options) => initializedText(workspace.configPath, workspace.root, options),
+      },
       runtime.output,
     );
   });
@@ -41,6 +42,13 @@ export function registerProject(program: Command, runtime: Runtime): void {
   action(configGet, runtime, async (context) => ({
     data: context.workspace.config,
     meta: { configPath: context.workspace.configPath, storagePath: context.workspace.root },
+    text: (options) =>
+      configText(
+        context.workspace.config,
+        context.workspace.configPath,
+        context.workspace.root,
+        options,
+      ),
   }));
 
   const group = program.command("group").description("Группы задач");

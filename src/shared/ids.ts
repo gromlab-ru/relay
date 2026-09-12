@@ -16,10 +16,16 @@ export function assertId(id: string, prefix: EntityPrefix): void {
   );
 }
 
-export function assertTaskPrefix(id: string): void {
+export function taskNumber(reference: string): number | undefined {
+  if (!/^#?[1-9]\d*$/.test(reference)) return undefined;
+  const number = Number(reference.replace(/^#/, ""));
+  return Number.isSafeInteger(number) ? number : undefined;
+}
+
+export function assertTaskReference(id: string): void {
   invariant(
-    /^tsk_[a-f0-9]{4,32}$/.test(id),
+    taskNumber(id) !== undefined || /^tsk_[a-f0-9]{4,32}$/.test(id),
     "INVALID_ID",
-    "Ожидается ID задачи или его префикс от 8 символов",
+    "Ожидается номер задачи от 1, полный ID или его префикс от 8 символов",
   );
 }

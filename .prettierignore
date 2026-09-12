@@ -4,3 +4,5 @@ coverage/
 package-lock.json
 .artifacts/
 .npmrc
+playground/.tasks/
+playground/tasks.config.json

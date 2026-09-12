@@ -10,12 +10,13 @@ Markdown записывается массивами строк для удоб�
 ## Возможности
 
 - Задачи, группы, теги, подзадачи и зависимости с проверкой циклов.
+- Постоянные номера `1`, `2`, `3` для команд и человекочитаемых ссылок.
 - Произвольные статусы в конфигурации проекта.
 - Назначение оркестратором и атомарный захват задачи агентом.
 - Проверка `revision` для защиты от устаревших изменений.
 - Многострочные описания, комментарии, саммари и отчёты в одном файле задачи.
 - Выборочное чтение контекста, поиск по отчётам и пагинация.
-- Текстовый вывод по умолчанию; `--format json` для машинной обработки.
+- Цветные таблицы, карточки, деревья связей и Markdown; `--format json` для машинной обработки.
 - Атомарная запись JSON и проверка целостности после Git-слияния.
 
 ## Запуск из исходников
@@ -45,12 +46,12 @@ node dist/cli/main.js create --title "Реализовать API" --group backen
 MD
 ```
 
-Подставьте ID из ответа в следующие команды:
+Подставьте номер из ответа в следующие команды (первая задача получает номер 1):
 
 ```bash
-node dist/cli/main.js description <task-id>
-node dist/cli/main.js get <task-id>
-node dist/cli/main.js get <task-id> --full
+node dist/cli/main.js description 1
+node dist/cli/main.js get 1
+node dist/cli/main.js get 1 --full
 node dist/cli/main.js list --ready --format json
 node dist/cli/main.js config get
 ```
@@ -72,8 +73,26 @@ npx @gromlab/tasks-cli list --ready
 
 ```bash
 npm run package:check
-npm exec --yes --package ./.artifacts/npm/gromlab-tasks-cli-0.1.0.tgz -- tasks-cli --help
+npm exec --yes --package ./.artifacts/npm/gromlab-tasks-cli-0.2.0.tgz -- tasks-cli --help
 ```
+
+## Терминальный вывод и номера
+
+В терминале статусы выделяются цветом, списки оформляются таблицами, а связи —
+деревом с номерами и названиями задач. На узком экране список становится набором
+компактных карточек. `--color never` отключает цвет, `--color always` включает
+его принудительно. JSON не содержит ANSI-кодов.
+
+```bash
+npx @gromlab/tasks-cli list
+npx @gromlab/tasks-cli tree 1
+npx @gromlab/tasks-cli links 3
+npx @gromlab/tasks-cli list --format json
+```
+
+Для данных из версии 0.1 выполните новой версией CLI
+`number --actor orchestrator`: номера сохранятся в документах задач.
+Подробнее: [оформление терминала](docs/TERMINAL.md).
 
 ## Хранилище
 
@@ -110,6 +129,7 @@ GitHub Actions проверяет Node.js 22/24 и собирает провер
 
 - [Техническое задание](docs/SPEC.md)
 - [Команды CLI](docs/CLI.md)
+- [Оформление терминала](docs/TERMINAL.md)
 - [Формат самодостаточного JSON](docs/FORMAT.md)
 - [Архитектура и гарантии](docs/ARCHITECTURE.md)
 - [Публикация в npm](docs/RELEASING.md)

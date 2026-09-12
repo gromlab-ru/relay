@@ -44,6 +44,8 @@ test("чистое текстовое слияние разных карточе
   assert.notEqual(uniqueLeft, uniqueRight);
   await cp(path(left, uniqueLeft), path(app.root, uniqueLeft));
   await cp(path(right, uniqueRight), path(app.root, uniqueRight));
+  // Номера из независимых копий могут совпасть, но UUID и ссылки остаются раздельными.
+  successful(await app.run(["number"]));
   // После явного устранения логического конфликта независимые новые записи сохранены.
   successful(await app.run(["deps", "remove", second, first]));
   const validated = successful(await app.run<{ tasks: number }>(["validate"]));

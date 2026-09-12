@@ -1,8 +1,10 @@
-import { assertGraph } from "../../domain/graph.js";
+import { assertGraph, blockedBy } from "../../domain/graph.js";
 import { taskBrief } from "../../domain/task.js";
 import type { Task } from "../../domain/task.js";
 import { resolveTask } from "../../storage/tasks.js";
 import type { TaskService } from "./service.js";
+import { treeText } from "../../presentation/relations.js";
+import type { TextOptions } from "../../presentation/theme.js";
 
 export async function taskTree(service: TaskService, reference: string, depth: number) {
   const tasks = await service.repository.snapshot();
@@ -29,5 +31,20 @@ export async function taskTree(service: TaskService, reference: string, depth: n
     }
     for (const child of children) pending.push({ id: child.id, depth: current.depth + 1 });
   }
-  return { data: { items }, meta: { truncated } };
+  return {
+    data: { items },
+    meta: { truncated },
+    text: (options: TextOptions) =>
+      treeText(
+        items,
+        options,
+        service.workspace.config,
+        new Map(
+          items.map((item) => [
+            item.id,
+            blockedBy(tasks.get(item.id)!, tasks, service.workspace.config).length,
+          ]),
+        ),
+      ),
+  };
 }

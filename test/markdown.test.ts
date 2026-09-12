@@ -15,7 +15,7 @@ test("текстовый CLI показывает абзацы, пустые с�
   assert.equal(description.code, 0, description.stderr);
   assert.equal(description.stdout, body);
   const card = await invokeRaw(app.root, ["get", id]);
-  assert.match(card.stdout, /^# Markdown/);
+  assert.match(card.stdout, /#1\s+Markdown/);
   assert.ok(card.stdout.includes(body));
   const comment = successful(
     await app.run<{ id: string }>(["comment", "add", id, "--stdin"], { input: body }),

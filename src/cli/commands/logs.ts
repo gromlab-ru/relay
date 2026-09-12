@@ -8,6 +8,7 @@ import { MAX_REPORT_BYTES, logKindSchema } from "../../domain/log.js";
 import type { Log } from "../../domain/log.js";
 import { toLines } from "../../domain/markdown.js";
 import { logText } from "../../presentation/records.js";
+import { palette } from "../../presentation/theme.js";
 import { invariant } from "../../shared/errors.js";
 import { action, argument, author } from "../context.js";
 import type { Runtime } from "../context.js";
@@ -72,7 +73,11 @@ export function registerLogs(program: Command, runtime: Runtime): void {
       },
       actor,
     );
-    return { data: { id: log.id, taskId: log.taskId } };
+    return {
+      data: { id: log.id, taskId: log.taskId },
+      text: (options) =>
+        `${palette(options).green("✓ Отчёт добавлен")}\n${palette(options).dim(log.id)}`,
+    };
   });
 
   const list = logFilterOptions(
@@ -88,7 +93,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
     .description("Показать полный многострочный отчёт");
   action(get, runtime, async (context) => {
     const log = await new LogService(context.workspace).get(argument(get), argument(get, 1));
-    return { data: log, text: logText(log) };
+    return { data: log, text: (options) => logText(log, options) };
   });
 
   const search = logFilterOptions(

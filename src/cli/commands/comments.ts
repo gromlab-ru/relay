@@ -6,6 +6,7 @@ import { pageFrom, pageOptions } from "../options.js";
 import { invariant } from "../../shared/errors.js";
 import { MAX_COMMENT_BYTES } from "../../domain/comment.js";
 import { commentText } from "../../presentation/records.js";
+import { palette } from "../../presentation/theme.js";
 
 export function registerComments(program: Command, runtime: Runtime): void {
   const comments = program.command("comment").description("Комментарии к задаче");
@@ -30,7 +31,11 @@ export function registerComments(program: Command, runtime: Runtime): void {
     );
     invariant(text !== undefined, "INPUT_SOURCE_REQUIRED", "Укажите --text или --file");
     const comment = await new CommentService(context.workspace).add(argument(add), text, actor);
-    return { data: { id: comment.id, taskId: comment.taskId } };
+    return {
+      data: { id: comment.id, taskId: comment.taskId },
+      text: (options) =>
+        `${palette(options).green("✓ Комментарий добавлен")}\n${palette(options).dim(comment.id)}`,
+    };
   });
 
   const list = pageOptions(
@@ -52,6 +57,6 @@ export function registerComments(program: Command, runtime: Runtime): void {
       argument(get),
       argument(get, 1),
     );
-    return { data: comment, text: commentText(comment) };
+    return { data: comment, text: (options) => commentText(comment, options) };
   });
 }

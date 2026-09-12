@@ -3,12 +3,14 @@ import { decodeCursor, encodeCursor } from "../shared/cursor.js";
 import { AppError } from "../shared/errors.js";
 import { resultBytes } from "./result.js";
 import type { OutputFormat, Result } from "./result.js";
+import type { TextOptions } from "../presentation/theme.js";
 
 export interface PageOptions {
   limit: number;
   maxBytes: number;
   format: OutputFormat;
   cursor?: string;
+  text?: TextOptions;
 }
 
 export function creationKey(item: { createdAt: string; id: string }): string {
@@ -26,7 +28,7 @@ export function paginate<T>(
   scope: unknown,
   options: PageOptions,
   descending = false,
-  render?: (items: readonly T[]) => string,
+  render?: (items: readonly T[], options: TextOptions) => string,
 ): Result {
   const order = descending ? -1 : 1;
   const after = options.cursor ? decodeCursor(options.cursor, scope, z.string()) : undefined;
@@ -36,9 +38,10 @@ export function paginate<T>(
   const selected: T[] = [];
   const response = (truncated = false): Result => {
     const hasMore = selected.length < available.length;
+    const page = [...selected];
     return {
-      data: { items: [...selected] },
-      ...(render ? { text: render(selected) } : {}),
+      data: { items: page },
+      ...(render ? { text: (view: TextOptions) => render(page, view) } : {}),
       meta: {
         hasMore,
         nextCursor: hasMore && selected.length ? encodeCursor(scope, key(selected.at(-1)!)) : null,
@@ -48,7 +51,7 @@ export function paginate<T>(
   };
   for (const item of available.slice(0, options.limit)) {
     selected.push(item);
-    if (resultBytes(response(), options.format) > options.maxBytes) {
+    if (resultBytes(response(), options.format, options.text) > options.maxBytes) {
       selected.pop();
       if (!selected.length)
         throw new AppError(

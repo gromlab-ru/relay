@@ -37,7 +37,17 @@ function findCycle(
 
 export function inspectGraph(tasks: ReadonlyMap<string, Task>, config: Config): GraphIssue[] {
   const issues: GraphIssue[] = [];
+  const numbers = new Set<number>();
   for (const task of tasks.values()) {
+    if (task.number !== undefined) {
+      if (numbers.has(task.number))
+        issues.push({
+          code: "DUPLICATE_TASK_NUMBER",
+          taskId: task.id,
+          message: `Номер ${task.number} повторяется; выполните number для устранения совпадений`,
+        });
+      numbers.add(task.number);
+    }
     if (!Object.hasOwn(config.statuses, task.status)) {
       issues.push({
         code: "UNKNOWN_STATUS",

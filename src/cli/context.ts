@@ -10,12 +10,16 @@ import type { Workspace } from "../storage/workspace.js";
 import { InputReader } from "./input.js";
 import { printResult } from "./output.js";
 import type { OutputOptions } from "./output.js";
+import { terminalOptions } from "./terminal.js";
+import type { ColorMode } from "./terminal.js";
+import { palette } from "../presentation/theme.js";
 
 export interface GlobalOptions {
   config?: string;
   actor?: string;
   format?: OutputFormat;
   maxBytes?: number;
+  color?: ColorMode;
 }
 export interface Runtime {
   cwd: string;
@@ -38,7 +42,20 @@ export function runtime(stdin: Readable, stdout: Writable, cwd = process.cwd()):
     stdout,
     input: new InputReader(stdin, cwd),
     env: process.env,
-    output: { format: "json", maxBytes: 16384 },
+    output: { format: "text", maxBytes: 16384, text: terminalOptions(stdout, process.env) },
+  };
+}
+
+export function outputOptions(
+  runtime: Runtime,
+  globals: GlobalOptions,
+  defaults = runtime.output,
+): OutputOptions {
+  const format = globals.format ?? defaults.format;
+  return {
+    format,
+    maxBytes: globals.maxBytes ?? defaults.maxBytes,
+    text: terminalOptions(runtime.stdout, runtime.env, format === "json" ? "never" : globals.color),
   };
 }
 
@@ -50,10 +67,7 @@ export function action(
   command.action(async () => {
     const globals = command.optsWithGlobals<GlobalOptions>();
     const workspace = await openWorkspace(runtime.cwd, globals.config);
-    const output: OutputOptions = {
-      format: globals.format ?? workspace.config.output.format,
-      maxBytes: globals.maxBytes ?? workspace.config.output.maxBytes,
-    };
+    const output = outputOptions(runtime, globals, workspace.config.output);
     runtime.output = output;
     const context: CommandContext = {
       workspace,
@@ -84,6 +98,14 @@ export function mutation(context: CommandContext, command: Command): MutationOpt
 }
 
 /** Ответ записи мал и не зависит от размера описания уже сохранённой карточки. */
-export function changed(task: { id: string; revision: number }): Result {
-  return { data: { id: task.id, revision: task.revision } };
+export function changed(task: {
+  id: string;
+  number?: number | undefined;
+  revision: number;
+}): Result {
+  return {
+    data: { id: task.id, number: task.number, revision: task.revision },
+    text: (options) =>
+      `${palette(options).green("✓")} Сохранена задача ${task.number === undefined ? task.id : `#${task.number}`} ${palette(options).dim(`· версия ${task.revision}`)}`,
+  };
 }

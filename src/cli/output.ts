@@ -2,14 +2,19 @@ import type { Writable } from "node:stream";
 import { AppError } from "../shared/errors.js";
 import type { Result, OutputFormat } from "../application/result.js";
 import { serializeResult } from "../application/result.js";
+import { defaultTextOptions, palette } from "../presentation/theme.js";
+import type { TextOptions } from "../presentation/theme.js";
+import { safeText, valueText } from "../presentation/text.js";
+import { wrap } from "../presentation/layout.js";
 
 export interface OutputOptions {
   format: OutputFormat;
   maxBytes: number;
+  text?: TextOptions;
 }
 
 export function printResult(stream: Writable, result: Result, options: OutputOptions): void {
-  const encoded = serializeResult(result, options.format);
+  const encoded = serializeResult(result, options.format, options.text);
   if (Buffer.byteLength(encoded) > options.maxBytes) {
     throw new AppError(
       "RESPONSE_TOO_LARGE",
@@ -26,8 +31,19 @@ export function printError(stream: Writable, error: AppError, options: OutputOpt
     ok: false,
     error: { code: error.code, message: error.message, details: error.details },
   };
+  const text = options.text ?? defaultTextOptions;
+  const colors = palette(text);
   const encode = () =>
-    `${JSON.stringify(payload, null, options.format === "text" ? 2 : undefined)}\n`;
+    options.format === "json"
+      ? `${JSON.stringify(payload)}\n`
+      : [
+          colors.red(colors.bold(`✗ ${safeText(payload.error.code)}`)),
+          wrap(safeText(payload.error.message), text.width),
+          ...(payload.error.details === undefined
+            ? []
+            : ["", wrap(valueText(payload.error.details, text), text.width)]),
+          "",
+        ].join("\n");
   if (Buffer.byteLength(encode()) > options.maxBytes) payload.error.details = { omitted: true };
   if (Buffer.byteLength(encode()) > options.maxBytes)
     payload.error.message = "Ошибка выполнения; подробности превышают лимит ответа";

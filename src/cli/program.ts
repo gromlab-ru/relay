@@ -15,6 +15,13 @@ export function createProgram(runtime: Runtime): Command {
     .option("--config <path>", "Явный путь к tasks.config.json")
     .option("--actor <id>", "Автор операции; альтернатива TASKS_ACTOR")
     .addOption(new Option("--format <format>", "Формат ответа").choices(["json", "text"]))
+    .addOption(
+      new Option("--color <mode>", "Цветовая подсветка (по умолчанию auto)").choices([
+        "auto",
+        "always",
+        "never",
+      ]),
+    )
     .option(
       "--max-bytes <bytes>",
       "Максимальный размер ответа UTF-8",

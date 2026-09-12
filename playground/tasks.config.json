@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "storageDir": ".tasks",
+  "defaultStatus": "todo",
+  "readyStatuses": [
+    "todo"
+  ],
+  "statuses": {
+    "todo": {
+      "terminal": false,
+      "satisfiesDependencies": false
+    },
+    "in_progress": {
+      "terminal": false,
+      "satisfiesDependencies": false
+    },
+    "review": {
+      "terminal": false,
+      "satisfiesDependencies": false
+    },
+    "done": {
+      "terminal": true,
+      "satisfiesDependencies": true
+    },
+    "cancelled": {
+      "terminal": true,
+      "satisfiesDependencies": false
+    }
+  },
+  "output": {
+    "format": "text",
+    "defaultLimit": 20,
+    "maxBytes": 16384
+  }
+}

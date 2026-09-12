@@ -6,6 +6,7 @@ import { invariant } from "../../shared/errors.js";
 import { newId } from "../../shared/ids.js";
 import { TaskRepository } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
+import { nextTaskNumber } from "./numbering.js";
 
 export interface MutationOptions {
   actor: string;
@@ -36,6 +37,7 @@ export class TaskService {
           status: fields.status ?? this.workspace.config.defaultStatus,
           version: 1,
           id: newId("tsk"),
+          number: nextTaskNumber(tasks.values()),
           createdAt: now,
           updatedAt: now,
           createdBy: actor,

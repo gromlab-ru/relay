@@ -2,6 +2,7 @@ import { assertGraph } from "../domain/graph.js";
 import type { TaskService } from "./tasks/service.js";
 import { paginate } from "./pagination.js";
 import type { PageOptions } from "./pagination.js";
+import { groupsText } from "../presentation/project.js";
 
 export async function listGroups(service: TaskService, page: PageOptions) {
   const tasks = await service.repository.snapshot();
@@ -23,5 +24,12 @@ export async function listGroups(service: TaskService, page: PageOptions) {
     if (service.workspace.config.statuses[task.status]?.terminal) group.terminal += 1;
     groups.set(task.group, group);
   }
-  return paginate([...groups.values()], (group) => group.name, { command: "group.list" }, page);
+  return paginate(
+    [...groups.values()],
+    (group) => group.name,
+    { command: "group.list" },
+    page,
+    false,
+    groupsText,
+  );
 }

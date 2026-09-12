@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { MAX_TASK_BYTES, taskSchema } from "../domain/task.js";
 import type { Task } from "../domain/task.js";
 import { parse } from "../domain/validation.js";
-import { assertTaskPrefix } from "../shared/ids.js";
+import { assertTaskReference, taskNumber } from "../shared/ids.js";
 import { invariant } from "../shared/errors.js";
 import { atomicJson, jsonFiles, readJson } from "./files.js";
 import type { Workspace } from "./workspace.js";
@@ -38,7 +38,9 @@ export class TaskRepository {
   }
 
   async resolve(reference: string): Promise<Task> {
-    assertTaskPrefix(reference);
+    assertTaskReference(reference);
+    // Внутри операции записи блокировка уже удерживается вызывающим сервисом.
+    if (taskNumber(reference) !== undefined) return resolveTask(reference, await this.all());
     if (reference.length === 36) return this.readFile(`${reference}.json`);
     const matches = (await jsonFiles(this.workspace.path("tasks"))).filter((file) =>
       file.startsWith(reference),
@@ -82,11 +84,20 @@ export class TaskRepository {
 }
 
 export function resolveTask(reference: string, tasks: ReadonlyMap<string, Task>): Task {
-  assertTaskPrefix(reference);
-  const matches = [...tasks.values()].filter((task) => task.id.startsWith(reference));
+  assertTaskReference(reference);
+  const number = taskNumber(reference);
+  const matches = [...tasks.values()].filter((task) =>
+    number === undefined ? task.id.startsWith(reference) : task.number === number,
+  );
   invariant(matches.length > 0, "TASK_NOT_FOUND", `Задача ${reference} не найдена`, 3);
-  invariant(matches.length === 1, "AMBIGUOUS_ID", "Префикс соответствует нескольким задачам", 2, {
-    ids: matches.map((task) => task.id),
-  });
+  invariant(
+    matches.length === 1,
+    "AMBIGUOUS_ID",
+    "Ссылка соответствует нескольким задачам; проверьте номера командой number",
+    2,
+    {
+      ids: matches.map((task) => task.id),
+    },
+  );
   return matches[0]!;
 }

@@ -4,6 +4,8 @@ import { asAppError, invariant } from "../shared/errors.js";
 import { jsonFiles } from "../storage/files.js";
 import { TaskRepository } from "../storage/tasks.js";
 import type { Workspace } from "../storage/workspace.js";
+import { palette } from "../presentation/theme.js";
+import type { TextOptions } from "../presentation/theme.js";
 
 interface Issue {
   path?: string;
@@ -42,7 +44,8 @@ export async function validateWorkspace(workspace: Workspace) {
     const logs = [...tasks.values()].reduce((sum, task) => sum + Object.keys(task.logs).length, 0);
     return {
       data: { valid: true, tasks: tasks.size, comments, logs },
-      text: `Хранилище корректно. Задач: ${tasks.size}; комментариев: ${comments}; отчётов: ${logs}.`,
+      text: (options: TextOptions) =>
+        `${palette(options).green("✓ Хранилище корректно")}\nЗадач: ${tasks.size} · Комментариев: ${comments} · Отчётов: ${logs}`,
     };
   });
 }

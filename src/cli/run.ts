@@ -1,6 +1,7 @@
 import { CommanderError } from "commander";
 import { AppError, asAppError } from "../shared/errors.js";
 import type { GlobalOptions, Runtime } from "./context.js";
+import { outputOptions } from "./context.js";
 import { printError } from "./output.js";
 import { createProgram } from "./program.js";
 
@@ -13,10 +14,7 @@ export async function runCli(argv: string[], runtime: Runtime): Promise<number> 
   } catch (error) {
     if (error instanceof CommanderError && error.exitCode === 0) return 0;
     const options = program.opts<GlobalOptions>();
-    const output = {
-      format: options.format ?? runtime.output.format,
-      maxBytes: options.maxBytes ?? runtime.output.maxBytes,
-    };
+    const output = outputOptions(runtime, options);
     const failure =
       error instanceof CommanderError
         ? new AppError("INVALID_ARGUMENT", error.message.replace(/^error: /, ""))

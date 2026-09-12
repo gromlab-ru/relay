@@ -1,7 +1,8 @@
 import type { Log } from "../../domain/log.js";
 import { logBrief } from "../../domain/log.js";
 import { singleLine, parse } from "../../domain/validation.js";
-import { previewText, safeText } from "../../presentation/text.js";
+import { previewText } from "../../presentation/text.js";
+import { searchLogsText } from "../../presentation/records.js";
 import { creationKey, paginate } from "../pagination.js";
 import type { PageOptions } from "../pagination.js";
 import { filterLogs } from "./list.js";
@@ -41,9 +42,6 @@ export function searchLogs(
     { command: "log.search", taskId, query, filters },
     page,
     true,
-    (selected) =>
-      selected
-        .map((log) => `${log.id} · ${log.kind} · строка ${log.line}\n${safeText(log.preview)}`)
-        .join("\n\n") || "Совпадений нет.",
+    (selected, options) => searchLogsText(selected, query, options),
   );
 }

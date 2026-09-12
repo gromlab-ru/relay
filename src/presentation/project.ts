@@ -1,0 +1,97 @@
+import type { Config } from "../domain/config.js";
+import { palette, statusText } from "./theme.js";
+import type { TextOptions } from "./theme.js";
+import { safeText } from "./safe.js";
+import { section, table, wrap } from "./layout.js";
+
+export function initializedText(
+  configPath: string,
+  storageDir: string,
+  options: TextOptions,
+): string {
+  const colors = palette(options);
+  return [
+    colors.green("✓ Проект инициализирован"),
+    wrap(
+      `Конфигурация: ${safeText(configPath)}\nХранилище: ${safeText(storageDir)}`,
+      options.width,
+    ),
+    "",
+    colors.dim("Следующий шаг: create --title <название> --actor <автор>"),
+  ].join("\n");
+}
+
+export function configText(
+  config: Config,
+  configPath: string,
+  root: string,
+  options: TextOptions,
+): string {
+  const colors = palette(options);
+  const statuses = Object.entries(config.statuses)
+    .map(([name, rule]) =>
+      wrap(
+        [
+          statusText(name, options, config),
+          colors.dim(`(${safeText(name)})`),
+          ...(name === config.defaultStatus ? ["по умолчанию"] : []),
+          ...(config.readyStatuses.includes(name) ? ["доступен для claim"] : []),
+          ...(rule.satisfiesDependencies ? ["завершает зависимости"] : []),
+        ].join(" · "),
+        options.width,
+      ),
+    )
+    .join("\n");
+  return [
+    section(
+      "Проект",
+      wrap(`${safeText(configPath)}\nХранилище: ${safeText(root)}`, options.width),
+      options,
+    ),
+    section("Статусы", statuses, options),
+    section(
+      "Вывод",
+      `Формат: ${config.output.format}\nРазмер страницы: ${config.output.defaultLimit}\nЛимит ответа: ${config.output.maxBytes} байт`,
+      options,
+    ),
+  ].join("\n\n");
+}
+
+export function groupsText(
+  items: readonly { name: string; total: number; completed: number; terminal: number }[],
+  options: TextOptions,
+): string {
+  const colors = palette(options);
+  const progress = (group: (typeof items)[number]) =>
+    `${colors.green("█".repeat(Math.round((10 * group.completed) / group.total)))}${colors.dim("░".repeat(10 - Math.round((10 * group.completed) / group.total)))}`;
+  const body =
+    options.width < 70
+      ? items
+          .map((group) =>
+            wrap(
+              `${colors.bold(safeText(group.name))}\n${progress(group)} ${group.completed}/${group.total} · завершено: ${group.terminal}`,
+              options.width,
+            ),
+          )
+          .join("\n\n")
+      : table(
+          ["ГРУППА", "ПРОГРЕСС", "ВЫПОЛНЕНО", "ЗАВЕРШЕНО"],
+          items.map((group) => [
+            safeText(group.name),
+            progress(group),
+            `${group.completed}/${group.total}`,
+            String(group.terminal),
+          ]),
+          [options.width - 38, 10, 10, 12],
+          options,
+        );
+  return section(`Группы · ${items.length}`, items.length ? body : "Групп нет.", options);
+}
+
+export function numberedText(
+  data: { assigned: number; total: number },
+  options: TextOptions,
+): string {
+  const colors = palette(options);
+  return colors.green(`✓ Назначено номеров: ${data.assigned}`) + `\nВсего задач: ${data.total}`;
+}
