@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_call:
+    outputs:
+      artifact_id:
+        description: Идентификатор проверенного npm-архива
+        value: ${{ jobs.package.outputs.artifact_id }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  check:
+    name: Проверки / Node.js ${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
+        with:
+          persist-credentials: false
+      - name: Подготовить Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # Версия 7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - name: Установить зависимости из lockfile
+        run: npm ci
+      - name: Проверить форматирование, типы, сборку и тесты
+        run: npm run check
+
+  package:
+    name: Проверенный npm-архив
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
+        with:
+          persist-credentials: false
+      - name: Подготовить Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # Версия 7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Зафиксировать версию npm для упаковки
+        run: npm install --global npm@11.16.0
+      - name: Установить зависимости из lockfile
+        run: npm ci
+      - name: Собрать архив и проверить установку CLI
+        run: npm run package:check
+      - name: Сохранить проверенный архив
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
+        with:
+          name: npm-package
+          path: .artifacts/npm/*.tgz
+          include-hidden-files: true
+          if-no-files-found: error
+          overwrite: true
+          compression-level: 0
+          retention-days: 14

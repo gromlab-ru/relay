@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# Одновременно выполняется один релиз; уже начатая публикация не прерывается.
+concurrency:
+  group: npm-publication
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Проверить релизный тег
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Получить исходники тега
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
+        with:
+          persist-credentials: false
+      - name: Подготовить Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # Версия 7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Сверить тег и версии манифестов
+        run: npm run release:check
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+
+  ci:
+    name: Проверить и упаковать релиз
+    needs: metadata
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Опубликовать проверенный архив в npm
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Получить релизные скрипты
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
+        with:
+          persist-credentials: false
+      - name: Подготовить npm Trusted Publishing
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # Версия 7.0.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Установить npm с поддержкой OIDC
+        run: npm install --global npm@11.16.0
+      - name: Получить архив из проверок этого запуска
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # Версия 8.0.1
+        with:
+          artifact-ids: ${{ needs.ci.outputs.artifact_id }}
+          path: .artifacts/npm
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Опубликовать новую версию или подтвердить совпадение существующей
+        run: npm run release:publish
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
