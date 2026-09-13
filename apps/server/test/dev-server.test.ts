@@ -115,11 +115,18 @@ for (const configuration of ["default", "relative"] as const)
         assert.equal(typeof manifest.bin?.pnpm, "string");
         pnpmCli = resolve(dirname(manifestPath), manifest.bin.pnpm);
       }
-      const env: NodeJS.ProcessEnv = { ...process.env, TASKS_PORT: "0", TASKS_ACTOR: "dev-human" };
+      const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        CI: "true",
+        GITHUB_ACTIONS: "true",
+        TASKS_PORT: "0",
+        TASKS_ACTOR: "dev-human",
+      };
       delete env.TASKS_CONFIG;
       if (configuration === "relative") env.TASKS_CONFIG = `${workspace}/tasks.config.json`;
       const grouped = process.platform !== "win32";
-      const child = spawn(process.execPath, [pnpmCli, "run", "dev:server"], {
+      // В Actions Turbo буферизует grouped-логи до завершения задачи; ждём URL из живого потока.
+      const child = spawn(process.execPath, [pnpmCli, "run", "dev:server", "--log-order=stream"], {
         cwd: root,
         env,
         detached: grouped,
