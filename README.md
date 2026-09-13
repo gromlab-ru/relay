@@ -1,136 +1,131 @@
-# @gromlab/tasks-cli
+# Tasks
 
-Локальный трекер для AI-оркестратора, субагентов и человека.
-**Одна задача — один JSON со всем контекстом.**
+Локальный трекер задач с CLI, REST API и веб-доской. Приложения работают с одним
+JSON-хранилищем: ревизии, зависимости задач, блокировки и история реализованы в общем Core.
 
-Описание, комментарии и короткие отчёты хранятся внутри задачи. Многострочный
-Markdown записывается массивами строк для удобной отладки JSON и выводится
-через CLI с настоящими переносами, пустыми строками и отступами.
+Репозиторий организован как **Turborepo + pnpm workspaces**. Пользователям поставляется
+один npm-пакет `@gromlab/tasks-cli`, включающий CLI, backend и собранный frontend.
 
-## Возможности
+## Быстрый старт
 
-- Задачи, группы, теги, подзадачи и зависимости с проверкой циклов.
-- Постоянные номера `1`, `2`, `3` для команд и человекочитаемых ссылок.
-- Произвольные статусы в конфигурации проекта.
-- Назначение оркестратором и атомарный захват задачи агентом.
-- Проверка `revision` для защиты от устаревших изменений.
-- Многострочные описания, комментарии, саммари и отчёты в одном файле задачи.
-- Выборочное чтение контекста, поиск по отчётам и пагинация.
-- Цветные таблицы, карточки, деревья связей и Markdown; `--format json` для машинной обработки.
-- Атомарная запись JSON и проверка целостности после Git-слияния.
-
-## Запуск из исходников
-
-Требуется Node.js **22+**; для проверок слияния нужен Git.
+Для разработки рекомендуется Node.js 24 и pnpm 11.18.0. Поддерживаемый минимум
+репозитория: Node.js 22.13. Версия pnpm закреплена в `packageManager`.
 
 ```bash
-npm ci
-npm run build
-node dist/cli/main.js --help
-node dist/cli/main.js init
-export TASKS_ACTOR=orchestrator
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
-Создание задачи без подготовки отдельного файла с описанием:
+- Web: <http://127.0.0.1:5173>.
+- API: <http://127.0.0.1:3000/api/v1/health>.
+- Swagger: <http://127.0.0.1:3000/api/docs>.
+
+`dev` запускает API и Vite через Turbo. По умолчанию backend использует демонстрационные
+данные `apps/playground`; действия в интерфейсе изменяют эти данные. Для своего проекта
+задайте абсолютный путь `TASKS_CONFIG`, например:
 
 ```bash
-node dist/cli/main.js create --title "Реализовать API" --group backend --stdin <<'MD'
-## Что сделать
-
-- Добавить POST /users.
-- Зафиксировать контракт ошибок.
-
-## Проверка
-
-Интеграционные тесты должны проходить.
-MD
+TASKS_CONFIG=/absolute/path/to/project/tasks.config.json pnpm run dev
 ```
 
-Подставьте номер из ответа в следующие команды (первая задача получает номер 1):
+`TASKS_PORT` меняет порт API, `TASKS_API_URL` задаёт адрес API для Vite,
+`TASKS_WEB_PORT` меняет порт Vite, `TASKS_ACTOR` задаёт автора серверных изменений.
+Без `TASKS_PORT` сервер использует `server.port` из `tasks.config.json` или `3000`.
+Например, совместный запуск на других портах:
 
 ```bash
-node dist/cli/main.js description 1
-node dist/cli/main.js get 1
-node dist/cli/main.js get 1 --full
-node dist/cli/main.js list --ready --format json
-node dist/cli/main.js config get
+TASKS_PORT=3001 TASKS_API_URL=http://127.0.0.1:3001 TASKS_WEB_PORT=5174 pnpm run dev
 ```
 
-Для разработки доступен `npm run dev -- <command>`. Другой проект выбирается
-через `--config /path/to/project/tasks.config.json`; `init` создаёт конфиг
-и хранилище рядом с ним.
+## Команды
 
-## npm-пакет
+Все команды выполняются из корня репозитория:
 
-Целевой запуск опубликованного пакета:
+| Команда                                                                                         | Назначение                                                  |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `pnpm run dev` / `pnpm run dev:app`                                                             | API и web в режиме разработки                               |
+| `pnpm run dev:server`                                                                           | Только backend с наблюдением за исходниками                 |
+| `pnpm run dev:web`                                                                              | Только Vite; API должен работать отдельно                   |
+| `pnpm --silent run dev:cli <args>`                                                              | CLI из исходников, рабочий каталог не меняется              |
+| `pnpm --silent run playground <args>`                                                           | CLI на демонстрационных данных                              |
+| `pnpm run build`                                                                                | Сборка всех приложений и библиотек                          |
+| `pnpm run build:cli`                                                                            | CLI, встроенный web и необходимые библиотеки                |
+| `pnpm run build:server` / `pnpm run build:web`                                                  | Выборочная сборка приложения                                |
+| `pnpm start`                                                                                    | Сборка и запуск backend с готовым UI на порту 3000          |
+| `pnpm --silent run start:cli <args>`                                                            | Собранный CLI; сначала выполнить build:cli                  |
+| `pnpm run lint` / `pnpm run typecheck`                                                          | Проверки workspaces                                         |
+| `pnpm test`                                                                                     | Все автоматизированные тесты с нужными сборками             |
+| `pnpm run test:cli` / `pnpm run test:server` / `pnpm run test:core` / `pnpm run test:contracts` | Выборочные тесты                                            |
+| `pnpm run format` / `pnpm run format:check`                                                     | Форматирование и его проверка                               |
+| `pnpm run check`                                                                                | Форматирование, lint, типы, сборки и тесты                  |
+| `pnpm run clean`                                                                                | Удалить локальные результаты сборки, сохранив кеш Turbo     |
+| `pnpm run package:check`                                                                        | Собрать npm-архив и проверить его установку вне репозитория |
+
+`dev:cli` является одноразовым запуском команды, а не частью общей dev-сессии:
+
+```bash
+pnpm --silent run dev:cli --version
+pnpm --silent run playground list --format json
+```
+
+Существующие команды `dev:ui`, `lint:web`, `typecheck:web`, `build:core` и
+`build:contracts` также доступны. Локальные инструменты приложения запускаются
+через фильтр pnpm, например `pnpm --filter @tasks/web run generate:api`.
+Аргументы скриптам передаются сразу после имени, без дополнительного `--`.
+
+## Структура
+
+| Workspace                                                      | Ответственность                                          |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| [`apps/cli`](apps/cli/README.md)                               | Commander, терминал, сборка и публикация продукта        |
+| [`apps/server`](apps/server/README.md)                         | Standalone backend, dev-настройки и управление процессом |
+| [`apps/web`](apps/web/README.md)                               | React, Vite, Mantine и канбан-доска                      |
+| [`apps/playground`](apps/playground/README.md)                 | Приватный демонстрационный проект и CLI-сценарии         |
+| `packages/core`                                                | Предметные операции и файловое хранилище                 |
+| [`packages/contracts`](packages/contracts/README.md)           | Переносимые контракты REST и SSE                         |
+| [`packages/server-runtime`](packages/server-runtime/README.md) | Общая NestJS-реализация для CLI и standalone backend     |
+| `packages/typescript-config`                                   | Общие строгие настройки TypeScript                       |
+
+CLI и standalone backend используют `@tasks/server-runtime`, который зависит от Core
+и Contracts. Web зависит только от Contracts, не от серверного кода. Зависимости объявляются
+в манифестах потребителей; межпакетные импорты проходят через `exports`.
+
+Состав workspaces определяет `pnpm-workspace.yaml`, внутренние зависимости используют
+`workspace:*`. Общий `pnpm-lock.yaml` фиксирует зависимости всех приложений и пакетов.
+Установка выполняется явно через `pnpm install`; запуск скриптов не устанавливает зависимости автоматически.
+
+Каждый workspace собирается в собственный `dist`. Turbo управляет порядком сборки
+и кешированием. Сборка CLI дополнительно зависит от сборки web на уровне задач,
+а не через зависимость одного приложения от другого. В разработке условие
+`tasks-source` позволяет backend и CLI использовать исходники библиотек без ручной сборки.
+
+## Установка продукта
+
+Из каталога пользовательского проекта:
 
 ```bash
 npx @gromlab/tasks-cli init
-npx @gromlab/tasks-cli list --ready
+npx @gromlab/tasks-cli create "Первая задача" --actor human
+npx @gromlab/tasks-cli server --actor human --open
 ```
 
-Проверка будущего релизного архива и запуск из него:
+Команда `server` поднимает один HTTP-сервер: на `/` он отдаёт статическую React-сборку,
+на `/api` — API и Swagger. Порт: `--port` → `TASKS_PORT` → `server.port` → `3000`.
+Например, добавьте `"server": { "port": 3001 }` в `tasks.config.json` или запустите
+`TASKS_PORT=3001 npx @gromlab/tasks-cli server --actor human`.
 
-```bash
-npm run package:check
-npm exec --yes --package ./.artifacts/npm/gromlab-tasks-cli-0.2.0.tgz -- tasks-cli --help
-```
-
-## Терминальный вывод и номера
-
-В терминале статусы выделяются цветом, списки оформляются таблицами, а связи —
-деревом с номерами и названиями задач. На узком экране список становится набором
-компактных карточек. `--color never` отключает цвет, `--color always` включает
-его принудительно. JSON не содержит ANSI-кодов.
-
-```bash
-npx @gromlab/tasks-cli list
-npx @gromlab/tasks-cli tree 1
-npx @gromlab/tasks-cli links 3
-npx @gromlab/tasks-cli list --format json
-```
-
-Для данных из версии 0.1 выполните новой версией CLI
-`number --actor orchestrator`: номера сохранятся в документах задач.
-Подробнее: [оформление терминала](docs/TERMINAL.md).
-
-## Хранилище
-
-```text
-tasks.config.json
-.tasks/
-  .gitignore
-  .runtime/
-  tasks/<task-id>.json
-```
-
-JSON задачи содержит `description`, `summary`, `comments`, `logs` и остальные
-поля карточки. Добавление комментария или отчёта атомарно изменяет этот файл
-и увеличивает его `revision`. Служебная `.runtime` исключается из Git.
-
-Процессы CLI координируются через общее хранилище. В разных worktree указывайте
-один и тот же абсолютный `--config`. Изменения независимых задач объединяются
-через Git; изменения одной задачи могут конфликтовать. После слияния запускайте
-`validate`. Эксклюзивность `claim` относится к общей папке данных.
-
-## Проверки и релизы
-
-```bash
-npm run check
-npm run package:check
-```
-
-GitHub Actions проверяет Node.js 22/24 и собирает проверенный npm-архив.
-Тег `v<version>` запускает релиз: обычные версии публикуются в `latest`,
-предварительные — в `next`. Версия тега сверяется с обоими манифестами.
-Порядок первой локальной публикации и настройки OIDC: [релизы](docs/RELEASING.md).
+При публикации приватные workspace-библиотеки включаются в готовый JavaScript,
+а frontend копируется в дистрибутив. Пользователю не нужны TypeScript, Vite или Turbo.
+Проверенный архив находится в `apps/cli/.artifacts/npm/`.
 
 ## Документация
 
-- [Техническое задание](docs/SPEC.md)
-- [Команды CLI](docs/CLI.md)
-- [Оформление терминала](docs/TERMINAL.md)
-- [Формат самодостаточного JSON](docs/FORMAT.md)
-- [Архитектура и гарантии](docs/ARCHITECTURE.md)
-- [Публикация в npm](docs/RELEASING.md)
-- [История версий](CHANGELOG.md)
+- [Руководство CLI](apps/cli/README.md) и [справочник команд](apps/cli/docs/CLI.md).
+- [Архитектура](docs/ARCHITECTURE.md) и [план продукта](docs/PLAN.md).
+- [Формат хранения](packages/core/docs/FORMAT.md) и [контракт API](packages/contracts/docs/API.md).
+- [Спецификация интерфейса](apps/web/UI_SPEC.md).
+- [Релизы](apps/cli/docs/RELEASING.md) и [история изменений](apps/cli/CHANGELOG.md).
+
+Корневой пакет приватный. Метаданные релиза находятся в `apps/cli/package.json`;
+CI публикует тот же архив, который прошёл проверку установки.

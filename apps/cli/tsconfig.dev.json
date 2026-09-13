@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.test.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "customConditions": ["tasks-source"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../packages/core/src/**/*.ts",
+    "../../packages/contracts/src/**/*.ts",
+    "../../packages/server-runtime/src/**/*.ts"
+  ]
+}

@@ -1,0 +1,55 @@
+.root {
+  background: var(--tasks-surface);
+  scrollbar-width: thin;
+  scrollbar-color: light-dark(#c5cada, #41485b) transparent;
+}
+
+.body {
+  padding: 0 1.25rem 1.5rem;
+}
+.header {
+  padding: 1rem 1.25rem;
+  color: var(--tasks-muted);
+  font-size: 0.8125rem;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.status {
+  flex: 1;
+  min-width: 8rem;
+  max-width: 12rem;
+}
+.tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: light-dark(#c5cada, #41485b) transparent;
+  margin-bottom: 1.5rem;
+  gap: 0;
+}
+
+.complete {
+  color: light-dark(#216333, #9ce0ab);
+  background: light-dark(#e6f5e9, #1d3929);
+
+  &:hover {
+    background: light-dark(#d4eede, #274a36);
+  }
+  &:disabled {
+    opacity: 0.45;
+  }
+}
+.metadata {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tasks-border);
+  color: var(--tasks-soft);
+  font-size: 0.6875rem;
+}

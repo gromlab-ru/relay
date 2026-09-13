@@ -1,0 +1,21 @@
+.root {
+  min-block-size: calc(100vh - 7.5rem);
+  padding-block: 3rem;
+  background:
+    radial-gradient(circle at 80% 15%, var(--app-color-glow), transparent 28rem),
+    var(--app-color-canvas);
+}
+
+.card {
+  max-inline-size: 30rem;
+  margin-inline: auto;
+  background: var(--app-color-surface-translucent);
+  backdrop-filter: blur(0.75rem);
+}
+
+.fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

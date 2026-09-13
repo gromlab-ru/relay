@@ -1,0 +1,39 @@
+.root {
+  background: var(--app-color-surface-translucent);
+  backdrop-filter: blur(0.75rem);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  block-size: 100%;
+  gap: var(--mantine-spacing-md);
+}
+
+.brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  color: var(--app-color-ink);
+
+  &:hover,
+  &:focus-visible {
+    .brandIcon {
+      --icon-color-1: var(--mantine-color-violet-6);
+    }
+  }
+}
+
+.brandIcon {
+  --icon-color-1: var(--mantine-color-indigo-6);
+}
+
+.homeLink {
+  display: none;
+
+  @media (--sm) {
+    display: inline;
+  }
+}

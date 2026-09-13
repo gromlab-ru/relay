@@ -1,0 +1,30 @@
+.root {
+  padding-top: 0.25rem;
+}
+
+.fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.titleInput {
+  font-size: 1rem;
+  font-weight: 550;
+}
+
+.context {
+  display: grid;
+  gap: 1rem;
+
+  @media (--sm) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.footer {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tasks-border);
+}

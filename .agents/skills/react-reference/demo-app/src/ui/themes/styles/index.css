@@ -1,0 +1,22 @@
+@layer mantine;
+
+@import '@mantine/core/styles.layer.css';
+@import './variables.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: var(--mantine-color-scheme);
+  color: var(--app-color-ink);
+  background: var(--app-color-canvas);
+  font-family: var(--mantine-font-family);
+}
+
+body {
+  min-block-size: 100vh;
+  margin: 0;
+}

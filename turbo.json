@@ -1,0 +1,109 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "@tasks/web#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".cache/**"]
+    },
+    "@tasks/server#build": {
+      "dependsOn": ["^build", "@tasks/web#build"],
+      "outputs": ["dist/**"]
+    },
+    "@gromlab/tasks-cli#build": {
+      "dependsOn": ["^build", "@tasks/web#build"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "TASKS_CONFIG",
+        "TASKS_ACTOR",
+        "TASKS_PORT",
+        "TASKS_API_URL",
+        "TASKS_WEB_PORT"
+      ]
+    },
+    "@gromlab/tasks-cli#dev": {
+      "cache": false,
+      "persistent": false,
+      "passThroughEnv": ["TASKS_ACTOR", "NO_COLOR", "FORCE_COLOR", "TERM"]
+    },
+    "start": {
+      "dependsOn": ["build", "@tasks/web#build"],
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["TASKS_CONFIG", "TASKS_ACTOR", "TASKS_PORT", "TASKS_WEB_PORT"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "@tasks/web#typecheck": {
+      "dependsOn": ["build"],
+      "outputs": [".cache/**"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "@gromlab/tasks-cli#test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/package.json"],
+      "outputs": []
+    },
+    "@tasks/core#test": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/server/src/**",
+        "$TURBO_ROOT$/apps/web/src/**",
+        "$TURBO_ROOT$/packages/contracts/src/**",
+        "$TURBO_ROOT$/packages/server-runtime/src/**"
+      ],
+      "outputs": []
+    },
+    "@tasks/server#test": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/pnpm-lock.yaml",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "$TURBO_ROOT$/turbo.json",
+        "$TURBO_ROOT$/apps/cli/package.json",
+        "$TURBO_ROOT$/apps/cli/scripts/clean.mjs",
+        "$TURBO_ROOT$/apps/web/package.json"
+      ],
+      "outputs": []
+    },
+    "package:check": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": [
+        "npm_execpath",
+        "npm_config_*",
+        "NPM_CONFIG_*",
+        "NODE_EXTRA_CA_CERTS",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        "RELEASE_TAG"
+      ]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

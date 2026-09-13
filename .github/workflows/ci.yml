@@ -36,10 +36,34 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           package-manager-cache: false
+      - name: Подготовить pnpm из packageManager
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # Версия 4
+        with:
+          run_install: false
       - name: Установить зависимости из lockfile
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Проверить форматирование, типы, сборку и тесты
-        run: npm run check
+        shell: bash
+        run: pnpm run check 2>&1 | tee "$RUNNER_TEMP/tasks-check.log"
+      - name: Показать причины падения проверок
+        if: failure()
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          const path = join(process.env.RUNNER_TEMP, 'tasks-check.log');
+          const log = await readFile(path, 'utf8').catch(() => '');
+          const lines = log.replace(/\u001b\[[0-9;]*m/g, '').split('\n');
+          const encode = (text) => text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+          let reported = 0;
+          for (let index = 0; index < lines.length && reported < 10; index++) {
+            if (!/AssertionError|SyntaxError|TypeError|Error:|error TS\d+/.test(lines[index])) continue;
+            console.log(`::error title=Причина падения проверки::${encode(lines.slice(Math.max(0, index - 2), index + 18).join('\n'))}`);
+            reported++;
+            index += 17;
+          }
+          if (!reported && log) console.log(`::error title=Проверки завершились с ошибкой::${encode(lines.slice(-60).join('\n'))}`);
+          NODE
 
   package:
     name: Проверенный npm-архив
@@ -60,16 +84,20 @@ jobs:
           package-manager-cache: false
       - name: Зафиксировать версию npm для упаковки
         run: npm install --global npm@11.16.0
+      - name: Подготовить pnpm из packageManager
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # Версия 4
+        with:
+          run_install: false
       - name: Установить зависимости из lockfile
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Собрать архив и проверить установку CLI
-        run: npm run package:check
+        run: pnpm run package:check
       - name: Сохранить проверенный архив
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
         with:
           name: npm-package
-          path: .artifacts/npm/*.tgz
+          path: apps/cli/.artifacts/npm/*.tgz
           include-hidden-files: true
           if-no-files-found: error
           overwrite: true

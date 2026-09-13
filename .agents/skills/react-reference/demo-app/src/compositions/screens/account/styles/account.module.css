@@ -1,0 +1,18 @@
+.root {
+  min-block-size: calc(100vh - 7.5rem);
+  padding-block: 3rem;
+  background:
+    radial-gradient(circle at 20% 10%, var(--app-color-glow), transparent 26rem),
+    var(--app-color-canvas);
+}
+
+.card {
+  background: var(--app-color-surface-translucent);
+  backdrop-filter: blur(0.75rem);
+}
+
+.profile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
+}

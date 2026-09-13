@@ -1,0 +1,4 @@
+.root {
+  min-block-size: 100vh;
+  padding-block: var(--mantine-spacing-xl);
+}

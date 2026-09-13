@@ -1,0 +1,10 @@
+.root {
+  background: var(--app-color-surface-translucent);
+  backdrop-filter: blur(0.75rem);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  block-size: 100%;
+}

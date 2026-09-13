@@ -1,7 +1,0 @@
-{
-  "name": "tasks-cli-playground",
-  "private": true,
-  "scripts": {
-    "tasks": "npx --yes --package ../.artifacts/npm/gromlab-tasks-cli-0.2.0.tgz tasks-cli"
-  }
-}

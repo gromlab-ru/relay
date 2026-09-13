@@ -1,0 +1,10 @@
+{
+  "extends": "@tasks/typescript-config/base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [],
+    "declaration": true
+  },
+  "include": ["src/**/*.ts"]
+}
