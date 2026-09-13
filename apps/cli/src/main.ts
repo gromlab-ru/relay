@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { runtime } from "./context.js";
 import { runCli } from "./run.js";
-import { isErrno } from "#core/shared/errors";
+import { isErrno } from "@tasks/core/shared/errors";
 
 // Закрытый потребителем pipe — штатное завершение, а не ошибка трекера.
 process.stdout.on("error", (error: Error) => {

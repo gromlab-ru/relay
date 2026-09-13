@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { createCommand } from "../command.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { integer } from "../options.js";
-import { invariant } from "#core/shared/errors";
+import { invariant } from "@tasks/core/shared/errors";
 
 export function registerServer(program: Command, runtime: Runtime) {
   const command = createCommand(program, {
@@ -35,11 +36,12 @@ export function registerServer(program: Command, runtime: Runtime) {
     const options = command.opts<{ port?: number; open?: boolean }>();
     const port = options.port ?? integer(0, 65535)(runtime.env.TASKS_PORT ?? "3000");
     const config = globals.config ?? runtime.env.TASKS_CONFIG;
-    const { startServer } = await import("#server");
+    const { startServer } = await import("@tasks/server-runtime");
     const server = await startServer({
       cwd: runtime.cwd,
       actor,
       port,
+      webRoot: fileURLToPath(new URL("./dist/web/", import.meta.resolve("#manifest"))),
       ...(config ? { config } : {}),
     });
     runtime.stdout.write(

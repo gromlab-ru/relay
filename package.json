@@ -1,138 +1,62 @@
 {
-  "name": "@gromlab/tasks-cli",
-  "version": "0.2.0",
-  "description": "Локальный CLI-трекер задач для AI-оркестраторов и агентов",
+  "name": "@gromlab/tasks-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tasks CLI, API and web workspaces",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gromlab-ru/tasks-cli.git"
   },
-  "homepage": "https://github.com/gromlab-ru/tasks-cli#readme",
-  "bugs": {
-    "url": "https://github.com/gromlab-ru/tasks-cli/issues"
-  },
-  "keywords": [
-    "cli",
-    "tasks",
-    "ai-agents",
-    "orchestration",
-    "json"
-  ],
   "type": "module",
-  "imports": {
-    "#core/*": {
-      "tasks-source": "./packages/core/src/*.ts",
-      "default": "./dist/core/*.js"
-    },
-    "#contracts": {
-      "tasks-source": "./packages/contracts/src/index.ts",
-      "default": "./dist/contracts/index.js"
-    },
-    "#server": "./dist/server/bootstrap.js",
-    "#manifest": "./package.json"
-  },
-  "bin": {
-    "tasks-cli": "dist/cli/main.js"
-  },
-  "files": [
-    "dist",
-    "!dist/.tsbuildinfo",
-    "README.md",
-    "CHANGELOG.md",
-    "PLAN.md",
-    "UI_SPEC.md",
-    "docs"
+  "packageManager": "npm@11.16.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12",
+    "npm": ">=11"
   },
   "scripts": {
-    "build": "node scripts/clean.mjs && tsc -b tsconfig.build.json && npm run build:web",
-    "build:web": "npm --prefix apps/web run build",
-    "dev:web": "npm --prefix apps/web run dev",
+    "dev": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run dev --filter=@tasks/server --filter=@tasks/web",
+    "dev:app": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run dev --filter=@tasks/server --filter=@tasks/web",
+    "dev:server": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run dev --filter=@tasks/server",
+    "dev:web": "turbo run dev --filter=@tasks/web",
     "dev:ui": "npm run dev:web",
-    "dev:app": "concurrently --kill-others --names api,web --prefix-colors blue,magenta \"npm run dev:server\" \"npm run dev:web\"",
-    "lint:web": "npm --prefix apps/web run lint",
-    "typecheck:web": "npm --prefix apps/web run typecheck",
-    "build:cli": "tsc -b apps/cli",
-    "build:server": "tsc -b apps/server",
-    "build:core": "tsc -b packages/core",
-    "dev": "npm run dev:cli --",
-    "dev:cli": "node --conditions=tasks-source --import tsx apps/cli/src/main.ts",
-    "dev:server": "concurrently --kill-others \"tsc --noEmit --watch --preserveWatchOutput\" \"node --watch --watch-preserve-output --conditions=tasks-source --import tsx apps/server/src/main.ts\"",
-    "typecheck": "tsc --noEmit && npm run typecheck:web",
-    "test": "npm run build && node --import tsx --test apps/cli/test/*.test.ts apps/server/test/*.test.ts packages/core/test/*.test.ts && npm run test:contracts",
-    "test:cli": "npm run build && node --import tsx --test apps/cli/test/*.test.ts",
-    "test:server": "npm run build:server && node --import tsx --test apps/server/test/*.test.ts",
-    "test:core": "npm run build:core && node --import tsx --test packages/core/test/*.test.ts",
-    "test:contracts": "tsc -p packages/contracts/tsconfig.test.json",
+    "dev:cli": "node --conditions=tasks-source apps/cli/scripts/dev.mjs",
+    "playground": "npm run --silent tasks --workspace=@tasks/playground --",
+    "start": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run start --filter=@tasks/server",
+    "start:cli": "node apps/cli/dist/cli/main.js",
+    "build": "turbo run build",
+    "build:cli": "turbo run build --filter=@gromlab/tasks-cli",
+    "build:server": "turbo run build --filter=@tasks/server",
+    "build:web": "turbo run build --filter=@tasks/web",
+    "build:core": "turbo run build --filter=@tasks/core",
+    "build:contracts": "turbo run build --filter=@tasks/contracts",
+    "lint": "turbo run lint",
+    "lint:web": "turbo run lint --filter=@tasks/web",
+    "typecheck": "turbo run typecheck",
+    "typecheck:web": "turbo run typecheck --filter=@tasks/web",
+    "test": "turbo run test",
+    "test:cli": "turbo run test --filter=@gromlab/tasks-cli",
+    "test:server": "turbo run test --filter=@tasks/server --filter=@tasks/server-runtime",
+    "test:core": "turbo run test --filter=@tasks/core",
+    "test:contracts": "turbo run test --filter=@tasks/contracts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm test",
-    "package:check": "npm run build && node scripts/release/check-package.mjs",
-    "release:check": "node scripts/release/check-tag.mjs",
-    "release:publish": "node scripts/release/publish.mjs",
-    "prepack": "npm run build"
-  },
-  "dependencies": {
-    "@fastify/static": "^10.1.3",
-    "@nestjs/common": "^12.0.1",
-    "@nestjs/core": "^12.0.1",
-    "@nestjs/platform-fastify": "^12.0.1",
-    "@nestjs/serve-static": "^12.0.0",
-    "@nestjs/swagger": "^12.0.1",
-    "commander": "^14.0.0",
-    "picocolors": "^1.1.1",
-    "proper-lockfile": "^4.1.2",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "string-width": "^8.2.2",
-    "wrap-ansi": "^10.0.1",
-    "zod": "^4.1.0"
+    "check": "npm run format:check && turbo run lint typecheck test",
+    "clean": "turbo run clean",
+    "package:check": "npm run clean && turbo run package:check --filter=@gromlab/tasks-cli",
+    "release:check": "npm run release:check --workspace=@gromlab/tasks-cli",
+    "release:publish": "npm run release:publish --workspace=@gromlab/tasks-cli"
   },
   "devDependencies": {
-    "@csstools/postcss-global-data": "^4.0.0",
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "@eslint/js": "^9.39.5",
-    "@fontsource-variable/inter": "^5.3.0",
-    "@mantine/core": "^9.6.1",
-    "@mantine/form": "^9.6.1",
-    "@mantine/hooks": "^9.6.1",
-    "@mantine/notifications": "^9.6.1",
-    "@types/node": "^22.18.0",
-    "@types/proper-lockfile": "^4.1.4",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.1",
     "agent-browser": "0.37.1",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1",
-    "autoprefixer": "^10.6.0",
-    "clsx": "^2.1.1",
-    "concurrently": "^10.0.5",
-    "dayjs": "^1.11.23",
-    "eslint": "^9.39.5",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "lucide-react": "^1.45.0",
-    "postcss": "^8.5.28",
-    "postcss-custom-media": "^12.0.1",
-    "postcss-nesting": "^14.0.1",
     "prettier": "^3.6.2",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.18.3",
-    "remark-gfm": "^4.0.1",
-    "swr": "^2.5.1",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.70.0",
-    "vite": "^8.3.0"
+    "turbo": "2.10.12"
   },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
+  "prettier": {
+    "trailingComma": "all",
+    "printWidth": 100
   }
 }

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { TaskService } from "#core/application/tasks/service";
-import { moveTask } from "#core/application/tasks/move";
-import { compareTasks } from "#core/domain/rank";
-import { openWorkspace } from "#core/storage/workspace";
+import { TaskService } from "@tasks/core/application/tasks/service";
+import { moveTask } from "@tasks/core/application/tasks/move";
+import { compareTasks } from "@tasks/core/domain/rank";
+import { openWorkspace } from "@tasks/core/storage/workspace";
 import { fixture } from "./helpers/workspace.js";
 
 test("порядок доски сохраняется в карточках после повторного открытия", async (t) => {

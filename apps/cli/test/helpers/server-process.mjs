@@ -126,6 +126,10 @@ export async function checkServerSurface(url, { web = false } = {}) {
   assert(document.paths["/api/v1/context"]);
   assert(document.paths["/api/v1/tasks"].post);
   assert(document.paths["/api/v1/events"].get);
-  assert.equal((await fetch(`${url}/api/docs`)).status, 200);
-  assert.equal((await fetch(`${url}/api/docs/swagger-ui-bundle.js`)).status, 200);
+  for (const path of ["/api/docs", "/api/docs/swagger-ui-bundle.js"]) {
+    const resource = await fetch(`${url}${path}`);
+    assert.equal(resource.status, 200);
+    // Drain large Swagger assets before testing graceful server shutdown.
+    assert((await resource.text()).length > 0);
+  }
 }

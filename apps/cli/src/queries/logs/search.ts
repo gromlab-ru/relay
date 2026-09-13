@@ -1,6 +1,6 @@
-import type { Log } from "#core/domain/log";
-import { logBrief } from "#core/domain/log";
-import { singleLine, parse } from "#core/domain/validation";
+import type { Log } from "@tasks/core/domain/log";
+import { logBrief } from "@tasks/core/domain/log";
+import { singleLine, parse } from "@tasks/core/domain/validation";
 import { previewText } from "../../presentation/text.js";
 import { searchLogsText } from "../../presentation/records.js";
 import { creationKey, paginate } from "../pagination.js";

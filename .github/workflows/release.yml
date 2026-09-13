@@ -62,7 +62,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # Версия 8.0.1
         with:
           artifact-ids: ${{ needs.ci.outputs.artifact_id }}
-          path: .artifacts/npm
+          path: apps/cli/.artifacts/npm
           merge-multiple: true
           digest-mismatch: error
       - name: Опубликовать новую версию или подтвердить совпадение существующей

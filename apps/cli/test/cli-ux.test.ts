@@ -7,7 +7,7 @@ import { Command } from "commander";
 import { createProgram } from "../src/program.js";
 import { registerCommand } from "../src/command.js";
 import { runtime } from "../src/context.js";
-import type { Task } from "#core/domain/task";
+import type { Task } from "@tasks/core/domain/task";
 import { failed, fixture, invokeRaw, successful } from "./helpers/cli.js";
 
 test("справка каждой команды содержит объяснение, примеры и общие параметры без конфига", async (t) => {

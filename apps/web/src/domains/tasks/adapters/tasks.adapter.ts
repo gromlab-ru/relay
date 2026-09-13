@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { BoardQuery, CreateTaskRequest, UpdateTaskRequest } from "#contracts";
+import type { BoardQuery, CreateTaskRequest, UpdateTaskRequest } from "@tasks/contracts";
 import { tasksApi } from "infra/tasks-api";
 import { TASK_PREVIEW_SCHEMA, TASK_SCHEMA } from "../types/task.type";
 import type {

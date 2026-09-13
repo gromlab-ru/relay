@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Task } from "#core/domain/task";
-import { toText } from "#core/domain/markdown";
+import type { Task } from "@tasks/core/domain/task";
+import { toText } from "@tasks/core/domain/markdown";
 import { failed, fixture, invoke, successful } from "./helpers/cli.js";
 
 test("оркестратор разбивает работу, backend передаёт результат frontend", async (t) => {

@@ -1,8 +1,13 @@
 # Tasks Web
 
 Рабочая канбан-доска на React, TypeScript и Vite. Компоненты — Mantine,
-серверный кеш — SWR, перенос — dnd-kit. Приложение собирается в `dist/web`
-и входит в единый npm-пакет `@gromlab/tasks-cli`.
+серверный кеш — SWR, перенос — dnd-kit. Приватный npm workspace `@tasks/web`
+собирается в `apps/web/dist`; его содержимое входит в дистрибутив CLI
+`@gromlab/tasks-cli`. Сам workspace отдельно не публикуется.
+
+Документация: [обзор репозитория](../../README.md), [руководство CLI](../cli/README.md),
+[история изменений CLI](../cli/CHANGELOG.md), [план](../../docs/PLAN.md),
+[HTTP API](../../packages/contracts/docs/API.md), [ТЗ интерфейса](UI_SPEC.md).
 
 ## Разработка
 
@@ -11,7 +16,7 @@
 
 ```bash
 npm ci
-npm run dev:app
+npm run dev
 ```
 
 Эта команда запускает API и Vite вместе. Их также можно запускать раздельно
@@ -19,15 +24,18 @@ npm run dev:app
 
 ```bash
 npm run dev:server
-npm run dev:web
+npm -w @tasks/web run dev
 ```
 
 Vite: `http://127.0.0.1:5173`. `/api`, включая SSE, проксируется на
-`http://127.0.0.1:3000`. Для другого адреса сервера задайте `TASKS_API_URL`.
-`npm run dev:ui` — совместимый псевдоним `dev:web`.
-При отдельном запуске `dev:web` сервер API должен уже работать: иначе прокси
-сообщит `ECONNREFUSED`. Vite разрешает ресурсы приложения, общие зависимости
-из корневого `node_modules` и переносимый пакет Contracts.
+`http://127.0.0.1:3000`. Для другого адреса сервера задайте `TASKS_API_URL`,
+для другого порта Vite задайте `TASKS_WEB_PORT` (по умолчанию 5173).
+`npm run dev:app` остаётся псевдонимом `dev`, а `npm run dev:ui` — `dev:web`.
+При отдельном запуске web сервер API должен уже работать: иначе прокси
+сообщит `ECONNREFUSED`. Vite автоматически определяет корень npm workspaces
+и разрешает общие зависимости без ручного списка `server.fs.allow`.
+Приложение импортирует из `@tasks/contracts` только типы, поэтому для запуска
+Vite не нужна предварительная производственная сборка Contracts.
 
 ## Сценарии
 
@@ -55,6 +63,12 @@ Vite: `http://127.0.0.1:5173`. `/api`, включая SSE, проксирует�
 Область профиля React SPA — `apps/web/src`. Применяется Unit Architecture из
 React Reference, указанного в `AGENTS.md`: фасеты `index.ts` и `lazy.ts`,
 алиасы слоёв без префикса `@`, вложенные юниты доступны своему родителю.
+Единственный список алиасов слоёв находится в `tsconfig.json`; Vite 8 читает
+его через `resolve.tsconfigPaths`. Межпакетный импорт `@tasks/contracts`
+использует публичный `exports` пакета, а не алиас его исходников.
+
+Браузерные tsconfig остаются самостоятельными: `module: ESNext`,
+`moduleResolution: Bundler` и DOM не наследуют общий NodeNext-профиль серверных пакетов.
 
 | Владелец                          | Ответственность                                            |
 | --------------------------------- | ---------------------------------------------------------- |
@@ -72,14 +86,15 @@ React Reference, указанного в `AGENTS.md`: фасеты `index.ts` и
 Клиент API остаётся в приложении. Его обновление из работающего сервера:
 
 ```bash
-npm --prefix apps/web run generate:api
+npm -w @tasks/web run generate:api
 ```
 
 `generated` полностью принадлежит `@gromlab/rest-api-codegen@5.2.4`.
 Ручные настройки находятся в `infra/tasks-api/tasks-api.ts`. Типы и runtime-проверки
-на границе доменов опираются на Contracts и реальный HTTP-контракт.
-`tsconfig.api.json` отдельно создаёт декларации сгенерированного кода; строгие
-проверки неиспользуемого кода приложения остаются в основном tsconfig и ESLint.
+на границе доменов опираются на `@tasks/contracts` и реальный HTTP-контракт.
+`tsconfig.api.json` отдельно создаёт декларации сгенерированного кода в
+`apps/web/.cache/api-types` и `apps/web/.cache/api.tsbuildinfo`; строгие проверки
+неиспользуемого кода приложения остаются в основном tsconfig и ESLint.
 
 Новые TSX создаются локальным генератором; журнал фактических команд — [GENERATION.md](GENERATION.md).
 
@@ -94,20 +109,32 @@ npm run build:web
 npm run package:check
 ```
 
+Корневые команды через Turbo сначала собирают зависимости, включая декларации
+Contracts. `npm -w @tasks/web run lint`, `npm -w @tasks/web run typecheck` и
+`npm -w @tasks/web run build` запускают только локальные инструменты, без Turbo;
+для двух последних команд `@tasks/contracts` должен быть уже собран.
+
 `package:check` проверяет установленный npm-архив в отдельном каталоге.
-В общую сборку фронтенд включён после очистки и компиляции Node-части.
+Общая сборка включает локальный `apps/web/dist` в дистрибутив CLI вместе с Node-частью.
+Для задач web `build` и `typecheck` Turbo должен сохранять `.cache/**`, а для
+`build` также `dist/**` относительно workspace, чтобы восстанавливать декларации SDK
+вместе с их build info. `npm -w @tasks/web run clean` удаляет только локальные
+`dist` и `.cache`.
 
 Для визуальной проверки устанавливается отдельный Chrome для agent-browser:
 
 ```bash
-npm --prefix apps/web run browser:install
-npm --prefix apps/web run browser -- --session tasks-web-review open http://127.0.0.1:5173
-npm --prefix apps/web run browser -- --session tasks-web-review snapshot -i
-npm --prefix apps/web run browser -- --session tasks-web-review close
+npm -w @tasks/web run browser:install
+npm -w @tasks/web run browser -- --session tasks-web-review open http://127.0.0.1:5173
+npm -w @tasks/web run browser -- --session tasks-web-review snapshot -i
+npm -w @tasks/web run browser -- --session tasks-web-review close
 ```
 
+Версия agent-browser закреплена в корневом `package.json`; команды workspace
+используют этот бинарный файл и локальный `agent-browser.json`.
 Используйте уникальную сессию каждого запуска. `agent-browser.json` задаёт headless
 и отключает автоматическое подключение к пользовательскому браузеру. Для проверки
 применяются снимки, реальные действия, `a11y`, `errors` и `console`.
 Ожидайте конкретный результат, а не `networkidle`: соединение SSE остаётся открытым.
-Браузерные проверки выполняются на временном проекте; скриншоты сохраняются в `.artifacts/web`.
+Браузерные проверки выполняются на временном проекте; скриншоты сохраняются в
+корневом `.artifacts/web` (из workspace это `../../.artifacts/web`).

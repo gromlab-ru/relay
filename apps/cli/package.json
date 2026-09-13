@@ -1,0 +1,71 @@
+{
+  "name": "@gromlab/tasks-cli",
+  "version": "0.2.0",
+  "description": "Локальный CLI-трекер задач для AI-оркестраторов и агентов",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gromlab-ru/tasks-cli.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/gromlab-ru/tasks-cli#readme",
+  "bugs": {
+    "url": "https://github.com/gromlab-ru/tasks-cli/issues"
+  },
+  "keywords": [
+    "cli",
+    "tasks",
+    "ai-agents",
+    "orchestration",
+    "json"
+  ],
+  "type": "module",
+  "imports": {
+    "#manifest": "./package.json"
+  },
+  "bin": {
+    "tasks-cli": "dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "PLAN.md",
+    "UI_SPEC.md",
+    "docs"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "node scripts/clean.mjs",
+    "dev": "node --conditions=tasks-source scripts/dev.mjs",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "node --import tsx --test test/*.test.ts",
+    "package:check": "node scripts/release/check-package.mjs",
+    "release:check": "node scripts/release/check-tag.mjs",
+    "release:publish": "node scripts/release/publish.mjs",
+    "prepack": "node -e \"throw new Error('Run npm run package:check at the repository root; publish only its checked archive.')\""
+  },
+  "dependencies": {
+    "@tasks/core": "*",
+    "@tasks/server-runtime": "*",
+    "commander": "^14.0.0",
+    "picocolors": "^1.1.1",
+    "string-width": "^8.2.2",
+    "wrap-ansi": "^10.0.1",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tasks/contracts": "*",
+    "@tasks/typescript-config": "*",
+    "@types/node": "^22.18.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}

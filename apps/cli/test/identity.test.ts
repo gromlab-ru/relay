@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { Task } from "#core/domain/task";
-import { TaskService } from "#core/application/tasks/service";
+import type { Task } from "@tasks/core/domain/task";
+import { TaskService } from "@tasks/core/application/tasks/service";
 import { getTask } from "../src/queries/tasks/queries.js";
-import { openWorkspace } from "#core/storage/workspace";
+import { openWorkspace } from "@tasks/core/storage/workspace";
 import { failed, fixture, successful } from "./helpers/cli.js";
 
 test("единственный ID — число от 1 во всех ответах, файлах и ссылках", async (t) => {

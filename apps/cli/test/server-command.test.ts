@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { binary, fixture } from "./helpers/cli.js";
 import { checkServerSurface, startServerProcess } from "./helpers/server-process.mjs";
-import type { ApiSuccess, ContextResponse } from "#contracts";
+import type { ApiSuccess, ContextResponse } from "@tasks/contracts";
+import { startServer } from "@tasks/server-runtime";
 
 test("server запускает API и Swagger из чужого каталога; CLI и HTTP используют одни данные", async (t) => {
   const app = await fixture(t);
@@ -12,7 +13,7 @@ test("server запускает API и Swagger из чужого каталог�
     app.root,
   );
   t.after(() => server.close());
-  await checkServerSurface(server.url);
+  await checkServerSurface(server.url, { web: true });
   const context = (await (
     await fetch(`${server.url}/api/v1/context`)
   ).json()) as ApiSuccess<ContextResponse>;
@@ -53,4 +54,11 @@ test("server запускает API и Swagger из чужого каталог�
   assert.equal(forbidden.status, 403);
   assert.equal(((await forbidden.json()) as { ok: boolean }).ok, false);
   await server.close();
+});
+
+test("API-only runtime retains JSON 404 responses without web assets", async (t) => {
+  const app = await fixture(t);
+  const server = await startServer({ cwd: app.root, actor: "api-human", port: 0, webRoot: false });
+  t.after(() => server.close());
+  await checkServerSurface(server.url, { web: false });
 });

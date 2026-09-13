@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { CommentService } from "#core/application/comments";
+import { CommentService } from "@tasks/core/application/comments";
 import { listComments } from "../queries/comments.js";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
@@ -8,7 +8,7 @@ import { pageFrom, pageOptions } from "../options.js";
 import type { PagingOptions } from "../options.js";
 import { textInputOptions, readTextInput } from "../text-input.js";
 import type { TextInputOptions } from "../text-input.js";
-import { MAX_COMMENT_BYTES } from "#core/domain/comment";
+import { MAX_COMMENT_BYTES } from "@tasks/core/domain/comment";
 import { commentText } from "../presentation/records.js";
 import { palette } from "../presentation/theme.js";
 

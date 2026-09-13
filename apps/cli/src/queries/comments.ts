@@ -1,7 +1,7 @@
-import { CommentService } from "#core/application/comments";
-import { toText } from "#core/domain/markdown";
-import type { Workspace } from "#core/storage/workspace";
-import type { TaskReference } from "#core/shared/ids";
+import { CommentService } from "@tasks/core/application/comments";
+import { toText } from "@tasks/core/domain/markdown";
+import type { Workspace } from "@tasks/core/storage/workspace";
+import type { TaskReference } from "@tasks/core/shared/ids";
 import { commentsText } from "../presentation/records.js";
 import { previewText } from "../presentation/text.js";
 import { creationKey, paginate } from "./pagination.js";

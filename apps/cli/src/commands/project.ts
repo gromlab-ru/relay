@@ -1,8 +1,8 @@
 import type { Command } from "commander";
-import { validateWorkspace } from "#core/application/validate";
+import { validateWorkspace } from "@tasks/core/application/validate";
 import { listGroups } from "../queries/groups.js";
-import { migrateTasks } from "#core/application/tasks/migrate";
-import { initialize } from "#core/storage/workspace";
+import { migrateTasks } from "@tasks/core/application/tasks/migrate";
+import { initialize } from "@tasks/core/storage/workspace";
 import { author, outputOptions } from "../context.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { printResult } from "../output.js";

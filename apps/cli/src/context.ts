@@ -1,12 +1,12 @@
 import type { Command } from "commander";
 import type { Readable, Writable } from "node:stream";
-import { TaskService } from "#core/application/tasks/service";
-import type { MutationOptions } from "#core/application/tasks/service";
+import { TaskService } from "@tasks/core/application/tasks/service";
+import type { MutationOptions } from "@tasks/core/application/tasks/service";
 import type { Result, OutputFormat } from "./queries/result.js";
-import { actorSchema, parse } from "#core/domain/validation";
-import { invariant } from "#core/shared/errors";
-import { openWorkspace } from "#core/storage/workspace";
-import type { Workspace } from "#core/storage/workspace";
+import { actorSchema, parse } from "@tasks/core/domain/validation";
+import { invariant } from "@tasks/core/shared/errors";
+import { openWorkspace } from "@tasks/core/storage/workspace";
+import type { Workspace } from "@tasks/core/storage/workspace";
 import { InputReader } from "./input.js";
 import { printResult } from "./output.js";
 import type { OutputOptions } from "./output.js";

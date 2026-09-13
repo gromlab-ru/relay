@@ -1,12 +1,12 @@
 import { Option } from "commander";
 import type { Command } from "commander";
-import { LogService } from "#core/application/logs/service";
+import { LogService } from "@tasks/core/application/logs/service";
 import { listLogs } from "../queries/logs/list.js";
 import type { LogFilters } from "../queries/logs/list.js";
 import { searchLogs } from "../queries/logs/search.js";
-import { MAX_REPORT_BYTES, logKindSchema } from "#core/domain/log";
-import type { Log } from "#core/domain/log";
-import { toLines } from "#core/domain/markdown";
+import { MAX_REPORT_BYTES, logKindSchema } from "@tasks/core/domain/log";
+import type { Log } from "@tasks/core/domain/log";
+import { toLines } from "@tasks/core/domain/markdown";
 import { logText } from "../presentation/records.js";
 import { palette } from "../presentation/theme.js";
 import { author } from "../context.js";

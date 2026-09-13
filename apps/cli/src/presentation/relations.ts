@@ -1,5 +1,5 @@
-import type { Task } from "#core/domain/task";
-import type { Config } from "#core/domain/config";
+import type { Task } from "@tasks/core/domain/task";
+import type { Config } from "@tasks/core/domain/config";
 import { palette, statusText, taskReference } from "./theme.js";
 import type { TextOptions } from "./theme.js";
 import { section, wrap } from "./layout.js";

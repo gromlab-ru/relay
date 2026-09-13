@@ -19,8 +19,7 @@
       "domains/*": ["./src/domains/*"],
       "infra/*": ["./src/infra/*"],
       "ui/*": ["./src/ui/*"],
-      "shared/*": ["./src/shared/*"],
-      "#contracts": ["../../packages/contracts/src/index.ts"]
+      "shared/*": ["./src/shared/*"]
     }
   },
   "references": [{ "path": "./tsconfig.api.json" }],

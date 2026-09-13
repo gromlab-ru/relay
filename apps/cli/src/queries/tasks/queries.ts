@@ -1,17 +1,17 @@
-import { assertGraph, blockedBy, isReady } from "#core/domain/graph";
-import { taskBrief } from "#core/domain/task";
-import { invariant } from "#core/shared/errors";
-import { resolveTask } from "#core/storage/tasks";
+import { assertGraph, blockedBy, isReady } from "@tasks/core/domain/graph";
+import { taskBrief } from "@tasks/core/domain/task";
+import { invariant } from "@tasks/core/shared/errors";
+import { resolveTask } from "@tasks/core/storage/tasks";
 import { paginate } from "../pagination.js";
-import type { TaskReference } from "#core/shared/ids";
+import type { TaskReference } from "@tasks/core/shared/ids";
 import type { PageOptions } from "../pagination.js";
-import type { TaskService } from "#core/application/tasks/service";
-import { selectTasks } from "#core/application/queries/tasks";
+import type { TaskService } from "@tasks/core/application/tasks/service";
+import { selectTasks } from "@tasks/core/application/queries/tasks";
 import { taskText, tasksText } from "../../presentation/tasks.js";
 import { fieldsText, markdownText } from "../../presentation/text.js";
 import { linksText } from "../../presentation/relations.js";
 import type { TextOptions } from "../../presentation/theme.js";
-import { compareTasks } from "#core/domain/rank";
+import { compareTasks } from "@tasks/core/domain/rank";
 
 export interface TaskFilters {
   status?: string;

@@ -1,14 +1,13 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "@tasks/typescript-config/base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "../../dist/cli",
-    "composite": true,
+    "outDir": "dist/cli",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "declaration": true,
     "sourceMap": true,
-    "inlineSources": true,
-    "tsBuildInfoFile": "../../dist/.tsbuildinfo/cli.tsbuildinfo"
+    "inlineSources": true
   },
-  "references": [{ "path": "../../packages/core" }, { "path": "../server" }],
   "include": ["src/**/*.ts"]
 }

@@ -1,5 +1,5 @@
-import type { Comment } from "#core/domain/comment";
-import type { Log } from "#core/domain/log";
+import type { Comment } from "@tasks/core/domain/comment";
+import type { Log } from "@tasks/core/domain/log";
 import { markdownText, safeText } from "./text.js";
 import { section, wrap } from "./layout.js";
 import { dateText, defaultTextOptions, palette } from "./theme.js";

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { claimTask, releaseTask, changeDependency } from "#core/application/tasks/assignment";
+import { claimTask, releaseTask, changeDependency } from "@tasks/core/application/tasks/assignment";
 import { changed, mutation } from "../context.js";
 import type { Runtime } from "../context.js";
 import { registerCommand, commandGroup } from "../command.js";

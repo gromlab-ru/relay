@@ -1,11 +1,11 @@
-import { assertGraph, blockedBy } from "#core/domain/graph";
-import { taskBrief } from "#core/domain/task";
-import type { Task } from "#core/domain/task";
-import { resolveTask } from "#core/storage/tasks";
-import type { TaskService } from "#core/application/tasks/service";
+import { assertGraph, blockedBy } from "@tasks/core/domain/graph";
+import { taskBrief } from "@tasks/core/domain/task";
+import type { Task } from "@tasks/core/domain/task";
+import { resolveTask } from "@tasks/core/storage/tasks";
+import type { TaskService } from "@tasks/core/application/tasks/service";
 import { treeText } from "../../presentation/relations.js";
 import type { TextOptions } from "../../presentation/theme.js";
-import type { TaskReference } from "#core/shared/ids";
+import type { TaskReference } from "@tasks/core/shared/ids";
 
 export async function taskTree(service: TaskService, reference: TaskReference, depth: number) {
   const tasks = await service.repository.snapshot();

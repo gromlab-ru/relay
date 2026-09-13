@@ -1,12 +1,10 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "@tasks/typescript-config/base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "../../dist/contracts",
+    "outDir": "dist",
     "types": [],
-    "composite": true,
-    "declaration": true,
-    "tsBuildInfoFile": "../../dist/.tsbuildinfo/contracts.tsbuildinfo"
+    "declaration": true
   },
   "include": ["src/**/*.ts"]
 }

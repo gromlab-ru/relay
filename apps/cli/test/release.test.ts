@@ -1,29 +1,33 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
-import { releaseMetadata } from "../../../scripts/release/metadata.mjs";
-import { publishedIntegrity, shouldPublish } from "../../../scripts/release/registry.mjs";
+import { distributionManifest, releaseMetadata } from "../scripts/release/metadata.mjs";
+import { publishedIntegrity, shouldPublish } from "../scripts/release/registry.mjs";
 
-function manifests(version = "0.1.0") {
+function manifests(version = "0.2.0") {
   return {
     manifest: {
       name: "@gromlab/tasks-cli",
       version,
       bin: { "tasks-cli": "dist/cli/main.js" },
-      publishConfig: { access: "public" },
+      publishConfig: { access: "public", registry: "https://registry.npmjs.org" },
       repository: { type: "git", url: "git+https://github.com/gromlab-ru/tasks-cli.git" },
+      engines: { node: ">=22" },
     },
     lock: {
-      name: "@gromlab/tasks-cli",
-      version,
-      packages: { "": { name: "@gromlab/tasks-cli", version } },
+      name: "@gromlab/tasks-monorepo",
+      version: "0.0.0",
+      packages: {
+        "": { name: "@gromlab/tasks-monorepo", version: "0.0.0" },
+        "apps/cli": { name: "@gromlab/tasks-cli", version },
+      },
     },
   };
 }
 
 test("релиз сверяет тег, оба манифеста и канал предварительной версии", () => {
   for (const [version, channel] of [
-    ["0.1.0", "latest"],
+    ["0.2.0", "latest"],
     ["0.2.0-rc.1", "next"],
   ]) {
     const { manifest, lock } = manifests(version);
@@ -32,18 +36,86 @@ test("релиз сверяет тег, оба манифеста и канал 
     assert.equal(metadata.archiveName, `gromlab-tasks-cli-${version}.tgz`);
   }
   const { manifest, lock } = manifests();
-  assert.throws(() => releaseMetadata(manifest, lock, "v0.1.1"));
-  assert.throws(() => releaseMetadata(manifest, { ...lock, version: "0.1.1" }, "v0.1.0"));
+  assert.throws(() => releaseMetadata(manifest, lock, "v0.2.1"));
+  assert.throws(() => releaseMetadata(manifest, { ...lock, version: "0.2.0" }, "v0.2.0"));
   assert.throws(() =>
     releaseMetadata(
       manifest,
-      { ...lock, packages: { "": { ...lock.packages[""], version: "0.1.1" } } },
-      "v0.1.0",
+      {
+        ...lock,
+        packages: {
+          ...lock.packages,
+          "apps/cli": { ...lock.packages["apps/cli"], version: "0.2.1" },
+        },
+      },
+      "v0.2.0",
     ),
+  );
+  assert.throws(() => releaseMetadata(manifest, { ...lock, packages: { "": lock.packages[""] } }));
+  assert.throws(() => releaseMetadata({ ...manifest, private: true }, lock));
+  assert.throws(() => releaseMetadata({ ...manifest, name: lock.name }, lock));
+  assert.throws(() => releaseMetadata({ ...manifest, bin: { "tasks-cli": "dist/main.js" } }, lock));
+  assert.throws(() => releaseMetadata({ ...manifest, engines: { node: ">=18" } }, lock));
+  assert.throws(() =>
+    releaseMetadata({ ...manifest, repository: { type: "git", url: "https://example.com" } }, lock),
   );
   for (const version of ["01.1.0", "0.1", "0.1.0-01", "0.1.0+build.1", "0.1.0\n"]) {
     const candidate = manifests(version);
     assert.throws(() => releaseMetadata(candidate.manifest, candidate.lock, `v${version}`));
+  }
+});
+
+test("release staging includes external runtime dependencies, not private workspaces or tools", () => {
+  const manifest = {
+    ...manifests().manifest,
+    dependencies: { "@tasks/core": "*", "@tasks/server-runtime": "*", commander: "^14.0.0" },
+    devDependencies: { esbuild: "^0.28.2", "@tasks/typescript-config": "*" },
+    scripts: { prepack: "node scripts/release/assemble-package.mjs" },
+    imports: { "#manifest": "./package.json" },
+  };
+  const workspaces = [
+    { name: "@tasks/contracts", version: "0.0.0", private: true, dependencies: {} },
+    {
+      name: "@tasks/core",
+      version: "0.0.0",
+      private: true,
+      dependencies: { zod: "^4.1.0", "proper-lockfile": "^4.1.2" },
+    },
+    {
+      name: "@tasks/server-runtime",
+      version: "0.0.0",
+      private: true,
+      dependencies: {
+        "@tasks/core": "*",
+        "@tasks/contracts": "*",
+        "@nestjs/core": "^12.0.1",
+        zod: "^4.1.0",
+      },
+    },
+  ];
+  const staged = distributionManifest(manifest, workspaces);
+  assert.equal(staged.name, manifest.name);
+  assert.equal(staged.version, manifest.version);
+  assert.deepEqual(staged.bin, manifest.bin);
+  assert.deepEqual(staged.repository, manifest.repository);
+  assert.deepEqual(staged.imports, { "#manifest": "./package.json" });
+  assert.deepEqual(staged.dependencies, {
+    "@nestjs/core": "^12.0.1",
+    commander: "^14.0.0",
+    "proper-lockfile": "^4.1.2",
+    zod: "^4.1.0",
+  });
+  assert.equal(staged.scripts, undefined);
+  assert.equal(staged.devDependencies, undefined);
+  assert(manifest.scripts.prepack, "The source manifest must not be mutated");
+  assert.throws(() => distributionManifest(manifest, workspaces.slice(1)));
+  for (const dependencies of [
+    { "@tasks/missing": "*" },
+    { "@tasks/core": "workspace:*" },
+    { zod: "^3.0.0" },
+    { external: "file:../external" },
+  ]) {
+    assert.throws(() => distributionManifest({ ...manifest, dependencies }, workspaces));
   }
 });
 

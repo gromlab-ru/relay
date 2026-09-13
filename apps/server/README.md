@@ -1,7 +1,8 @@
 # Tasks API
 
 NestJS + Fastify: локальный REST API, OpenAPI 3.1, Swagger UI и SSE.
-CLI и сервер напрямую вызывают операции `packages/core`; HTTP-слой не запускает CLI-команды.
+HTTP-слой находится в `@tasks/server-runtime` и вызывает операции `@tasks/core/*`, не запуская CLI-команды.
+`@tasks/server` содержит только самостоятельную точку входа и её dev-проверку.
 
 ## Запуск
 
@@ -11,14 +12,21 @@ CLI и сервер напрямую вызывают операции `packages
 npm run dev:server
 ```
 
-Dev-режим использует `playground/tasks.config.json`, автора `human` и порт `3000`.
-Переменные `TASKS_CONFIG`, `TASKS_ACTOR`, `TASKS_PORT` переопределяют эти значения.
+`npm run dev` запускает API и Vite вместе. `npm start` сначала собирает сервер,
+его зависимости и web через Turbo, затем запускает `apps/server/dist/main.js`
+с готовым UI из `apps/web/dist`.
 
-Сервер и Core запускаются из TypeScript-исходников через `tsx` с автоматическим
-перезапуском при изменениях. Параллельно работает `tsc --noEmit --watch` для проверки типов.
-Dev-запуск не зависит от JavaScript в `dist`: очистка и сборка npm-пакета не удаляют
+Самостоятельный сервер использует `apps/playground/tasks.config.json`, автора `human` и порт `3000`.
+Переменные `TASKS_CONFIG`, `TASKS_ACTOR`, `TASKS_PORT` переопределяют эти значения.
+Корневые команды разрешают относительный `TASKS_CONFIG` от каталога вызова до запуска Turbo.
+Для мутаций и браузерных проверок используйте временный проект с абсолютным `TASKS_CONFIG`.
+
+Сервер, runtime и Core запускаются из TypeScript-исходников через условие `tasks-source`
+и `tsx` с автоматическим перезапуском при изменениях. Параллельно работает
+`tsc -p tsconfig.dev.json --watch` для проверки типов без готовых сборок зависимостей.
+Dev-запуск не зависит от JavaScript в `dist`: очистка и сборка workspace-пакетов не удаляют
 его точку входа. Пути playground и готового фронтенда определяются относительно
-`#manifest` и одинаково разрешаются при запуске исходников и установленного пакета.
+`#manifest` приложения и одинаково разрешаются из `src/main.ts` и `dist/main.js`.
 
 Из установленного npm-пакета, в каталоге проекта:
 
@@ -38,7 +46,11 @@ npx @gromlab/tasks-cli server --actor human --config ./tasks.config.json --port 
 
 ## Устройство
 
-- `bootstrap.ts`: `createServer(options)` для встраивания/тестов и `startServer(options)` для HTTP.
+- `apps/server/src/main.ts`: переменные окружения, пути playground/UI и остановка по сигналам.
+- `packages/server-runtime/src/bootstrap.ts`: `createServer(options)` для встраивания/тестов и `startServer(options)` для HTTP.
+
+Внутри `packages/server-runtime/src`:
+
 - `modules/workspace`: контекст проекта, обновление конфигурации перед каждым запросом.
 - `modules/tasks`, `board`, `comments`, `logs`: адаптеры операций Core и публичных DTO.
 - `common/validation.ts`: проверка запросов Zod; HTTP-строки boolean/limit преобразуются явно.
@@ -46,7 +58,7 @@ npx @gromlab/tasks-cli server --actor human --config ./tasks.config.json --port 
 - `openapi`: схемы на основе Zod/Core, метаданные операций и регистрация Swagger.
 - `modules/events`: общий наблюдатель проекта и отдельная подписка каждого SSE-клиента.
 
-Контракт: [docs/API.md](../../docs/API.md), клиентские типы: `#contracts`.
+Контракт: [API.md](../../packages/contracts/docs/API.md), клиентские типы: `@tasks/contracts`.
 OpenAPI строится из тех же Zod-схем, которые проверяют запросы. Байтовые ограничения,
 графовые правила и зависимость статусов от конфигурации дополнительно описаны текстом:
 JSON Schema не выражает эти проверки полностью. HTTP-тесты проверяют реальные ответы по OpenAPI,
@@ -63,12 +75,12 @@ SSE уведомляет об изменениях API и файлов, вклю
 клиент перечитывает REST. Ошибка конфигурации/хранилища публикуется как `workspace-error`,
 после исправления приходит `changed`. Остановка приложения завершает потоки и наблюдатели.
 
-## Подключение будущего фронтенда
+## Подключение фронтенда
 
-Будущее приложение React + Vite располагается в `apps/web`. Сервер ожидает готовые
-`index.html` и ресурсы в `dist/web` рядом с `dist/server` внутри npm-пакета.
-Путь не зависит от рабочего каталога проекта с задачами. Программный параметр `webRoot`
-позволяет указать другой каталог; `webRoot: false` отключает статику.
+Приложение React + Vite располагается в `apps/web`. Самостоятельный сервер передаёт runtime
+путь `apps/web/dist`, вычисленный относительно своего `package.json`, а не рабочего каталога.
+При встраивании `@tasks/server-runtime` вызывающий код сам задаёт `webRoot`.
+Без `webRoot` или при `webRoot: false` runtime обслуживает только API, SSE и Swagger.
 
 Если сборки нет, API, SSE и Swagger работают самостоятельно, а `/` возвращает JSON 404.
 При наличии сборки `@nestjs/serve-static` отдаёт `/`, ресурсы и `index.html` для клиентских
@@ -76,29 +88,23 @@ SSE уведомляет об изменениях API и файлов, вклю
 возвращают 404, а не HTML. Фронтенд подключается при запуске; после появления сборки сервер
 нужно перезапустить.
 
-Самостоятельная сборка сервера — `npm run build:server`, сервера вместе с CLI —
-`npm run build:cli` (через TypeScript project references). Общий `build`/`prepack` может
-дополнительно собирать `apps/web` в `dist/web` **после очистки и сборки бэкенда**.
-Пока фронтенд разрабатывается, самостоятельная сборка и smoke-проверки API доступны отдельно.
+`npm run build:server` собирает сервер и его зависимости через Turbo; каждый пакет пишет
+только собственный `dist` командой `tsc -p tsconfig.json`, без TypeScript project references.
+Сборка `apps/web` независима от бэкенда: для API и Swagger она не требуется.
 
-В разработке Vite сможет проксировать `/api` на Nest, включая SSE. `dev:server` разрешает
-Origin `http://127.0.0.1:5173` и `http://localhost:5173`; пользовательский запуск допускает
-свой origin и запросы локальных клиентов без Origin. Сервер слушает только `127.0.0.1`.
+В разработке Vite проксирует `/api` на Nest, включая SSE. `dev:server` разрешает
+Origin `http://127.0.0.1:5173` и `http://localhost:5173` по умолчанию; `TASKS_WEB_PORT`
+меняет порт Vite и разрешённых dev-origin. Пользовательский запуск допускает свой origin
+и запросы локальных клиентов без Origin. Сервер слушает только `127.0.0.1`.
 
 ## Проверки
 
 ```bash
 npm run build:server
-npm exec tsc -- --noEmit
+npm run typecheck --workspace @tasks/server
+npm run typecheck --workspace @tasks/server-runtime
 npm run test:server
 npm run test:contracts
-```
-
-Проверка npm-архива из сборки бэкенда и CLI:
-
-```bash
-npm run build:cli
-npm exec -- node scripts/release/check-package.mjs
 ```
 
 Общие проверки продукта, включая подключённый в корневые команды фронтенд:
@@ -108,6 +114,8 @@ npm run check
 npm run package:check
 ```
 
-HTTP-тесты используют временные проекты и Fastify `inject`; SSE проверяется настоящим HTTP-соединением.
+HTTP-тесты в `packages/server-runtime/test` используют временные проекты и Fastify `inject`;
+SSE проверяется настоящим HTTP-соединением. `apps/server/test/dev-server.test.ts` проверяет
+изолированную копию workspace-пакетов без production-сборок, очистку `dist`, перезапуски и shutdown.
 Проверка пакета устанавливает npm-архив без devDependencies вне репозитория, запускает сервер
 через NPX и проверяет совместную работу HTTP и CLI с одними документами.

@@ -1,5 +1,5 @@
-import { assertGraph } from "#core/domain/graph";
-import type { TaskService } from "#core/application/tasks/service";
+import { assertGraph } from "@tasks/core/domain/graph";
+import type { TaskService } from "@tasks/core/application/tasks/service";
 import { paginate } from "./pagination.js";
 import type { PageOptions } from "./pagination.js";
 import { groupsText } from "../presentation/project.js";

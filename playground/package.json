@@ -1,7 +1,0 @@
-{
-  "name": "tasks-cli-playground",
-  "private": true,
-  "scripts": {
-    "tasks": "node --conditions=tasks-source --import tsx ../apps/cli/src/main.ts"
-  }
-}

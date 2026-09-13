@@ -1,0 +1,24 @@
+{
+  "name": "@tasks/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "tasks-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "tsc -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@tasks/core": "*",
+    "@tasks/typescript-config": "*",
+    "typescript": "^5.9.2"
+  }
+}

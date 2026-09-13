@@ -1,0 +1,112 @@
+import assert from "node:assert/strict";
+
+/**
+ * @typedef {{name: string, version: string, private?: boolean,
+ *   bin: Record<string, string>, publishConfig: {access: string, registry: string},
+ *   repository: {type: string, url: string, directory?: string},
+ *   engines: {node: string}, dependencies?: Record<string, string>,
+ *   devDependencies?: Record<string, string>, scripts?: Record<string, string>,
+ *   imports?: Record<string, string>, files?: string[]}} PackageManifest
+ * @typedef {{name: string, version: string,
+ *   packages: Record<string, {name?: string, version: string}>}} PackageLock
+ * @typedef {{name: string, version: string, private: boolean,
+ *   dependencies?: Record<string, string>}} WorkspaceManifest
+ */
+
+const number = "(?:0|[1-9]\\d*)";
+const identifier = `(?:${number}|\\d*[a-zA-Z-][0-9a-zA-Z-]*)`;
+const versionPattern = new RegExp(
+  `^${number}\\.${number}\\.${number}(?:-(?<prerelease>${identifier}(?:\\.${identifier})*))?$`,
+);
+
+/**
+ * Версия и канал вычисляются до установки зависимостей и любых обращений на запись к npm.
+ * @param {PackageManifest} manifest Манифест публикуемого пакета.
+ * @param {PackageLock} lock Корневой lockfile с записью apps/cli.
+ * @param {string} [tag] Git-тег, если проверяется релиз.
+ */
+export function releaseMetadata(manifest, lock, tag) {
+  assert.equal(manifest.name, "@gromlab/tasks-cli", "Неверное имя публикуемого пакета");
+  assert(!manifest.private, "Приватный манифест нельзя публиковать");
+  assert.equal(manifest.publishConfig.access, "public", "Ожидается публичный пакет");
+  assert.equal(manifest.publishConfig.registry, "https://registry.npmjs.org");
+  assert.equal(manifest.engines.node, ">=22", "CLI требует Node.js 22+");
+  assert.equal(manifest.bin["tasks-cli"], "dist/cli/main.js", "Неожиданная точка входа CLI");
+  assert.equal(
+    manifest.repository.url,
+    "git+https://github.com/gromlab-ru/tasks-cli.git",
+    "Неверный repository.url для npm provenance",
+  );
+  assert.equal(lock.name, "@gromlab/tasks-monorepo", "Неверное имя корневого lockfile");
+  assert.equal(lock.version, "0.0.0", "Версия монорепозитория не является версией CLI");
+  assert.equal(lock.packages[""]?.name, lock.name, "Корневое имя lockfile не совпадает");
+  assert.equal(lock.packages[""]?.version, lock.version, "Корневая версия lockfile не совпадает");
+  assert.equal(lock.packages["apps/cli"]?.name, manifest.name, "Неверное имя workspace CLI");
+  assert.equal(
+    lock.packages["apps/cli"]?.version,
+    manifest.version,
+    "Версия apps/cli в lockfile не совпадает с манифестом CLI",
+  );
+  const parsed = versionPattern.exec(manifest.version);
+  assert(
+    parsed && parsed[0] === manifest.version,
+    "Ожидается SemVer без build metadata: 0.1.0 или 0.2.0-rc.1",
+  );
+  if (tag !== undefined)
+    assert.equal(
+      tag,
+      `v${manifest.version}`,
+      "Тег должен точно совпадать с v<version> из package.json",
+    );
+  return {
+    name: manifest.name,
+    version: manifest.version,
+    distTag: parsed.groups?.prerelease ? "next" : "latest",
+    archiveName: `gromlab-tasks-cli-${manifest.version}.tgz`,
+  };
+}
+
+/**
+ * Private workspace code is bundled; only its external runtime dependencies are installed.
+ * @param {PackageManifest} manifest
+ * @param {WorkspaceManifest[]} workspaces
+ */
+export function distributionManifest(manifest, workspaces) {
+  const internal = new Set(workspaces.map((workspace) => workspace.name));
+  assert.deepEqual(
+    [...internal].sort(),
+    ["@tasks/contracts", "@tasks/core", "@tasks/server-runtime"],
+    "Expected all private runtime workspaces",
+  );
+  for (const workspace of workspaces) {
+    assert.equal(workspace.private, true, `${workspace.name} must remain private`);
+    assert.equal(workspace.version, "0.0.0", `${workspace.name} must not carry the CLI version`);
+  }
+  /** @type {Record<string, string>} */
+  const dependencies = {};
+  for (const candidate of [manifest, ...workspaces]) {
+    for (const [name, version] of Object.entries(candidate.dependencies ?? {})) {
+      if (internal.has(name)) {
+        assert.equal(version, "*", `${name} must use an npm workspace dependency`);
+        continue;
+      }
+      assert(!name.startsWith("@tasks/"), `Unbundled private dependency: ${name}`);
+      assert(!/^(?:workspace:|file:|link:)/.test(version), `Non-registry dependency: ${name}`);
+      assert(
+        dependencies[name] === undefined || dependencies[name] === version,
+        `Conflicting runtime versions for ${name}`,
+      );
+      dependencies[name] = version;
+    }
+  }
+  const staged = {
+    ...manifest,
+    imports: { "#manifest": "./package.json" },
+    dependencies: Object.fromEntries(
+      Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  };
+  delete staged.devDependencies;
+  delete staged.scripts;
+  return staged;
+}

@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { resolve } from "node:path";
-import { AppError, invariant } from "#core/shared/errors";
+import { AppError, invariant } from "@tasks/core/shared/errors";
 
 /** Один stdin нельзя неявно использовать сразу для нескольких независимых полей. */
 export class InputReader {

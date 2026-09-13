@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TestContext } from "node:test";
 
-export const binary = fileURLToPath(new URL("../../../../dist/cli/main.js", import.meta.url));
+export const binary = fileURLToPath(new URL("../../dist/cli/main.js", import.meta.url));
 
 interface Success<T> {
   ok: true;
@@ -96,7 +96,8 @@ export function failed(result: Invocation<unknown>, code: string, exitCode = 2):
 }
 
 export async function fixture(t: TestContext) {
-  const root = await mkdtemp(join(tmpdir(), "tasks-cli-"));
+  // Core canonicalizes storage paths, including macOS temporary-directory symlinks.
+  const root = await realpath(await mkdtemp(join(tmpdir(), "tasks-cli-")));
   t.after(() => rm(root, { recursive: true, force: true }));
   successful(await invoke(root, ["init"]));
   return {

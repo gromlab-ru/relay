@@ -1,12 +1,14 @@
 node_modules/
 dist/
+.turbo/
+.cache/
 coverage/
 package-lock.json
 .artifacts/
 .agents/
 .npmrc
-playground/.tasks/
-playground/tasks.config.json
+apps/playground/.tasks/
+apps/playground/tasks.config.json
 apps/ui/reference/
 apps/server/reference/
 apps/web/.templates/

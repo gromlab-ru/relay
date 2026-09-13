@@ -1,8 +1,8 @@
 import stringWidth from "string-width";
-import type { Task } from "#core/domain/task";
-import { defaultConfig } from "#core/domain/config";
-import type { Config } from "#core/domain/config";
-import { isReady } from "#core/domain/graph";
+import type { Task } from "@tasks/core/domain/task";
+import { defaultConfig } from "@tasks/core/domain/config";
+import type { Config } from "@tasks/core/domain/config";
+import { isReady } from "@tasks/core/domain/graph";
 import { markdownText, safeText } from "./text.js";
 import { contextText } from "./records.js";
 import { frame, section, table, wrap } from "./layout.js";

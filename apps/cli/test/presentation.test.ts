@@ -8,9 +8,9 @@ import stringWidth from "string-width";
 import { terminalOptions } from "../src/terminal.js";
 import { fixture, invokeRaw, successful } from "./helpers/cli.js";
 import { failed } from "./helpers/cli.js";
-import type { Task } from "#core/domain/task";
-import { TaskService } from "#core/application/tasks/service";
-import { openWorkspace } from "#core/storage/workspace";
+import type { Task } from "@tasks/core/domain/task";
+import { TaskService } from "@tasks/core/application/tasks/service";
+import { openWorkspace } from "@tasks/core/storage/workspace";
 
 test("подсветка учитывает TTY, NO_COLOR, TERM, явные флаги и ширину терминала", () => {
   const stream = Object.assign(

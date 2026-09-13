@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Task } from "#core/domain/task";
-import type { Log } from "#core/domain/log";
-import { toLines } from "#core/domain/markdown";
+import type { Task } from "@tasks/core/domain/task";
+import type { Log } from "@tasks/core/domain/log";
+import { toLines } from "@tasks/core/domain/markdown";
 import { failed, fixture, successful } from "./helpers/cli.js";
 
 test("описание, комментарии и отчёты находятся в единственном JSON задачи", async (t) => {

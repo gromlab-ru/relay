@@ -4,17 +4,21 @@
 
 ```text
 apps/
-  cli/src/           команды, аргументы, ввод, queries и терминальное presentation
-  cli/test/          проверки CLI и пользовательского запуска сервера
-  server/src/        NestJS: bootstrap, модули, HTTP, Swagger, статика
-  server/test/       HTTP/OpenAPI, SSE, статика и интеграция с Core
-  web/               будущее React + Vite приложение
+  cli/src/                 команды, аргументы, ввод, queries и терминальное presentation
+  cli/test/                проверки CLI и пользовательского запуска сервера
+  cli/scripts/release/     проверка тегов, упаковка, установка и публикация
+  server/src/main.ts       самостоятельная точка входа сервера
+  server/test/             source-watch, перезапуск и остановка dev-сервера
+  web/                     React + Vite приложение
+  playground/              демонстрационный проект
 packages/
-  core/src/          domain, application, storage, shared
-  core/test/         проверки ядра и архитектурных границ
-  contracts/src/     переносимые REST/SSE DTO
-  contracts/test/    совместимость типов с Core
-scripts/release/     проверка тегов, упаковка, установка и публикация
+  core/src/                domain, application, storage, shared
+  core/test/               проверки ядра и архитектурных границ
+  contracts/src/           переносимые REST/SSE DTO
+  contracts/test/          совместимость типов с Core
+  server-runtime/src/      NestJS: bootstrap, модули, HTTP, Swagger, статика
+  server-runtime/test/     HTTP/OpenAPI, SSE, статика и интеграция с Core
+  typescript-config/       общие строгие настройки Node-пакетов
 ```
 
 `CommandDefinition<Options>` объединяет контракт и справку команды.
@@ -22,20 +26,41 @@ scripts/release/     проверка тегов, упаковка, устано
 `run` получает контекст и типизированные опции, возвращает `Result`;
 открытие проекта и вывод не дублируются. Общие наборы параметров находятся
 в `apps/cli/src/options.ts`, `apps/cli/src/task-fields.ts` и `apps/cli/src/text-input.ts`.
-Порядок добавления команд и пример: [EXTENDING.md](EXTENDING.md).
+Порядок добавления команд и пример: [EXTENDING.md](../apps/cli/docs/EXTENDING.md).
 
-План разделения ответственности: [PLAN.md](../PLAN.md). CLI и NestJS/Fastify — входные
+План разделения ответственности: [PLAN.md](PLAN.md). CLI и NestJS/Fastify — входные
 интерфейсы к одному Core. Сервер напрямую вызывает его операции, проверяет HTTP-запросы
-с помощью Zod и возвращает DTO из Contracts. Реализованы REST и SSE из [API.md](API.md).
+с помощью Zod и возвращает DTO из Contracts. Реализованы REST и SSE из
+[API.md](../packages/contracts/docs/API.md).
 Swagger доступен по `/api/docs`, OpenAPI 3.1 — по `/api/openapi.json`.
 
-`Core/application/queries` содержит общие запросы доски и истории. Сервер открывает
+CLI импортирует операции через `@tasks/core/*` и лениво загружает `@tasks/server-runtime`
+для команды `server`. Самостоятельный `@tasks/server` использует тот же runtime;
+Node-реализация не импортируется из другого приложения. Runtime зависит от Core
+и `@tasks/contracts`; web использует только переносимый контракт.
+
+Корневой приватный пакет управляет npm workspaces и Turbo. Зависимости объявлены
+в манифестах потребителей, импорты проходят через `exports`. Node-пакеты собираются
+локальным `tsc -p tsconfig.json` в собственные `dist`, без межпакетных TypeScript
+project references и корневых алиасов исходников. Порядок сборки задаёт Turbo.
+Условие `tasks-source` выбирает TypeScript-экспорты для разработки через `tsx`;
+production и интеграционные проверки используют скомпилированный JavaScript.
+
+`packages/core/src/application/queries` содержит общие запросы доски и истории. Сервер открывает
 актуальный конфиг для каждой операции; снимки задач и изменения выполняются под блокировкой Core.
 Наблюдатель SSE отслеживает файлы, конфиг и замену каталогов, освобождая ресурсы при остановке.
 
-API собирается и запускается самостоятельно. Готовое будущее `apps/web` подключается
-из `dist/web` относительно установленного пакета; при наличии `index.html` сервер
-отдаёт статику и клиентские маршруты на `/`. `/api` зарезервирован и изолирован от SPA fallback.
+API собирается и запускается самостоятельно. `npm run dev` запускает API и Vite,
+а `npm start` собирает и запускает самостоятельный сервер с UI из `apps/web/dist`.
+По умолчанию используется `apps/playground/tasks.config.json`; для проверок изменений
+нужно отдельное временное хранилище с абсолютным путём `TASKS_CONFIG`.
+
+Сборка CLI содержит `apps/cli/dist/cli/main.js` и копию web в `apps/cli/dist/web`.
+В установленном пакете UI подключается из `dist/web` относительно манифеста CLI;
+при наличии `index.html` сервер отдаёт статику и клиентские маршруты на `/`.
+`/api` зарезервирован и изолирован от SPA fallback. `npm run package:check` собирает
+самодостаточный stage в `apps/cli/.artifacts/package`, упаковывает и проверяет архив
+в `apps/cli/.artifacts/npm`; приватные библиотеки включаются в готовый JavaScript.
 
 ## Самодостаточный документ
 
@@ -59,7 +84,7 @@ ID выделяется как максимальный сохранённый I
 
 ## Миграция v1 → v2
 
-Старые схемы изолированы в `domain/legacy.ts` и доступны только `migrate`.
+Старые схемы изолированы в `packages/core/src/domain/legacy.ts` и доступны только `migrate`.
 Уникальные старые номера сохраняются как ID. Остальные выдаются выше максимума;
 задачи без номеров в пустой базе получают ID от 1 в порядке создания.
 Все ссылки и принадлежность вложенных записей преобразуются вместе с документом.

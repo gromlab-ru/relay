@@ -1,10 +1,10 @@
 import type { Command } from "commander";
-import type { TaskPatch } from "#core/domain/task";
-import { invariant } from "#core/shared/errors";
+import type { TaskPatch } from "@tasks/core/domain/task";
+import { invariant } from "@tasks/core/shared/errors";
 import type { InputReader } from "./input.js";
 import { csv } from "./options.js";
-import { toLines } from "#core/domain/markdown";
-import { parseTaskId } from "#core/shared/ids";
+import { toLines } from "@tasks/core/domain/markdown";
+import { parseTaskId } from "@tasks/core/shared/ids";
 
 export interface FieldOptions {
   title?: string;
