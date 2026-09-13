@@ -1,0 +1,48 @@
+import { Module } from "@nestjs/common";
+import type { DynamicModule } from "@nestjs/common";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { HealthModule } from "./modules/health/health.module.js";
+import { ContextModule } from "./modules/context/context.module.js";
+import { BoardModule } from "./modules/board/board.module.js";
+import { TasksModule } from "./modules/tasks/tasks.module.js";
+import { CommentsModule } from "./modules/comments/comments.module.js";
+import { LogsModule } from "./modules/logs/logs.module.js";
+import { EventsModule } from "./modules/events/events.module.js";
+import { WorkspaceModule } from "./modules/workspace/workspace.module.js";
+import type { WorkspaceOptions } from "./modules/workspace/workspace.module.js";
+
+@Module({})
+export class AppModule {
+  static register(workspace: WorkspaceOptions, webRoot?: string): DynamicModule {
+    const staticOptions = {
+      fallthrough: true,
+      dotfiles: "deny",
+      redirect: false,
+      cacheControl: false,
+      // Fastify-опция: статические файлы не могут занять зарезервированный /api.
+      globIgnore: ["api/**"],
+    };
+    return {
+      module: AppModule,
+      imports: [
+        WorkspaceModule.register(workspace),
+        HealthModule,
+        ContextModule,
+        BoardModule,
+        TasksModule,
+        CommentsModule,
+        LogsModule,
+        EventsModule,
+        ...(webRoot
+          ? [
+              ServeStaticModule.forRoot({
+                rootPath: webRoot,
+                renderPath: "/*",
+                serveStaticOptions: staticOptions,
+              }),
+            ]
+          : []),
+      ],
+    };
+  }
+}

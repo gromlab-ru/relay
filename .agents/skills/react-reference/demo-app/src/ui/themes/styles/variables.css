@@ -1,0 +1,6 @@
+:root {
+  --app-color-canvas: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+  --app-color-ink: light-dark(var(--mantine-color-dark-9), var(--mantine-color-gray-0));
+  --app-color-glow: light-dark(rgb(76 110 245 / 14%), rgb(116 143 252 / 18%));
+  --app-color-surface-translucent: light-dark(rgb(255 255 255 / 78%), rgb(37 38 43 / 78%));
+}

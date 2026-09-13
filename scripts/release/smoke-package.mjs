@@ -12,8 +12,9 @@ import {
  * Проверяем установленный архив в отдельном проекте без исходников и devDependencies.
  * @param {string} archive Абсолютный путь к проверяемому архиву.
  * @param {import('./metadata.mjs').PackageManifest} manifest Ожидаемый манифест.
+ * @param {{web?: boolean}} options Состав проверяемой сборки.
  */
-export async function smokePackage(archive, manifest) {
+export async function smokePackage(archive, manifest, options = {}) {
   const directory = await mkdtemp(join(tmpdir(), "tasks-cli-release-"));
   try {
     await writeFile(
@@ -93,9 +94,18 @@ export async function smokePackage(archive, manifest) {
       directory,
     );
     try {
-      await checkServerSurface(server.url);
+      await checkServerSurface(server.url, options);
       const context = await (await fetch(`${server.url}/api/v1/context`)).json();
       assert.equal(context.data.storagePath, join(directory, ".tasks"));
+      const response = await fetch(`${server.url}/api/v1/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "HTTP из установленного архива" }),
+      });
+      assert.equal(response.status, 201);
+      const apiTask = await response.json();
+      const read = JSON.parse(await execute(["get", String(apiTask.data.id)]));
+      assert.equal(read.data.title, "HTTP из установленного архива");
     } finally {
       await server.close();
     }

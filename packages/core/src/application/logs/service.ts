@@ -6,6 +6,8 @@ import type { TaskReference } from "../../shared/ids.js";
 import { invariant } from "../../shared/errors.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { TaskService } from "../tasks/service.js";
+import { recordsPage } from "../queries/records.js";
+import type { RecordsQueryInput } from "../queries/records.js";
 
 export class LogService {
   private readonly tasks: TaskService;
@@ -14,12 +16,20 @@ export class LogService {
   }
 
   /** Добавление отчёта — изменение того же документа и той же revision задачи. */
-  async add(reference: TaskReference, input: LogInput, actor: string): Promise<Log> {
+  async add(
+    reference: TaskReference,
+    input: Pick<LogInput, "body"> & Partial<Omit<LogInput, "body">>,
+    actor: string,
+  ): Promise<Log> {
     const id = newId("log");
     const updated = await this.tasks.mutate(reference, { actor }, (task) => {
       const log = parse(
         logSchema,
         {
+          kind: "progress",
+          title: "",
+          summary: [],
+          sessionId: null,
           ...input,
           version: 1,
           id,
@@ -45,5 +55,10 @@ export class LogService {
     const log = task.logs[id];
     invariant(log, "LOG_NOT_FOUND", "Отчёт не найден в указанной задаче", 3);
     return log;
+  }
+
+  async list(reference: TaskReference, query: RecordsQueryInput = {}) {
+    const { taskId, logs } = await this.records(reference);
+    return recordsPage(logs, { root: this.tasks.workspace.root, taskId, type: "logs" }, query);
   }
 }

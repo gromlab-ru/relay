@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "../../dist/server",
+    "composite": true,
+    "declaration": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "tsBuildInfoFile": "../../dist/.tsbuildinfo/server.tsbuildinfo"
+  },
+  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/contracts" }],
+  "include": ["src/**/*.ts"]
+}

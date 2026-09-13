@@ -1,0 +1,38 @@
+.root {
+  scroll-margin-top: 4.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--mantine-color-orange-4);
+  border-radius: var(--mantine-radius-md);
+  background: var(--tasks-surface);
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.choices {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  @media (--md) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.choice {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--tasks-border);
+  border-radius: var(--mantine-radius-md);
+
+  & > pre {
+    max-height: 15rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+}

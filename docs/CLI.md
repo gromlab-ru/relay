@@ -313,11 +313,13 @@ npx @gromlab/tasks-cli server --actor human --open
 npx @gromlab/tasks-cli server --actor human --port 3001 --config ./tasks.config.json
 ```
 
-NestJS на `127.0.0.1` раздаёт собранный React и API. `--open` открывает браузер,
+NestJS на `127.0.0.1` предоставляет API, OpenAPI и Swagger; готовый фронтенд подключается
+из `dist/web`, когда сборка присутствует. `--open` открывает корневой адрес в браузере,
 `--port 0` выбирает свободный порт, `Ctrl+C` корректно останавливает приложение.
 С `--format json` первое сообщение содержит `data.url`, `data.actor`, `data.pid`.
-В каркасе доступны health/context и Swagger; продуктовые API и канбан — следующие
-этапы [PLAN.md](../PLAN.md). Контракт описан в [API.md](API.md).
+Параметры `--actor`, `--config`, `--port` имеют приоритет над `TASKS_ACTOR`, `TASKS_CONFIG`,
+`TASKS_PORT`. Без фронтенда `/` возвращает 404, а `/api/docs` предоставляет Swagger UI.
+Реализованы задачные маршруты, история, доска и SSE. Контракт описан в [API.md](API.md).
 
 ## Ошибки и проверка данных
 

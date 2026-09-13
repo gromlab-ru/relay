@@ -1,0 +1,18 @@
+:root {
+  --tasks-canvas: light-dark(#f8f9fb, #14161d);
+  --tasks-surface: light-dark(#fff, #1c1f28);
+  --tasks-raised: light-dark(#fff, #222632);
+  --tasks-border: light-dark(#e7e9ef, #303442);
+  --tasks-subtle: light-dark(#f1f3f7, #222630);
+  --tasks-ink: light-dark(#252938, #ebedf5);
+  --tasks-muted: light-dark(#626b7e, #b1b7c7);
+  --tasks-soft: light-dark(#6b7280, #979fb2);
+  --tasks-card-shadow: 0 1px 2px light-dark(#18223b06, #00000016);
+  --tasks-card-hover: 0 4px 14px light-dark(#18223b0c, #00000032);
+  --tasks-page-gutter: 1rem;
+  --tasks-panel-width: 44rem;
+
+  @media (--md) {
+    --tasks-page-gutter: 2rem;
+  }
+}

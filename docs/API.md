@@ -5,10 +5,11 @@
 
 ## Состояние реализации
 
-В каркасе реализованы `GET /api/v1/health` и `GET /api/v1/context`.
-Swagger доступен по `/api/docs`, спецификация — `/api/openapi.json`.
-Остальные маршруты ниже — согласованный целевой контракт для бэкенд-агента.
-Фронтенд-агент может использовать эти DTO для HTTP-моков до готовности маршрутов.
+Все перечисленные ниже REST-маршруты и SSE реализованы в `apps/server`.
+Swagger доступен по `/api/docs`, OpenAPI 3.1 — по `/api/openapi.json`.
+Операции имеют стабильные уникальные `operationId`; схемы запросов и ответов формируются
+из Zod/Core и проверяются HTTP-тестами. Сервер вызывает Core напрямую.
+Подробности запуска и интеграции: [apps/server/README.md](../apps/server/README.md).
 
 ## Запуск и транспорт
 
@@ -17,6 +18,8 @@ npx @gromlab/tasks-cli server --actor human --open
 ```
 
 Один локальный адрес обслуживает UI и API. Префикс — `/api/v1`.
+API работает и без фронтенда. Готовая сборка будущего `apps/web` подключается из `dist/web`
+и отдаётся на `/`; до её появления корневой адрес возвращает 404.
 Все тела запросов — UTF-8 JSON с `Content-Type: application/json`, лимит 1 МиБ.
 Автор изменений задаётся серверным `--actor` / `TASKS_ACTOR`; значение доступно
 в контексте. Поле исполнителя `assignee` имеет отдельное значение.
@@ -49,27 +52,28 @@ npx @gromlab/tasks-cli server --actor human --open
 
 В таблице пути указаны относительно `/api/v1`; типы относятся к `data`.
 
-| Метод | Путь                             | Запрос               | Ответ                                 | Этап                           |
-| ----- | -------------------------------- | -------------------- | ------------------------------------- | ------------------------------ |
-| GET   | `/health`                        | —                    | `HealthResponse`                      | Каркас                         |
-| GET   | `/context`                       | —                    | `ContextResponse`                     | Каркас                         |
-| GET   | `/board`                         | `BoardQuery`         | `BoardResponse` + `meta`              | Бэкенд                         |
-| GET   | `/tasks`                         | `BoardQuery`         | `BoardResponse` + `meta`              | Бэкенд; тот же контракт списка |
-| POST  | `/tasks`                         | `CreateTaskRequest`  | `TaskCard`, HTTP 201                  | Бэкенд                         |
-| GET   | `/tasks/:id`                     | —                    | `TaskDetailResponse`                  | Бэкенд                         |
-| PATCH | `/tasks/:id`                     | `UpdateTaskRequest`  | `TaskCard`                            | Бэкенд                         |
-| POST  | `/tasks/:id/move`                | `MoveTaskRequest`    | `TaskCard`                            | Бэкенд                         |
-| POST  | `/tasks/:id/claim`               | `ClaimTaskRequest`   | `TaskCard`                            | Бэкенд                         |
-| POST  | `/tasks/:id/release`             | `ReleaseTaskRequest` | `TaskCard`                            | Бэкенд                         |
-| GET   | `/tasks/:id/comments`            | `RecordsQuery`       | `RecordsPage<CommentRecord>` + `meta` | Бэкенд                         |
-| POST  | `/tasks/:id/comments`            | `AddCommentRequest`  | `CommentRecord`, HTTP 201             | Бэкенд                         |
-| GET   | `/tasks/:id/comments/:commentId` | —                    | `CommentRecord`                       | Бэкенд                         |
-| GET   | `/tasks/:id/logs`                | `RecordsQuery`       | `RecordsPage<LogRecord>` + `meta`     | Бэкенд                         |
-| POST  | `/tasks/:id/logs`                | `AddLogRequest`      | `LogRecord`, HTTP 201                 | Бэкенд                         |
-| GET   | `/tasks/:id/logs/:logId`         | —                    | `LogRecord`                           | Бэкенд                         |
-| GET   | `/events`                        | EventSource          | SSE, `ServerEvent`                    | Бэкенд                         |
+| Метод | Путь                             | Запрос               | Ответ                                 | operationId    |
+| ----- | -------------------------------- | -------------------- | ------------------------------------- | -------------- |
+| GET   | `/health`                        | —                    | `HealthResponse`                      | `getHealth`    |
+| GET   | `/context`                       | —                    | `ContextResponse`                     | `getContext`   |
+| GET   | `/board`                         | `BoardQuery`         | `BoardResponse` + `meta`              | `getBoard`     |
+| GET   | `/tasks`                         | `BoardQuery`         | `BoardResponse` + `meta`              | `listTasks`    |
+| POST  | `/tasks`                         | `CreateTaskRequest`  | `TaskCard`, HTTP 201                  | `createTask`   |
+| GET   | `/tasks/:id`                     | —                    | `TaskDetailResponse`                  | `getTask`      |
+| PATCH | `/tasks/:id`                     | `UpdateTaskRequest`  | `TaskCard`                            | `updateTask`   |
+| POST  | `/tasks/:id/move`                | `MoveTaskRequest`    | `TaskCard`                            | `moveTask`     |
+| POST  | `/tasks/:id/claim`               | `ClaimTaskRequest`   | `TaskCard`                            | `claimTask`    |
+| POST  | `/tasks/:id/release`             | `ReleaseTaskRequest` | `TaskCard`                            | `releaseTask`  |
+| GET   | `/tasks/:id/comments`            | `RecordsQuery`       | `RecordsPage<CommentRecord>` + `meta` | `listComments` |
+| POST  | `/tasks/:id/comments`            | `AddCommentRequest`  | `CommentRecord`, HTTP 201             | `addComment`   |
+| GET   | `/tasks/:id/comments/:commentId` | —                    | `CommentRecord`                       | `getComment`   |
+| GET   | `/tasks/:id/logs`                | `RecordsQuery`       | `RecordsPage<LogRecord>` + `meta`     | `listLogs`     |
+| POST  | `/tasks/:id/logs`                | `AddLogRequest`      | `LogRecord`, HTTP 201                 | `addLog`       |
+| GET   | `/tasks/:id/logs/:logId`         | —                    | `LogRecord`                           | `getLog`       |
+| GET   | `/events`                        | EventSource          | SSE, `ServerEvent`                    | `watchEvents`  |
 
-`health.stage` равен `scaffold` до завершения продуктовых маршрутов.
+`health.stage` равен `ready`: продуктовые маршруты доступны. Health проверяет доступность
+процесса; состояние конкретного проекта проверяется при выполнении операций и через SSE.
 Context содержит проект, `projectId`, пути, автора и конфигурацию. Ключи
 `config.statuses` определяют колонки и их порядок; их значения — цвета и семантику.
 
@@ -149,6 +153,8 @@ Boolean-параметры передаются как `true`/`false`. Поис�
 `BoardResponse` содержит `context`, `items`, `total`, счётчики колонок,
 списки групп/исполнителей/тегов и `version` снимка. Порядок: колонки по конфигу,
 внутри колонки — сохранённый rank с детерминированным разрешением совпадений.
+`total` и `counts` относятся ко всем отфильтрованным задачам до пагинации; `counts`
+содержит также пустые колонки. Варианты групп, исполнителей и тегов берутся из полного снимка.
 Лимит страницы доски: по умолчанию 200, диапазон 1–500.
 
 **Одинаковая пагинация у доски, комментариев и отчётов:**
@@ -169,6 +175,10 @@ Boolean-параметры передаются как `true`/`false`. Поис�
 `search` по телу с учётом регистра; `kind` применим к отчётам.
 Лимит страницы истории: по умолчанию 20, диапазон 1–100. Большие записи учитываются
 при ограничении ответа; клиенту доступны продолжение и отдельное чтение записи.
+Бюджет JSON-страницы истории — 512 КиБ. Сокращённая страница имеет `meta.truncated: true`.
+Если одна запись не помещается, ответ 400 `RESPONSE_TOO_LARGE` содержит `details.recordId`
+для отдельного чтения и `details.nextCursor` для продолжения после неё (`null`, если история закончилась).
+Курсор истории основан на `(createdAt, id)` и сохраняет позицию при добавлении новых записей.
 
 ## Записи контекста
 
@@ -217,3 +227,13 @@ data: {"source":"storage","taskIds":[12]}
 соединения клиент заново читает REST API. Сервер отслеживает атомарную замену
 файлов, изменения из CLI и обновление конфига. На отключение и shutdown
 освобождаются подписки и наблюдатели.
+Уведомления могут объединяться и дублироваться; гарантии воспроизведения по `Last-Event-ID` нет.
+Наблюдатель использует `fs.watch` с объединением событий за 40 мс и восстановительную
+проверку раз в 3 секунды. Изменение `storageDir` переключает наблюдение на новый каталог.
+
+## Локальный доступ
+
+Сервер слушает `127.0.0.1`. HTTP Host должен быть локальным; Origin браузера должен
+совпадать с origin сервера. Вызовы локальных CLI/MCP-клиентов без Origin разрешены.
+Dev-запуск дополнительно разрешает Vite на `http://127.0.0.1:5173` и `http://localhost:5173`.
+Лимиты запросов и единый формат ошибок действуют также при наличии SPA fallback.

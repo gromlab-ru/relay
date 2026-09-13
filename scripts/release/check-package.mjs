@@ -34,7 +34,6 @@ for (const required of [
   "dist/server/bootstrap.js",
   "dist/core/storage/workspace.js",
   "dist/contracts/index.js",
-  "dist/ui/index.html",
   "PLAN.md",
   "UI_SPEC.md",
   "README.md",
@@ -56,5 +55,5 @@ for (const path of paths) {
   );
 }
 const archive = join(artifactDirectory, entry.filename);
-await smokePackage(archive, manifest);
+await smokePackage(archive, manifest, { web: paths.includes("dist/web/index.html") });
 console.log(`Проверен npm-архив: ${archive}`);

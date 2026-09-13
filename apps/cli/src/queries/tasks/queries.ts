@@ -6,7 +6,7 @@ import { paginate } from "../pagination.js";
 import type { TaskReference } from "#core/shared/ids";
 import type { PageOptions } from "../pagination.js";
 import type { TaskService } from "#core/application/tasks/service";
-import { toText } from "#core/domain/markdown";
+import { selectTasks } from "#core/application/queries/tasks";
 import { taskText, tasksText } from "../../presentation/tasks.js";
 import { fieldsText, markdownText } from "../../presentation/text.js";
 import { linksText } from "../../presentation/relations.js";
@@ -28,34 +28,22 @@ export interface TaskFilters {
 export async function listTasks(service: TaskService, filters: TaskFilters, page: PageOptions) {
   const tasks = await service.repository.snapshot();
   assertGraph(tasks, service.workspace.config);
-  const parentId = filters.parent ? resolveTask(filters.parent, tasks).id : undefined;
-  const search = filters.search?.toLowerCase();
   const openOnly = filters.status === undefined && !filters.all;
-  if (filters.status !== undefined)
-    invariant(
-      Object.hasOwn(service.workspace.config.statuses, filters.status),
-      "UNKNOWN_STATUS",
-      "Статус не определён в конфигурации",
-    );
-  const items = [...tasks.values()]
-    .filter(
-      (task) =>
-        (filters.status === undefined || task.status === filters.status) &&
-        (!openOnly || !service.workspace.config.statuses[task.status]?.terminal) &&
-        (!filters.group || task.group === filters.group) &&
-        (!filters.assignee || task.assignee === filters.assignee) &&
-        (!parentId || task.parentId === parentId) &&
-        (!filters.tag || task.tags.includes(filters.tag)) &&
-        (!search ||
-          `${task.title}\n${toText(task.description)}\n${toText(task.summary)}`
-            .toLowerCase()
-            .includes(search)) &&
-        (!filters.ready || isReady(task, tasks, service.workspace.config)),
-    )
-    .map((task) => ({
-      ...taskBrief(task),
-      blockedBy: blockedBy(task, tasks, service.workspace.config),
-    }));
+  const items = selectTasks(
+    tasks,
+    service.workspace.config,
+    {
+      ...filters,
+      group: filters.group || undefined,
+      assignee: filters.assignee || undefined,
+      tag: filters.tag || undefined,
+      ready: filters.ready || undefined,
+    },
+    { openOnly, searchId: false },
+  ).map((task) => ({
+    ...taskBrief(task),
+    blockedBy: blockedBy(task, tasks, service.workspace.config),
+  }));
   const columns = Object.keys(service.workspace.config.statuses);
   if (filters.sort === "board")
     items.sort(

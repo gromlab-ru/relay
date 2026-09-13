@@ -7,8 +7,8 @@ apps/
   cli/src/           команды, аргументы, ввод, queries и терминальное presentation
   cli/test/          проверки CLI и пользовательского запуска сервера
   server/src/        NestJS: bootstrap, модули, HTTP, Swagger, статика
-  server/test/       самостоятельный запуск Nest; далее HTTP-интеграция
-  ui/src/            React, клиент API, визуальные компоненты
+  server/test/       HTTP/OpenAPI, SSE, статика и интеграция с Core
+  web/               будущее React + Vite приложение
 packages/
   core/src/          domain, application, storage, shared
   core/test/         проверки ядра и архитектурных границ
@@ -24,10 +24,18 @@ scripts/release/     проверка тегов, упаковка, устано
 в `apps/cli/src/options.ts`, `apps/cli/src/task-fields.ts` и `apps/cli/src/text-input.ts`.
 Порядок добавления команд и пример: [EXTENDING.md](EXTENDING.md).
 
-План разделения ответственности: [PLAN.md](../PLAN.md). Серверный каркас
-реализован на NestJS/Fastify; API использует Core, браузер — Contracts.
-В текущем каркасе доступны health/context, Swagger и раздача React.
-Продуктовые API и канбан разрабатываются отдельными агентами по плану и ТЗ.
+План разделения ответственности: [PLAN.md](../PLAN.md). CLI и NestJS/Fastify — входные
+интерфейсы к одному Core. Сервер напрямую вызывает его операции, проверяет HTTP-запросы
+с помощью Zod и возвращает DTO из Contracts. Реализованы REST и SSE из [API.md](API.md).
+Swagger доступен по `/api/docs`, OpenAPI 3.1 — по `/api/openapi.json`.
+
+`Core/application/queries` содержит общие запросы доски и истории. Сервер открывает
+актуальный конфиг для каждой операции; снимки задач и изменения выполняются под блокировкой Core.
+Наблюдатель SSE отслеживает файлы, конфиг и замену каталогов, освобождая ресурсы при остановке.
+
+API собирается и запускается самостоятельно. Готовое будущее `apps/web` подключается
+из `dist/web` относительно установленного пакета; при наличии `index.html` сервер
+отдаёт статику и клиентские маршруты на `/`. `/api` зарезервирован и изолирован от SPA fallback.
 
 ## Самодостаточный документ
 

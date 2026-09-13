@@ -1,0 +1,60 @@
+@layer mantine;
+@import "@mantine/core/styles.layer.css";
+@import "@mantine/notifications/styles.layer.css";
+@import "@fontsource-variable/inter";
+@import "./variables.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: var(--mantine-color-scheme);
+  background: var(--tasks-canvas);
+  color: var(--tasks-ink);
+  font-family: var(--mantine-font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-width: 20rem;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+[tabindex] {
+  &:focus-visible {
+    outline: 2px solid var(--mantine-color-indigo-5);
+    outline-offset: 3px;
+  }
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--mantine-color-indigo-light);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

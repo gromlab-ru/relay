@@ -81,35 +81,41 @@ export async function startServerProcess(args, cwd) {
   };
 }
 
-/** Проверяет общий origin, SPA, HTTP и ресурсы установленной сборки.
+/** Проверяет HTTP, Swagger и, при наличии сборки, общий origin и SPA.
  * @param {string} url URL запущенного сервера.
+ * @param {{web?: boolean}} options Ожидается ли фронтенд в установленном архиве.
  */
-export async function checkServerSurface(url) {
+export async function checkServerSurface(url, { web = false } = {}) {
   const health = await fetch(`${url}/api/v1/health`);
   assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), {
     ok: true,
-    data: { status: "ok", stage: "scaffold", contractVersion: 1 },
+    data: { status: "ok", stage: "ready", contractVersion: 1 },
   });
   const response = await fetch(url);
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].flatMap((match) =>
-    match[1] ? [match[1]] : [],
-  );
-  const styles = [...html.matchAll(/<link[^>]*href="([^"]+\.css)"/g)].flatMap((match) =>
-    match[1] ? [match[1]] : [],
-  );
-  assert(scripts.length > 0, "В HTML отсутствует React-сборка");
-  assert(styles.length > 0, "В HTML отсутствуют стили");
-  for (const path of [...scripts, ...styles]) {
-    const asset = await fetch(new URL(path, url));
-    assert.equal(asset.status, 200, path);
-    assert((await asset.text()).length > 0);
+  if (web) {
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].flatMap((match) =>
+      match[1] ? [match[1]] : [],
+    );
+    const styles = [...html.matchAll(/<link[^>]*href="([^"]+\.css)"/g)].flatMap((match) =>
+      match[1] ? [match[1]] : [],
+    );
+    assert(scripts.length > 0, "В HTML отсутствует React-сборка");
+    assert(styles.length > 0, "В HTML отсутствуют стили");
+    for (const path of [...scripts, ...styles]) {
+      const asset = await fetch(new URL(path, url));
+      assert.equal(asset.status, 200, path);
+      assert((await asset.text()).length > 0);
+    }
+    const deep = await fetch(`${url}/tasks/12`);
+    assert.equal(deep.status, 200);
+    assert.equal(await deep.text(), html);
+  } else {
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).ok, false);
   }
-  const deep = await fetch(`${url}/tasks/12`);
-  assert.equal(deep.status, 200);
-  assert.equal(await deep.text(), html);
   const unknown = await fetch(`${url}/api/v1/not-a-route`);
   assert.equal(unknown.status, 404);
   assert.equal((await unknown.json()).ok, false);
@@ -118,5 +124,8 @@ export async function checkServerSurface(url) {
   const document = await spec.json();
   assert(document.paths["/api/v1/health"]);
   assert(document.paths["/api/v1/context"]);
+  assert(document.paths["/api/v1/tasks"].post);
+  assert(document.paths["/api/v1/events"].get);
   assert.equal((await fetch(`${url}/api/docs`)).status, 200);
+  assert.equal((await fetch(`${url}/api/docs/swagger-ui-bundle.js`)).status, 200);
 }

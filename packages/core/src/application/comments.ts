@@ -7,6 +7,8 @@ import type { TaskReference } from "../shared/ids.js";
 import { invariant } from "../shared/errors.js";
 import type { Workspace } from "../storage/workspace.js";
 import { TaskService } from "./tasks/service.js";
+import { recordsPage } from "./queries/records.js";
+import type { RecordsQueryInput } from "./queries/records.js";
 
 export class CommentService {
   private readonly tasks: TaskService;
@@ -45,5 +47,14 @@ export class CommentService {
   async records(reference: TaskReference) {
     const task = await this.tasks.repository.resolve(reference);
     return { taskId: task.id, comments: Object.values(task.comments) };
+  }
+
+  async list(reference: TaskReference, query: RecordsQueryInput = {}) {
+    const { taskId, comments } = await this.records(reference);
+    return recordsPage(
+      comments,
+      { root: this.tasks.workspace.root, taskId, type: "comments" },
+      query,
+    );
   }
 }

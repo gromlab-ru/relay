@@ -1,0 +1,21 @@
+{
+  "name": "tasks-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "create": "npx --yes @gromlab/create@0.2.0 --skip-update",
+    "dev": "vite --host 127.0.0.1",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc -b tsconfig.api.json && tsc --noEmit",
+    "lint": "eslint src vite.config.ts",
+    "browser": "agent-browser --config ./agent-browser.json",
+    "browser:install": "agent-browser install",
+    "generate:api": "npx --yes @gromlab/rest-api-codegen@5.2.4 --input http://127.0.0.1:3000/api/openapi.json --output src/infra/tasks-api/generated"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions"
+  ]
+}

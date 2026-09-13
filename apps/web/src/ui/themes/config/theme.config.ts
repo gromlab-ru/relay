@@ -1,0 +1,65 @@
+import {
+  ActionIcon,
+  Button,
+  createTheme,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+  TextInput,
+  Tooltip,
+} from "@mantine/core";
+
+/** Спокойная, компактная тема для длительной работы с текстом. */
+export const theme = createTheme({
+  primaryColor: "indigo",
+  primaryShade: 6,
+  defaultRadius: "md",
+  fontFamily: "Inter Variable, Inter, system-ui, sans-serif",
+  fontFamilyMonospace: "ui-monospace, SFMono-Regular, Consolas, monospace",
+  headings: { fontFamily: "Inter Variable, Inter, system-ui, sans-serif", fontWeight: "650" },
+  fontSizes: { xs: "0.75rem", sm: "0.8125rem", md: "0.875rem", lg: "1rem", xl: "1.125rem" },
+  radius: { xs: "0.25rem", sm: "0.375rem", md: "0.5rem", lg: "0.75rem", xl: "1rem" },
+  colors: {
+    indigo: [
+      "#f0f0ff",
+      "#e0e0fc",
+      "#c4c2f5",
+      "#a5a1ed",
+      "#8780e6",
+      "#7065df",
+      "#6558d6",
+      "#5648bc",
+      "#473a9e",
+      "#392e80",
+    ],
+    dark: [
+      "#d9dbe3",
+      "#b7bac7",
+      "#969baa",
+      "#737a8b",
+      "#454a58",
+      "#303441",
+      "#242833",
+      "#1b1e27",
+      "#161820",
+      "#111319",
+    ],
+  },
+  components: {
+    Button: Button.extend({ defaultProps: { size: "sm", fw: 550 } }),
+    ActionIcon: ActionIcon.extend({ defaultProps: { size: 32, variant: "subtle", color: "gray" } }),
+    Input: Input.extend({ defaultProps: { size: "md" } }),
+    TextInput: TextInput.extend({ defaultProps: { size: "md" } }),
+    Textarea: Textarea.extend({ defaultProps: { size: "md" } }),
+    Select: Select.extend({ defaultProps: { size: "md" } }),
+    Tooltip: Tooltip.extend({ defaultProps: { withArrow: true, openDelay: 400 } }),
+    Modal: Modal.extend({
+      defaultProps: {
+        centered: true,
+        radius: "lg",
+        overlayProps: { backgroundOpacity: 0.3, blur: 2 },
+      },
+    }),
+  },
+});

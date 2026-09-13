@@ -14,13 +14,14 @@ NestJS отдаёт собранный UI, REST API и SSE с одного ло�
 
 ## Исходные условия
 
-- Основная зона реализации: `apps/ui/src`, `apps/ui/public` и `apps/ui/test`.
-- Стек: React, TypeScript, Vite. Подготовлены dnd-kit, TanStack Query,
-  react-markdown, remark-gfm, lucide-react.
+- Основная зона реализации: `apps/web/src`.
+- Стек: React, TypeScript, Vite, Mantine, SWR, dnd-kit,
+  react-markdown, remark-gfm, lucide-react. Направление дизайна — сдержанный рабочий интерфейс.
 - Типы HTTP и SSE импортируются из `#contracts`; описание — [docs/API.md](docs/API.md).
-- В каркасе доступны health и context; продуктовые маршруты реализует бэкенд-агент.
-- `ScaffoldScreen` проверяет связь приложений. Продуктовый интерфейс создаётся по этому ТЗ.
-- Материалы `apps/ui/reference` — незавершённый предыдущий прототип.
+- Сервер предоставляет продуктовые маршруты и SSE; интерфейс использует реальный API.
+- REST-клиент находится в `apps/web/src/infra/tasks-api`.
+- Автотесты фронтенда не добавляются по решению пользователя. Браузерные сценарии
+  проверяются через agent-browser в собственной headless-сессии.
 - Визуальную систему, композицию и компоненты проектирует UI-агент по подключённым
   правилам UI/UX. Критерии качества ниже являются частью приёмки.
 
@@ -143,9 +144,13 @@ NestJS отдаёт собранный UI, REST API и SSE с одного ло�
 
 ## 8. Интеграция и проверка
 
-Разработка: `npm run dev:server` и `npm run dev:ui` в отдельных терминалах.
+Разработка: `npm run dev:server` и `npm run dev:web` в отдельных терминалах.
 Vite проксирует `/api` в Nest. Фронтенд можно разрабатывать на типизированных
 HTTP-моках по Contracts; финальная приёмка требует реального сервера.
+
+Обязательные проверки приложения: `npm run lint:web`, `npm run typecheck:web`,
+`npm run build:web`. Визуальная приёмка использует agent-browser; правила изоляции
+и headless-режима закреплены в `apps/web/AGENTS.md`.
 
 Браузерные сценарии приёмки:
 
