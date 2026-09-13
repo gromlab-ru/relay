@@ -1,20 +1,19 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
     "allowJs": true,
     "checkJs": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "verbatimModuleSyntax": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.mjs"]
+  "include": [
+    "apps/cli/src/**/*.ts",
+    "apps/server/src/**/*.ts",
+    "packages/*/src/**/*.ts",
+    "apps/*/test/**/*.ts",
+    "apps/*/test/**/*.mjs",
+    "packages/*/test/**/*.ts",
+    "scripts/**/*.mjs"
+  ]
 }

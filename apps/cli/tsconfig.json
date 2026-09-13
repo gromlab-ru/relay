@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "../../dist/cli",
+    "composite": true,
+    "declaration": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "tsBuildInfoFile": "../../dist/.tsbuildinfo/cli.tsbuildinfo"
+  },
+  "references": [{ "path": "../../packages/core" }, { "path": "../server" }],
+  "include": ["src/**/*.ts"]
+}

@@ -7,7 +7,7 @@
 в документации, а в `--help` оставались однострочные подписи. Общие входы
 комментариев и отчётов тоже настраивались отдельно.
 
-Теперь `src/cli/command.ts` задаёт единый формат `CommandDefinition<Options>`:
+Теперь `apps/cli/src/command.ts` задаёт единый формат `CommandDefinition<Options>`:
 
 - `name` — имя и позиционные аргументы в синтаксисе Commander;
 - `description` — короткое назначение для списка команд;
@@ -23,7 +23,7 @@
 
 ## Пример
 
-Добавьте определение в подходящий модуль `src/cli/commands/`:
+Добавьте определение в подходящий модуль `apps/cli/src/commands/`:
 
 ```ts
 import { registerCommand } from "../command.js";
@@ -49,7 +49,7 @@ registerCommand<{ titleOnly?: boolean }>(program, runtime, {
 вынесите её в `application/` и вызывайте из `run`.
 
 Для отдельного семейства создайте `registerXxx(program, runtime)` и подключите
-его в `src/cli/program.ts`. Вложенные команды регистрируются так же:
+его в `apps/cli/src/program.ts`. Вложенные команды регистрируются так же:
 
 ```ts
 const group = commandGroup(program, {

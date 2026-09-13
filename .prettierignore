@@ -6,3 +6,5 @@ package-lock.json
 .npmrc
 playground/.tasks/
 playground/tasks.config.json
+apps/ui/reference/
+apps/server/reference/

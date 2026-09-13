@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { runNpm } from "../lib/npm.mjs";
+import { npxCliPath, runNpm, runNpx } from "../lib/npm.mjs";
+import {
+  checkServerSurface,
+  startServerProcess,
+} from "../../apps/cli/test/helpers/server-process.mjs";
 
 /**
  * Проверяем установленный архив в отдельном проекте без исходников и devDependencies.
@@ -36,8 +40,8 @@ export async function smokePackage(archive, manifest) {
 
     /** @param {string[]} args Команда установленного CLI. */
     const execute = async (args) => {
-      const { stdout } = await runNpm(
-        ["exec", "--offline", "--yes=false", "--", "tasks-cli", "--format", "json", ...args],
+      const { stdout } = await runNpx(
+        ["--offline", "--yes=false", manifest.name, "--format", "json", ...args],
         directory,
       );
       return stdout;
@@ -71,6 +75,30 @@ export async function smokePackage(archive, manifest) {
     assert.equal(validation.ok, true);
     assert.equal(validation.data.tasks, 1);
     assert.equal(validation.data.logs, 1);
+    assert.deepEqual(await readdir(join(directory, ".tasks")), ["1.json"]);
+    const server = await startServerProcess(
+      [
+        npxCliPath(),
+        "--offline",
+        "--yes=false",
+        manifest.name,
+        "server",
+        "--actor",
+        "package-check",
+        "--port",
+        "0",
+        "--format",
+        "json",
+      ],
+      directory,
+    );
+    try {
+      await checkServerSurface(server.url);
+      const context = await (await fetch(`${server.url}/api/v1/context`)).json();
+      assert.equal(context.data.storagePath, join(directory, ".tasks"));
+    } finally {
+      await server.close();
+    }
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

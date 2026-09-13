@@ -2,6 +2,6 @@
   "name": "tasks-cli-playground",
   "private": true,
   "scripts": {
-    "tasks": "node --import tsx ../src/cli/main.ts"
+    "tasks": "node --conditions=tasks-source --import tsx ../apps/cli/src/main.ts"
   }
 }

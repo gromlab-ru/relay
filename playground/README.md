@@ -25,7 +25,7 @@ npm run --silent tasks -- group list
 Эквивалент прямого вызова:
 
 ```bash
-node --import tsx ../src/cli/main.ts list
+node --conditions=tasks-source --import tsx ../apps/cli/src/main.ts list
 ```
 
 В терминале цвета включаются автоматически. Можно явно передать
@@ -52,7 +52,7 @@ node --import tsx ../src/cli/main.ts list
 | 6   | Подключить экран к API           | Ожидает завершения задач 3 и 4     |
 
 ID — единственные идентификаторы задач, сохранённые как числа в формате v2.
-Файлы находятся в `.tasks/tasks/1.json` … `6.json`, конфигурация — в `tasks.config.json`.
+Файлы находятся в `.tasks/1.json` … `6.json`, конфигурация — в `tasks.config.json`.
 
 ## Попробовать самому
 

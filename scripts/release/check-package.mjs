@@ -31,6 +31,12 @@ const paths = entry.files.map((file) => file.path);
 for (const required of [
   "package.json",
   "dist/cli/main.js",
+  "dist/server/bootstrap.js",
+  "dist/core/storage/workspace.js",
+  "dist/contracts/index.js",
+  "dist/ui/index.html",
+  "PLAN.md",
+  "UI_SPEC.md",
   "README.md",
   "CHANGELOG.md",
   "docs/CLI.md",
@@ -39,10 +45,14 @@ for (const required of [
 }
 for (const path of paths) {
   assert(
-    /^(?:dist\/|docs\/|package\.json$|README\.md$|CHANGELOG\.md$|LICENSE(?:\.md|\.txt)?$)/.test(
+    /^(?:dist\/|docs\/|package\.json$|README\.md$|CHANGELOG\.md$|PLAN\.md$|UI_SPEC\.md$|LICENSE(?:\.md|\.txt)?$)/.test(
       path,
     ),
     `Неожиданный файл в npm-архиве: ${path}`,
+  );
+  assert(
+    !path.includes(".tsbuildinfo") && !path.includes("/reference/") && !path.includes("/test/"),
+    `В архив попал служебный файл: ${path}`,
   );
 }
 const archive = join(artifactDirectory, entry.filename);
