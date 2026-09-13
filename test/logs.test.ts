@@ -11,7 +11,7 @@ test("описание, комментарии и отчёты находятс�
   const app = await fixture(t);
   const description = "## Требования\r\n\r\n- API\r\n- Форма\r\n";
   const id = successful(
-    await app.run<{ id: string }>(["create", "--title", "Самодостаточная задача", "--stdin"], {
+    await app.run<{ id: number }>(["create", "--title", "Самодостаточная задача", "--stdin"], {
       input: description,
     }),
   ).data.id;
@@ -55,7 +55,7 @@ test("вложенные записи проверяются вместе с з�
     .data.id;
   const path = join(app.root, ".tasks", "tasks", `${taskId}.json`);
   const task: Task = JSON.parse(await readFile(path, "utf8"));
-  task.logs[logId]!.taskId = `tsk_${"f".repeat(32)}`;
+  task.logs[logId]!.taskId = 999;
   await writeFile(path, JSON.stringify(task));
   failed(await app.run(["validate"]), "VALIDATION_FAILED", 5);
   failed(await app.run(["get", taskId]), "INVALID_DATA", 5);

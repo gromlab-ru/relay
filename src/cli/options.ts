@@ -3,6 +3,17 @@ import type { Command } from "commander";
 import type { PageOptions } from "../application/pagination.js";
 import type { CommandContext } from "./context.js";
 
+export interface PageControls {
+  limit?: number;
+  cursor?: string;
+}
+export interface PagingOptions extends PageControls {
+  all?: boolean;
+}
+export interface RevisionOptions {
+  ifRevision?: number;
+}
+
 export function integer(min: number, max: number) {
   return (value: string): number => {
     const parsed = Number(value);
@@ -17,18 +28,27 @@ export function csv(value: string): string[] {
   return value === "" ? [] : value.split(",").map((item) => item.trim());
 }
 
-export function pageOptions(command: Command): Command {
+export function cursorOptions(command: Command): Command {
   return command
     .option("--limit <count>", "Размер страницы, от 1 до 100", integer(1, 100))
-    .option("--cursor <cursor>", "Продолжение предыдущей страницы");
+    .option("--cursor <cursor>", "Курсор из предыдущего ответа; фильтры должны совпадать");
 }
 
-export function pageFrom(context: CommandContext, command: Command): PageOptions {
-  const options = command.opts<{ limit?: number; cursor?: string }>();
+export function pageOptions(command: Command): Command {
+  return cursorOptions(command).addOption(
+    new Option("--all", "Все результаты одним ответом; лимит --max-bytes сохраняется").conflicts([
+      "limit",
+      "cursor",
+    ]),
+  );
+}
+
+export function pageFrom(context: CommandContext, options: PagingOptions): PageOptions {
   return {
     limit: options.limit ?? context.workspace.config.output.defaultLimit,
     ...context.output,
     ...(options.cursor ? { cursor: options.cursor } : {}),
+    ...(options.all ? { all: true } : {}),
   };
 }
 

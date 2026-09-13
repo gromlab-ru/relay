@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { invariant } from "./errors.js";
 
-export type EntityPrefix = "tsk" | "cmt" | "log";
+export type EntityPrefix = "cmt" | "log";
+export type TaskReference = string | number;
 
-/** Случайный ID позволяет создавать записи без общего счётчика и координатора. */
+/** Комментарии и отчёты адресуются независимо внутри документа задачи. */
 export function newId(prefix: EntityPrefix): string {
   return `${prefix}_${randomUUID().replaceAll("-", "")}`;
 }
@@ -16,16 +17,13 @@ export function assertId(id: string, prefix: EntityPrefix): void {
   );
 }
 
-export function taskNumber(reference: string): number | undefined {
-  if (!/^#?[1-9]\d*$/.test(reference)) return undefined;
-  const number = Number(reference.replace(/^#/, ""));
-  return Number.isSafeInteger(number) ? number : undefined;
-}
-
-export function assertTaskReference(id: string): void {
+export function parseTaskId(reference: TaskReference): number {
+  const source = String(reference);
+  const id = Number(source.replace(/^#/, ""));
   invariant(
-    taskNumber(id) !== undefined || /^tsk_[a-f0-9]{4,32}$/.test(id),
+    /^#?[1-9]\d*$/.test(source) && Number.isSafeInteger(id),
     "INVALID_ID",
-    "Ожидается номер задачи от 1, полный ID или его префикс от 8 символов",
+    "ID задачи — целое число от 1. Пример: tasks-cli get 3",
   );
+  return id;
 }

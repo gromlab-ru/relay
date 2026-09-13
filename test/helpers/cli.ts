@@ -36,15 +36,19 @@ interface RunOptions {
 /** Сквозные проверки запускают опубликованный JavaScript в отдельном процессе Node.js. */
 export async function invokeRaw(
   cwd: string,
-  args: string[],
+  args: Array<string | number>,
   options: RunOptions = {},
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [...(options.nodeArgs ?? []), binary, ...args], {
-      cwd,
-      env: { ...process.env, TASKS_ACTOR: "orchestrator", ...options.env },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    const child = spawn(
+      process.execPath,
+      [...(options.nodeArgs ?? []), binary, ...args.map(String)],
+      {
+        cwd,
+        env: { ...process.env, TASKS_ACTOR: "orchestrator", ...options.env },
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8").on("data", (text: string) => {
@@ -66,7 +70,7 @@ export async function invokeRaw(
 
 export async function invoke<T = unknown>(
   cwd: string,
-  args: string[],
+  args: Array<string | number>,
   options: RunOptions = {},
 ): Promise<Invocation<T>> {
   const result = await invokeRaw(cwd, ["--format", "json", ...args], options);
@@ -97,9 +101,10 @@ export async function fixture(t: TestContext) {
   successful(await invoke(root, ["init"]));
   return {
     root,
-    run: <T = unknown>(args: string[], options?: RunOptions) => invoke<T>(root, args, options),
-    async create(title: string, args: string[] = []): Promise<string> {
-      return successful(await invoke<{ id: string }>(root, ["create", "--title", title, ...args]))
+    run: <T = unknown>(args: Array<string | number>, options?: RunOptions) =>
+      invoke<T>(root, args, options),
+    async create(title: string, args: Array<string | number> = []): Promise<number> {
+      return successful(await invoke<{ id: number }>(root, ["create", "--title", title, ...args]))
         .data.id;
     },
   };

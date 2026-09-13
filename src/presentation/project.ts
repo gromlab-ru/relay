@@ -17,7 +17,8 @@ export function initializedText(
       options.width,
     ),
     "",
-    colors.dim("Следующий шаг: create --title <название> --actor <автор>"),
+    colors.dim('Следующий шаг: tasks-cli create "Первая задача" --actor human'),
+    colors.dim("Справка и примеры: tasks-cli create --help"),
   ].join("\n");
 }
 
@@ -37,6 +38,7 @@ export function configText(
           ...(name === config.defaultStatus ? ["по умолчанию"] : []),
           ...(config.readyStatuses.includes(name) ? ["доступен для claim"] : []),
           ...(rule.satisfiesDependencies ? ["завершает зависимости"] : []),
+          `цвет: ${rule.color ?? "auto"}`,
         ].join(" · "),
         options.width,
       ),
@@ -51,7 +53,10 @@ export function configText(
     section("Статусы", statuses, options),
     section(
       "Вывод",
-      `Формат: ${config.output.format}\nРазмер страницы: ${config.output.defaultLimit}\nЛимит ответа: ${config.output.maxBytes} байт`,
+      wrap(
+        `Формат: ${config.output.format}\nРазмер страницы групп, комментариев и отчётов: ${config.output.defaultLimit}\nСписок задач: по байтовому бюджету (число ограничивается через --limit)\nЛимит ответа: ${config.output.maxBytes} байт`,
+        options.width,
+      ),
       options,
     ),
   ].join("\n\n");
@@ -86,12 +91,4 @@ export function groupsText(
           options,
         );
   return section(`Группы · ${items.length}`, items.length ? body : "Групп нет.", options);
-}
-
-export function numberedText(
-  data: { assigned: number; total: number },
-  options: TextOptions,
-): string {
-  const colors = palette(options);
-  return colors.green(`✓ Назначено номеров: ${data.assigned}`) + `\nВсего задач: ${data.total}`;
 }

@@ -27,7 +27,7 @@ test("после переоткрытия зависимости можно ут
   successful(
     await app.run(["update", id, "--summary", "Требуется перепроверка после изменения контракта"]),
   );
-  const task = successful(await app.run<Task & { blockedBy: string[] }>(["get", id])).data;
+  const task = successful(await app.run<Task & { blockedBy: number[] }>(["get", id])).data;
   assert.equal(task.status, "done");
   assert.deepEqual(task.blockedBy, [dependency]);
   assert.match(toText(task.summary), /перепроверка/);

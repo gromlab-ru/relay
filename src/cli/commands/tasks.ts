@@ -1,99 +1,196 @@
 import type { Command } from "commander";
 import { getTask, listTasks, taskLinks, taskMarkdown } from "../../application/tasks/queries.js";
-import { taskTree } from "../../application/tasks/tree.js";
-import { numberTasks } from "../../application/tasks/numbering.js";
-import { numberedText } from "../../presentation/project.js";
 import type { TaskFilters } from "../../application/tasks/queries.js";
+import { taskTree } from "../../application/tasks/tree.js";
 import { invariant } from "../../shared/errors.js";
-import { action, argument, author, changed, mutation } from "../context.js";
+import { author, changed, mutation } from "../context.js";
 import type { Runtime } from "../context.js";
-import { csv, integer, pageFrom, pageOptions, revisionOption } from "../options.js";
+import { registerCommand } from "../command.js";
+import { csv, integer, cursorOptions, revisionOption } from "../options.js";
+import type { PageControls, RevisionOptions } from "../options.js";
 import { fieldOptions, taskFields } from "../task-fields.js";
+import type { FieldOptions } from "../task-fields.js";
+
+const taskArgument = { id: "ID задачи: целое число от 1 (например, 3)" };
 
 export function registerTasks(program: Command, runtime: Runtime): void {
-  const number = program
-    .command("number")
-    .description("Назначить постоянные номера старым задачам и устранить совпадения после слияния");
-  action(number, runtime, async (context) => {
-    const data = await numberTasks(context.tasks, author(context));
-    return { data, text: (options) => numberedText(data, options) };
+  registerCommand<FieldOptions>(program, runtime, {
+    name: "create [title]",
+    description: "Создать задачу и получить её ID",
+    arguments: { title: "Название в кавычках; альтернатива --title" },
+    details:
+      "ID назначается автоматически: максимальный существующий ID + 1, первая задача — 1.\nДля записи нужен --actor или TASKS_ACTOR. Описание можно передать через --stdin.\n--parent задаёт иерархию; --depends-on — задачи, завершения которых нужно дождаться.",
+    examples: [
+      ['tasks-cli create "Добавить API" --group backend --actor human', "Создать задачу в группе"],
+      [
+        'tasks-cli create --title "Форма регистрации" --parent 1 --depends-on 2 --actor frontend',
+        "Создать подзадачу с зависимостью",
+      ],
+      [
+        "tasks-cli create \"Контракт\" --actor human --stdin <<'MD'\n## Требования\n\n- Описать POST /users.\nMD",
+        "Передать многострочное описание",
+      ],
+    ],
+    configure: fieldOptions,
+    async run(context, input) {
+      const actor = author(context);
+      const fields = await taskFields(
+        input.options,
+        context.runtime.input,
+        input.optionalArgument(),
+      );
+      invariant(
+        fields.title !== undefined,
+        "TITLE_REQUIRED",
+        'Укажите название: tasks-cli create "Название задачи" --actor <автор>',
+      );
+      return changed(await context.tasks.create({ ...fields, title: fields.title }, actor));
+    },
   });
 
-  const create = fieldOptions(program.command("create").description("Создать задачу"), true);
-  action(create, runtime, async (context) => {
-    const actor = author(context);
-    const fields = await taskFields(create, runtime.input);
-    invariant(fields.title !== undefined, "TITLE_REQUIRED", "Укажите --title");
-    return changed(await context.tasks.create({ ...fields, title: fields.title }, actor));
+  registerCommand<TaskFilters & PageControls>(program, runtime, {
+    name: "list",
+    description: "Показать незавершённые задачи по группам",
+    details:
+      "По умолчанию показаны все незавершённые задачи: статусы с terminal: false, включая заблокированные.\n--all включает завершённые и отменённые; явный --status выбирает только указанный статус.\n--ready оставляет свободные задачи в разрешённых статусах с выполненными зависимостями.\nБез --limit количество задач ограничено только --max-bytes; большой список возвращает курсор продолжения.\n--all можно сочетать с --limit и --cursor. При продолжении повторяйте фильтры, включая --all.\nТекст разделён на группы, внутри каждой — порядок по ID. JSON возвращает плоский data.items по ID.",
+    examples: [
+      ["tasks-cli list", "Текущая работа и очередь по группам"],
+      ["tasks-cli list --all", "Включить историю: выполненные и отменённые задачи"],
+      ["tasks-cli list --status done", "Показать выполненные задачи"],
+      ["tasks-cli list --group backend --ready", "Найти доступную работу в группе"],
+      [
+        "tasks-cli list --status in_progress --assignee backend-agent",
+        "Работа конкретного исполнителя",
+      ],
+      [
+        'tasks-cli list --search "контракт" --format json',
+        "Найти текст в названии, описании или результате",
+      ],
+      [
+        "tasks-cli list --limit 10 --cursor <курсор-из-ответа>",
+        "Продолжить предыдущую страницу с теми же фильтрами",
+      ],
+    ],
+    configure: (command) =>
+      cursorOptions(command)
+        .option("--all", "Все статусы, включая завершённые и отменённые")
+        .option(
+          "--status <status>",
+          "Точный статус из config get; переопределяет фильтр незавершённых",
+        )
+        .option("--group <name>", "Точное имя группы")
+        .option("--assignee <actor>", "Точный идентификатор исполнителя")
+        .option("--parent <id>", "Только непосредственные подзадачи указанного ID")
+        .option("--tag <tag>", "Задачи с указанным тегом")
+        .option("--search <text>", "Поиск в названии, описании и результате без учёта регистра")
+        .option("--ready", "Свободные задачи с выполненными зависимостями"),
+    run(context, { options }) {
+      const { status, group, assignee, parent, tag, search, ready, all, limit, cursor } = options;
+      const filters = Object.fromEntries(
+        Object.entries({ status, group, assignee, parent, tag, search, ready, all }).filter(
+          ([, value]) => value !== undefined,
+        ),
+      );
+      return listTasks(context.tasks, filters, {
+        ...context.output,
+        ...(limit === undefined ? {} : { limit }),
+        ...(cursor === undefined ? {} : { cursor }),
+      });
+    },
   });
 
-  const list = pageOptions(program.command("list").description("Получить компактный список задач"))
-    .option("--status <status>", "Статус")
-    .option("--group <name>", "Группа")
-    .option("--assignee <actor>", "Исполнитель")
-    .option("--parent <id>", "Непосредственные подзадачи")
-    .option("--tag <tag>", "Тег")
-    .option("--search <text>", "Подстрока в названии, описании или результате")
-    .option("--ready", "Свободные задачи с выполненными зависимостями");
-  action(list, runtime, async (context) => {
-    const { status, group, assignee, parent, tag, search, ready } = list.opts<TaskFilters>();
-    const filters = Object.fromEntries(
-      Object.entries({ status, group, assignee, parent, tag, search, ready }).filter(
-        ([, value]) => value !== undefined,
-      ),
-    );
-    return listTasks(context.tasks, filters, pageFrom(context, list));
+  registerCommand<{ fields?: string[]; full?: boolean }>(program, runtime, {
+    name: "get <id>",
+    description: "Прочитать карточку задачи",
+    arguments: taskArgument,
+    details:
+      "Обычная карточка содержит описание, результат, связи и счётчики записей.\n--full добавляет комментарии и отчёты целиком. --fields выбирает только нужные поля.\nЕсли ответ слишком велик, выберите поля или увеличьте --max-bytes.",
+    examples: [
+      ["tasks-cli get 3", "Карточка задачи"],
+      ["tasks-cli get 3 --full --max-bytes 262144", "Прочитать весь контекст"],
+      [
+        "tasks-cli get 3 --fields id,status,summary,revision --format json",
+        "Компактный ответ для агента",
+      ],
+    ],
+    configure: (command) =>
+      command
+        .option("--fields <fields>", "Поля через запятую: id,title,status,summary,revision,…", csv)
+        .option("--full", "Включить все комментарии и отчёты"),
+    run: (context, input) =>
+      getTask(context.tasks, input.argument(), input.options.fields, !!input.options.full),
   });
-
-  const get = program
-    .command("get <id>")
-    .description("Получить карточку без комментариев и логов")
-    .option("--fields <fields>", "Только перечисленные поля через запятую", csv)
-    .option("--full", "Включить комментарии и отчёты");
-  action(get, runtime, (context) =>
-    getTask(
-      context.tasks,
-      argument(get),
-      get.opts<{ fields?: string[] }>().fields,
-      !!get.opts<{ full?: boolean }>().full,
-    ),
-  );
 
   for (const field of ["description", "summary"] as const) {
-    const command = program
-      .command(`${field} <id>`)
-      .description(
+    registerCommand(program, runtime, {
+      name: `${field} <id>`,
+      arguments: taskArgument,
+      description:
         field === "description"
-          ? "Показать многострочное описание"
-          : "Показать многострочный результат",
-      );
-    action(command, runtime, (context) => taskMarkdown(context.tasks, argument(command), field));
+          ? "Прочитать описание задачи"
+          : "Прочитать актуальный результат задачи",
+      details:
+        "Выводит только выбранный Markdown-текст с сохранением абзацев и отступов.\nВ JSON многострочный текст представлен массивом строк. Изменение выполняется командой update.",
+      examples: [
+        [`tasks-cli ${field} 3`, "Прочитать текст"],
+        [`tasks-cli update 3 --${field} "Новый текст" --actor human`, "Изменить текст"],
+      ],
+      run: (context, input) => taskMarkdown(context.tasks, input.argument(), field),
+    });
   }
 
-  const update = revisionOption(
-    fieldOptions(program.command("update <id>").description("Изменить указанные поля задачи")),
-  );
-  action(update, runtime, async (context) => {
-    const options = mutation(context, update);
-    const fields = await taskFields(update, runtime.input);
-    invariant(
-      Object.keys(fields).length > 0,
-      "EMPTY_UPDATE",
-      "Укажите хотя бы одно поле для изменения",
-    );
-    return changed(await context.tasks.update(argument(update), fields, options));
+  registerCommand<FieldOptions & RevisionOptions>(program, runtime, {
+    name: "update <id>",
+    description: "Изменить выбранные поля задачи",
+    arguments: taskArgument,
+    details:
+      "Неуказанные поля сохраняются. Пустая строка очищает description, summary, tags и depends-on.\nДля группы и родителя используйте --clear-group / --clear-parent. Исполнитель снимается через release.\n--depends-on заменяет весь набор; для одной связи используйте deps add/remove.\n--if-revision защищает от изменения карточки после вашего чтения, включая новые комментарии и отчёты.",
+    examples: [
+      [
+        'tasks-cli update 3 --summary "API готов" --if-revision 4 --actor backend',
+        "Сохранить результат с проверкой версии",
+      ],
+      ['tasks-cli update 3 --clear-group --tags "" --actor human', "Очистить группу и теги"],
+      [
+        "tasks-cli update 3 --description-file requirements.md --actor human",
+        "Заменить описание из файла",
+      ],
+    ],
+    configure: (command) => revisionOption(fieldOptions(command)),
+    async run(context, input) {
+      const options = mutation(context, input.options);
+      const fields = await taskFields(input.options, context.runtime.input);
+      invariant(
+        Object.keys(fields).length > 0,
+        "EMPTY_UPDATE",
+        'Укажите поле для изменения. Пример: update 3 --summary "Готово"',
+      );
+      return changed(await context.tasks.update(input.argument(), fields, options));
+    },
   });
 
-  const links = program
-    .command("links <id>")
-    .description("Родительские связи, зависимости и блокеры");
-  action(links, runtime, (context) => taskLinks(context.tasks, argument(links)));
+  registerCommand(program, runtime, {
+    name: "links <id>",
+    description: "Показать связи и текущие блокеры",
+    arguments: taskArgument,
+    details:
+      "Показывает родителя, подзадачи, зависимости и задачи, которые зависят от этой.\nНезавершённые зависимости выделены в секцию «Ожидает завершения».",
+    examples: [["tasks-cli links 3", "Понять, что блокирует задачу и кого блокирует она"]],
+    run: (context, input) => taskLinks(context.tasks, input.argument()),
+  });
 
-  const tree = program
-    .command("tree <id>")
-    .description("Дерево подзадач в виде списка с глубиной")
-    .option("--depth <depth>", "Максимальная глубина, корень имеет глубину 0", integer(0, 100), 3);
-  action(tree, runtime, (context) =>
-    taskTree(context.tasks, argument(tree), tree.opts<{ depth: number }>().depth),
-  );
+  registerCommand<{ depth: number }>(program, runtime, {
+    name: "tree <id>",
+    description: "Показать дерево подзадач",
+    arguments: taskArgument,
+    details:
+      "Корень имеет глубину 0. По умолчанию выводятся три уровня потомков.\nРодительство задаёт декомпозицию, а блокирующие связи задаются отдельно через deps.\nВ JSON дерево представлено плоским списком с полем depth.",
+    examples: [
+      ["tasks-cli tree 1 --depth 2", "Посмотреть два уровня подзадач"],
+      ["tasks-cli tree 1 --depth 100 --format json", "Прочитать глубокую иерархию"],
+    ],
+    configure: (command) =>
+      command.option("--depth <depth>", "Глубина от 0 до 100; корень — 0", integer(0, 100), 3),
+    run: (context, input) => taskTree(context.tasks, input.argument(), input.options.depth),
+  });
 }

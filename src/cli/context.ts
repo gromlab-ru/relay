@@ -27,6 +27,7 @@ export interface Runtime {
   input: InputReader;
   env: NodeJS.ProcessEnv;
   output: OutputOptions;
+  helpCommand?: string;
 }
 export interface CommandContext {
   workspace: Workspace;
@@ -80,32 +81,24 @@ export function action(
   });
 }
 
-export function argument(command: Command, index = 0): string {
-  const value: unknown = command.processedArgs[index];
-  invariant(typeof value === "string", "INVALID_ARGUMENT", "Отсутствует аргумент команды");
-  return value;
-}
-
 export function author(context: CommandContext): string {
   const value = context.globals.actor ?? context.runtime.env.TASKS_ACTOR;
   invariant(value, "ACTOR_REQUIRED", "Для записи укажите --actor или TASKS_ACTOR");
   return parse(actorSchema, value, "автор");
 }
 
-export function mutation(context: CommandContext, command: Command): MutationOptions {
-  const { ifRevision } = command.opts<{ ifRevision?: number }>();
+export function mutation(
+  context: CommandContext,
+  { ifRevision }: { ifRevision?: number },
+): MutationOptions {
   return { actor: author(context), ...(ifRevision !== undefined ? { ifRevision } : {}) };
 }
 
 /** Ответ записи мал и не зависит от размера описания уже сохранённой карточки. */
-export function changed(task: {
-  id: string;
-  number?: number | undefined;
-  revision: number;
-}): Result {
+export function changed(task: { id: number; revision: number }): Result {
   return {
-    data: { id: task.id, number: task.number, revision: task.revision },
+    data: { id: task.id, revision: task.revision },
     text: (options) =>
-      `${palette(options).green("✓")} Сохранена задача ${task.number === undefined ? task.id : `#${task.number}`} ${palette(options).dim(`· версия ${task.revision}`)}`,
+      `${palette(options).green("✓")} Сохранена задача #${task.id} ${palette(options).dim(`· версия ${task.revision}`)}`,
   };
 }

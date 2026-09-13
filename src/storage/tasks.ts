@@ -2,8 +2,9 @@ import { join } from "node:path";
 import { MAX_TASK_BYTES, taskSchema } from "../domain/task.js";
 import type { Task } from "../domain/task.js";
 import { parse } from "../domain/validation.js";
-import { assertTaskReference, taskNumber } from "../shared/ids.js";
-import { invariant } from "../shared/errors.js";
+import { parseTaskId } from "../shared/ids.js";
+import type { TaskReference } from "../shared/ids.js";
+import { invariant, isErrno, AppError } from "../shared/errors.js";
 import { atomicJson, jsonFiles, readJson } from "./files.js";
 import type { Workspace } from "./workspace.js";
 
@@ -11,6 +12,7 @@ export class TaskRepository {
   constructor(readonly workspace: Workspace) {}
 
   async readFile(filename: string): Promise<Task> {
+    assertModernFilename(filename);
     const path = this.workspace.path("tasks", filename);
     const task = parse(taskSchema, await readJson(path, MAX_TASK_BYTES), path, true);
     invariant(
@@ -22,8 +24,8 @@ export class TaskRepository {
     return task;
   }
 
-  async all(): Promise<Map<string, Task>> {
-    const tasks = new Map<string, Task>();
+  async all(): Promise<Map<number, Task>> {
+    const tasks = new Map<number, Task>();
     // Последовательное чтение ограничивает число открытых файлов независимо от размера базы.
     for (const file of await jsonFiles(this.workspace.path("tasks"))) {
       const task = await this.readFile(file);
@@ -33,27 +35,47 @@ export class TaskRepository {
   }
 
   /** Читаем согласованный граф, чтобы не увидеть смесь состояний двух операций. */
-  snapshot(): Promise<Map<string, Task>> {
+  snapshot(): Promise<Map<number, Task>> {
     return this.workspace.locked(() => this.all());
   }
 
-  async resolve(reference: string): Promise<Task> {
-    assertTaskReference(reference);
-    // Внутри операции записи блокировка уже удерживается вызывающим сервисом.
-    if (taskNumber(reference) !== undefined) return resolveTask(reference, await this.all());
-    if (reference.length === 36) return this.readFile(`${reference}.json`);
-    const matches = (await jsonFiles(this.workspace.path("tasks"))).filter((file) =>
-      file.startsWith(reference),
-    );
-    invariant(matches.length > 0, "TASK_NOT_FOUND", `Задача ${reference} не найдена`, 3);
-    invariant(
-      matches.length === 1,
-      "AMBIGUOUS_ID",
-      `Префикс ${reference} соответствует нескольким задачам`,
-      2,
-      { ids: matches.map((name) => name.slice(0, -5)) },
-    );
-    return this.readFile(matches[0]!);
+  resolve(reference: TaskReference): Promise<Task> {
+    const id = parseTaskId(reference);
+    return this.workspace.locked(() => this.readId(id));
+  }
+
+  /** Карточке нужны только её непосредственные связи, а не все отчёты всего проекта. */
+  related(reference: TaskReference): Promise<Map<number, Task>> {
+    const id = parseTaskId(reference);
+    return this.workspace.locked(async () => {
+      const task = await this.readId(id);
+      const tasks = new Map([[id, task]]);
+      for (const relatedId of new Set([
+        ...task.dependsOn,
+        ...(task.parentId ? [task.parentId] : []),
+      ])) {
+        if (!tasks.has(relatedId)) tasks.set(relatedId, await this.readId(relatedId));
+      }
+      return tasks;
+    });
+  }
+
+  private async readId(id: number): Promise<Task> {
+    try {
+      return await this.readFile(`${id}.json`);
+    } catch (error) {
+      if (isErrno(error, "ENOENT") || (error instanceof AppError && error.code === "NOT_FOUND")) {
+        // Сканирование нужно только для понятной диагностики старого хранилища.
+        for (const filename of await jsonFiles(this.workspace.path("tasks")))
+          assertModernFilename(filename);
+        throw new AppError(
+          "TASK_NOT_FOUND",
+          `Задача ${id} не найдена. Посмотрите tasks-cli list`,
+          3,
+        );
+      }
+      throw error;
+    }
   }
 
   /** Вызывается только внутри блокировки, когда проверены ссылки и revision. */
@@ -83,21 +105,18 @@ export class TaskRepository {
   }
 }
 
-export function resolveTask(reference: string, tasks: ReadonlyMap<string, Task>): Task {
-  assertTaskReference(reference);
-  const number = taskNumber(reference);
-  const matches = [...tasks.values()].filter((task) =>
-    number === undefined ? task.id.startsWith(reference) : task.number === number,
-  );
-  invariant(matches.length > 0, "TASK_NOT_FOUND", `Задача ${reference} не найдена`, 3);
+export function resolveTask(reference: TaskReference, tasks: ReadonlyMap<number, Task>): Task {
+  const id = parseTaskId(reference);
+  const task = tasks.get(id);
+  invariant(task, "TASK_NOT_FOUND", `Задача ${id} не найдена. Посмотрите tasks-cli list`, 3);
+  return task;
+}
+
+function assertModernFilename(filename: string): void {
   invariant(
-    matches.length === 1,
-    "AMBIGUOUS_ID",
-    "Ссылка соответствует нескольким задачам; проверьте номера командой number",
-    2,
-    {
-      ids: matches.map((task) => task.id),
-    },
+    !filename.startsWith("tsk_"),
+    "MIGRATION_REQUIRED",
+    "Хранилище использует UUID. Выполните tasks-cli migrate --actor <автор> для перехода на числовые ID",
+    4,
   );
-  return matches[0]!;
 }

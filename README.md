@@ -1,136 +1,30 @@
 # @gromlab/tasks-cli
 
-Локальный трекер для AI-оркестратора, субагентов и человека.
-**Одна задача — один JSON со всем контекстом.**
-
-Описание, комментарии и короткие отчёты хранятся внутри задачи. Многострочный
-Markdown записывается массивами строк для удобной отладки JSON и выводится
-через CLI с настоящими переносами, пустыми строками и отступами.
+Локальный трекер задач для человека и AI-агентов. **Одна задача — один JSON**
+с описанием, связями, комментариями и отчётами. Требуется Node.js 22+.
 
 ## Возможности
 
-- Задачи, группы, теги, подзадачи и зависимости с проверкой циклов.
-- Постоянные номера `1`, `2`, `3` для команд и человекочитаемых ссылок.
-- Произвольные статусы в конфигурации проекта.
-- Назначение оркестратором и атомарный захват задачи агентом.
-- Проверка `revision` для защиты от устаревших изменений.
-- Многострочные описания, комментарии, саммари и отчёты в одном файле задачи.
-- Выборочное чтение контекста, поиск по отчётам и пагинация.
-- Цветные таблицы, карточки, деревья связей и Markdown; `--format json` для машинной обработки.
-- Атомарная запись JSON и проверка целостности после Git-слияния.
+| Возможность                               | Команды и настройки                                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------- |
+| Задачи с последовательными ID от 1        | `create`, `get`, `update`, `status`                                       |
+| Обзор задач по группам                    | `list` — незавершённые, `list --all` — все статусы, `group list` — сводка |
+| Подзадачи и зависимости                   | `tree`, `links`, `deps add/remove`                                        |
+| Распределение работы между агентами       | `assign`, атомарный `claim`, `release`, проверка `--if-revision`          |
+| Контекст в Markdown                       | `description`, `summary`, `comment`, `log`                                |
+| Свои статусы и цвета                      | `tasks.config.json`, просмотр через `config get`                          |
+| Машинный вывод и пагинация                | `--format json`, `--limit`, `--cursor`, `--max-bytes`                     |
+| Проверка данных и перенос старого формата | `validate`, `migrate`                                                     |
 
-## Запуск из исходников
-
-Требуется Node.js **22+**; для проверок слияния нужен Git.
-
-```bash
-npm ci
-npm run build
-node dist/cli/main.js --help
-node dist/cli/main.js init
-export TASKS_ACTOR=orchestrator
-```
-
-Создание задачи без подготовки отдельного файла с описанием:
-
-```bash
-node dist/cli/main.js create --title "Реализовать API" --group backend --stdin <<'MD'
-## Что сделать
-
-- Добавить POST /users.
-- Зафиксировать контракт ошибок.
-
-## Проверка
-
-Интеграционные тесты должны проходить.
-MD
-```
-
-Подставьте номер из ответа в следующие команды (первая задача получает номер 1):
-
-```bash
-node dist/cli/main.js description 1
-node dist/cli/main.js get 1
-node dist/cli/main.js get 1 --full
-node dist/cli/main.js list --ready --format json
-node dist/cli/main.js config get
-```
-
-Для разработки доступен `npm run dev -- <command>`. Другой проект выбирается
-через `--config /path/to/project/tasks.config.json`; `init` создаёт конфиг
-и хранилище рядом с ним.
-
-## npm-пакет
-
-Целевой запуск опубликованного пакета:
+## Пример
 
 ```bash
 npx @gromlab/tasks-cli init
-npx @gromlab/tasks-cli list --ready
-```
-
-Проверка будущего релизного архива и запуск из него:
-
-```bash
-npm run package:check
-npm exec --yes --package ./.artifacts/npm/gromlab-tasks-cli-0.2.0.tgz -- tasks-cli --help
-```
-
-## Терминальный вывод и номера
-
-В терминале статусы выделяются цветом, списки оформляются таблицами, а связи —
-деревом с номерами и названиями задач. На узком экране список становится набором
-компактных карточек. `--color never` отключает цвет, `--color always` включает
-его принудительно. JSON не содержит ANSI-кодов.
-
-```bash
+npx @gromlab/tasks-cli create "Реализовать API" --group backend --actor human
 npx @gromlab/tasks-cli list
-npx @gromlab/tasks-cli tree 1
-npx @gromlab/tasks-cli links 3
-npx @gromlab/tasks-cli list --format json
+npx @gromlab/tasks-cli claim 1 --status in_progress --actor agent
+npx @gromlab/tasks-cli log add 1 --kind summary --text "API готов" --actor agent
+npx @gromlab/tasks-cli status 1 done --actor agent
+npx @gromlab/tasks-cli list --all
+npx @gromlab/tasks-cli --help
 ```
-
-Для данных из версии 0.1 выполните новой версией CLI
-`number --actor orchestrator`: номера сохранятся в документах задач.
-Подробнее: [оформление терминала](docs/TERMINAL.md).
-
-## Хранилище
-
-```text
-tasks.config.json
-.tasks/
-  .gitignore
-  .runtime/
-  tasks/<task-id>.json
-```
-
-JSON задачи содержит `description`, `summary`, `comments`, `logs` и остальные
-поля карточки. Добавление комментария или отчёта атомарно изменяет этот файл
-и увеличивает его `revision`. Служебная `.runtime` исключается из Git.
-
-Процессы CLI координируются через общее хранилище. В разных worktree указывайте
-один и тот же абсолютный `--config`. Изменения независимых задач объединяются
-через Git; изменения одной задачи могут конфликтовать. После слияния запускайте
-`validate`. Эксклюзивность `claim` относится к общей папке данных.
-
-## Проверки и релизы
-
-```bash
-npm run check
-npm run package:check
-```
-
-GitHub Actions проверяет Node.js 22/24 и собирает проверенный npm-архив.
-Тег `v<version>` запускает релиз: обычные версии публикуются в `latest`,
-предварительные — в `next`. Версия тега сверяется с обоими манифестами.
-Порядок первой локальной публикации и настройки OIDC: [релизы](docs/RELEASING.md).
-
-## Документация
-
-- [Техническое задание](docs/SPEC.md)
-- [Команды CLI](docs/CLI.md)
-- [Оформление терминала](docs/TERMINAL.md)
-- [Формат самодостаточного JSON](docs/FORMAT.md)
-- [Архитектура и гарантии](docs/ARCHITECTURE.md)
-- [Публикация в npm](docs/RELEASING.md)
-- [История версий](CHANGELOG.md)

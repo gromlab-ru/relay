@@ -41,7 +41,7 @@ export function filterLogs(logs: Log[], filters: LogFilters): Log[] {
   );
 }
 
-export function listLogs(logs: Log[], taskId: string, filters: LogFilters, page: PageOptions) {
+export function listLogs(logs: Log[], taskId: number, filters: LogFilters, page: PageOptions) {
   return paginate(
     filterLogs(logs, filters).map(logBrief),
     creationKey,

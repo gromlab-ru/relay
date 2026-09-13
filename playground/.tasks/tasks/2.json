@@ -25,7 +25,7 @@
     "api",
     "demo"
   ],
-  "parentId": "tsk_962c3a07c669411ba60d8c7f22248c3b",
+  "parentId": 1,
   "dependsOn": [],
   "assignee": "backend-agent",
   "summary": [
@@ -33,8 +33,8 @@
     "- Контракт согласован.",
     "- Backend и frontend могут работать параллельно."
   ],
-  "version": 1,
-  "id": "tsk_7da0c01aba2142c1982b6309d4d7c1b9",
+  "version": 2,
+  "id": 2,
   "createdAt": "2026-09-12T16:29:08.559Z",
   "updatedAt": "2026-09-12T17:05:34.872Z",
   "createdBy": "orchestrator",
@@ -44,7 +44,7 @@
     "cmt_f548217512064cf7858fc2b7a0cfb40b": {
       "version": 1,
       "id": "cmt_f548217512064cf7858fc2b7a0cfb40b",
-      "taskId": "tsk_7da0c01aba2142c1982b6309d4d7c1b9",
+      "taskId": 2,
       "actor": "orchestrator",
       "createdAt": "2026-09-12T16:30:20.157Z",
       "body": [
@@ -55,6 +55,5 @@
       ]
     }
   },
-  "logs": {},
-  "number": 2
+  "logs": {}
 }

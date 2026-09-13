@@ -4,19 +4,19 @@ import { invariant } from "../shared/errors.js";
 
 export interface GraphIssue {
   code: string;
-  taskId: string;
+  taskId: number;
   message: string;
 }
 
 /** Итеративный обход не переполняет стек на глубокой иерархии задач. */
 function findCycle(
-  tasks: ReadonlyMap<string, Task>,
-  edges: (task: Task) => string[],
-): string | undefined {
-  const colors = new Map<string, number>();
+  tasks: ReadonlyMap<number, Task>,
+  edges: (task: Task) => number[],
+): number | undefined {
+  const colors = new Map<number, number>();
   for (const id of tasks.keys()) {
     if (colors.has(id)) continue;
-    const stack: Array<{ id: string; exit: boolean }> = [{ id, exit: false }];
+    const stack: Array<{ id: number; exit: boolean }> = [{ id, exit: false }];
     while (stack.length) {
       const frame = stack.pop()!;
       if (frame.exit) {
@@ -35,19 +35,9 @@ function findCycle(
   return undefined;
 }
 
-export function inspectGraph(tasks: ReadonlyMap<string, Task>, config: Config): GraphIssue[] {
+export function inspectGraph(tasks: ReadonlyMap<number, Task>, config: Config): GraphIssue[] {
   const issues: GraphIssue[] = [];
-  const numbers = new Set<number>();
   for (const task of tasks.values()) {
-    if (task.number !== undefined) {
-      if (numbers.has(task.number))
-        issues.push({
-          code: "DUPLICATE_TASK_NUMBER",
-          taskId: task.id,
-          message: `Номер ${task.number} повторяется; выполните number для устранения совпадений`,
-        });
-      numbers.add(task.number);
-    }
     if (!Object.hasOwn(config.statuses, task.status)) {
       issues.push({
         code: "UNKNOWN_STATUS",
@@ -87,7 +77,7 @@ export function inspectGraph(tasks: ReadonlyMap<string, Task>, config: Config): 
   return issues;
 }
 
-export function assertGraph(tasks: ReadonlyMap<string, Task>, config: Config): void {
+export function assertGraph(tasks: ReadonlyMap<number, Task>, config: Config): void {
   const issues = inspectGraph(tasks, config);
   invariant(
     issues.length === 0,
@@ -98,14 +88,14 @@ export function assertGraph(tasks: ReadonlyMap<string, Task>, config: Config): v
   );
 }
 
-export function blockedBy(task: Task, tasks: ReadonlyMap<string, Task>, config: Config): string[] {
+export function blockedBy(task: Task, tasks: ReadonlyMap<number, Task>, config: Config): number[] {
   return task.dependsOn.filter((id) => {
     const dependency = tasks.get(id);
     return !dependency || !config.statuses[dependency.status]?.satisfiesDependencies;
   });
 }
 
-export function isReady(task: Task, tasks: ReadonlyMap<string, Task>, config: Config): boolean {
+export function isReady(task: Task, tasks: ReadonlyMap<number, Task>, config: Config): boolean {
   return (
     task.assignee === null &&
     config.readyStatuses.includes(task.status) &&

@@ -73,19 +73,19 @@ test("оркестратор разбивает работу, backend перед
   assert.match(toText(card.summary), /POST \/users/);
   assert.ok(!("logs" in card) && !("comments" in card));
   const links = successful(
-    await app.run<{ blocks: Array<{ id: string }>; parent: { id: string } }>(["links", backend]),
+    await app.run<{ blocks: Array<{ id: number }>; parent: { id: number } }>(["links", backend]),
   ).data;
   assert.equal(links.parent.id, parent);
   assert.equal(links.blocks[0]?.id, frontend);
   const tree = successful(
-    await app.run<{ items: Array<{ id: string; depth: number }> }>(["tree", parent]),
+    await app.run<{ items: Array<{ id: number; depth: number }> }>(["tree", parent]),
   ).data;
   assert.equal(tree.items.length, 3);
   assert.equal(tree.items.find((item) => item.id === frontend)?.depth, 1);
   successful(await app.run(["validate"]));
 
   successful(await app.run(["status", backend, "todo"]));
-  const blocked = successful(await app.run<{ blockedBy: string[] }>(["get", frontend])).data;
+  const blocked = successful(await app.run<{ blockedBy: number[] }>(["get", frontend])).data;
   assert.deepEqual(blocked.blockedBy, [backend]);
   successful(await app.run(["status", backend, "cancelled"]));
   failed(await app.run(["status", frontend, "done"]), "TASK_BLOCKED", 4);
@@ -120,7 +120,7 @@ test("циклы, отсутствующие ссылки и устаревша�
   failed(await app.run(["status", first, "неизвестный"]), "UNKNOWN_STATUS", 4);
   const after = successful(await app.run<Task>(["get", first])).data;
   assert.deepEqual(after, before);
-  failed(await app.run(["deps", "add", first, `tsk_${"f".repeat(32)}`]), "NOT_FOUND", 3);
+  failed(await app.run(["deps", "add", first, "999"]), "TASK_NOT_FOUND", 3);
   successful(await app.run(["validate"]));
 });
 
@@ -140,14 +140,14 @@ test("конфиг задаёт семантику произвольных ст
   assert.equal(settings.data.defaultStatus, "очередь");
   const nested = join(app.root, "src", "nested");
   await mkdir(nested, { recursive: true });
-  const backend = successful(await invoke<{ id: string }>(nested, ["create", "--title", "Сервер"]))
+  const backend = successful(await invoke<{ id: number }>(nested, ["create", "--title", "Сервер"]))
     .data.id;
   const frontend = await app.create("Клиент", ["--depends-on", backend]);
   successful(await app.run(["status", backend, "отменено"]));
   failed(await app.run(["claim", frontend]), "TASK_BLOCKED", 4);
   successful(await app.run(["status", backend, "принято"]));
   successful(await app.run(["claim", frontend]));
-  const card = successful(await app.run<Task>(["get", frontend.slice(0, 12)])).data;
+  const card = successful(await app.run<Task>(["get", frontend])).data;
   assert.equal(card.assignee, "orchestrator");
 });
 
@@ -161,7 +161,7 @@ test("длинный ввод, автор и аргументы проверяю
   failed(await app.run(["init"]), "ALREADY_INITIALIZED", 4);
   const description = 'Длинное описание с кавычками " и переносами\n'.repeat(500);
   const id = successful(
-    await app.run<{ id: string }>(["create", "--title", "Текст", "--description-file", "-"], {
+    await app.run<{ id: number }>(["create", "--title", "Текст", "--description-file", "-"], {
       input: description,
     }),
   ).data.id;

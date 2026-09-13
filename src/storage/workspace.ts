@@ -8,6 +8,7 @@ import { atomicJson, exists, readJson } from "./files.js";
 import { withStorageLock } from "./lock.js";
 
 export const CONFIG_NAME = "tasks.config.json";
+export const MIGRATION_STATE = "migration-v2.json";
 
 export class Workspace {
   readonly runtime: string;
@@ -21,8 +22,19 @@ export class Workspace {
   path(...parts: string[]): string {
     return join(this.root, ...parts);
   }
-  locked<T>(operation: (assertOwned: () => void) => Promise<T>): Promise<T> {
-    return withStorageLock(this.root, operation);
+  locked<T>(
+    operation: (assertOwned: () => void) => Promise<T>,
+    mode: "normal" | "migration" = "normal",
+  ): Promise<T> {
+    return withStorageLock(this.root, async (assertOwned) => {
+      invariant(
+        mode === "migration" || !(await exists(join(this.runtime, MIGRATION_STATE))),
+        "MIGRATION_IN_PROGRESS",
+        "Миграция прервана. Продолжите: tasks-cli migrate --actor <автор>",
+        4,
+      );
+      return operation(assertOwned);
+    });
   }
 }
 

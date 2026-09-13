@@ -20,10 +20,8 @@ export const taskFieldsSchema = z.strictObject({
 
 export const taskSchema = taskFieldsSchema
   .extend({
-    version: z.literal(1),
+    version: z.literal(2),
     id: taskIdSchema,
-    // Старые документы читаются до явного назначения номеров командой number.
-    number: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
     createdBy: actorSchema,
@@ -66,22 +64,10 @@ export function initialTaskFields(): Omit<TaskFields, "title" | "status"> {
 
 /** Краткие карточки не содержат длинных текстов, комментариев или тел логов. */
 export function taskBrief(task: Task) {
-  const {
-    id,
-    number,
-    title,
-    status,
-    group,
-    tags,
-    parentId,
-    assignee,
-    revision,
-    createdAt,
-    updatedAt,
-  } = task;
+  const { id, title, status, group, tags, parentId, assignee, revision, createdAt, updatedAt } =
+    task;
   return {
     id,
-    number,
     title,
     status,
     group,

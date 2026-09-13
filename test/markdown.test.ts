@@ -9,7 +9,7 @@ test("текстовый CLI показывает абзацы, пустые с�
   const body =
     "## Проблема\n\n\n- Первый пункт\n  - Вложенный пункт\n\n```ts\n  await run();\n```\n\n";
   const id = successful(
-    await app.run<{ id: string }>(["create", "--title", "Markdown", "--stdin"], { input: body }),
+    await app.run<{ id: number }>(["create", "--title", "Markdown", "--stdin"], { input: body }),
   ).data.id;
   const description = await invokeRaw(app.root, ["description", id]);
   assert.equal(description.code, 0, description.stderr);

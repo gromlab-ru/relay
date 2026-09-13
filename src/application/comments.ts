@@ -3,6 +3,7 @@ import type { Comment } from "../domain/comment.js";
 import { parse } from "../domain/validation.js";
 import { toLines, toText } from "../domain/markdown.js";
 import { assertId, newId } from "../shared/ids.js";
+import type { TaskReference } from "../shared/ids.js";
 import { invariant } from "../shared/errors.js";
 import type { Workspace } from "../storage/workspace.js";
 import { commentsText } from "../presentation/records.js";
@@ -17,7 +18,7 @@ export class CommentService {
     this.tasks = new TaskService(workspace);
   }
 
-  async add(reference: string, text: string, actor: string): Promise<Comment> {
+  async add(reference: TaskReference, text: string, actor: string): Promise<Comment> {
     const id = newId("cmt");
     const updated = await this.tasks.mutate(reference, { actor }, (task) => {
       const comment = parse(
@@ -37,7 +38,7 @@ export class CommentService {
     return updated.comments[id]!;
   }
 
-  async get(reference: string, id: string): Promise<Comment> {
+  async get(reference: TaskReference, id: string): Promise<Comment> {
     assertId(id, "cmt");
     const task = await this.tasks.repository.resolve(reference);
     const comment = task.comments[id];
@@ -45,7 +46,7 @@ export class CommentService {
     return comment;
   }
 
-  async list(reference: string, page: PageOptions, actor?: string) {
+  async list(reference: TaskReference, page: PageOptions, actor?: string) {
     const task = await this.tasks.repository.resolve(reference);
     const items = Object.values(task.comments)
       .filter((comment) => !actor || comment.actor === actor)

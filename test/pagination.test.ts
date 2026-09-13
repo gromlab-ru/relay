@@ -4,13 +4,30 @@ import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { Task } from "../src/domain/task.js";
 import { failed, fixture, invoke, successful } from "./helpers/cli.js";
+import { paginate } from "../src/application/pagination.js";
+import { resultBytes } from "../src/application/result.js";
+
+test("последняя страница помещается целиком даже когда промежуточный курсор превышает бюджет", () => {
+  const items = [{ id: "1" }, { id: "2" }];
+  const page = paginate(
+    items,
+    (item) => item.id,
+    { command: "budget" },
+    { format: "text", maxBytes: 1024 },
+    false,
+    (rows) => "x".repeat(990) + rows.map((row) => row.id).join("\n"),
+  );
+  assert.deepEqual(page.data, { items });
+  assert.equal(page.meta?.hasMore, false);
+  assert.ok(resultBytes(page, "text") <= 1024);
+});
 
 test("байтовый бюджет уменьшает страницу без пропусков; курсор привязан к фильтрам", async (t) => {
   const app = await fixture(t);
-  const ids: string[] = [];
+  const ids: number[] = [];
   for (let index = 0; index < 7; index += 1)
     ids.push(await app.create(`Задача ${index} ${"🔬".repeat(20)}`, ["--group", "backend"]));
-  const seen: string[] = [];
+  const seen: number[] = [];
   let cursor: string | null | undefined;
   let savedCursor = "";
   for (let index = 0; index < 20; index += 1) {

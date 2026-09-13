@@ -35,5 +35,5 @@ export function singleLine(maxBytes: number, allowEmpty = false) {
 }
 
 export const actorSchema = singleLine(512).pipe(z.string().max(128));
-export const taskIdSchema = z.string().regex(/^tsk_[a-f0-9]{32}$/);
+export const taskIdSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 export const timestampSchema = z.iso.datetime();

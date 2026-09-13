@@ -11,14 +11,14 @@ interface Issue {
   path?: string;
   code: string;
   message: string;
-  taskId?: string;
+  taskId?: number;
 }
 
 /** Схема карточки проверяет и все вложенные записи: отдельного режима чтения тел нет. */
 export async function validateWorkspace(workspace: Workspace) {
   return workspace.locked(async () => {
     const issues: Issue[] = [];
-    const tasks = new Map<string, Task>();
+    const tasks = new Map<number, Task>();
     const repository = new TaskRepository(workspace);
     for (const file of await jsonFiles(workspace.path("tasks"))) {
       try {

@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Writable } from "node:stream";
 import { stripVTControlCharacters } from "node:util";
 import { test } from "node:test";
 import stringWidth from "string-width";
 import { terminalOptions } from "../src/cli/terminal.js";
 import { fixture, invokeRaw, successful } from "./helpers/cli.js";
+import { failed } from "./helpers/cli.js";
+import type { Task } from "../src/domain/task.js";
+import { TaskService } from "../src/application/tasks/service.js";
+import { openWorkspace } from "../src/storage/workspace.js";
 
 test("подсветка учитывает TTY, NO_COLOR, TERM, явные флаги и ширину терминала", () => {
   const stream = Object.assign(
@@ -56,7 +62,7 @@ test("все представления используют текст, ном�
     ["group", "list"],
     ["config", "get"],
     ["validate"],
-    ["number"],
+    ["migrate"],
     ["comment", "list", "3"],
     ["comment", "get", "3", comment],
     ["log", "list", "3"],
@@ -77,8 +83,8 @@ test("все представления используют текст, ном�
   }
   const list = await invokeRaw(app.root, ["list", "--color", "never"]);
   assert.match(list.stdout, /#1\s+Проект/);
-  assert.match(list.stdout, /#4.*Интеграция.*! 1/);
-  assert.match(list.stdout, /Интеграция.*Ожидает/);
+  assert.match(list.stdout, /#4.*Интеграция.*! ждёт #3/);
+  assert.match(list.stdout, /Интеграция.*К работе/);
   assert.doesNotMatch(list.stdout, /tsk_[a-f0-9]/);
   const links = await invokeRaw(app.root, ["links", "4"]);
   assert.match(links.stdout, /ОЖИДАЕТ ЗАВЕРШЕНИЯ/);
@@ -150,4 +156,84 @@ test("пагинация учитывает ANSI-байты и не теряет
   }
   assert.equal(cursor, undefined);
   assert.deepEqual(numbers, [1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test("рабочий список разделён на группы, включая задачи без группы, и не ограничен двадцатью задачами", async (t) => {
+  const app = await fixture(t);
+  const service = new TaskService(await openWorkspace(app.root));
+  for (let index = 0; index < 23; index++) {
+    await service.create(
+      { title: `Работа ${index + 1}`, group: ["frontend", "backend", null][index % 3]! },
+      "human",
+    );
+  }
+  const ordinary = successful(await app.run<{ items: Task[] }>(["list"]));
+  assert.equal(ordinary.data.items.length, 23);
+  assert.equal(ordinary.meta?.hasMore, false);
+  const all = successful(await app.run<{ items: Task[] }>(["list", "--all"]));
+  assert.equal(all.data.items.length, 23);
+  assert.equal(all.meta?.hasMore, false);
+  assert.equal(all.meta?.nextCursor, null);
+  const text = await invokeRaw(app.root, ["list", "--color", "never"]);
+  assert.equal(text.code, 0, text.stdout);
+  assert.match(text.stdout, /показано 23 из 23/);
+  const backend = text.stdout.indexOf("Группа: backend");
+  const frontend = text.stdout.indexOf("Группа: frontend");
+  const ungrouped = text.stdout.indexOf("Без группы");
+  assert.ok(backend >= 0 && frontend > backend && ungrouped > frontend, text.stdout);
+  const ids = (source: string) =>
+    [...source.matchAll(/^#(\d+)\s/gm)].map((match) => Number(match[1]));
+  assert.deepEqual(ids(text.stdout.slice(backend, frontend)), [2, 5, 8, 11, 14, 17, 20, 23]);
+  assert.deepEqual(ids(text.stdout.slice(frontend, ungrouped)), [1, 4, 7, 10, 13, 16, 19, 22]);
+  assert.deepEqual(ids(text.stdout.slice(ungrouped)), [3, 6, 9, 12, 15, 18, 21]);
+  const partial = successful(
+    await app.run<{ items: Task[] }>(["list", "--all", "--max-bytes", "1024"]),
+  );
+  assert.ok(partial.data.items.length > 0 && partial.data.items.length < 23);
+  assert.equal(partial.meta?.hasMore, true);
+  assert.equal(
+    successful(await app.run<{ items: Task[] }>(["list", "--all", "--limit", "3"])).data.items
+      .length,
+    3,
+  );
+  failed(await app.run(["list", "--all", "--cursor", "cursor"]), "INVALID_CURSOR");
+});
+
+test("цвета статусов из конфига применяются во всех представлениях и не меняют семантику", async (t) => {
+  const app = await fixture(t);
+  const path = join(app.root, "tasks.config.json");
+  const config = JSON.parse(await readFile(path, "utf8"));
+  config.statuses.review.color = "blue";
+  config.statuses.todo.color = "none";
+  config.statuses.принято = { terminal: true, satisfiesDependencies: true, color: "red" };
+  await writeFile(path, JSON.stringify(config));
+  await app.create("Корень");
+  await app.create("Проверка", ["--parent", "1", "--status", "review"]);
+  await app.create("Принятая работа", ["--status", "принято"]);
+  await app.create("Продолжение", ["--depends-on", "3"]);
+  for (const args of [["list"], ["get", "2"], ["tree", "1"], ["links", "1"], ["config", "get"]]) {
+    const result = await invokeRaw(app.root, [...args, "--color", "always"]);
+    assert.equal(result.code, 0, result.stdout);
+    assert.match(result.stdout, /\x1b\[34m◇ На проверке\x1b\[39m/);
+    const plain = await invokeRaw(app.root, [...args, "--color", "never"]);
+    assert.equal(stripVTControlCharacters(result.stdout), plain.stdout);
+    const json = await app.run([...args, "--color", "always"]);
+    successful(json);
+    assert.doesNotMatch(json.stdout, /\x1b/);
+  }
+  const noColor = await invokeRaw(app.root, ["get", "1", "--color", "always"]);
+  assert.match(noColor.stdout, /○ К работе/);
+  assert.doesNotMatch(noColor.stdout, /\x1b\[\d+m○ К работе/);
+  const custom = await invokeRaw(app.root, ["get", "3", "--color", "always"]);
+  assert.match(custom.stdout, /\x1b\[31m✓ принято\x1b\[39m/);
+  successful(await app.run(["claim", 4]));
+  delete config.statuses.review.color;
+  await writeFile(path, JSON.stringify(config));
+  assert.match(
+    (await invokeRaw(app.root, ["get", "2", "--color", "always"])).stdout,
+    /\x1b\[35m◇ На проверке/,
+  );
+  config.statuses.review.color = "not-a-color";
+  await writeFile(path, JSON.stringify(config));
+  failed(await app.run(["config", "get"]), "VALIDATION_ERROR");
 });

@@ -43,7 +43,7 @@ test("ожидание stdin отчёта не блокирует задачи �
   const id = await app.create("Поток");
   const child = spawn(
     process.execPath,
-    [binary, "log", "add", id, "--file", "-", "--actor", "logger"],
+    [binary, "log", "add", String(id), "--file", "-", "--actor", "logger"],
     {
       cwd: app.root,
       stdio: ["pipe", "pipe", "pipe"],

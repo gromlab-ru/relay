@@ -5,13 +5,13 @@ import type { TextOptions } from "./theme.js";
 import { section, wrap } from "./layout.js";
 import { safeText } from "./safe.js";
 
-type Related = Pick<Task, "id" | "number" | "title" | "status">;
+type Related = Pick<Task, "id" | "title" | "status">;
 export interface Links {
   parent: Related | null;
   children: Related[];
   dependsOn: Related[];
   blocks: Related[];
-  blockedBy: string[];
+  blockedBy: number[];
 }
 
 function branch(
@@ -48,10 +48,7 @@ export function linksText(
     section(
       title,
       rows
-        .toSorted(
-          (a, b) =>
-            (a.number ?? Infinity) - (b.number ?? Infinity) || a.id.localeCompare(b.id, "en"),
-        )
+        .toSorted((a, b) => a.id - b.id)
         .map((row, index) =>
           branch(row, index === rows.length - 1 ? "└─ " : "├─ ", options, config),
         )
@@ -80,23 +77,20 @@ export function linksText(
 }
 
 export function treeText(
-  items: readonly (Related & { parentId: string | null; depth: number })[],
+  items: readonly (Related & { parentId: number | null; depth: number })[],
   options: TextOptions,
   config: Config,
-  blockerCounts: ReadonlyMap<string, number> = new Map(),
+  blockerCounts: ReadonlyMap<number, number> = new Map(),
 ): string {
   const root = items[0];
   if (!root) return palette(options).dim("Задач нет.");
-  const children = new Map<string, (typeof items)[number][]>();
+  const children = new Map<number, (typeof items)[number][]>();
   for (const item of items.slice(1)) {
     const siblings = children.get(item.parentId!) ?? [];
     siblings.push(item);
     children.set(item.parentId!, siblings);
   }
-  for (const siblings of children.values())
-    siblings.sort(
-      (a, b) => (a.number ?? Infinity) - (b.number ?? Infinity) || a.id.localeCompare(b.id, "en"),
-    );
+  for (const siblings of children.values()) siblings.sort((a, b) => a.id - b.id);
   const pending = [{ task: root, prefix: "", connector: "" }];
   const lines = [palette(options).bold(palette(options).cyan("ДЕРЕВО ЗАДАЧ")), ""];
   // JSON остаётся плоским BFS-списком; терминал показывает иерархию в порядке DFS.

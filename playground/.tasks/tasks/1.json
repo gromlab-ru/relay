@@ -29,14 +29,13 @@
   "summary": [
     "Учебный проект: контракт готов, backend в работе, экран на проверке."
   ],
-  "version": 1,
-  "id": "tsk_962c3a07c669411ba60d8c7f22248c3b",
+  "version": 2,
+  "id": 1,
   "createdAt": "2026-09-12T16:28:55.608Z",
   "updatedAt": "2026-09-12T17:05:34.849Z",
   "createdBy": "orchestrator",
   "updatedBy": "orchestrator",
   "revision": 2,
   "comments": {},
-  "logs": {},
-  "number": 1
+  "logs": {}
 }

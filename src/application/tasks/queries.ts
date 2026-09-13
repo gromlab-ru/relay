@@ -2,7 +2,8 @@ import { assertGraph, blockedBy, isReady } from "../../domain/graph.js";
 import { taskBrief } from "../../domain/task.js";
 import { invariant } from "../../shared/errors.js";
 import { resolveTask } from "../../storage/tasks.js";
-import { paginate, creationKey } from "../pagination.js";
+import { paginate } from "../pagination.js";
+import type { TaskReference } from "../../shared/ids.js";
 import type { PageOptions } from "../pagination.js";
 import type { TaskService } from "./service.js";
 import { toText } from "../../domain/markdown.js";
@@ -19,6 +20,7 @@ export interface TaskFilters {
   tag?: string;
   search?: string;
   ready?: boolean;
+  all?: boolean;
 }
 
 export async function listTasks(service: TaskService, filters: TaskFilters, page: PageOptions) {
@@ -26,7 +28,8 @@ export async function listTasks(service: TaskService, filters: TaskFilters, page
   assertGraph(tasks, service.workspace.config);
   const parentId = filters.parent ? resolveTask(filters.parent, tasks).id : undefined;
   const search = filters.search?.toLowerCase();
-  if (filters.status)
+  const openOnly = filters.status === undefined && !filters.all;
+  if (filters.status !== undefined)
     invariant(
       Object.hasOwn(service.workspace.config.statuses, filters.status),
       "UNKNOWN_STATUS",
@@ -35,7 +38,8 @@ export async function listTasks(service: TaskService, filters: TaskFilters, page
   const items = [...tasks.values()]
     .filter(
       (task) =>
-        (!filters.status || task.status === filters.status) &&
+        (filters.status === undefined || task.status === filters.status) &&
+        (!openOnly || !service.workspace.config.statuses[task.status]?.terminal) &&
         (!filters.group || task.group === filters.group) &&
         (!filters.assignee || task.assignee === filters.assignee) &&
         (!parentId || task.parentId === parentId) &&
@@ -50,26 +54,34 @@ export async function listTasks(service: TaskService, filters: TaskFilters, page
       ...taskBrief(task),
       blockedBy: blockedBy(task, tasks, service.workspace.config),
     }));
+  const hasFilters = Object.entries(filters).some(([key, value]) => key !== "all" && !!value);
+  const emptyMessage =
+    items.length > 0
+      ? "Больше задач нет."
+      : hasFilters
+        ? "Задач по выбранным фильтрам нет."
+        : openOnly
+          ? "Открытых задач нет.\nИстория: tasks-cli list --all"
+          : "Задач нет.";
   return paginate(
     items,
-    creationKey,
-    { command: "list", filters },
+    (task) => String(task.id).padStart(16, "0"),
+    { command: "list", version: 3, filters },
     page,
     false,
     (selected, options) =>
-      tasksText(selected, options, service.workspace.config, tasks, items.length),
+      tasksText(selected, options, service.workspace.config, tasks, items.length, emptyMessage),
   );
 }
 
 export async function getTask(
   service: TaskService,
-  reference: string,
+  reference: TaskReference,
   fields?: string[],
   full = false,
 ) {
-  const tasks = await service.repository.snapshot();
+  const tasks = await service.repository.related(reference);
   const task = resolveTask(reference, tasks);
-  assertGraph(tasks, service.workspace.config);
   const data = {
     ...task,
     blockedBy: blockedBy(task, tasks, service.workspace.config),
@@ -95,7 +107,7 @@ export async function getTask(
 
 export async function taskMarkdown(
   service: TaskService,
-  reference: string,
+  reference: TaskReference,
   field: "description" | "summary",
 ) {
   const task = await service.repository.resolve(reference);
@@ -105,17 +117,16 @@ export async function taskMarkdown(
   };
 }
 
-export async function taskLinks(service: TaskService, reference: string) {
+export async function taskLinks(service: TaskService, reference: TaskReference) {
   const tasks = await service.repository.snapshot();
   const task = resolveTask(reference, tasks);
   assertGraph(tasks, service.workspace.config);
-  const describe = (id: string) => {
+  const describe = (id: number) => {
     const related = tasks.get(id)!;
-    return { id: related.id, number: related.number, title: related.title, status: related.status };
+    return { id: related.id, title: related.title, status: related.status };
   };
   const data = {
     id: task.id,
-    number: task.number,
     parent: task.parentId ? describe(task.parentId) : null,
     children: [...tasks.values()]
       .filter((item) => item.parentId === task.id)

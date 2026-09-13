@@ -22,20 +22,30 @@ export function statusText(
 ): string {
   const colors = palette(options);
   const rule = config.statuses[status];
-  if (rule?.satisfiesDependencies)
-    return colors.green(`✓ ${status === "done" ? "Выполнена" : safeText(status)}`);
-  if (rule?.terminal)
-    return colors.dim(`− ${status === "cancelled" ? "Отменена" : safeText(status)}`);
-  if (status === "in_progress") return colors.yellow("● В работе");
-  if (status === "review") return colors.magenta("◇ На проверке");
-  return colors.cyan(
-    `○ ${status === "todo" ? (blocked ? "Ожидает" : "К работе") : safeText(status)}`,
-  );
+  const label = rule?.satisfiesDependencies
+    ? `✓ ${status === "done" ? "Выполнена" : safeText(status)}`
+    : rule?.terminal
+      ? `− ${status === "cancelled" ? "Отменена" : safeText(status)}`
+      : status === "in_progress"
+        ? "● В работе"
+        : status === "review"
+          ? "◇ На проверке"
+          : `○ ${status === "todo" ? (blocked ? "Ожидает" : "К работе") : safeText(status)}`;
+  const fallback = rule?.satisfiesDependencies
+    ? "green"
+    : rule?.terminal
+      ? "gray"
+      : status === "in_progress"
+        ? "yellow"
+        : status === "review"
+          ? "magenta"
+          : "cyan";
+  const color = rule?.color ?? fallback;
+  return color === "none" ? label : colors[color](label);
 }
 
-export function taskReference(task: { id: string; number?: number | undefined }): string {
-  // Полный UUID остаётся копируемой ссылкой для ещё не пронумерованных документов.
-  return task.number === undefined ? task.id : `#${task.number}`;
+export function taskReference(task: { id: number }): string {
+  return `#${task.id}`;
 }
 
 export function dateText(value: string): string {

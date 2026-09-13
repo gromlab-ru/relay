@@ -11,7 +11,7 @@ import type { LogFilters } from "./list.js";
 /** Находим отчёты по содержимому; полное тело остаётся доступным через log get. */
 export function searchLogs(
   logs: Log[],
-  taskId: string,
+  taskId: number,
   query: string,
   filters: LogFilters,
   page: PageOptions,

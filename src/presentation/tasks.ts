@@ -9,16 +9,16 @@ import { frame, section, table, wrap } from "./layout.js";
 import { defaultTextOptions, palette, statusText, taskReference } from "./theme.js";
 import type { TextOptions } from "./theme.js";
 
-export type TaskRow = Pick<Task, "id" | "number" | "title" | "status" | "group" | "assignee"> & {
-  blockedBy?: string[];
+export type TaskRow = Pick<Task, "id" | "title" | "status" | "group" | "assignee"> & {
+  blockedBy?: number[];
 };
 
 export function taskText(
   task: Task,
-  blockers: string[],
+  blockers: number[],
   full: boolean,
   options: TextOptions = defaultTextOptions,
-  tasks: ReadonlyMap<string, Task> = new Map(),
+  tasks: ReadonlyMap<number, Task> = new Map(),
   config: Config = defaultConfig,
 ): string {
   const colors = palette(options);
@@ -37,7 +37,6 @@ export function taskText(
           ),
         ]
       : []),
-    ...(full ? [colors.dim(`UUID: ${task.id}`)] : []),
   ];
   return [
     frame(`${taskReference(task)}  ${safeText(task.title)}`, metadata, options),
@@ -53,8 +52,9 @@ export function tasksText(
   items: readonly TaskRow[],
   options: TextOptions = defaultTextOptions,
   config: Config = defaultConfig,
-  tasks: ReadonlyMap<string, Task> = new Map(),
+  tasks: ReadonlyMap<number, Task> = new Map(),
   total = items.length,
+  emptyMessage = "Задач нет.",
 ): string {
   const colors = palette(options);
   const complete = items.filter(
@@ -65,22 +65,38 @@ export function tasksText(
     return task && isReady(task, tasks, config);
   }).length;
   const blocked = items.filter((task) => task.blockedBy?.length).length;
-  const heading = `${colors.bold(colors.cyan("ЗАДАЧИ"))}  ${colors.dim(`${items.length} из ${total}`)}`;
-  if (!items.length) return `${heading}\n\n${colors.dim("Задач нет.")}`;
+  const heading = wrap(
+    `${colors.bold(colors.cyan("ЗАДАЧИ"))}  ${colors.dim(`показано ${items.length} из ${total}`)}`,
+    options.width,
+  );
+  if (!items.length) return `${heading}\n\n${wrap(colors.dim(emptyMessage), options.width)}`;
   const counts = wrap(
     `${colors.green(`✓ Выполнено: ${complete}`)}  ·  ${colors.cyan(`○ Доступно: ${ready}`)}  ·  ${colors.red(`! Заблокировано: ${blocked}`)}`,
     options.width,
   );
-  const status = (task: TaskRow) =>
-    `${statusText(task.status, options, config, !!task.blockedBy?.length)}${task.blockedBy?.length ? colors.red(`  ! ${task.blockedBy.length}`) : ""}`;
-  const idWidth = Math.max(3, ...items.map((task) => stringWidth(taskReference(task))));
-  const statusWidth = Math.min(26, Math.max(12, ...items.map((task) => stringWidth(status(task)))));
+  const status = (task: TaskRow) => {
+    const blockers = task.blockedBy?.toSorted((a, b) => a - b) ?? [];
+    const references = blockers
+      .slice(0, 3)
+      .map((id) => `#${id}`)
+      .join(", ");
+    const rest = blockers.length > 3 ? ` … ещё ${blockers.length - 3}` : "";
+    return `${statusText(task.status, options, config)}${blockers.length ? colors.red(`  ! ждёт ${references}${rest}`) : ""}`;
+  };
+  const idWidth = items.reduce(
+    (width, task) => Math.max(width, stringWidth(taskReference(task))),
+    3,
+  );
+  const statusWidth = Math.min(
+    26,
+    items.reduce((width, task) => Math.max(width, stringWidth(status(task))), 12),
+  );
   const showActor = options.width >= 96;
   const titleWidth =
     options.width - idWidth - statusWidth - (showActor ? 18 : 0) - (showActor ? 6 : 4);
-  const body =
+  const renderRows = (rows: readonly TaskRow[]) =>
     options.width < 68 || titleWidth < 24
-      ? items
+      ? rows
           .map((task) =>
             [
               wrap(
@@ -91,15 +107,12 @@ export function tasksText(
                 `  ${status(task)} · ${safeText(task.assignee ?? "Без исполнителя")}`,
                 options.width,
               ),
-              ...(task.group
-                ? [wrap(colors.dim(`  Группа: ${safeText(task.group)}`), options.width)]
-                : []),
             ].join("\n"),
           )
           .join("\n\n")
       : table(
           ["ID", "ЗАДАЧА", "СТАТУС", ...(showActor ? ["ИСПОЛНИТЕЛЬ"] : [])],
-          items.map((task) => [
+          rows.map((task) => [
             colors.dim(taskReference(task)),
             safeText(task.title),
             status(task),
@@ -108,8 +121,21 @@ export function tasksText(
           [idWidth, titleWidth, statusWidth, ...(showActor ? [18] : [])],
           options,
         );
-  const legacy = items.some((task) => task.number === undefined)
-    ? `\n\n${colors.yellow("Назначить номера старым задачам: number --actor <автор>")}`
-    : "";
-  return `${heading}\n${counts}\n\n${body}${legacy}`;
+  const groups = new Map<string | null, TaskRow[]>();
+  for (const task of items) {
+    const rows = groups.get(task.group) ?? [];
+    rows.push(task);
+    groups.set(task.group, rows);
+  }
+  const sections = [...groups]
+    .sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : a.localeCompare(b, "ru")))
+    .map(([name, rows]) => {
+      const title = name === null ? "Без группы" : `Группа: ${safeText(name)}`;
+      const header = wrap(
+        `${colors.bold(colors.cyan(title))} ${colors.dim(`(${rows.length})`)}`,
+        options.width,
+      );
+      return `${header}\n${renderRows(rows.toSorted((a, b) => a.id - b.id))}`;
+    });
+  return `${heading}\n${counts}\n\n${sections.join("\n\n")}`;
 }

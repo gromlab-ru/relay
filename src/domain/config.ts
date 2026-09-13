@@ -1,8 +1,22 @@
 import { z } from "zod";
 
+export const statusColorSchema = z.enum([
+  "black",
+  "red",
+  "green",
+  "yellow",
+  "blue",
+  "magenta",
+  "cyan",
+  "white",
+  "gray",
+  "none",
+]);
+
 const statusSchema = z.strictObject({
   terminal: z.boolean().default(false),
   satisfiesDependencies: z.boolean().default(false),
+  color: statusColorSchema.optional(),
 });
 
 export const configSchema = z
@@ -46,11 +60,11 @@ export const defaultConfig: Config = {
   defaultStatus: "todo",
   readyStatuses: ["todo"],
   statuses: {
-    todo: { terminal: false, satisfiesDependencies: false },
-    in_progress: { terminal: false, satisfiesDependencies: false },
-    review: { terminal: false, satisfiesDependencies: false },
-    done: { terminal: true, satisfiesDependencies: true },
-    cancelled: { terminal: true, satisfiesDependencies: false },
+    todo: { terminal: false, satisfiesDependencies: false, color: "cyan" },
+    in_progress: { terminal: false, satisfiesDependencies: false, color: "yellow" },
+    review: { terminal: false, satisfiesDependencies: false, color: "magenta" },
+    done: { terminal: true, satisfiesDependencies: true, color: "green" },
+    cancelled: { terminal: true, satisfiesDependencies: false, color: "gray" },
   },
   output: { format: "text", defaultLimit: 20, maxBytes: 16384 },
 };

@@ -3,10 +3,10 @@ import { initialTaskFields, taskSchema } from "../../domain/task.js";
 import { assertGraph, blockedBy } from "../../domain/graph.js";
 import { actorSchema, parse } from "../../domain/validation.js";
 import { invariant } from "../../shared/errors.js";
-import { newId } from "../../shared/ids.js";
-import { TaskRepository } from "../../storage/tasks.js";
+import type { TaskReference } from "../../shared/ids.js";
+import { TaskRepository, resolveTask } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
-import { nextTaskNumber } from "./numbering.js";
+import { nextTaskId } from "./identity.js";
 
 export interface MutationOptions {
   actor: string;
@@ -14,7 +14,7 @@ export interface MutationOptions {
 }
 export type TaskTransform = (
   task: Task,
-  tasks: ReadonlyMap<string, Task>,
+  tasks: ReadonlyMap<number, Task>,
 ) => TaskDocumentPatch | Promise<TaskDocumentPatch>;
 
 export class TaskService {
@@ -27,7 +27,7 @@ export class TaskService {
     parse(actorSchema, actor, "автор");
     return this.workspace.locked(async (assertOwned) => {
       const tasks = await this.repository.all();
-      const fields = await this.resolveReferences(input);
+      const fields = this.resolveReferences(input, tasks);
       const now = new Date().toISOString();
       const task = parse(
         taskSchema,
@@ -35,9 +35,8 @@ export class TaskService {
           ...initialTaskFields(),
           ...fields,
           status: fields.status ?? this.workspace.config.defaultStatus,
-          version: 1,
-          id: newId("tsk"),
-          number: nextTaskNumber(tasks.values()),
+          version: 2,
+          id: nextTaskId(tasks.values()),
           createdAt: now,
           updatedAt: now,
           createdBy: actor,
@@ -55,19 +54,24 @@ export class TaskService {
     });
   }
 
-  async update(reference: string, patch: TaskPatch, options: MutationOptions): Promise<Task> {
-    return this.mutate(reference, options, async () => this.resolveReferences(patch));
+  async update(
+    reference: TaskReference,
+    patch: TaskPatch,
+    options: MutationOptions,
+  ): Promise<Task> {
+    return this.mutate(reference, options, (_task, tasks) => this.resolveReferences(patch, tasks));
   }
 
   /** Повторное чтение, изменение и проверка всего графа образуют критическую секцию. */
   async mutate(
-    reference: string,
+    reference: TaskReference,
     options: MutationOptions,
     transform: TaskTransform,
   ): Promise<Task> {
     parse(actorSchema, options.actor, "автор");
     return this.workspace.locked(async (assertOwned) => {
-      const current = await this.repository.resolve(reference);
+      const tasks = await this.repository.all();
+      const current = resolveTask(reference, tasks);
       invariant(
         options.ifRevision === undefined || options.ifRevision === current.revision,
         "REVISION_CONFLICT",
@@ -75,7 +79,6 @@ export class TaskService {
         4,
         { expected: options.ifRevision, actual: current.revision },
       );
-      const tasks = await this.repository.all();
       const patch = await transform(current, tasks);
       const candidate = parse(taskSchema, { ...current, ...patch }, "изменение задачи");
       this.checkCandidate(candidate, tasks);
@@ -89,19 +92,18 @@ export class TaskService {
     });
   }
 
-  private async resolveReferences<T extends TaskPatch>(fields: T): Promise<T> {
+  private resolveReferences<T extends TaskPatch>(fields: T, tasks: ReadonlyMap<number, Task>): T {
     const result = { ...fields };
-    if (result.parentId) result.parentId = (await this.repository.resolve(result.parentId)).id;
+    if (result.parentId) result.parentId = resolveTask(result.parentId, tasks).id;
     if (result.dependsOn) {
-      const ids: string[] = [];
-      for (const ref of result.dependsOn) ids.push((await this.repository.resolve(ref)).id);
-      result.dependsOn = [...new Set(ids)].sort();
+      const ids = result.dependsOn.map((id) => resolveTask(id, tasks).id);
+      result.dependsOn = [...new Set(ids)].sort((a, b) => a - b);
     }
     if (result.tags) result.tags = [...new Set(result.tags)].sort();
     return result;
   }
 
-  private checkCandidate(task: Task, tasks: Map<string, Task>): void {
+  private checkCandidate(task: Task, tasks: Map<number, Task>): void {
     const previous = tasks.get(task.id);
     tasks.set(task.id, task);
     assertGraph(tasks, this.workspace.config);

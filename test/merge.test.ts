@@ -21,7 +21,7 @@ test("чистое текстовое слияние разных карточе
   }
   successful(await invoke(left, ["deps", "add", first, second]));
   successful(await invoke(right, ["deps", "add", second, first]));
-  const path = (root: string, id: string) => join(root, ".tasks", "tasks", `${id}.json`);
+  const path = (root: string, id: number) => join(root, ".tasks", "tasks", `${id}.json`);
   // merge-file проверяет реальный алгоритм Git без создания репозитория и коммитов.
   for (const id of [first, second]) {
     const merged = await execute("git", [
@@ -35,19 +35,30 @@ test("чистое текстовое слияние разных карточе
   }
   failed(await app.run(["validate"]), "VALIDATION_FAILED", 5);
 
-  const uniqueLeft = successful(
-    await invoke<{ id: string }>(left, ["create", "--title", "Новая слева"]),
-  ).data.id;
-  const uniqueRight = successful(
-    await invoke<{ id: string }>(right, ["create", "--title", "Новая справа"]),
-  ).data.id;
-  assert.notEqual(uniqueLeft, uniqueRight);
-  await cp(path(left, uniqueLeft), path(app.root, uniqueLeft));
-  await cp(path(right, uniqueRight), path(app.root, uniqueRight));
-  // Номера из независимых копий могут совпасть, но UUID и ссылки остаются раздельными.
-  successful(await app.run(["number"]));
-  // После явного устранения логического конфликта независимые новые записи сохранены.
   successful(await app.run(["deps", "remove", second, first]));
   const validated = successful(await app.run<{ tasks: number }>(["validate"]));
-  assert.equal(validated.data.tasks, 4);
+  assert.equal(validated.data.tasks, 2);
+  // Независимые копии не координируют ID: Git должен показать конфликт одного пути.
+  const createdLeft = successful(
+    await invoke<{ id: number }>(left, ["create", "--title", "Новая слева"]),
+  ).data.id;
+  const createdRight = successful(
+    await invoke<{ id: number }>(right, ["create", "--title", "Новая справа"]),
+  ).data.id;
+  assert.equal(createdLeft, 3);
+  assert.equal(createdRight, 3);
+  const empty = join(app.root, "empty-base");
+  await writeFile(empty, "");
+  await assert.rejects(
+    execute("git", ["merge-file", "--stdout", path(left, 3), empty, path(right, 3)]),
+    // merge-file возвращает количество конфликтов (до 127), а не всегда 1.
+    (error: { code?: number; stdout?: string }) =>
+      typeof error.code === "number" &&
+      error.code > 0 &&
+      error.code <= 127 &&
+      !!error.stdout?.includes("<<<<<<<") &&
+      !!error.stdout?.includes(">>>>>>>") &&
+      error.stdout.includes("Новая слева") &&
+      error.stdout.includes("Новая справа"),
+  );
 });

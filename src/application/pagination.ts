@@ -6,11 +6,13 @@ import type { OutputFormat, Result } from "./result.js";
 import type { TextOptions } from "../presentation/theme.js";
 
 export interface PageOptions {
-  limit: number;
+  /** Без ограничения числа элементов страница определяется байтовым бюджетом. */
+  limit?: number;
   maxBytes: number;
   format: OutputFormat;
   cursor?: string;
   text?: TextOptions;
+  all?: boolean;
 }
 
 export function creationKey(item: { createdAt: string; id: string }): string {
@@ -49,7 +51,23 @@ export function paginate<T>(
       },
     };
   };
-  for (const item of available.slice(0, options.limit)) {
+  // Сначала пробуем страницу целиком: последней странице не нужен длинный курсор.
+  // Для помещающегося рабочего списка это также исключает рендеринг каждого префикса.
+  const candidates = options.all ? available : available.slice(0, options.limit);
+  for (const item of candidates) selected.push(item);
+  const result = response();
+  const requiredBytes = resultBytes(result, options.format, options.text);
+  if (requiredBytes <= options.maxBytes) return result;
+  if (options.all) {
+    throw new AppError(
+      "RESPONSE_TOO_LARGE",
+      "Полный список не помещается в --max-bytes; увеличьте лимит или используйте страницы",
+      2,
+      { requiredBytes, maxBytes: options.maxBytes },
+    );
+  }
+  selected.length = 0;
+  for (const item of candidates) {
     selected.push(item);
     if (resultBytes(response(), options.format, options.text) > options.maxBytes) {
       selected.pop();

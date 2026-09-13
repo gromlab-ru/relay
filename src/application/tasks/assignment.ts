@@ -1,8 +1,15 @@
 import { blockedBy, isReady } from "../../domain/graph.js";
 import { invariant } from "../../shared/errors.js";
 import type { TaskService, MutationOptions } from "./service.js";
+import type { TaskReference } from "../../shared/ids.js";
+import { resolveTask } from "../../storage/tasks.js";
 
-export function claimTask(service: TaskService, reference: string, options: MutationOptions) {
+export function claimTask(
+  service: TaskService,
+  reference: TaskReference,
+  options: MutationOptions,
+  status?: string,
+) {
   return service.mutate(reference, options, (task, tasks) => {
     invariant(task.assignee === null, "TASK_ASSIGNED", "Задача уже назначена", 4, {
       assignee: task.assignee,
@@ -17,13 +24,13 @@ export function claimTask(service: TaskService, reference: string, options: Muta
       "Статус задачи не разрешает захват",
       4,
     );
-    return { assignee: options.actor };
+    return { assignee: options.actor, ...(status === undefined ? {} : { status }) };
   });
 }
 
 export function releaseTask(
   service: TaskService,
-  reference: string,
+  reference: TaskReference,
   options: MutationOptions,
   force: boolean,
 ) {
@@ -40,16 +47,16 @@ export function releaseTask(
 
 export function changeDependency(
   service: TaskService,
-  reference: string,
-  dependency: string,
+  reference: TaskReference,
+  dependency: TaskReference,
   add: boolean,
   options: MutationOptions,
 ) {
-  return service.mutate(reference, options, async (task) => {
-    const target = await service.repository.resolve(dependency);
+  return service.mutate(reference, options, (task, tasks) => {
+    const target = resolveTask(dependency, tasks);
     const dependsOn = new Set(task.dependsOn);
     if (add) dependsOn.add(target.id);
     else dependsOn.delete(target.id);
-    return { dependsOn: [...dependsOn].sort() };
+    return { dependsOn: [...dependsOn].sort((a, b) => a - b) };
   });
 }

@@ -17,7 +17,9 @@ export async function runCli(argv: string[], runtime: Runtime): Promise<number> 
     const output = outputOptions(runtime, options);
     const failure =
       error instanceof CommanderError
-        ? new AppError("INVALID_ARGUMENT", error.message.replace(/^error: /, ""))
+        ? new AppError("INVALID_ARGUMENT", error.message.replace(/^error: /, ""), 2, {
+            hint: `Синтаксис и примеры: ${runtime.helpCommand ?? "tasks-cli"} --help`,
+          })
         : asAppError(error);
     printError(runtime.stdout, failure, output);
     return failure.exitCode;

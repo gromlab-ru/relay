@@ -53,11 +53,13 @@ export async function smokePackage(archive, manifest) {
       await execute(["create", "--title", "Проверка npm-архива", "--actor", "package-check"]),
     );
     assert.equal(created.ok, true);
+    assert.equal(created.data.id, 1);
+    assert.equal("number" in created.data, false);
     const log = JSON.parse(
       await execute([
         "log",
         "add",
-        created.data.id,
+        String(created.data.id),
         "--text",
         "Проверка UTF-8 🔬",
         "--actor",
