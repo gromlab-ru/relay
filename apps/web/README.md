@@ -1,7 +1,7 @@
 # Tasks Web
 
 Рабочая канбан-доска на React, TypeScript и Vite. Компоненты — Mantine,
-серверный кеш — SWR, перенос — dnd-kit. Приватный npm workspace `@tasks/web`
+серверный кеш — SWR, перенос — dnd-kit. Приватный pnpm workspace `@tasks/web`
 собирается в `apps/web/dist`; его содержимое входит в дистрибутив CLI
 `@gromlab/tasks-cli`. Сам workspace отдельно не публикуется.
 
@@ -15,24 +15,25 @@
 пользовательский npm-пакет по-прежнему запускается на Node.js 22+.
 
 ```bash
-npm ci
-npm run dev
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 Эта команда запускает API и Vite вместе. Их также можно запускать раздельно
 в двух терминалах:
 
 ```bash
-npm run dev:server
-npm -w @tasks/web run dev
+pnpm run dev:server
+pnpm --filter @tasks/web run dev
 ```
 
 Vite: `http://127.0.0.1:5173`. `/api`, включая SSE, проксируется на
 `http://127.0.0.1:3000`. Для другого адреса сервера задайте `TASKS_API_URL`,
 для другого порта Vite задайте `TASKS_WEB_PORT` (по умолчанию 5173).
-`npm run dev:app` остаётся псевдонимом `dev`, а `npm run dev:ui` — `dev:web`.
+`pnpm run dev:app` остаётся псевдонимом `dev`, а `pnpm run dev:ui` — `dev:web`.
 При отдельном запуске web сервер API должен уже работать: иначе прокси
-сообщит `ECONNREFUSED`. Vite автоматически определяет корень npm workspaces
+сообщит `ECONNREFUSED`. Vite автоматически определяет корень pnpm workspaces
 и разрешает общие зависимости без ручного списка `server.fs.allow`.
 Приложение импортирует из `@tasks/contracts` только типы, поэтому для запуска
 Vite не нужна предварительная производственная сборка Contracts.
@@ -86,7 +87,7 @@ React Reference, указанного в `AGENTS.md`: фасеты `index.ts` и
 Клиент API остаётся в приложении. Его обновление из работающего сервера:
 
 ```bash
-npm -w @tasks/web run generate:api
+pnpm --filter @tasks/web run generate:api
 ```
 
 `generated` полностью принадлежит `@gromlab/rest-api-codegen@5.2.4`.
@@ -103,31 +104,31 @@ npm -w @tasks/web run generate:api
 Автотесты фронтенда не добавляются по согласованному решению. Проверки:
 
 ```bash
-npm run lint:web
-npm run typecheck:web
-npm run build:web
-npm run package:check
+pnpm run lint:web
+pnpm run typecheck:web
+pnpm run build:web
+pnpm run package:check
 ```
 
 Корневые команды через Turbo сначала собирают зависимости, включая декларации
-Contracts. `npm -w @tasks/web run lint`, `npm -w @tasks/web run typecheck` и
-`npm -w @tasks/web run build` запускают только локальные инструменты, без Turbo;
+Contracts. `pnpm --filter @tasks/web run lint`, `pnpm --filter @tasks/web run typecheck` и
+`pnpm --filter @tasks/web run build` запускают только локальные инструменты, без Turbo;
 для двух последних команд `@tasks/contracts` должен быть уже собран.
 
 `package:check` проверяет установленный npm-архив в отдельном каталоге.
 Общая сборка включает локальный `apps/web/dist` в дистрибутив CLI вместе с Node-частью.
 Для задач web `build` и `typecheck` Turbo должен сохранять `.cache/**`, а для
 `build` также `dist/**` относительно workspace, чтобы восстанавливать декларации SDK
-вместе с их build info. `npm -w @tasks/web run clean` удаляет только локальные
+вместе с их build info. `pnpm --filter @tasks/web run clean` удаляет только локальные
 `dist` и `.cache`.
 
 Для визуальной проверки устанавливается отдельный Chrome для agent-browser:
 
 ```bash
-npm -w @tasks/web run browser:install
-npm -w @tasks/web run browser -- --session tasks-web-review open http://127.0.0.1:5173
-npm -w @tasks/web run browser -- --session tasks-web-review snapshot -i
-npm -w @tasks/web run browser -- --session tasks-web-review close
+pnpm --filter @tasks/web run browser:install
+pnpm --filter @tasks/web run browser --session tasks-web-review open http://127.0.0.1:5173
+pnpm --filter @tasks/web run browser --session tasks-web-review snapshot -i
+pnpm --filter @tasks/web run browser --session tasks-web-review close
 ```
 
 Версия agent-browser закреплена в корневом `package.json`; команды workspace

@@ -1,6 +1,6 @@
-# Tasks API
+# Tasks Server
 
-NestJS + Fastify: локальный REST API, OpenAPI 3.1, Swagger UI и SSE.
+NestJS + Fastify: статическая React-доска на `/`, локальный REST API, OpenAPI 3.1, Swagger UI и SSE.
 HTTP-слой находится в `@tasks/server-runtime` и вызывает операции `@tasks/core/*`, не запуская CLI-команды.
 `@tasks/server` содержит только самостоятельную точку входа и её dev-проверку.
 
@@ -9,14 +9,15 @@ HTTP-слой находится в `@tasks/server-runtime` и вызывает 
 Из репозитория:
 
 ```bash
-npm run dev:server
+pnpm run dev:server
 ```
 
-`npm run dev` запускает API и Vite вместе. `npm start` сначала собирает сервер,
+`pnpm run dev` запускает API и Vite вместе. `pnpm start` сначала собирает сервер,
 его зависимости и web через Turbo, затем запускает `apps/server/dist/main.js`
 с готовым UI из `apps/web/dist`.
 
-Самостоятельный сервер использует `apps/playground/tasks.config.json`, автора `human` и порт `3000`.
+Самостоятельный сервер использует `apps/playground/tasks.config.json`, автора `human`
+и `server.port` из выбранного конфига (по умолчанию `3000`).
 Переменные `TASKS_CONFIG`, `TASKS_ACTOR`, `TASKS_PORT` переопределяют эти значения.
 Корневые команды разрешают относительный `TASKS_CONFIG` от каталога вызова до запуска Turbo.
 Для мутаций и браузерных проверок используйте временный проект с абсолютным `TASKS_CONFIG`.
@@ -33,16 +34,20 @@ Dev-запуск не зависит от JavaScript в `dist`: очистка �
 ```bash
 npx @gromlab/tasks-cli server --actor human
 npx @gromlab/tasks-cli server --actor human --config ./tasks.config.json --port 3001
+TASKS_PORT=3002 npx @gromlab/tasks-cli server --actor human
 ```
 
+- Web: `http://127.0.0.1:3000/`
 - REST: `http://127.0.0.1:3000/api/v1`
 - Swagger: `http://127.0.0.1:3000/api/docs`
 - OpenAPI: `http://127.0.0.1:3000/api/openapi.json`
 - SSE: `http://127.0.0.1:3000/api/v1/events`
 
-Параметры CLI имеют приоритет над переменными окружения. `--port 0` выбирает свободный порт.
+Приоритет порта: `--port` → `TASKS_PORT` → `server.port` в `tasks.config.json` → `3000`.
+Например, добавьте `"server": { "port": 3001 }` в конфиг проекта.
+Допустимы целые числа `0–65535`; `0` выбирает свободный порт. Изменение требует перезапуска.
 Один сервер обслуживает один проект и использует одного автора изменений.
-`--open` открывает корневой адрес в браузере; до подключения фронтенда используйте Swagger.
+`--open` открывает доску на корневом адресе в браузере.
 
 ## Устройство
 
@@ -88,9 +93,10 @@ SSE уведомляет об изменениях API и файлов, вклю
 возвращают 404, а не HTML. Фронтенд подключается при запуске; после появления сборки сервер
 нужно перезапустить.
 
-`npm run build:server` собирает сервер и его зависимости через Turbo; каждый пакет пишет
-только собственный `dist` командой `tsc -p tsconfig.json`, без TypeScript project references.
-Сборка `apps/web` независима от бэкенда: для API и Swagger она не требуется.
+`pnpm run build:server` собирает сервер, его зависимости и статику `apps/web` через Turbo.
+После этой команды `pnpm --filter @tasks/server start` сразу отдаёт готовый frontend.
+Каждый Node-пакет пишет только собственный `dist` командой `tsc -p tsconfig.json`,
+без TypeScript project references. Vite собирает web в `apps/web/dist`.
 
 В разработке Vite проксирует `/api` на Nest, включая SSE. `dev:server` разрешает
 Origin `http://127.0.0.1:5173` и `http://localhost:5173` по умолчанию; `TASKS_WEB_PORT`
@@ -100,22 +106,24 @@ Origin `http://127.0.0.1:5173` и `http://localhost:5173` по умолчани�
 ## Проверки
 
 ```bash
-npm run build:server
-npm run typecheck --workspace @tasks/server
-npm run typecheck --workspace @tasks/server-runtime
-npm run test:server
-npm run test:contracts
+pnpm run build:server
+pnpm --filter @tasks/server run typecheck
+pnpm --filter @tasks/server-runtime run typecheck
+pnpm run test:server
+pnpm run test:contracts
 ```
 
 Общие проверки продукта, включая подключённый в корневые команды фронтенд:
 
 ```bash
-npm run check
-npm run package:check
+pnpm run check
+pnpm run package:check
 ```
 
 HTTP-тесты в `packages/server-runtime/test` используют временные проекты и Fastify `inject`;
 SSE проверяется настоящим HTTP-соединением. `apps/server/test/dev-server.test.ts` проверяет
 изолированную копию workspace-пакетов без production-сборок, очистку `dist`, перезапуски и shutdown.
+`production-server.test.ts` запускает готовый сервер из чужого каталога с портом из конфига
+и проверяет React-статику, прямой SPA-маршрут и API.
 Проверка пакета устанавливает npm-архив без devDependencies вне репозитория, запускает сервер
 через NPX и проверяет совместную работу HTTP и CLI с одними документами.

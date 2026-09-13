@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import {
   access,
   cp,
@@ -13,7 +14,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, sep } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
@@ -44,15 +45,8 @@ for (const configuration of ["default", "relative"] as const)
         "packages/typescript-config",
       ];
       // Копия изолирует очистку и изменение исходников от работающего dev-сервера разработчика.
-      await writeFile(
-        join(root, "package.json"),
-        JSON.stringify({
-          ...JSON.parse(await readFile(join(project, "package.json"), "utf8")),
-          workspaces,
-        }),
-      );
-      await cp(join(project, "turbo.json"), join(root, "turbo.json"));
-      await cp(join(project, "package-lock.json"), join(root, "package-lock.json"));
+      for (const path of ["package.json", "turbo.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"])
+        await cp(join(project, path), join(root, path));
       for (const path of workspaces) {
         const destination = join(root, path);
         await mkdir(dirname(destination), { recursive: true });
@@ -62,32 +56,33 @@ for (const configuration of ["default", "relative"] as const)
             !["dist", "node_modules", ".turbo", ".cache", ".artifacts"].includes(basename(source)),
         });
       }
-      // External dependencies can be shared, but workspace links must point into the copy.
-      const modules = join(root, "node_modules");
-      await mkdir(modules);
-      for (const entry of await readdir(join(project, "node_modules"), { withFileTypes: true })) {
-        if (!(entry.isDirectory() || entry.isSymbolicLink()) || entry.name === "@tasks") continue;
-        const source = await realpath(join(project, "node_modules", entry.name));
-        if (!source.split(sep).includes("node_modules")) continue;
-        const destination = join(modules, entry.name);
-        if (entry.name.startsWith("@")) {
-          await mkdir(destination);
-          for (const dependency of await readdir(source, { withFileTypes: true })) {
-            if (!(dependency.isDirectory() || dependency.isSymbolicLink())) continue;
-            const target = await realpath(join(source, dependency.name));
-            if (target.split(sep).includes("node_modules"))
-              await symlink(target, join(destination, dependency.name), "junction");
-          }
-        } else {
-          await symlink(source, destination, "junction");
-        }
-      }
-      await mkdir(join(modules, "@tasks"));
-      for (const path of workspaces) {
-        const manifest = JSON.parse(await readFile(join(root, path, "package.json"), "utf8")) as {
-          name: string;
+      // У каждого пакета свои зависимости. Внешние пакеты общие, workspace-ссылки ведут в копию.
+      const workspaceTargets = new Map(
+        await Promise.all(
+          workspaces.map(
+            async (path) => [await realpath(join(project, path)), join(root, path)] as const,
+          ),
+        ),
+      );
+      for (const path of ["", ...workspaces]) {
+        const sourceModules = join(project, path, "node_modules");
+        if (!existsSync(sourceModules)) continue;
+        const modules = join(root, path, "node_modules");
+        await mkdir(modules);
+        const link = async (name: string) => {
+          const target = await realpath(join(sourceModules, name));
+          await symlink(workspaceTargets.get(target) ?? target, join(modules, name), "junction");
         };
-        await symlink(join(root, path), join(modules, manifest.name), "junction");
+        for (const entry of await readdir(sourceModules, { withFileTypes: true })) {
+          if (!(entry.isDirectory() || entry.isSymbolicLink())) continue;
+          if (entry.name.startsWith("@")) {
+            await mkdir(join(modules, entry.name));
+            for (const dependency of await readdir(join(sourceModules, entry.name)))
+              await link(join(entry.name, dependency));
+          } else {
+            await link(entry.name);
+          }
+        }
       }
       const resolution = await execute(
         process.execPath,
@@ -97,7 +92,7 @@ for (const configuration of ["default", "relative"] as const)
           "-e",
           "console.log(JSON.stringify(['@tasks/core/storage/workspace', '@tasks/contracts', '@tasks/server-runtime'].map((name) => import.meta.resolve(name))))",
         ],
-        { cwd: root },
+        { cwd: join(root, "apps/cli") },
       );
       assert.deepEqual(
         JSON.parse(resolution.stdout),
@@ -109,13 +104,13 @@ for (const configuration of ["default", "relative"] as const)
       );
       const workspace = configuration === "default" ? "apps/playground" : "custom tasks";
       await initialize(join(root, workspace), ".tasks");
-      const npmCli = process.env.npm_execpath;
-      assert(npmCli, "Запускайте тест через npm run test:server");
+      const pnpmCli = process.env.npm_execpath;
+      assert(pnpmCli, "Запускайте тест через pnpm run test:server");
       const env: NodeJS.ProcessEnv = { ...process.env, TASKS_PORT: "0", TASKS_ACTOR: "dev-human" };
       delete env.TASKS_CONFIG;
       if (configuration === "relative") env.TASKS_CONFIG = `${workspace}/tasks.config.json`;
       const grouped = process.platform !== "win32";
-      const child = spawn(process.execPath, [npmCli, "run", "dev:server"], {
+      const child = spawn(process.execPath, [pnpmCli, "run", "dev:server"], {
         cwd: root,
         env,
         detached: grouped,
@@ -194,7 +189,7 @@ for (const configuration of ["default", "relative"] as const)
         await mkdir(path);
         await writeFile(join(path, "build-marker"), "production build");
       }
-      await execute(process.execPath, [npmCli, "run", "clean", "--workspaces", "--if-present"], {
+      await execute(process.execPath, [pnpmCli, "--recursive", "--if-present", "run", "clean"], {
         cwd: root,
       });
       for (const path of outputs) await assert.rejects(access(path), { code: "ENOENT" });

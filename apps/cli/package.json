@@ -1,7 +1,7 @@
 {
   "name": "@gromlab/tasks-cli",
   "version": "0.2.0",
-  "description": "Локальный CLI-трекер задач для AI-оркестраторов и агентов",
+  "description": "Локальный трекер задач: CLI, веб-доска и REST API для человека и AI-агентов",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gromlab-ru/tasks-cli.git",
@@ -14,6 +14,8 @@
   "keywords": [
     "cli",
     "tasks",
+    "kanban",
+    "rest-api",
     "ai-agents",
     "orchestration",
     "json"
@@ -45,11 +47,11 @@
     "package:check": "node scripts/release/check-package.mjs",
     "release:check": "node scripts/release/check-tag.mjs",
     "release:publish": "node scripts/release/publish.mjs",
-    "prepack": "node -e \"throw new Error('Run npm run package:check at the repository root; publish only its checked archive.')\""
+    "prepack": "node -e \"throw new Error('Выполните pnpm run package:check из корня репозитория; публикуйте только проверенный архив.')\""
   },
   "dependencies": {
-    "@tasks/core": "*",
-    "@tasks/server-runtime": "*",
+    "@tasks/core": "workspace:*",
+    "@tasks/server-runtime": "workspace:*",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1",
     "string-width": "^8.2.2",
@@ -57,8 +59,8 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/contracts": "*",
-    "@tasks/typescript-config": "*",
+    "@tasks/contracts": "workspace:*",
+    "@tasks/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.20.5",

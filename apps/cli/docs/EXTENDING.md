@@ -108,7 +108,7 @@ registerCommand(group, runtime, definition);
 затем выполните из корня репозитория:
 
 ```bash
-npm run build
-npm run typecheck --workspace @gromlab/tasks-cli
-npm run test --workspace @gromlab/tasks-cli
+pnpm run build
+pnpm --filter @gromlab/tasks-cli run typecheck
+pnpm --filter @gromlab/tasks-cli run test
 ```

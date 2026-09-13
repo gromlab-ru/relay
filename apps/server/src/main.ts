@@ -8,11 +8,13 @@ const server = await startServer({
     process.env.TASKS_CONFIG ??
     fileURLToPath(new URL("../playground/tasks.config.json", import.meta.resolve("#manifest"))),
   actor: process.env.TASKS_ACTOR ?? "human",
-  port: process.env.TASKS_PORT === undefined ? 3000 : Number(process.env.TASKS_PORT),
+  ...(process.env.TASKS_PORT === undefined
+    ? {}
+    : { port: /^\d+$/.test(process.env.TASKS_PORT) ? Number(process.env.TASKS_PORT) : NaN }),
   webRoot: fileURLToPath(new URL("../web/dist/", import.meta.resolve("#manifest"))),
   allowedOrigins: [`http://127.0.0.1:${webPort}`, `http://localhost:${webPort}`],
 });
-console.log(`Tasks API: ${server.url}\nSwagger: ${server.url}/api/docs`);
+console.log(`Tasks Web: ${server.url}\nTasks API: ${server.url}\nSwagger: ${server.url}/api/docs`);
 const stop = () => {
   process.removeListener("SIGINT", stop);
   process.removeListener("SIGTERM", stop);

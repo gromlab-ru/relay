@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { isBuiltin } from "node:module";
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { cliRoot, readPackageFiles, repoRoot, stageDirectory } from "../lib/project.mjs";
+import { cliRoot, readCliManifest, repoRoot, stageDirectory } from "../lib/project.mjs";
 import { distributionManifest, releaseMetadata } from "./metadata.mjs";
 
-const { manifest, lock } = await readPackageFiles();
-releaseMetadata(manifest, lock);
+const manifest = await readCliManifest();
+releaseMetadata(manifest);
 /** @type {import('./metadata.mjs').WorkspaceManifest[]} */
 const workspaces = await Promise.all(
   ["core", "contracts", "server-runtime"].map(async (name) =>

@@ -9,18 +9,19 @@ import { invariant } from "@tasks/core/shared/errors";
 export function registerServer(program: Command, runtime: Runtime) {
   const command = createCommand(program, {
     name: "server",
-    description: "Запустить локальный REST API, Swagger и доступный веб-интерфейс",
+    description: "Запустить веб-доску, локальный REST API и Swagger",
     details:
-      "Запускает локальный сервер на 127.0.0.1. UI и REST API используют те же задачи, что CLI.\n--actor или TASKS_ACTOR задаёт автора изменений из интерфейса. Ctrl+C завершает сервер.",
+      "Запускает локальный сервер на 127.0.0.1 со статической React-сборкой на /. UI и REST API используют те же задачи, что CLI.\nПорт: --port → TASKS_PORT → server.port в tasks.config.json → 3000.\n--actor или TASKS_ACTOR задаёт автора изменений из интерфейса. Ctrl+C завершает сервер.",
     examples: [
       ["npx @gromlab/tasks-cli server --actor human --open", "Открыть доску в браузере"],
       ["npx @gromlab/tasks-cli server --actor human --port 3001", "Использовать другой порт"],
+      ["TASKS_PORT=3001 npx @gromlab/tasks-cli server --actor human", "Задать порт окружением"],
     ],
     configure: (target) =>
       target
         .option(
           "--port <number>",
-          "Порт HTTP; по умолчанию TASKS_PORT или 3000, 0 выбирает свободный",
+          "Порт HTTP; по умолчанию TASKS_PORT, server.port или 3000; 0 выбирает свободный",
           integer(0, 65535),
         )
         .option("--open", "Открыть браузер после запуска"),
@@ -34,20 +35,24 @@ export function registerServer(program: Command, runtime: Runtime) {
       "Укажите автора: npx @gromlab/tasks-cli server --actor human",
     );
     const options = command.opts<{ port?: number; open?: boolean }>();
-    const port = options.port ?? integer(0, 65535)(runtime.env.TASKS_PORT ?? "3000");
+    const port =
+      options.port ??
+      (runtime.env.TASKS_PORT === undefined
+        ? undefined
+        : integer(0, 65535)(runtime.env.TASKS_PORT));
     const config = globals.config ?? runtime.env.TASKS_CONFIG;
     const { startServer } = await import("@tasks/server-runtime");
     const server = await startServer({
       cwd: runtime.cwd,
       actor,
-      port,
+      ...(port === undefined ? {} : { port }),
       webRoot: fileURLToPath(new URL("./dist/web/", import.meta.resolve("#manifest"))),
       ...(config ? { config } : {}),
     });
     runtime.stdout.write(
       globals.format === "json"
         ? JSON.stringify({ ok: true, data: { url: server.url, actor, pid: process.pid } }) + "\n"
-        : `\n  TASKS · API\n\n  ${server.url}\n  Swagger: ${server.url}/api/docs\n  OpenAPI: ${server.url}/api/openapi.json\n  Автор: ${actor}\n\n  Ctrl+C — завершить сервер\n\n`,
+        : `\n  TASKS · WEB + API\n\n  ${server.url}\n  Swagger: ${server.url}/api/docs\n  OpenAPI: ${server.url}/api/openapi.json\n  Автор: ${actor}\n\n  Ctrl+C — завершить сервер\n\n`,
     );
     if (options.open) {
       const binary =

@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Установка выполняется явно, в том числе при запуске релизных скриптов без зависимостей.
+verifyDepsBeforeRun: false
+
+allowBuilds:
+  "@scarf/scarf": false
+  agent-browser: true
+  esbuild: true
+  fsevents: true

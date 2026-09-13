@@ -7,12 +7,12 @@ import { promisify } from "node:util";
 import { fixture, successful } from "./helpers/cli.js";
 import { checkServerSurface, startServerProcess } from "./helpers/server-process.mjs";
 
-test("source CLI preserves the npm caller's workspace, JSON output and server lifecycle", async (t) => {
+test("исходный CLI сохраняет каталог вызова pnpm, JSON-вывод и жизненный цикл сервера", async (t) => {
   const app = await fixture(t);
-  const npm = process.env.npm_execpath;
-  assert(npm);
+  const pnpm = process.env.npm_execpath;
+  assert(pnpm, "Запускайте тест через pnpm run test:cli");
   const repo = fileURLToPath(new URL("../../../", import.meta.url));
-  const args = [npm, "--prefix", repo, "run", "--silent", "dev:cli", "--"];
+  const args = [pnpm, "--dir", repo, "--silent", "run", "dev:cli"];
   const { stdout, stderr } = await promisify(execFile)(
     process.execPath,
     [...args, "create", "Source workspace", "--actor", "source-human", "--format", "json"],

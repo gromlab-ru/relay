@@ -7,8 +7,6 @@ import assert from "node:assert/strict";
  *   engines: {node: string}, dependencies?: Record<string, string>,
  *   devDependencies?: Record<string, string>, scripts?: Record<string, string>,
  *   imports?: Record<string, string>, files?: string[]}} PackageManifest
- * @typedef {{name: string, version: string,
- *   packages: Record<string, {name?: string, version: string}>}} PackageLock
  * @typedef {{name: string, version: string, private: boolean,
  *   dependencies?: Record<string, string>}} WorkspaceManifest
  */
@@ -22,10 +20,9 @@ const versionPattern = new RegExp(
 /**
  * Версия и канал вычисляются до установки зависимостей и любых обращений на запись к npm.
  * @param {PackageManifest} manifest Манифест публикуемого пакета.
- * @param {PackageLock} lock Корневой lockfile с записью apps/cli.
  * @param {string} [tag] Git-тег, если проверяется релиз.
  */
-export function releaseMetadata(manifest, lock, tag) {
+export function releaseMetadata(manifest, tag) {
   assert.equal(manifest.name, "@gromlab/tasks-cli", "Неверное имя публикуемого пакета");
   assert(!manifest.private, "Приватный манифест нельзя публиковать");
   assert.equal(manifest.publishConfig.access, "public", "Ожидается публичный пакет");
@@ -36,16 +33,6 @@ export function releaseMetadata(manifest, lock, tag) {
     manifest.repository.url,
     "git+https://github.com/gromlab-ru/tasks-cli.git",
     "Неверный repository.url для npm provenance",
-  );
-  assert.equal(lock.name, "@gromlab/tasks-monorepo", "Неверное имя корневого lockfile");
-  assert.equal(lock.version, "0.0.0", "Версия монорепозитория не является версией CLI");
-  assert.equal(lock.packages[""]?.name, lock.name, "Корневое имя lockfile не совпадает");
-  assert.equal(lock.packages[""]?.version, lock.version, "Корневая версия lockfile не совпадает");
-  assert.equal(lock.packages["apps/cli"]?.name, manifest.name, "Неверное имя workspace CLI");
-  assert.equal(
-    lock.packages["apps/cli"]?.version,
-    manifest.version,
-    "Версия apps/cli в lockfile не совпадает с манифестом CLI",
   );
   const parsed = versionPattern.exec(manifest.version);
   assert(
@@ -67,7 +54,7 @@ export function releaseMetadata(manifest, lock, tag) {
 }
 
 /**
- * Private workspace code is bundled; only its external runtime dependencies are installed.
+ * Код приватных пакетов включается в сборку; устанавливаются только внешние зависимости.
  * @param {PackageManifest} manifest
  * @param {WorkspaceManifest[]} workspaces
  */
@@ -87,7 +74,7 @@ export function distributionManifest(manifest, workspaces) {
   for (const candidate of [manifest, ...workspaces]) {
     for (const [name, version] of Object.entries(candidate.dependencies ?? {})) {
       if (internal.has(name)) {
-        assert.equal(version, "*", `${name} must use an npm workspace dependency`);
+        assert.equal(version, "workspace:*", `${name} должен использовать зависимость workspace:*`);
         continue;
       }
       assert(!name.startsWith("@tasks/"), `Unbundled private dependency: ${name}`);

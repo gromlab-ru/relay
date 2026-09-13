@@ -4,9 +4,14 @@ import { spawn } from "node:child_process";
 /** Запускает CLI или npx и читает JSON-сообщение готовности сервера.
  * @param {string[]} args Аргументы процесса Node.js, включая путь CLI/npx.
  * @param {string} cwd Каталог временного проекта.
+ * @param {NodeJS.ProcessEnv} [env] Переопределения окружения запуска.
  */
-export async function startServerProcess(args, cwd) {
-  const child = spawn(process.execPath, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+export async function startServerProcess(args, cwd, env) {
+  const child = spawn(process.execPath, args, {
+    cwd,
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   let output = "";
   let errors = "";
   let exited = false;
@@ -95,6 +100,7 @@ export async function checkServerSurface(url, { web = false } = {}) {
   const response = await fetch(url);
   if (web) {
     assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /text\/html/);
     const html = await response.text();
     const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].flatMap((match) =>
       match[1] ? [match[1]] : [],
@@ -107,11 +113,25 @@ export async function checkServerSurface(url, { web = false } = {}) {
     for (const path of [...scripts, ...styles]) {
       const asset = await fetch(new URL(path, url));
       assert.equal(asset.status, 200, path);
+      assert.match(
+        asset.headers.get("content-type") ?? "",
+        path.endsWith(".css") ? /text\/css/ : /(?:text|application)\/javascript/,
+        path,
+      );
       assert((await asset.text()).length > 0);
     }
     const deep = await fetch(`${url}/tasks/12`);
     assert.equal(deep.status, 200);
     assert.equal(await deep.text(), html);
+    const head = await fetch(url, { method: "HEAD" });
+    assert.equal(head.status, 200);
+    assert.match(head.headers.get("content-type") ?? "", /text\/html/);
+    assert.equal(await head.text(), "");
+    for (const path of ["/assets/missing.js", "/missing.css", "/api/docs/missing.js"]) {
+      const missing = await fetch(`${url}${path}`);
+      assert.equal(missing.status, 404, path);
+      assert.equal((await missing.json()).ok, false, path);
+    }
   } else {
     assert.equal(response.status, 404);
     assert.equal((await response.json()).ok, false);

@@ -7,7 +7,7 @@
     "#manifest": "./package.json"
   },
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.json",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
     "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
     "dev": "concurrently --kill-others \"tsc -p tsconfig.dev.json --watch --preserveWatchOutput\" \"tsx --tsconfig tsconfig.dev.json --watch --watch-preserve-output --conditions=tasks-source src/main.ts\"",
     "start": "node dist/main.js",
@@ -15,11 +15,11 @@
     "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@tasks/server-runtime": "*"
+    "@tasks/server-runtime": "workspace:*"
   },
   "devDependencies": {
-    "@tasks/core": "*",
-    "@tasks/typescript-config": "*",
+    "@tasks/core": "workspace:*",
+    "@tasks/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "concurrently": "^10.0.5",
     "tsx": "^4.20.5",

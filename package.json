@@ -8,23 +8,19 @@
     "url": "git+https://github.com/gromlab-ru/tasks-cli.git"
   },
   "type": "module",
-  "packageManager": "npm@11.16.0",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@11.18.0",
   "engines": {
-    "node": ">=22.12",
-    "npm": ">=11"
+    "node": ">=22.13",
+    "pnpm": ">=11.18.0"
   },
   "scripts": {
     "dev": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run dev --filter=@tasks/server --filter=@tasks/web",
     "dev:app": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run dev --filter=@tasks/server --filter=@tasks/web",
     "dev:server": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run dev --filter=@tasks/server",
     "dev:web": "turbo run dev --filter=@tasks/web",
-    "dev:ui": "npm run dev:web",
+    "dev:ui": "pnpm run dev:web",
     "dev:cli": "node --conditions=tasks-source apps/cli/scripts/dev.mjs",
-    "playground": "npm run --silent tasks --workspace=@tasks/playground --",
+    "playground": "pnpm --filter @tasks/playground --silent run tasks",
     "start": "node --import ./apps/server/scripts/environment.mjs ./node_modules/turbo/bin/turbo run start --filter=@tasks/server",
     "start:cli": "node apps/cli/dist/cli/main.js",
     "build": "turbo run build",
@@ -44,11 +40,11 @@
     "test:contracts": "turbo run test --filter=@tasks/contracts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && turbo run lint typecheck test",
+    "check": "pnpm run format:check && turbo run lint typecheck test",
     "clean": "turbo run clean",
-    "package:check": "npm run clean && turbo run package:check --filter=@gromlab/tasks-cli",
-    "release:check": "npm run release:check --workspace=@gromlab/tasks-cli",
-    "release:publish": "npm run release:publish --workspace=@gromlab/tasks-cli"
+    "package:check": "pnpm run clean && turbo run package:check --filter=@gromlab/tasks-cli",
+    "release:check": "pnpm --filter @gromlab/tasks-cli run release:check",
+    "release:publish": "pnpm --filter @gromlab/tasks-cli run release:publish"
   },
   "devDependencies": {
     "agent-browser": "0.37.1",

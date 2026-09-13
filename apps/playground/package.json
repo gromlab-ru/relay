@@ -6,7 +6,7 @@
     "tasks": "tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts"
   },
   "devDependencies": {
-    "@gromlab/tasks-cli": "file:../cli",
+    "@gromlab/tasks-cli": "workspace:*",
     "tsx": "^4.20.5"
   }
 }

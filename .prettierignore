@@ -3,7 +3,7 @@ dist/
 .turbo/
 .cache/
 coverage/
-package-lock.json
+pnpm-lock.yaml
 .artifacts/
 .agents/
 .npmrc

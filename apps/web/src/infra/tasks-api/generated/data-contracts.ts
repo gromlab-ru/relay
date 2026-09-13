@@ -61,6 +61,15 @@ export interface ContextResponse {
         }
       >
     >;
+    /** @default {"port":3000} */
+    server: {
+      /**
+       * @min 0
+       * @max 65535
+       * @default 3000
+       */
+      port: number;
+    };
     /** @default {"format":"text","defaultLimit":20,"maxBytes":16384} */
     output: {
       /** @default "text" */
@@ -686,6 +695,15 @@ export interface BoardResponse {
           }
         >
       >;
+      /** @default {"port":3000} */
+      server: {
+        /**
+         * @min 0
+         * @max 65535
+         * @default 3000
+         */
+        port: number;
+      };
       /** @default {"format":"text","defaultLimit":20,"maxBytes":16384} */
       output: {
         /** @default "text" */

@@ -147,15 +147,15 @@ NestJS отдаёт собранный UI, REST API и SSE с одного ло�
 
 ## 8. Интеграция и проверка
 
-Команды выполняются из корня репозитория. Разработка: `npm run dev` либо
-`npm run dev:server` и `npm -w @tasks/web run dev` в отдельных терминалах.
+Команды выполняются из корня репозитория. Разработка: `pnpm run dev` либо
+`pnpm run dev:server` и `pnpm --filter @tasks/web run dev` в отдельных терминалах.
 Vite проксирует `/api` в Nest. Фронтенд можно разрабатывать на типизированных
 HTTP-моках по Contracts; финальная приёмка требует реального сервера.
 
-Обязательные проверки приложения: `npm run lint:web`, `npm run typecheck:web`,
-`npm run build:web`. Корневые команды через Turbo собирают необходимые зависимости.
+Обязательные проверки приложения: `pnpm run lint:web`, `pnpm run typecheck:web`,
+`pnpm run build:web`. Корневые команды через Turbo собирают необходимые зависимости.
 Локальная сборка находится в `apps/web/dist` и включается в дистрибутив CLI.
-Визуальная приёмка использует `npm -w @tasks/web run browser -- ...`; правила изоляции
+Визуальная приёмка использует `pnpm --filter @tasks/web run browser ...`; правила изоляции
 и headless-режима закреплены в [AGENTS.md](AGENTS.md).
 
 Браузерные сценарии приёмки:

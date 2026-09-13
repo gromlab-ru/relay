@@ -5,31 +5,31 @@
 
 ## Посмотреть оформление
 
-Из этой папки (или `npm run --silent playground -- <args>` из корня):
+Из этой папки (или `pnpm --silent run playground <args>` из корня):
 
 ```bash
-npm run --silent tasks -- list
-npm run --silent tasks -- list --all
-npm run --silent tasks -- list --status done
-npm run --silent tasks -- tree 1
-npm run --silent tasks -- links 6
-npm run --silent tasks -- get 3 --full
-npm run --silent tasks -- log list 3
-npm run --silent tasks -- group list
+pnpm --silent run tasks list
+pnpm --silent run tasks list --all
+pnpm --silent run tasks list --status done
+pnpm --silent run tasks tree 1
+pnpm --silent run tasks links 6
+pnpm --silent run tasks get 3 --full
+pnpm --silent run tasks log list 3
+pnpm --silent run tasks group list
 ```
 
 Команда `tasks` запускает исходники TypeScript через **Node.js** с `tsx`.
 Изменения кода доступны при следующем запуске. Зависимости устанавливаются
-командой `npm ci` в корне репозитория.
+командой `pnpm install --frozen-lockfile` в корне репозитория.
 
 Эквивалент прямого вызова:
 
 ```bash
-npm exec -- tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts list
+pnpm exec tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts list
 ```
 
 Условие `tasks-source` выбирает исходники приватных пакетов без предварительной сборки.
-Корневой `npm run dev` запускает API и web с этим демонстрационным проектом по умолчанию;
+Корневой `pnpm run dev` запускает API и web с этим демонстрационным проектом по умолчанию;
 CLI запускается отдельно через `playground` или `dev:cli` с явным `--config`.
 
 В терминале цвета включаются автоматически. Можно явно передать
@@ -65,26 +65,26 @@ ID — единственные идентификаторы задач, сох�
 ```bash
 TASKS_DEMO="$(mktemp -d)"
 cp -R .tasks tasks.config.json "$TASKS_DEMO/"
-npm run --silent tasks -- --config "$TASKS_DEMO/tasks.config.json" list --ready
-npm run --silent tasks -- --config "$TASKS_DEMO/tasks.config.json" claim 5 --status in_progress --actor human
-npm run --silent tasks -- --config "$TASKS_DEMO/tasks.config.json" comment add 5 --text "Начал писать инструкцию" --actor human
-npm run --silent tasks -- --config "$TASKS_DEMO/tasks.config.json" get 5 --full
-npm run --silent tasks -- --config "$TASKS_DEMO/tasks.config.json" create "Новая демонстрационная задача" --group docs --actor human
+pnpm --silent run tasks --config "$TASKS_DEMO/tasks.config.json" list --ready
+pnpm --silent run tasks --config "$TASKS_DEMO/tasks.config.json" claim 5 --status in_progress --actor human
+pnpm --silent run tasks --config "$TASKS_DEMO/tasks.config.json" comment add 5 --text "Начал писать инструкцию" --actor human
+pnpm --silent run tasks --config "$TASKS_DEMO/tasks.config.json" get 5 --full
+pnpm --silent run tasks --config "$TASKS_DEMO/tasks.config.json" create "Новая демонстрационная задача" --group docs --actor human
 # Следующий ID — 7.
 ```
 
 Для проверки UI на той же копии передайте `TASKS_CONFIG="$TASKS_DEMO/tasks.config.json"`
-корневой команде `npm run dev`.
+корневой команде `pnpm run dev`.
 
 Справка с объяснениями и примерами:
 
 ```bash
-npm run --silent tasks -- create --help
-npm run --silent tasks -- log add --help
+pnpm --silent run tasks create --help
+pnpm --silent run tasks log add --help
 ```
 
 Проверка целостности:
 
 ```bash
-npm run --silent tasks -- validate
+pnpm --silent run tasks validate
 ```

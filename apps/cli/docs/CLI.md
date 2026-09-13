@@ -62,6 +62,7 @@ tasks-cli group list
     "done": { "terminal": true, "satisfiesDependencies": true, "color": "green" },
     "cancelled": { "terminal": true, "color": "gray" }
   },
+  "server": { "port": 3000 },
   "output": { "format": "text", "defaultLimit": 20, "maxBytes": 16384 }
 }
 ```
@@ -69,6 +70,10 @@ tasks-cli group list
 `color`: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`,
 `gray`, `none`. Без поля используется стандартная тема. Цвет не влияет на
 `terminal` и `satisfiesDependencies`; их значения по умолчанию — `false`.
+
+`server.port`: целое число от `0` до `65535`, по умолчанию `3000`.
+`0` выбирает свободный порт. Секция `server` необязательна для существующих конфигов.
+Порт читается при запуске; после его изменения перезапустите сервер.
 
 ## Создание и изменение
 
@@ -253,7 +258,7 @@ tasks-cli log add <task-id> --kind summary --title "Результат рабо�
 ## Проверка
 
 ```text
-npm test
+pnpm test
 ```
 
 Все тесты прошли.
@@ -312,16 +317,19 @@ CLI измеряет реальный объём UTF-8 ответа, включ�
 ```bash
 npx @gromlab/tasks-cli server --actor human --open
 npx @gromlab/tasks-cli server --actor human --port 3001 --config ./tasks.config.json
+TASKS_PORT=3002 npx @gromlab/tasks-cli server --actor human
 ```
 
-NestJS на `127.0.0.1` предоставляет API, OpenAPI и Swagger; готовый фронтенд подключается
-из `dist/web` относительно манифеста CLI, когда сборка присутствует.
+NestJS на `127.0.0.1` предоставляет API, OpenAPI и Swagger; статическая сборка React
+подключается из `dist/web` относительно манифеста CLI и открывается на `/`.
+HTML, JS, CSS, шрифты и API обслуживаются одним сервером на одном порту.
 Полный npm-дистрибутив всегда включает UI; исходный CLI может работать без него.
 `--open` открывает корневой адрес в браузере,
 `--port 0` выбирает свободный порт, `Ctrl+C` корректно останавливает приложение.
 С `--format json` первое сообщение содержит `data.url`, `data.actor`, `data.pid`.
-Параметры `--actor`, `--config`, `--port` имеют приоритет над `TASKS_ACTOR`, `TASKS_CONFIG`,
-`TASKS_PORT`. Без фронтенда `/` возвращает 404, а `/api/docs` предоставляет Swagger UI.
+Порт выбирается в порядке `--port` → `TASKS_PORT` → `server.port` в выбранном
+`tasks.config.json` → `3000`. Параметры `--actor`, `--config` имеют приоритет над
+`TASKS_ACTOR`, `TASKS_CONFIG`. Без фронтенда `/` возвращает 404, а `/api/docs` предоставляет Swagger UI.
 Реализованы задачные маршруты, история, доска и SSE. Контракт описан в
 [API.md](https://github.com/gromlab-ru/tasks-cli/blob/main/packages/contracts/docs/API.md).
 

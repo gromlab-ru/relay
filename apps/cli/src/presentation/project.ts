@@ -52,6 +52,14 @@ export function configText(
     ),
     section("Статусы", statuses, options),
     section(
+      "Сервер",
+      wrap(
+        `Порт: ${config.server.port === 0 ? "0 (свободный)" : config.server.port}\nПриоритет: --port → TASKS_PORT → server.port`,
+        options.width,
+      ),
+      options,
+    ),
+    section(
       "Вывод",
       wrap(
         `Формат: ${config.output.format}\nРазмер страницы групп, комментариев и отчётов: ${config.output.defaultLimit}\nСписок задач: по байтовому бюджету (число ограничивается через --limit)\nЛимит ответа: ${config.output.maxBytes} байт`,

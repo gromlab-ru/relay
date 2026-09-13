@@ -4,72 +4,49 @@ import { test } from "node:test";
 import { distributionManifest, releaseMetadata } from "../scripts/release/metadata.mjs";
 import { publishedIntegrity, shouldPublish } from "../scripts/release/registry.mjs";
 
-function manifests(version = "0.2.0") {
+function manifest(version = "0.2.0") {
   return {
-    manifest: {
-      name: "@gromlab/tasks-cli",
-      version,
-      bin: { "tasks-cli": "dist/cli/main.js" },
-      publishConfig: { access: "public", registry: "https://registry.npmjs.org" },
-      repository: { type: "git", url: "git+https://github.com/gromlab-ru/tasks-cli.git" },
-      engines: { node: ">=22" },
-    },
-    lock: {
-      name: "@gromlab/tasks-monorepo",
-      version: "0.0.0",
-      packages: {
-        "": { name: "@gromlab/tasks-monorepo", version: "0.0.0" },
-        "apps/cli": { name: "@gromlab/tasks-cli", version },
-      },
-    },
+    name: "@gromlab/tasks-cli",
+    version,
+    bin: { "tasks-cli": "dist/cli/main.js" },
+    publishConfig: { access: "public", registry: "https://registry.npmjs.org" },
+    repository: { type: "git", url: "git+https://github.com/gromlab-ru/tasks-cli.git" },
+    engines: { node: ">=22" },
   };
 }
 
-test("релиз сверяет тег, оба манифеста и канал предварительной версии", () => {
+test("релиз сверяет тег с манифестом CLI и определяет канал предварительной версии", () => {
   for (const [version, channel] of [
     ["0.2.0", "latest"],
     ["0.2.0-rc.1", "next"],
   ]) {
-    const { manifest, lock } = manifests(version);
-    const metadata = releaseMetadata(manifest, lock, `v${version}`);
+    const metadata = releaseMetadata(manifest(version), `v${version}`);
     assert.equal(metadata.distTag, channel);
     assert.equal(metadata.archiveName, `gromlab-tasks-cli-${version}.tgz`);
   }
-  const { manifest, lock } = manifests();
-  assert.throws(() => releaseMetadata(manifest, lock, "v0.2.1"));
-  assert.throws(() => releaseMetadata(manifest, { ...lock, version: "0.2.0" }, "v0.2.0"));
+  const candidate = manifest();
+  assert.throws(() => releaseMetadata(candidate, "v0.2.1"));
+  assert.throws(() => releaseMetadata({ ...candidate, private: true }));
+  assert.throws(() => releaseMetadata({ ...candidate, name: "@gromlab/tasks-monorepo" }));
+  assert.throws(() => releaseMetadata({ ...candidate, bin: { "tasks-cli": "dist/main.js" } }));
+  assert.throws(() => releaseMetadata({ ...candidate, engines: { node: ">=18" } }));
   assert.throws(() =>
-    releaseMetadata(
-      manifest,
-      {
-        ...lock,
-        packages: {
-          ...lock.packages,
-          "apps/cli": { ...lock.packages["apps/cli"], version: "0.2.1" },
-        },
-      },
-      "v0.2.0",
-    ),
-  );
-  assert.throws(() => releaseMetadata(manifest, { ...lock, packages: { "": lock.packages[""] } }));
-  assert.throws(() => releaseMetadata({ ...manifest, private: true }, lock));
-  assert.throws(() => releaseMetadata({ ...manifest, name: lock.name }, lock));
-  assert.throws(() => releaseMetadata({ ...manifest, bin: { "tasks-cli": "dist/main.js" } }, lock));
-  assert.throws(() => releaseMetadata({ ...manifest, engines: { node: ">=18" } }, lock));
-  assert.throws(() =>
-    releaseMetadata({ ...manifest, repository: { type: "git", url: "https://example.com" } }, lock),
+    releaseMetadata({ ...candidate, repository: { type: "git", url: "https://example.com" } }),
   );
   for (const version of ["01.1.0", "0.1", "0.1.0-01", "0.1.0+build.1", "0.1.0\n"]) {
-    const candidate = manifests(version);
-    assert.throws(() => releaseMetadata(candidate.manifest, candidate.lock, `v${version}`));
+    assert.throws(() => releaseMetadata(manifest(version), `v${version}`));
   }
 });
 
-test("release staging includes external runtime dependencies, not private workspaces or tools", () => {
-  const manifest = {
-    ...manifests().manifest,
-    dependencies: { "@tasks/core": "*", "@tasks/server-runtime": "*", commander: "^14.0.0" },
-    devDependencies: { esbuild: "^0.28.2", "@tasks/typescript-config": "*" },
+test("дистрибутив содержит внешние зависимости без приватных workspace-ссылок и инструментов", () => {
+  const source = {
+    ...manifest(),
+    dependencies: {
+      "@tasks/core": "workspace:*",
+      "@tasks/server-runtime": "workspace:*",
+      commander: "^14.0.0",
+    },
+    devDependencies: { esbuild: "^0.28.2", "@tasks/typescript-config": "workspace:*" },
     scripts: { prepack: "node scripts/release/assemble-package.mjs" },
     imports: { "#manifest": "./package.json" },
   };
@@ -86,18 +63,18 @@ test("release staging includes external runtime dependencies, not private worksp
       version: "0.0.0",
       private: true,
       dependencies: {
-        "@tasks/core": "*",
-        "@tasks/contracts": "*",
+        "@tasks/core": "workspace:*",
+        "@tasks/contracts": "workspace:*",
         "@nestjs/core": "^12.0.1",
         zod: "^4.1.0",
       },
     },
   ];
-  const staged = distributionManifest(manifest, workspaces);
-  assert.equal(staged.name, manifest.name);
-  assert.equal(staged.version, manifest.version);
-  assert.deepEqual(staged.bin, manifest.bin);
-  assert.deepEqual(staged.repository, manifest.repository);
+  const staged = distributionManifest(source, workspaces);
+  assert.equal(staged.name, source.name);
+  assert.equal(staged.version, source.version);
+  assert.deepEqual(staged.bin, source.bin);
+  assert.deepEqual(staged.repository, source.repository);
   assert.deepEqual(staged.imports, { "#manifest": "./package.json" });
   assert.deepEqual(staged.dependencies, {
     "@nestjs/core": "^12.0.1",
@@ -107,15 +84,16 @@ test("release staging includes external runtime dependencies, not private worksp
   });
   assert.equal(staged.scripts, undefined);
   assert.equal(staged.devDependencies, undefined);
-  assert(manifest.scripts.prepack, "The source manifest must not be mutated");
-  assert.throws(() => distributionManifest(manifest, workspaces.slice(1)));
+  assert(source.scripts.prepack, "Исходный манифест не должен изменяться");
+  assert.throws(() => distributionManifest(source, workspaces.slice(1)));
   for (const dependencies of [
-    { "@tasks/missing": "*" },
-    { "@tasks/core": "workspace:*" },
+    { "@tasks/missing": "workspace:*" },
+    { "@tasks/core": "*" },
     { zod: "^3.0.0" },
     { external: "file:../external" },
+    { external: "workspace:*" },
   ]) {
-    assert.throws(() => distributionManifest({ ...manifest, dependencies }, workspaces));
+    assert.throws(() => distributionManifest({ ...source, dependencies }, workspaces));
   }
 });
 

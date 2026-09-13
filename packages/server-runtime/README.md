@@ -1,34 +1,40 @@
-# Server Runtime
+# Общая серверная реализация Tasks
 
-Private npm workspace `@tasks/server-runtime` owns the shared NestJS/Fastify API,
-OpenAPI, Swagger, SSE, and optional static-file serving. Both the
-[CLI](../../apps/cli/README.md) and the [standalone server](../../apps/server/README.md)
-use its public exports; neither application imports the other application's source.
+Приватный pnpm workspace `@tasks/server-runtime` содержит общую реализацию API на NestJS/Fastify,
+OpenAPI, Swagger, SSE и опциональную раздачу статических файлов. Его публичные экспорты используют
+[CLI](../../apps/cli/README.md) и [самостоятельный сервер](../../apps/server/README.md).
+Общий пакет позволяет приложениям использовать сервер без импорта исходников друг друга.
 
-## Ownership
+## Ответственность пакета
 
-- `src/bootstrap.ts` exports `createServer(options)` and `startServer(options)`.
-- `src/modules`, `src/common`, and `src/openapi` own the HTTP implementation.
-- Business operations come from `@tasks/core/*`; DTOs come from `@tasks/contracts`.
-- `test` covers HTTP/OpenAPI, SSE, static assets, and Core integration.
-- Callers provide workspace options and manage shutdown. Static serving is opt-in
-  through `webRoot`; an omitted or false value runs only the API, SSE, and Swagger.
+- `src/bootstrap.ts` экспортирует `createServer(options)` и `startServer(options)`.
+- `src/modules`, `src/common` и `src/openapi` содержат реализацию HTTP-слоя.
+- Бизнес-операции импортируются из `@tasks/core/*`, DTO — из `@tasks/contracts`.
+- `test` содержит проверки HTTP/OpenAPI, SSE, статических ресурсов и интеграции с Core.
+- Вызывающее приложение передаёт параметры рабочего пространства и управляет остановкой сервера.
+  Раздача статических файлов включается через `webRoot`; если параметр не указан или равен `false`,
+  работают только API, SSE и Swagger.
+- `startServer` использует явно переданный `port`, затем `server.port` выбранного
+  `tasks.config.json`, затем `3000`. CLI и standalone-точка входа передают `TASKS_PORT`
+  как явное переопределение; сам runtime не читает окружение процесса.
 
-The [API contract](../contracts/docs/API.md) describes requests, responses, and events.
-Standalone development defaults and source-watch checks belong to `apps/server`.
+[Контракт API](../contracts/docs/API.md) описывает запросы, ответы и события.
+Настройки самостоятельного запуска для разработки и проверки перезапуска при изменении исходников
+находятся в `apps/server`.
 
-## Development
+## Разработка
 
-From the repository root after `npm ci`:
+Команды выполняются из корня репозитория после `pnpm install --frozen-lockfile`:
 
 ```bash
-npm run build:server
-npm run typecheck --workspace=@tasks/server-runtime
-npm run test:server
+pnpm run build:server
+pnpm --filter @tasks/server-runtime run typecheck
+pnpm run test:server
 ```
 
-Turbo builds dependencies before this workspace. Its local `tsc -p tsconfig.json`
-emits only `packages/server-runtime/dist`, without cross-workspace TypeScript project
-references. The `tasks-source` export condition selects TypeScript for source development;
-production uses compiled JavaScript. CLI release assembly bundles the compiled runtime
-into the self-contained npm distribution as a lazy-loaded ESM chunk.
+Turbo собирает зависимости перед этим пакетом. Локальная команда `tsc -p tsconfig.json`
+записывает результат только в `packages/server-runtime/dist`, без межпакетных ссылок
+TypeScript project references. Условие экспорта `tasks-source` выбирает TypeScript-исходники
+для разработки; готовая версия использует скомпилированный JavaScript. При релизной сборке CLI
+скомпилированная серверная реализация включается в самодостаточный npm-дистрибутив
+как отдельный ESM-модуль, загружаемый по требованию.

@@ -4,8 +4,8 @@ import { FastifyAdapter } from "@nestjs/platform-fastify";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import { z } from "zod";
 import { API_PREFIX } from "@tasks/contracts";
+import { serverPortSchema } from "@tasks/core/domain/config";
 import { actorSchema, parse } from "@tasks/core/domain/validation";
 import { openWorkspace } from "@tasks/core/storage/workspace";
 import { isErrno } from "@tasks/core/shared/errors";
@@ -18,15 +18,22 @@ export interface ServerOptions {
   cwd: string;
   actor: string;
   config?: string;
+  /** Переопределяет server.port из конфигурации проекта. */
   port?: number;
-  /** Static files are opt-in; undefined or false runs the API without a frontend. */
+  /** Статика подключается явно; undefined или false запускает только API. */
   webRoot?: string | false;
   allowedOrigins?: string[];
 }
 
-export async function createServer(options: ServerOptions): Promise<NestFastifyApplication> {
+/**
+ * Инициализирует приложение и порт по одному снимку конфигурации проекта.
+ */
+async function initializeServer(
+  options: ServerOptions,
+): Promise<{ app: NestFastifyApplication; port: number }> {
   const actor = parse(actorSchema, options.actor, "автор");
   const workspace = await openWorkspace(options.cwd, options.config);
+  const port = parse(serverPortSchema, options.port ?? workspace.config.server.port, "порт");
   const candidate = options.webRoot ? resolve(options.webRoot) : undefined;
   let webRoot: string | undefined;
   if (candidate) {
@@ -53,16 +60,25 @@ export async function createServer(options: ServerOptions): Promise<NestFastifyA
     setupOpenApi(app);
     await app.init();
     await adapter.getInstance().ready();
-    return app;
+    return { app, port };
   } catch (error) {
     await app.close();
     throw error;
   }
 }
 
+/**
+ * Создаёт сервер без прослушивания порта для встраивания и HTTP-проверок.
+ */
+export async function createServer(options: ServerOptions): Promise<NestFastifyApplication> {
+  return (await initializeServer(options)).app;
+}
+
+/**
+ * Запускает общий HTTP-сервер на loopback-адресе с настройками проекта.
+ */
 export async function startServer(options: ServerOptions) {
-  const port = parse(z.number().int().min(0).max(65535), options.port ?? 3000, "порт");
-  const app = await createServer(options);
+  const { app, port } = await initializeServer(options);
   try {
     await app.listen(port, "127.0.0.1");
     return { app, url: await app.getUrl(), close: () => app.close() };

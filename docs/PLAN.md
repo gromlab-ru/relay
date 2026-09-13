@@ -72,8 +72,9 @@ MCP ──── REST ─────────→ NestJS
 - Core содержит бизнес-правила и файловые операции. Представления CLI находятся в `apps/cli`.
 - Contracts пригоден для браузера и содержит только переносимые типы и константы.
 
-Корневой `package.json` приватный и управляет npm workspaces и Turbo. Зависимости
-объявляются в манифестах потребителей, межпакетные импорты используют `exports`.
+Корневой `package.json` приватный и управляет pnpm workspaces и Turbo. Состав пакетов
+задаёт `pnpm-workspace.yaml`, общий lockfile — `pnpm-lock.yaml`. Внутренние зависимости
+объявляются как `workspace:*` в манифестах потребителей, межпакетные импорты используют `exports`.
 Версия публикуемого продукта принадлежит `apps/cli/package.json`.
 Каждый Node-пакет собирается своим `tsc -p tsconfig.json` в локальный `dist`,
 без межпакетных TypeScript project references и корневых алиасов исходников.
@@ -155,16 +156,16 @@ NestJS использует Fastify-адаптер. Раздача UI — `@nest
 ### Этап D — совместная приёмка
 
 - [ ] Человек создаёт задачу и подзадачи через UI; CLI видит те же документы.
-- [ ] Агент изменяет задачу через CLI; открытая доска обновляется автоматически.
+- [x] Агент изменяет задачу через CLI; открытая доска обновляется автоматически.
 - [ ] Перенос и порядок сохраняются после перезапуска сервера и браузера.
 - [ ] Недопустимое завершение заблокированной задачи возвращает понятную ошибку.
-- [ ] Устаревшее изменение возвращает 409, введённый текст остаётся доступен.
-- [ ] Комментарии и отчёты переживают параллельные записи.
+- [x] Устаревшее изменение возвращает 409, введённый текст остаётся доступен.
+- [x] Комментарии и отчёты переживают параллельные записи.
 - [ ] Выполненные и отменённые задачи доступны на доске; родительство и зависимости различаются.
-- [ ] `npm run check` и `npm run package:check` проходят после интеграции `apps/web`.
+- [x] `pnpm run check` и `pnpm run package:check` проходят после интеграции `apps/web`.
 - [x] Из установленного архива работает `npx @gromlab/tasks-cli server --actor human`.
-- [ ] UI, ресурсы, API, Swagger и прямой адрес `/tasks/<id>` доступны из произвольного рабочего каталога.
-- [ ] Руководство `apps/cli/README.md` описывает пользовательские сценарии только через `npx @gromlab/tasks-cli`.
+- [x] UI, ресурсы, API, Swagger и прямой адрес `/tasks/<id>` доступны из произвольного рабочего каталога.
+- [x] Руководство `apps/cli/README.md` описывает пользовательские сценарии только через `npx @gromlab/tasks-cli`.
 
 ## 5. Как агентам работать параллельно
 
@@ -174,22 +175,23 @@ NestJS использует Fastify-адаптер. Раздача UI — `@nest
 3. Фронтенд может разрабатывать сценарии на типизированных HTTP-моках;
    финальная проверка проводится с реальным NestJS и временным хранилищем.
 4. Зависимости и локальные команды менять в манифестах владельцев; общие команды
-   и порядок сборки согласовывать через корневые `package.json`, `package-lock.json` и `turbo.json`.
+   и порядок сборки согласовывать через корневые `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` и `turbo.json`.
 5. В отчёте каждого агента указывать реализованные пункты, команды проверок,
    оставшиеся ограничения и изменения контракта.
 
 ## 6. Команды разработки
 
-Это команды из корня репозитория для разработчиков. Требуются Node.js 22.12+ и npm 11+;
-рекомендуются Node.js 24 и npm 11.16.0. Пользовательский запуск продукта — NPX на Node.js 22+.
+Это команды из корня репозитория для разработчиков. Требуются Node.js 22.13+ и pnpm 11.18.0;
+рекомендуется Node.js 24. Пользовательский запуск продукта — NPX на Node.js 22+.
 
 ```bash
-npm ci
-npm run dev
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 `dev` запускает API и web вместе через Turbo. Для раздельного запуска используются
-`npm run dev:server` и `npm run dev:web`. Nest — `127.0.0.1:3000`, Vite —
+`pnpm run dev:server` и `pnpm run dev:web`. Nest — `127.0.0.1:3000`, Vite —
 `127.0.0.1:5173` с проксированием `/api` в Nest, включая SSE.
 Dev-сервер по умолчанию использует `apps/playground/tasks.config.json` и автора `human`.
 `TASKS_CONFIG`, `TASKS_ACTOR`, `TASKS_PORT` позволяют выбрать другое окружение;
@@ -199,7 +201,7 @@ Dev-сервер по умолчанию использует `apps/playground/t
 CLI из исходников запускается отдельно, без Turbo-логов в JSON-выводе:
 
 ```bash
-npm run --silent dev:cli -- list --config "$PWD/apps/playground/tasks.config.json" --format json
+pnpm --silent run dev:cli list --config "$PWD/apps/playground/tasks.config.json" --format json
 ```
 
 Корневой `dev:cli` сохраняет рабочий каталог вызова и выполняет
@@ -207,17 +209,17 @@ npm run --silent dev:cli -- list --config "$PWD/apps/playground/tasks.config.jso
 Условие `tasks-source` выбирает TypeScript-экспорты библиотек без предварительной сборки.
 Dev-сервер также следит за исходниками и параллельно проверяет типы.
 
-`npm run build` собирает все workspaces. `npm start` собирает и запускает
+`pnpm run build` собирает все workspaces. `pnpm start` собирает и запускает
 самостоятельный сервер с UI из `apps/web/dist`; это не запуск CLI.
-Собранный CLI доступен через `npm run --silent start:cli -- <args>` после `build:cli`.
+Собранный CLI доступен через `pnpm --silent run start:cli <args>` после `build:cli`.
 
 ```bash
-npm run check
-npm run package:check
-npm run test:cli
-npm run test:server
-npm run test:core
-npm run test:contracts
+pnpm run check
+pnpm run package:check
+pnpm run test:cli
+pnpm run test:server
+pnpm run test:core
+pnpm run test:contracts
 ```
 
 Корневой каталог тестов не используется. Интеграционные тесты команд находятся
@@ -226,12 +228,12 @@ npm run test:contracts
 Contracts проверяется компиляцией совместимости DTO с реальными типами ядра.
 Фронтенд проверяется командами `lint:web`, `typecheck:web`, `build:web` и через agent-browser.
 Turbo собирает web до сборки CLI; каждый workspace очищает только собственные результаты.
-`npm run package:check` собирает продукт, подготавливает stage и проверяет установленный
-архив вне репозитория. Корневой `npm pack` и упаковка рабочего CLI workspace не заменяют
-этот процесс; `prepack` CLI только подготавливает stage из уже готовых сборок.
+`pnpm run package:check` собирает продукт, подготавливает stage и проверяет установленный
+архив вне репозитория. Корневой `pnpm pack` и упаковка рабочего CLI workspace не заменяют
+этот процесс; `prepack` CLI запрещает прямую упаковку и указывает на `package:check`.
 
 Релиз выполняется [процессом публикации по тегу](../apps/cli/docs/RELEASING.md) после приёмки.
-Корневые `release:check` и `release:publish` делегируют npm workspace-скриптам
+Корневые `release:check` и `release:publish` делегируют pnpm workspace-скриптам
 без Turbo и установки зависимостей репозитория; публикуется тот же проверенный архив.
 При проверке каркаса используется локально собранный архив: опубликованная версия
 пакета может ещё не содержать команду `server`.

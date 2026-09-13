@@ -36,6 +36,8 @@ export interface ProjectConfig {
   defaultStatus: string;
   readyStatuses: string[];
   statuses: Record<string, StatusDefinition>;
+  /** Настроенный порт сервера; 0 выбирает свободный порт при запуске. */
+  server: { port: number };
   output: { format: "text" | "json"; defaultLimit: number; maxBytes: number };
 }
 export interface ContextResponse {

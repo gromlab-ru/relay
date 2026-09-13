@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { artifactDirectory, readPackageFiles, stageDirectory } from "../lib/project.mjs";
+import { artifactDirectory, readCliManifest, stageDirectory } from "../lib/project.mjs";
 import { runNpm } from "../lib/npm.mjs";
 import { releaseMetadata } from "./metadata.mjs";
 import { smokePackage } from "./smoke-package.mjs";
 
-const { manifest, lock } = await readPackageFiles();
-const metadata = releaseMetadata(manifest, lock);
+const manifest = await readCliManifest();
+const metadata = releaseMetadata(manifest);
 await import("./assemble-package.mjs");
 await rm(artifactDirectory, { recursive: true, force: true });
 await mkdir(artifactDirectory, { recursive: true });

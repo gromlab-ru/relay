@@ -27,6 +27,7 @@ NestJS/Fastify-сервер поставляется в том же npm-паке
 ```bash
 npx @gromlab/tasks-cli server --actor human --open
 npx @gromlab/tasks-cli server --actor human --port 3001
+TASKS_PORT=3002 npx @gromlab/tasks-cli server --actor human
 ```
 
 Сервер по умолчанию доступен на `http://127.0.0.1:3000`, Swagger — на `/api/docs`,
@@ -34,8 +35,23 @@ OpenAPI 3.1 — на `/api/openapi.json`. Реализованы чтение и
 назначения, комментарии, отчёты и SSE-уведомления об изменениях из API и CLI.
 Бизнес-правила, ревизии и блокировки общие с CLI и выполняются в Core.
 
+Порт можно сохранить в `tasks.config.json` (фрагмент существующего конфига):
+
+```json
+{
+  "server": { "port": 3001 }
+}
+```
+
+Приоритет: `--port` → `TASKS_PORT` → `server.port` → `3000`.
+Допустимы целые числа от `0` до `65535`; `0` выбирает свободный порт и выводит его
+в адресе запущенного сервера. Старые конфиги без `server` используют `3000`.
+Изменение порта применяется после перезапуска. `config get` показывает настройку проекта.
+
 React + Vite приложение находится в `apps/web`; готовая доска из `dist/web`
-открывается на `/`. В интерфейсе доступны поиск и фильтры, создание и редактирование
+поставляется как статические HTML, JS, CSS и шрифты и открывается на `/`.
+Одна команда `server` отдаёт эту статику и API на одном порту.
+В интерфейсе доступны поиск и фильтры, создание и редактирование
 задач, перенос карточек, подзадачи, зависимости, комментарии и отчёты.
 Прямой адрес `/tasks/<id>` открывает задачу в боковой панели, на телефоне — на весь экран.
 Светлая, тёмная и системная темы переключаются в верхней панели.
@@ -77,7 +93,7 @@ npx @gromlab/tasks-cli config get
 ```
 
 Появятся `tasks.config.json` и каталог `.tasks/`. Конфиг задаёт путь хранения,
-статусы и лимиты вывода. В `.tasks/` находятся только JSON-файлы задач:
+статусы, порт сервера и лимиты вывода. В `.tasks/` находятся только JSON-файлы задач:
 `1.json`, `2.json` и так далее. Блокировки, временные записи и резервные копии
 миграций находятся в соседнем `.tasks-runtime/`, содержимое которого исключается из Git.
 
@@ -521,27 +537,27 @@ npx @gromlab/tasks-cli log add --help
 
 ## Разработка CLI
 
-Команды ниже выполняются из корня монорепозитория после `npm ci`:
+Команды ниже выполняются из корня монорепозитория после `pnpm install --frozen-lockfile`:
 
 ```bash
-npm run dev
-npm run --silent dev:cli -- --help
-npm run --silent dev:cli -- --config "$PWD/apps/playground/tasks.config.json" list --format json
-npm run build
-npm run typecheck --workspace @gromlab/tasks-cli
-npm run test --workspace @gromlab/tasks-cli
-npm run package:check
+pnpm run dev
+pnpm --silent run dev:cli --help
+pnpm --silent run dev:cli --config "$PWD/apps/playground/tasks.config.json" list --format json
+pnpm run build
+pnpm --filter @gromlab/tasks-cli run typecheck
+pnpm --filter @gromlab/tasks-cli run test
+pnpm run package:check
 ```
 
-`npm run dev` запускает API и Vite, а не CLI. Корневой `dev:cli` сохраняет рабочий
+`pnpm run dev` запускает API и Vite, а не CLI. Корневой `dev:cli` сохраняет рабочий
 каталог вызова и выполняет
 `tsx --tsconfig apps/cli/tsconfig.dev.json --conditions=tasks-source apps/cli/src/main.ts`,
 без предварительной сборки приватных пакетов. `--silent` сохраняет чистый JSON-вывод.
 Команда `server` лениво импортирует `@tasks/server-runtime`; без локального
 `apps/cli/dist/web/index.html` исходный CLI предоставляет только API и Swagger.
 Примеры данных находятся в `apps/playground`; для мутаций используйте временный проект
-с явным `--config`. `npm start` собирает и запускает самостоятельный сервер с готовым UI,
-а `npm run --silent start:cli -- <args>` запускает собранный CLI после `build:cli`.
+с явным `--config`. `pnpm start` собирает и запускает самостоятельный сервер с готовым UI,
+а `pnpm --silent run start:cli <args>` запускает собранный CLI после `build:cli`.
 
 Команды и пользовательский вывод находятся в `apps/cli/src/commands`,
 `apps/cli/src/presentation` и `apps/cli/src/queries`. Бизнес-операции импортируются через

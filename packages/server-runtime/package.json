@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.json",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
     "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
     "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "node --import tsx --test test/*.test.ts"
@@ -23,15 +23,15 @@
     "@nestjs/platform-fastify": "^12.0.1",
     "@nestjs/serve-static": "^12.0.0",
     "@nestjs/swagger": "^12.0.1",
-    "@tasks/contracts": "*",
-    "@tasks/core": "*",
+    "@tasks/contracts": "workspace:*",
+    "@tasks/core": "workspace:*",
     "fastify": "^5.12.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/typescript-config": "*",
+    "@tasks/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",

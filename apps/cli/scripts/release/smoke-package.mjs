@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { npxCliPath, runNpm, runNpx } from "../lib/npm.mjs";
+import { npxCommand, runNpm, runNpx } from "../lib/npm.mjs";
 import { checkServerSurface, startServerProcess } from "../../test/helpers/server-process.mjs";
 
 /**
@@ -57,6 +57,11 @@ export async function smokePackage(archive, manifest) {
     );
     const initialization = JSON.parse(await execute(["init"]));
     assert.equal(initialization.ok, true);
+    const configPath = join(directory, "tasks.config.json");
+    const config = JSON.parse(await readFile(configPath, "utf8"));
+    assert.equal(config.server.port, 3000);
+    config.server.port = 0;
+    await writeFile(configPath, JSON.stringify(config));
     const created = JSON.parse(
       await execute(["create", "--title", "Проверка npm-архива", "--actor", "package-check"]),
     );
@@ -82,19 +87,18 @@ export async function smokePackage(archive, manifest) {
     assert.deepEqual(await readdir(join(directory, ".tasks")), ["1.json"]);
     const server = await startServerProcess(
       [
-        npxCliPath(),
+        ...npxCommand(),
         "--offline",
         "--yes=false",
         manifest.name,
         "server",
         "--actor",
         "package-check",
-        "--port",
-        "0",
         "--format",
         "json",
       ],
       directory,
+      { TASKS_PORT: undefined, TASKS_CONFIG: undefined },
     );
     try {
       await checkServerSurface(server.url, { web: true });
