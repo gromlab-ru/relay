@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { fixture, successful } from "./helpers/cli.js";
 import { checkServerSurface, startServerProcess } from "./helpers/server-process.mjs";
+import { pnpmCliPath } from "../scripts/lib/pnpm.mjs";
 
 test("исходный CLI сохраняет каталог вызова pnpm, JSON-вывод и жизненный цикл сервера", async (t) => {
   const app = await fixture(t);
-  const pnpm = process.env.npm_execpath;
-  assert(pnpm, "Запускайте тест через pnpm run test:cli");
+  const pnpm = pnpmCliPath();
   const repo = fileURLToPath(new URL("../../../", import.meta.url));
   const args = [pnpm, "--dir", repo, "--silent", "run", "dev:cli"];
   const { stdout, stderr } = await promisify(execFile)(

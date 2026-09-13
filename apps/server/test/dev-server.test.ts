@@ -14,7 +14,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { createRequire } from "node:module";
+import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
@@ -104,8 +105,16 @@ for (const configuration of ["default", "relative"] as const)
       );
       const workspace = configuration === "default" ? "apps/playground" : "custom tasks";
       await initialize(join(root, workspace), ".tasks");
-      const pnpmCli = process.env.npm_execpath;
-      assert(pnpmCli, "Запускайте тест через pnpm run test:server");
+      const executable = process.env.npm_execpath;
+      assert(executable, "Запускайте тест через pnpm run test:server");
+      let pnpmCli = await realpath(executable);
+      if (!/\.[cm]?js$/.test(pnpmCli)) {
+        // CI передаёт .bin-обёртку; Node.js должен запускать JS-файл из манифеста pnpm.
+        const manifestPath = createRequire(pnpmCli).resolve("pnpm");
+        const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+        assert.equal(typeof manifest.bin?.pnpm, "string");
+        pnpmCli = resolve(dirname(manifestPath), manifest.bin.pnpm);
+      }
       const env: NodeJS.ProcessEnv = { ...process.env, TASKS_PORT: "0", TASKS_ACTOR: "dev-human" };
       delete env.TASKS_CONFIG;
       if (configuration === "relative") env.TASKS_CONFIG = `${workspace}/tasks.config.json`;

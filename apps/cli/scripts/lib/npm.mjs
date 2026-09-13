@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { cliRoot } from "./project.mjs";
+import { pnpmCliPath } from "./pnpm.mjs";
 
 const execute = promisify(execFile);
 
@@ -37,7 +37,5 @@ export async function runNpx(args, cwd = cliRoot) {
 
 /** @param {"npm" | "npx"} tool */
 function toolCommand(tool) {
-  const pnpmCli = process.env.npm_execpath;
-  assert(pnpmCli, "Запускайте релизные скрипты через pnpm run");
-  return [pnpmCli, "exec", tool];
+  return [pnpmCliPath(), "exec", tool];
 }
