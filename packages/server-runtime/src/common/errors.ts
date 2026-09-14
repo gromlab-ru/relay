@@ -22,6 +22,7 @@ const conflicts = new Set([
   "MIGRATION_REQUIRED",
   "MIGRATION_IN_PROGRESS",
   "ID_EXHAUSTED",
+  "IDEMPOTENCY_CONFLICT",
 ]);
 const missing = new Set(["TASK_NOT_FOUND", "COMMENT_NOT_FOUND", "LOG_NOT_FOUND"]);
 const httpCodes: Record<number, string> = {
@@ -39,6 +40,7 @@ export function httpFailure(error: unknown): { status: number; body: ApiFailure 
   let code: string;
   let message: string;
   let details: unknown;
+  let exitCode: number | undefined;
   if (error instanceof HttpException) {
     status = error.getStatus();
     const response = error.getResponse();
@@ -59,12 +61,14 @@ export function httpFailure(error: unknown): { status: number; body: ApiFailure 
     message = error instanceof Error ? error.message : "Некорректный HTTP-запрос";
   } else {
     const failure = error instanceof AppError ? error : asAppError(error);
+    exitCode = failure.exitCode;
     code = failure.code;
     status = missing.has(code)
       ? 404
       : conflicts.has(code)
         ? 409
-        : [
+        : failure.exitCode === 2 ||
+            [
               "VALIDATION_ERROR",
               "INVALID_ID",
               "INVALID_CURSOR",
@@ -81,7 +85,15 @@ export function httpFailure(error: unknown): { status: number; body: ApiFailure 
   }
   return {
     status,
-    body: { ok: false, error: { code, message, ...(details === undefined ? {} : { details }) } },
+    body: {
+      ok: false,
+      error: {
+        code,
+        message,
+        ...(exitCode === undefined ? {} : { exitCode }),
+        ...(details === undefined ? {} : { details }),
+      },
+    },
   };
 }
 

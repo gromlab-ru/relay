@@ -2,6 +2,23 @@ import { InvalidArgumentError, Option } from "commander";
 import type { Command } from "commander";
 import type { PageOptions } from "./queries/pagination.js";
 import type { CommandContext } from "./context.js";
+import { randomUUID } from "node:crypto";
+import { requestIdSchema } from "@tasks/core/application/record-request";
+import { parse } from "@tasks/core/domain/validation";
+
+export interface RequestOptions {
+  requestId?: string;
+}
+export function recordOptions(command: Command): Command {
+  return command.option(
+    "--request-id <id>",
+    "Ключ записи для безопасного повтора через HTTP или --local",
+    (value) => parse(requestIdSchema, value, "идентификатор запроса"),
+  );
+}
+export function requestId(options: RequestOptions): string {
+  return options.requestId ?? randomUUID();
+}
 
 export interface PageControls {
   limit?: number;

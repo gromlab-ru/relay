@@ -1,6 +1,5 @@
 import type { OverviewData, OverviewQueryInput } from "@tasks/core/application/queries/overview";
-import { TaskQueries } from "@tasks/core/application/queries/tasks";
-import type { TaskService } from "@tasks/core/application/tasks/service";
+import type { TasksBackend } from "../backend/types.js";
 import { AppError } from "@tasks/core/shared/errors";
 import type { TaskReference } from "@tasks/core/shared/ids";
 import type { OutputOptions } from "../output.js";
@@ -9,12 +8,12 @@ import { resultBytes } from "./result.js";
 import type { Result } from "./result.js";
 
 export async function projectOverview(
-  service: TaskService,
+  service: TasksBackend,
   reference: TaskReference | undefined,
   input: OverviewQueryInput,
   output: OutputOptions,
 ): Promise<Result> {
-  const overview = await new TaskQueries(service.workspace).overview(reference, input);
+  const overview = await service.overview(reference, input);
   const maxItems = Math.max(
     overview.progress.items.length,
     overview.ready.items.length,

@@ -1,7 +1,8 @@
 import { logSchema } from "../../domain/log.js";
 import type { Log, LogInput } from "../../domain/log.js";
 import { parse } from "../../domain/validation.js";
-import { assertId, newId } from "../../shared/ids.js";
+import { assertId } from "../../shared/ids.js";
+import { recordRequestId, repeatedRecord } from "../record-request.js";
 import type { TaskReference } from "../../shared/ids.js";
 import { invariant } from "../../shared/errors.js";
 import type { Workspace } from "../../storage/workspace.js";
@@ -20,8 +21,9 @@ export class LogService {
     reference: TaskReference,
     input: Pick<LogInput, "body"> & Partial<Omit<LogInput, "body">>,
     actor: string,
+    requestId?: string,
   ): Promise<Log> {
-    const id = newId("log");
+    const id = recordRequestId("log", requestId);
     const updated = await this.tasks.mutate(reference, { actor }, (task) => {
       const log = parse(
         logSchema,
@@ -39,7 +41,7 @@ export class LogService {
         },
         "отчёт",
       );
-      return { logs: { ...task.logs, [id]: log } };
+      return repeatedRecord(task.logs[id], log) ? {} : { logs: { ...task.logs, [id]: log } };
     });
     return updated.logs[id]!;
   }

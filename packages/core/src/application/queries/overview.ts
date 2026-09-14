@@ -60,6 +60,45 @@ export interface OverviewData {
   blockers: OverviewSection<OverviewBlocker>;
 }
 
+const countSchema = z.object({
+  total: z.number(),
+  open: z.number(),
+  completed: z.number(),
+  terminal: z.number(),
+  byStatus: z.record(z.string(), z.number()),
+});
+const overviewTaskSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  status: z.string(),
+  group: z.string().nullable(),
+  assignee: z.string().nullable(),
+  parentId: z.number().nullable(),
+  revision: z.number(),
+  blockedByCount: z.number(),
+});
+const impactSchema = z.object({
+  blockedCount: z.number(),
+  unblocksCount: z.number(),
+  readyAfterCompletionCount: z.number(),
+});
+const sectionSchema = <T extends z.ZodType>(item: T) =>
+  z.object({ total: z.number(), items: z.array(item) });
+export const overviewDataSchema = z.object({
+  root: overviewTaskSchema.nullable(),
+  version: z.string(),
+  limit: z.number(),
+  counts: countSchema,
+  leafCounts: countSchema,
+  reviewStatuses: z.array(z.string()),
+  progress: sectionSchema(overviewTaskSchema.extend({ children: countSchema })),
+  ready: sectionSchema(overviewTaskSchema),
+  review: sectionSchema(overviewTaskSchema.extend(impactSchema.shape)),
+  blockers: sectionSchema(
+    overviewTaskSchema.extend(impactSchema.shape).extend({ outsideScope: z.boolean() }),
+  ),
+});
+
 function emptyImpact(): OverviewImpact {
   return { blockedCount: 0, unblocksCount: 0, readyAfterCompletionCount: 0 };
 }

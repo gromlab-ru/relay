@@ -52,7 +52,7 @@ test("валидация запрещает служебные поля, нев�
     { title: "я".repeat(513) },
     { title: "A", rank: "1/1" },
     { title: "A", id: 1 },
-    { title: "A", actor: "forged" },
+    { title: "A", actor: "" },
     { title: "A", createdBy: "forged" },
     { title: "A", description: ["two\nlines"] },
     { title: "A", status: "unknown" },
@@ -66,7 +66,7 @@ test("валидация запрещает служебные поля, нев�
   ).json().data;
   for (const payload of [
     { patch: {}, ifRevision: 1 },
-    { patch: { title: "A" } },
+    { patch: { title: "A" }, actor: "\n" },
     { patch: { rank: "1/2" }, ifRevision: 1 },
     { patch: { status: "done" }, ifRevision: 0 },
   ])

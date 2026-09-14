@@ -19,7 +19,7 @@ import { ContentType } from "../http-client.js";
  *
  * @tags tasks
  * @name ClaimTask
- * @summary Назначить готовую задачу на автора сервера
+ * @summary Назначить готовую задачу на автора запроса
  * @request POST:/api/v1/tasks/{id}/claim
  */
 export const claimTask = (

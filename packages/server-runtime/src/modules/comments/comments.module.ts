@@ -69,7 +69,8 @@ class CommentsController {
       await new CommentService(await this.workspace.open()).add(
         id,
         input.text,
-        this.workspace.options.actor,
+        this.workspace.actor(input.actor),
+        input.requestId,
       ),
     );
   }

@@ -62,7 +62,7 @@ export function distributionManifest(manifest, workspaces) {
   const internal = new Set(workspaces.map((workspace) => workspace.name));
   assert.deepEqual(
     [...internal].sort(),
-    ["@tasks/contracts", "@tasks/core", "@tasks/server-runtime"],
+    ["@tasks/contracts", "@tasks/core", "@tasks/rest-sdk", "@tasks/server-runtime"],
     "Expected all private runtime workspaces",
   );
   for (const workspace of workspaces) {

@@ -5,6 +5,7 @@ dist/
 coverage/
 pnpm-lock.yaml
 .artifacts/
+.tasks-runtime/
 .agents/
 .npmrc
 apps/playground/.tasks/

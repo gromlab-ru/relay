@@ -37,7 +37,7 @@ test("OpenAPI описывает каждый маршрут, а реальны�
         );
     }
   }
-  assert.equal(operations.size, 17);
+  assert.equal(operations.size, 26);
   for (const [name, schema] of Object.entries(document.components!.schemas!)) {
     ajv.compile({ ...schema, components: document.components });
     if (!("$ref" in schema) && Array.isArray(schema.examples))
@@ -114,6 +114,30 @@ test("OpenAPI описывает каждый маршрут, а реальны�
     `${base}/comments/${comment.data.id}`,
   );
   await request("GET", "/api/v1/tasks/{id}/logs/{logId}", `${base}/logs/${log.data.id}`);
+  await request("GET", "/api/v1/task-list");
+  await request("GET", "/api/v1/tasks/{id}/document", `${base}/document`);
+  await request("GET", "/api/v1/tasks/{id}/markdown", `${base}/markdown?field=summary`);
+  await request("GET", "/api/v1/tasks/{id}/links", `${base}/links`);
+  await request("GET", "/api/v1/tasks/{id}/tree", `${base}/tree?depth=2`);
+  await request("GET", "/api/v1/groups");
+  await request(
+    "GET",
+    "/api/v1/overview",
+    `/api/v1/overview?rootId=${created.data.id}&reviewStatuses=review`,
+  );
+  await request("GET", "/api/v1/validation");
+  const dependency = await request(
+    "POST",
+    "/api/v1/tasks",
+    undefined,
+    { title: "Зависимость", actor: "агент" },
+    201,
+  );
+  await request("POST", "/api/v1/tasks/{id}/dependencies", `${base}/dependencies`, {
+    dependencyId: dependency.data.id,
+    action: "add",
+    actor: "агент",
+  });
   await request("GET", "/api/v1/tasks/{id}", "/api/v1/tasks/999", undefined, 404);
   await request(
     "PATCH",
@@ -122,14 +146,14 @@ test("OpenAPI описывает каждый маршрут, а реальны�
     { patch: { title: "Conflict" }, ifRevision: 1 },
     409,
   );
-  assert.equal(visited.size, 16);
+  assert.equal(visited.size, 25);
   const sse = operations.get("GET /api/v1/events")!.responses[200]!;
   assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
   const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;
   const patchSchema = updateSchema.properties!.patch as SchemaObject;
   assert.equal(patchSchema.minProperties, 1);
   assert.equal(updateSchema.additionalProperties, false);
-  assert(updateSchema.required!.includes("ifRevision"));
+  assert(!updateSchema.required!.includes("ifRevision"));
   const createSchema = document.components!.schemas!.CreateTaskRequest as SchemaObject;
   assert.deepEqual(createSchema.required, ["title"]);
   assert.equal(createSchema.properties!.rank, undefined);

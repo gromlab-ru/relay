@@ -18,7 +18,7 @@ export function taskText(
   blockers: number[],
   full: boolean,
   options: TextOptions = defaultTextOptions,
-  tasks: ReadonlyMap<number, Task> = new Map(),
+  tasks: ReadonlyMap<number, Pick<Task, "id" | "title">> = new Map(),
   config: Config = defaultConfig,
 ): string {
   const colors = palette(options);
@@ -56,12 +56,14 @@ export function tasksText(
   total = items.length,
   emptyMessage = "Задач нет.",
   preserveOrder = false,
+  readyIds?: ReadonlySet<number>,
 ): string {
   const colors = palette(options);
   const complete = items.filter(
     (task) => config.statuses[task.status]?.satisfiesDependencies,
   ).length;
   const ready = items.filter((row) => {
+    if (readyIds) return readyIds.has(row.id);
     const task = tasks.get(row.id);
     return task && isReady(task, tasks, config);
   }).length;

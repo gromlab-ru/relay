@@ -4,6 +4,432 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface TaskListQuery {
+  status?: string;
+  group?: string;
+  assignee?: string;
+  parent?: string | number;
+  tag?: string;
+  /** @maxLength 4096 */
+  search?: string;
+  ready?: boolean;
+  all?: boolean;
+  sort?: TaskListQuerySortEnum;
+}
+
+export interface TaskListData {
+  items: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+    group: string | null;
+    /** @maxItems 100 */
+    tags: string[];
+    parentId: number | null;
+    assignee: string | null;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    blockedBy: number[];
+  }[];
+  readyIds: number[];
+}
+
+export interface TaskDocumentData {
+  task: {
+    /** @minLength 1 */
+    title: string;
+    description: string[];
+    /** @minLength 1 */
+    status: string;
+    group: string | null;
+    /** @maxItems 100 */
+    tags: string[];
+    parentId: number | null;
+    /** @maxItems 1000 */
+    dependsOn: number[];
+    assignee: string | null;
+    /**
+     * @maxLength 2048
+     * @pattern ^-?\d+\/[1-9]\d*$
+     */
+    rank?: string;
+    summary: string[];
+    version: 2;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /** @maxLength 128 */
+    createdBy: string;
+    /** @maxLength 128 */
+    updatedBy: string;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    comments: Partial<
+      Record<
+        string,
+        {
+          version: 1;
+          /** @pattern ^cmt_[a-f0-9]{32}$ */
+          id: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @maxLength 128 */
+          actor: string;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          createdAt: string;
+          body: string[];
+        }
+      >
+    >;
+    logs: Partial<
+      Record<
+        string,
+        {
+          version: 1;
+          /** @pattern ^log_[a-f0-9]{32}$ */
+          id: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @maxLength 128 */
+          actor: string;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          createdAt: string;
+          kind: TaskDocumentDataKindEnum;
+          /** @minLength 0 */
+          title: string;
+          summary: string[];
+          sessionId: string | null;
+          body: string[];
+        }
+      >
+    >;
+  };
+  related: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+  }[];
+  blockedBy: number[];
+  ready: boolean;
+}
+
+export interface TaskMarkdownQuery {
+  field: TaskMarkdownQueryFieldEnum;
+}
+
+export interface TaskMarkdownData {
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  id: number;
+  lines: string[];
+}
+
+export interface TaskLinksData {
+  task: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+  };
+  id: number;
+  parent: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+  } | null;
+  children: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+  }[];
+  dependsOn: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+  }[];
+  blocks: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+  }[];
+  blockedBy: number[];
+}
+
+export interface TaskTreeData {
+  items: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    id: number;
+    /** @minLength 1 */
+    title: string;
+    /** @minLength 1 */
+    status: string;
+    group: string | null;
+    /** @maxItems 100 */
+    tags: string[];
+    parentId: number | null;
+    assignee: string | null;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    depth: number;
+  }[];
+  truncated: boolean;
+  blockedCounts: Partial<Record<string, number>>;
+}
+
+export interface TreeQuery {
+  /**
+   * @min 0
+   * @max 100
+   * @default 3
+   */
+  depth: number;
+}
+
+export type GroupsData = {
+  name: string;
+  total: number;
+  completed: number;
+  terminal: number;
+}[];
+
+export interface OverviewQuery {
+  /**
+   * @min 1
+   * @max 100
+   * @default 5
+   */
+  limit: number;
+  /**
+   * @maxItems 100
+   * @minItems 1
+   */
+  reviewStatuses?: string[];
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  rootId?: number;
+}
+
+export interface OverviewData {
+  root: {
+    id: number;
+    title: string;
+    status: string;
+    group: string | null;
+    assignee: string | null;
+    parentId: number | null;
+    revision: number;
+    blockedByCount: number;
+  } | null;
+  version: string;
+  limit: number;
+  counts: {
+    total: number;
+    open: number;
+    completed: number;
+    terminal: number;
+    byStatus: Partial<Record<string, number>>;
+  };
+  leafCounts: {
+    total: number;
+    open: number;
+    completed: number;
+    terminal: number;
+    byStatus: Partial<Record<string, number>>;
+  };
+  reviewStatuses: string[];
+  progress: {
+    total: number;
+    items: {
+      id: number;
+      title: string;
+      status: string;
+      group: string | null;
+      assignee: string | null;
+      parentId: number | null;
+      revision: number;
+      blockedByCount: number;
+      children: {
+        total: number;
+        open: number;
+        completed: number;
+        terminal: number;
+        byStatus: Partial<Record<string, number>>;
+      };
+    }[];
+  };
+  ready: {
+    total: number;
+    items: {
+      id: number;
+      title: string;
+      status: string;
+      group: string | null;
+      assignee: string | null;
+      parentId: number | null;
+      revision: number;
+      blockedByCount: number;
+    }[];
+  };
+  review: {
+    total: number;
+    items: {
+      id: number;
+      title: string;
+      status: string;
+      group: string | null;
+      assignee: string | null;
+      parentId: number | null;
+      revision: number;
+      blockedByCount: number;
+      blockedCount: number;
+      unblocksCount: number;
+      readyAfterCompletionCount: number;
+    }[];
+  };
+  blockers: {
+    total: number;
+    items: {
+      id: number;
+      title: string;
+      status: string;
+      group: string | null;
+      assignee: string | null;
+      parentId: number | null;
+      revision: number;
+      blockedByCount: number;
+      blockedCount: number;
+      unblocksCount: number;
+      readyAfterCompletionCount: number;
+      outsideScope: boolean;
+    }[];
+  };
+}
+
+export interface ChangeDependencyRequest {
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  dependencyId: number;
+  action: ChangeDependencyRequestActionEnum;
+  /** @maxLength 128 */
+  actor?: string;
+  /**
+   * Ожидаемая revision документа; при несовпадении HTTP 409 REVISION_CONFLICT
+   * @min 1
+   * @max 9007199254740991
+   */
+  ifRevision?: number;
+}
+
+export interface ValidationData {
+  valid: boolean;
+  tasks: number;
+  comments: number;
+  logs: number;
+}
+
 export type ServerEvent =
   | {
       type: "connected";
@@ -40,6 +466,7 @@ export interface HealthResponse {
 }
 
 export interface ContextResponse {
+  capabilities?: string[];
   project: string;
   /** Стабильный идентификатор пути конфигурации проекта */
   projectId: string;
@@ -75,6 +502,8 @@ export interface ContextResponse {
        * @default 3000
        */
       port: number;
+      /** @format uri */
+      url?: string;
     };
     /** @default {"format":"text","defaultLimit":20,"maxBytes":16384} */
     output: {
@@ -121,6 +550,8 @@ export interface CreateTaskRequest {
   assignee?: string | null;
   /** Markdown: массив строк, до 4096 байт UTF-8 суммарно */
   summary?: string[];
+  /** @maxLength 128 */
+  actor?: string;
 }
 
 export interface UpdateTaskRequest {
@@ -155,7 +586,9 @@ export interface UpdateTaskRequest {
    * @min 1
    * @max 9007199254740991
    */
-  ifRevision: number;
+  ifRevision?: number;
+  /** @maxLength 128 */
+  actor?: string;
 }
 
 export interface MoveTaskRequest {
@@ -169,6 +602,8 @@ export interface MoveTaskRequest {
    * @max 9007199254740991
    */
   ifRevision: number;
+  /** @maxLength 128 */
+  actor?: string;
 }
 
 export interface ClaimTaskRequest {
@@ -177,9 +612,11 @@ export interface ClaimTaskRequest {
    * @min 1
    * @max 9007199254740991
    */
-  ifRevision: number;
+  ifRevision?: number;
   /** @minLength 1 */
   status?: string;
+  /** @maxLength 128 */
+  actor?: string;
 }
 
 export interface ReleaseTaskRequest {
@@ -188,8 +625,10 @@ export interface ReleaseTaskRequest {
    * @min 1
    * @max 9007199254740991
    */
-  ifRevision: number;
+  ifRevision?: number;
   force?: boolean;
+  /** @maxLength 128 */
+  actor?: string;
 }
 
 export interface AddCommentRequest {
@@ -199,6 +638,14 @@ export interface AddCommentRequest {
    * @maxLength 65536
    */
   text: string;
+  /** @maxLength 128 */
+  actor?: string;
+  /**
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId?: string;
 }
 
 export interface AddLogRequest {
@@ -219,6 +666,14 @@ export interface AddLogRequest {
   summary?: string;
   /** @maxLength 128 */
   sessionId?: string;
+  /** @maxLength 128 */
+  actor?: string;
+  /**
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId?: string;
 }
 
 export interface BoardQuery {
@@ -675,6 +1130,7 @@ export interface TaskDetailResponse {
 
 export interface BoardResponse {
   context: {
+    capabilities?: string[];
     project: string;
     /** Стабильный идентификатор пути конфигурации проекта */
     projectId: string;
@@ -710,6 +1166,8 @@ export interface BoardResponse {
          * @default 3000
          */
         port: number;
+        /** @format uri */
+        url?: string;
       };
       /** @default {"format":"text","defaultLimit":20,"maxBytes":16384} */
       output: {
@@ -910,8 +1368,26 @@ export interface ApiFailure {
     code: string;
     message: string;
     details?: any;
+    /**
+     * @min 1
+     * @max 255
+     */
+    exitCode?: number;
   };
 }
+
+export type TaskListQuerySortEnum = "id" | "board";
+
+export type TaskDocumentDataKindEnum =
+  | "progress"
+  | "decision"
+  | "execution"
+  | "error"
+  | "summary";
+
+export type TaskMarkdownQueryFieldEnum = "description" | "summary";
+
+export type ChangeDependencyRequestActionEnum = "add" | "remove";
 
 export type ServerEventSourceEnum = "api" | "storage";
 
@@ -1083,6 +1559,116 @@ export interface ClaimTaskParams {
 export type ReleaseTaskOkEnum = true;
 
 export interface ReleaseTaskParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+}
+
+export type GetTaskListOkEnum = true;
+
+export interface GetTaskListParams {
+  status?: string;
+  group?: string;
+  assignee?: string;
+  parent?: string | number;
+  tag?: string;
+  /** @maxLength 4096 */
+  search?: string;
+  ready?: boolean;
+  all?: boolean;
+  sort?: SortEnum;
+}
+
+export type SortEnum = "id" | "board";
+
+export type GetTaskListParams1SortEnum = "id" | "board";
+
+export type GetTaskDocumentOkEnum = true;
+
+export interface GetTaskDocumentParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+}
+
+export type GetTaskMarkdownOkEnum = true;
+
+export interface GetTaskMarkdownParams {
+  field: FieldEnum;
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+}
+
+export type FieldEnum = "description" | "summary";
+
+export type GetTaskMarkdownParams1FieldEnum = "description" | "summary";
+
+export type GetTaskLinksOkEnum = true;
+
+export interface GetTaskLinksParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+}
+
+export type GetTaskTreeOkEnum = true;
+
+export interface GetTaskTreeParams {
+  /**
+   * @min 0
+   * @max 100
+   * @default 3
+   */
+  depth?: number;
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+}
+
+export type GetGroupsOkEnum = true;
+
+export type GetOverviewOkEnum = true;
+
+export interface GetOverviewParams {
+  /**
+   * @min 1
+   * @max 100
+   * @default 5
+   */
+  limit?: number;
+  /**
+   * @maxItems 100
+   * @minItems 1
+   */
+  reviewStatuses?: string[];
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  rootId?: number;
+}
+
+export type ValidateProjectOkEnum = true;
+
+export type ChangeDependencyOkEnum = true;
+
+export interface ChangeDependencyParams {
   /**
    * Положительный безопасный целочисленный ID задачи
    * @min 1

@@ -2,7 +2,8 @@ import { commentSchema } from "../domain/comment.js";
 import type { Comment } from "../domain/comment.js";
 import { parse } from "../domain/validation.js";
 import { toLines } from "../domain/markdown.js";
-import { assertId, newId } from "../shared/ids.js";
+import { assertId } from "../shared/ids.js";
+import { recordRequestId, repeatedRecord } from "./record-request.js";
 import type { TaskReference } from "../shared/ids.js";
 import { invariant } from "../shared/errors.js";
 import type { Workspace } from "../storage/workspace.js";
@@ -16,8 +17,13 @@ export class CommentService {
     this.tasks = new TaskService(workspace);
   }
 
-  async add(reference: TaskReference, text: string, actor: string): Promise<Comment> {
-    const id = newId("cmt");
+  async add(
+    reference: TaskReference,
+    text: string,
+    actor: string,
+    requestId?: string,
+  ): Promise<Comment> {
+    const id = recordRequestId("cmt", requestId);
     const updated = await this.tasks.mutate(reference, { actor }, (task) => {
       const comment = parse(
         commentSchema,
@@ -31,7 +37,9 @@ export class CommentService {
         },
         "комментарий",
       );
-      return { comments: { ...task.comments, [id]: comment } };
+      return repeatedRecord(task.comments[id], comment)
+        ? {}
+        : { comments: { ...task.comments, [id]: comment } };
     });
     return updated.comments[id]!;
   }

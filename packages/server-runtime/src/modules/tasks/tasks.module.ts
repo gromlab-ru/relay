@@ -83,7 +83,8 @@ class TasksController {
     @Body(new ZodValidationPipe(createTaskSchema)) input: CreateTaskRequest,
   ): Promise<ApiSuccess<TaskCard>> {
     const service = new TaskService(await this.workspace.open());
-    return success(taskCard(await service.create(input, this.workspace.options.actor)));
+    const { actor, ...fields } = input;
+    return success(taskCard(await service.create(fields, this.workspace.actor(actor))));
   }
 
   @Patch(":id")
@@ -99,14 +100,7 @@ class TasksController {
     @Body(new ZodValidationPipe(updateTaskSchema)) input: UpdateTaskRequest,
   ): Promise<ApiSuccess<TaskCard>> {
     const service = new TaskService(await this.workspace.open());
-    return success(
-      taskCard(
-        await service.update(id, input.patch, {
-          actor: this.workspace.options.actor,
-          ifRevision: input.ifRevision,
-        }),
-      ),
-    );
+    return success(taskCard(await service.update(id, input.patch, this.workspace.mutation(input))));
   }
 
   @Post(":id/move")
@@ -125,10 +119,7 @@ class TasksController {
     const service = new TaskService(await this.workspace.open());
     return success(
       taskCard(
-        await moveTask(service, id, input.status, input.beforeId, {
-          actor: this.workspace.options.actor,
-          ifRevision: input.ifRevision,
-        }),
+        await moveTask(service, id, input.status, input.beforeId, this.workspace.mutation(input)),
       ),
     );
   }
@@ -137,7 +128,7 @@ class TasksController {
   @HttpCode(200)
   @ApiEndpoint({
     id: "claimTask",
-    summary: "Назначить готовую задачу на автора сервера",
+    summary: "Назначить готовую задачу на автора запроса",
     response: "TaskCard",
     body: "ClaimTaskRequest",
     taskId: true,
@@ -148,14 +139,7 @@ class TasksController {
   ): Promise<ApiSuccess<TaskCard>> {
     const service = new TaskService(await this.workspace.open());
     return success(
-      taskCard(
-        await claimTask(
-          service,
-          id,
-          { actor: this.workspace.options.actor, ifRevision: input.ifRevision },
-          input.status,
-        ),
-      ),
+      taskCard(await claimTask(service, id, this.workspace.mutation(input), input.status)),
     );
   }
 
@@ -175,12 +159,7 @@ class TasksController {
     const service = new TaskService(await this.workspace.open());
     return success(
       taskCard(
-        await releaseTask(
-          service,
-          id,
-          { actor: this.workspace.options.actor, ifRevision: input.ifRevision },
-          input.force ?? false,
-        ),
+        await releaseTask(service, id, this.workspace.mutation(input), input.force ?? false),
       ),
     );
   }

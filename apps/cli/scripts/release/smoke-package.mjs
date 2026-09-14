@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { npxCommand, runNpm, runNpx } from "../lib/npm.mjs";
@@ -42,11 +42,13 @@ export async function smokePackage(archive, manifest) {
       "Release archives must not depend on private workspaces",
     );
 
-    /** @param {string[]} args Команда установленного CLI. */
-    const execute = async (args) => {
+    /** @param {string[]} args Команда установленного CLI.
+     * @param {string} [cwd] Рабочая копия вызывающего агента.
+     */
+    const execute = async (args, cwd = directory) => {
       const { stdout } = await runNpx(
         ["--offline", "--yes=false", manifest.name, "--format", "json", ...args],
-        directory,
+        cwd,
       );
       return stdout;
     };
@@ -100,6 +102,12 @@ export async function smokePackage(archive, manifest) {
       directory,
       { TASKS_PORT: undefined, TASKS_CONFIG: undefined },
     );
+    const agent = join(directory, "agent-worktree");
+    await mkdir(agent);
+    await writeFile(
+      join(agent, "tasks.config.json"),
+      JSON.stringify({ ...config, server: { ...config.server, url: server.url } }),
+    );
     try {
       await checkServerSurface(server.url, { web: true });
       const context = await (await fetch(`${server.url}/api/v1/context`)).json();
@@ -113,9 +121,48 @@ export async function smokePackage(archive, manifest) {
       const apiTask = await response.json();
       const read = JSON.parse(await execute(["get", String(apiTask.data.id)]));
       assert.equal(read.data.title, "HTTP из установленного архива");
+      const remoteLog = [
+        "log",
+        "add",
+        String(apiTask.data.id),
+        "--text",
+        "Шаг удалённого агента",
+        "--actor",
+        "installed-agent",
+        "--request-id",
+        "package-checkpoint",
+      ];
+      const first = JSON.parse(await execute(remoteLog, agent));
+      assert.deepEqual(JSON.parse(await execute(remoteLog, agent)), first);
+      const remoteTask = JSON.parse(
+        await execute(["get", String(apiTask.data.id), "--full"], agent),
+      );
+      assert.equal(remoteTask.data.logs[first.data.id].actor, "installed-agent");
+      assert.equal(remoteTask.data.logCount, 1);
+      assert.equal(remoteTask.data.revision, 2);
+      assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
     } finally {
       await server.close();
     }
+    const fallback = JSON.parse(
+      await execute(
+        [
+          "--local",
+          "--config",
+          configPath,
+          "comment",
+          "add",
+          "1",
+          "--text",
+          "Аварийная запись",
+          "--actor",
+          "orchestrator",
+        ],
+        agent,
+      ),
+    );
+    assert.equal(fallback.ok, true);
+    assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

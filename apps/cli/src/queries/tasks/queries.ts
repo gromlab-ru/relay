@@ -1,17 +1,13 @@
-import { assertGraph, blockedBy, isReady } from "@tasks/core/domain/graph";
-import { taskBrief } from "@tasks/core/domain/task";
 import { invariant } from "@tasks/core/shared/errors";
-import { resolveTask } from "@tasks/core/storage/tasks";
 import { paginate } from "../pagination.js";
 import type { TaskReference } from "@tasks/core/shared/ids";
 import type { PageOptions } from "../pagination.js";
-import type { TaskService } from "@tasks/core/application/tasks/service";
-import { selectTasks } from "@tasks/core/application/queries/tasks";
+import type { TasksBackend } from "../../backend/types.js";
+import { parseTaskId } from "@tasks/core/shared/ids";
 import { taskText, tasksText } from "../../presentation/tasks.js";
 import { fieldsText, markdownText } from "../../presentation/text.js";
 import { linksText } from "../../presentation/relations.js";
 import type { TextOptions } from "../../presentation/theme.js";
-import { compareTasks } from "@tasks/core/domain/rank";
 
 export interface TaskFilters {
   status?: string;
@@ -25,32 +21,9 @@ export interface TaskFilters {
   sort?: "id" | "board";
 }
 
-export async function listTasks(service: TaskService, filters: TaskFilters, page: PageOptions) {
-  const tasks = await service.repository.snapshot();
-  assertGraph(tasks, service.workspace.config);
+export async function listTasks(service: TasksBackend, filters: TaskFilters, page: PageOptions) {
+  const { items, readyIds } = await service.list(filters);
   const openOnly = filters.status === undefined && !filters.all;
-  const items = selectTasks(
-    tasks,
-    service.workspace.config,
-    {
-      ...filters,
-      group: filters.group || undefined,
-      assignee: filters.assignee || undefined,
-      tag: filters.tag || undefined,
-      ready: filters.ready || undefined,
-    },
-    { openOnly, searchId: false },
-  ).map((task) => ({
-    ...taskBrief(task),
-    blockedBy: blockedBy(task, tasks, service.workspace.config),
-  }));
-  const columns = Object.keys(service.workspace.config.statuses);
-  if (filters.sort === "board")
-    items.sort(
-      (a, b) =>
-        columns.indexOf(a.status) - columns.indexOf(b.status) ||
-        compareTasks(tasks.get(a.id)!, tasks.get(b.id)!),
-    );
   const positions = new Map(items.map((task, index) => [task.id, index]));
   const hasFilters = Object.entries(filters).some(
     ([key, value]) => key !== "all" && key !== "sort" && !!value,
@@ -74,26 +47,27 @@ export async function listTasks(service: TaskService, filters: TaskFilters, page
         selected,
         options,
         service.workspace.config,
-        tasks,
+        new Map(),
         items.length,
         emptyMessage,
         filters.sort === "board",
+        new Set(readyIds),
       ),
   );
 }
 
 export async function getTask(
-  service: TaskService,
+  service: TasksBackend,
   reference: TaskReference,
   fields?: string[],
   full = false,
 ) {
-  const tasks = await service.repository.related(reference);
-  const task = resolveTask(reference, tasks);
+  const { task, related, blockedBy, ready } = await service.document(reference);
+  const tasks = new Map(related.map((item) => [item.id, item]));
   const data = {
     ...task,
-    blockedBy: blockedBy(task, tasks, service.workspace.config),
-    ready: isReady(task, tasks, service.workspace.config),
+    blockedBy,
+    ready,
     commentCount: Object.keys(task.comments).length,
     logCount: Object.keys(task.logs).length,
   };
@@ -114,37 +88,19 @@ export async function getTask(
 }
 
 export async function taskMarkdown(
-  service: TaskService,
+  service: TasksBackend,
   reference: TaskReference,
   field: "description" | "summary",
 ) {
-  const task = await service.repository.resolve(reference);
+  const lines = await service.markdown(reference, field);
   return {
-    data: { id: task.id, [field]: task[field] },
-    text: (options: TextOptions) => markdownText(task[field], options),
+    data: { id: parseTaskId(reference), [field]: lines },
+    text: (options: TextOptions) => markdownText(lines, options),
   };
 }
 
-export async function taskLinks(service: TaskService, reference: TaskReference) {
-  const tasks = await service.repository.snapshot();
-  const task = resolveTask(reference, tasks);
-  assertGraph(tasks, service.workspace.config);
-  const describe = (id: number) => {
-    const related = tasks.get(id)!;
-    return { id: related.id, title: related.title, status: related.status };
-  };
-  const data = {
-    id: task.id,
-    parent: task.parentId ? describe(task.parentId) : null,
-    children: [...tasks.values()]
-      .filter((item) => item.parentId === task.id)
-      .map((item) => describe(item.id)),
-    dependsOn: task.dependsOn.map(describe),
-    blocks: [...tasks.values()]
-      .filter((item) => item.dependsOn.includes(task.id))
-      .map((item) => describe(item.id)),
-    blockedBy: blockedBy(task, tasks, service.workspace.config),
-  };
+export async function taskLinks(service: TasksBackend, reference: TaskReference) {
+  const { task, ...data } = await service.links(reference);
   return {
     data,
     text: (options: TextOptions) => linksText(task, data, options, service.workspace.config),

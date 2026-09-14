@@ -38,3 +38,19 @@ export type BoardMatches = Assert<Equal<Output<"BoardResponse">, Contract.BoardR
 export type ContextMatches = Assert<Equal<Output<"ContextResponse">, Contract.ContextResponse>>;
 export type HealthMatches = Assert<Equal<Output<"HealthResponse">, Contract.HealthResponse>>;
 export type EventMatches = Assert<Equal<Output<"ServerEvent">, Contract.ServerEvent>>;
+export type ListQueryMatches = Assert<Equal<Input<"TaskListQuery">, Contract.TaskListQuery>>;
+export type ListDataMatches = Assert<Equal<Output<"TaskListData">, Contract.TaskListData>>;
+export type DocumentMatches = Assert<Equal<Output<"TaskDocumentData">, Contract.TaskDocumentData>>;
+export type MarkdownQueryMatches = Assert<
+  Equal<Input<"TaskMarkdownQuery">, Contract.TaskMarkdownQuery>
+>;
+export type MarkdownMatches = Assert<Equal<Output<"TaskMarkdownData">, Contract.TaskMarkdownData>>;
+export type LinksMatches = Assert<Equal<Output<"TaskLinksData">, Contract.TaskLinksData>>;
+export type TreeMatches = Assert<Equal<Output<"TaskTreeData">, Contract.TaskTreeData>>;
+export type GroupsMatches = Assert<Equal<Output<"GroupsData">, Contract.GroupsData>>;
+export type OverviewQueryMatches = Assert<Equal<Input<"OverviewQuery">, Contract.OverviewQuery>>;
+export type OverviewMatches = Assert<Equal<Output<"OverviewData">, Contract.OverviewData>>;
+export type DependencyMatches = Assert<
+  Equal<Input<"ChangeDependencyRequest">, Contract.ChangeDependencyRequest>
+>;
+export type ValidationMatches = Assert<Equal<Output<"ValidationData">, Contract.ValidationData>>;

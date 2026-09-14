@@ -36,7 +36,7 @@ registerCommand<{ titleOnly?: boolean }>(program, runtime, {
   examples: [["tasks-cli inspect 3 --title-only", "Выбрать название"]],
   configure: (command) => command.option("--title-only", "Только название"),
   async run(context, input) {
-    const task = await context.tasks.repository.resolve(input.argument());
+    const { task } = await context.tasks.document(input.argument());
     return {
       data: input.options.titleOnly ? { title: task.title } : task,
     };
@@ -49,6 +49,13 @@ registerCommand<{ titleOnly?: boolean }>(program, runtime, {
 вынесите её в `packages/core/src/application/` и вызывайте из `run` через
 экспорты `@tasks/core/application/*`. Не используйте алиасы корневого tsconfig
 или относительные импорты исходников другого workspace.
+
+Команды обращаются к `context.tasks` и `context.backend.comments/logs/validate`.
+Контракт `apps/cli/src/backend/types.ts` реализован локальным Core и HTTP через
+`@tasks/rest-sdk`. Новая рабочая операция должна поддерживать оба адаптера;
+файловый `Workspace` доступен только локальной служебной операции через `localWorkspace`.
+Расширение API сопровождается OpenAPI и регенерацией SDK. Терминальное представление
+и байтовая пагинация остаются в CLI; общие read models находятся в Core.
 
 Для отдельного семейства создайте `registerXxx(program, runtime)` и подключите
 его в `apps/cli/src/program.ts`. Вложенные команды регистрируются так же:

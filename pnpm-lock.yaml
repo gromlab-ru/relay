@@ -23,6 +23,9 @@ importers:
       '@tasks/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tasks/rest-sdk':
+        specifier: workspace:*
+        version: link:../../packages/rest-sdk
       '@tasks/server-runtime':
         specifier: workspace:*
         version: link:../../packages/server-runtime

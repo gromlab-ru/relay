@@ -5,6 +5,8 @@ import { test } from "node:test";
 import type { Task } from "@tasks/core/domain/task";
 import { TaskService } from "@tasks/core/application/tasks/service";
 import { getTask } from "../src/queries/tasks/queries.js";
+import { createLocalBackend } from "../src/backend/local.js";
+import { TaskRepository } from "@tasks/core/storage/tasks";
 import { openWorkspace } from "@tasks/core/storage/workspace";
 import { failed, fixture, successful } from "./helpers/cli.js";
 
@@ -61,14 +63,18 @@ test("одно изменение читает граф один раз, get ч�
   await app.create("Посторонняя карточка");
   const service = new TaskService(await openWorkspace(app.root));
   const files: string[] = [];
-  const read = service.repository.readFile.bind(service.repository);
-  service.repository.readFile = (filename) => {
-    files.push(filename);
-    return read(filename);
-  };
+  const read = TaskRepository.prototype.readFile;
+  t.mock.method(
+    TaskRepository.prototype,
+    "readFile",
+    function (this: TaskRepository, filename: string) {
+      files.push(filename);
+      return read.call(this, filename);
+    },
+  );
   await service.update(3, { dependsOn: [1, 2], parentId: 1 }, { actor: "human" });
   assert.deepEqual(files.toSorted(), ["1.json", "2.json", "3.json", "4.json"]);
   files.length = 0;
-  await getTask(service, 3);
+  await getTask((await createLocalBackend(app.root)).tasks, 3);
   assert.deepEqual(files.toSorted(), ["1.json", "2.json", "3.json"]);
 });

@@ -66,9 +66,15 @@ async function locateConfig(cwd: string, explicit?: string): Promise<string> {
   }
 }
 
-export async function openWorkspace(cwd: string, explicit?: string): Promise<Workspace> {
+/** Чтение настроек не создаёт хранилище, runtime-каталог или блокировки. */
+export async function readWorkspaceConfig(cwd: string, explicit?: string) {
   const configPath = await locateConfig(cwd, explicit);
   const config = parse(configSchema, await readJson(configPath), configPath);
+  return { configPath, config };
+}
+
+export async function openWorkspace(cwd: string, explicit?: string): Promise<Workspace> {
+  const { configPath, config } = await readWorkspaceConfig(cwd, explicit);
   const storage = resolve(dirname(configPath), config.storageDir);
   await mkdir(dirname(storage), { recursive: true });
   const root = (await exists(storage))

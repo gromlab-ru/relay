@@ -2,6 +2,7 @@
 
 Локальный трекер задач с CLI, REST API и веб-доской. Приложения работают с одним
 JSON-хранилищем: ревизии, зависимости задач, блокировки и история реализованы в общем Core.
+CLI поддерживает прямой доступ и HTTP-режим для агентов в независимых Git worktree.
 
 Репозиторий организован как **Turborepo + pnpm workspaces**. Пользователям поставляется
 один npm-пакет `@gromlab/tasks-cli`, включающий CLI, backend и собранный frontend.
@@ -89,7 +90,7 @@ pnpm --silent run playground list --format json
 | `packages/typescript-config`                                   | Общие строгие настройки TypeScript                         |
 
 CLI и standalone backend используют `@tasks/server-runtime`, который зависит от Core
-и Contracts. Web использует `@tasks/rest-sdk`, собранный из OpenAPI сервера. Зависимости объявляются
+и Contracts. Web и HTTP-режим CLI используют `@tasks/rest-sdk`, собранный из OpenAPI сервера. Зависимости объявляются
 в манифестах потребителей; межпакетные импорты проходят через `exports`.
 
 Состав workspaces определяет `pnpm-workspace.yaml`, внутренние зависимости используют
@@ -121,6 +122,12 @@ npx @gromlab/tasks-cli server --actor human --open
 Проверенный архив находится в `apps/cli/.artifacts/npm/`.
 
 ## Документация
+
+Для общей работы агентов задайте `server.url` в конфиге или `TASKS_SERVER_URL` в их
+окружении. Каждый агент задаёт свой `TASKS_ACTOR`; сервер сохраняет прогресс в
+рабочей копии оркестратора. `--local --config /path/to/orchestrator/tasks.config.json`
+принудительно выбирает прямую запись, в том числе при недоступном сервере.
+Сценарий и `--request-id`: [руководство CLI](apps/cli/README.md#работа-агентов-через-общий-сервер).
 
 - [Руководство CLI](apps/cli/README.md) и [справочник команд](apps/cli/docs/CLI.md).
 - [Архитектура](docs/ARCHITECTURE.md) и [план продукта](docs/PLAN.md).

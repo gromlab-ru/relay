@@ -10,6 +10,7 @@ import { LogsModule } from "./modules/logs/logs.module.js";
 import { EventsModule } from "./modules/events/events.module.js";
 import { WorkspaceModule } from "./modules/workspace/workspace.module.js";
 import type { WorkspaceOptions } from "./modules/workspace/workspace.module.js";
+import { ProjectModule } from "./modules/project/project.module.js";
 
 @Module({})
 export class AppModule {
@@ -30,6 +31,7 @@ export class AppModule {
         ContextModule,
         BoardModule,
         TasksModule,
+        ProjectModule,
         CommentsModule,
         LogsModule,
         EventsModule,

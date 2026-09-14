@@ -6,13 +6,21 @@
 
 import { addComment } from "./operations/add-comment.js";
 import { addLog } from "./operations/add-log.js";
+import { changeDependency } from "./operations/change-dependency.js";
 import { claimTask } from "./operations/claim-task.js";
 import { createTask } from "./operations/create-task.js";
 import { getBoard } from "./operations/get-board.js";
 import { getComment } from "./operations/get-comment.js";
 import { getContext } from "./operations/get-context.js";
+import { getGroups } from "./operations/get-groups.js";
 import { getHealth } from "./operations/get-health.js";
 import { getLog } from "./operations/get-log.js";
+import { getOverview } from "./operations/get-overview.js";
+import { getTaskDocument } from "./operations/get-task-document.js";
+import { getTaskLinks } from "./operations/get-task-links.js";
+import { getTaskList } from "./operations/get-task-list.js";
+import { getTaskMarkdown } from "./operations/get-task-markdown.js";
+import { getTaskTree } from "./operations/get-task-tree.js";
 import { getTask } from "./operations/get-task.js";
 import { listComments } from "./operations/list-comments.js";
 import { listLogs } from "./operations/list-logs.js";
@@ -20,6 +28,7 @@ import { listTasks } from "./operations/list-tasks.js";
 import { moveTask } from "./operations/move-task.js";
 import { releaseTask } from "./operations/release-task.js";
 import { updateTask } from "./operations/update-task.js";
+import { validateProject } from "./operations/validate-project.js";
 import { watchEvents } from "./operations/watch-events.js";
 
 export const operationsTree = {
@@ -40,6 +49,17 @@ export const operationsTree = {
     moveTask: moveTask,
     claimTask: claimTask,
     releaseTask: releaseTask,
+  },
+  project: {
+    getTaskList: getTaskList,
+    getTaskDocument: getTaskDocument,
+    getTaskMarkdown: getTaskMarkdown,
+    getTaskLinks: getTaskLinks,
+    getTaskTree: getTaskTree,
+    getGroups: getGroups,
+    getOverview: getOverview,
+    validateProject: validateProject,
+    changeDependency: changeDependency,
   },
   comments: {
     listComments: listComments,

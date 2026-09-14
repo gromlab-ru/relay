@@ -65,7 +65,7 @@ class LogsController {
     @Param("id", TaskIdPipe) id: number,
     @Body(new ZodValidationPipe(addLogSchema)) input: AddLogRequest,
   ): Promise<ApiSuccess<LogRecord>> {
-    const { text, summary, ...fields } = input;
+    const { text, summary, actor, requestId, ...fields } = input;
     return success(
       await new LogService(await this.workspace.open()).add(
         id,
@@ -74,7 +74,8 @@ class LogsController {
           body: toLines(text),
           ...(summary === undefined ? {} : { summary: toLines(summary) }),
         },
-        this.workspace.options.actor,
+        this.workspace.actor(actor),
+        requestId,
       ),
     );
   }

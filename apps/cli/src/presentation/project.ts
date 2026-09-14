@@ -54,7 +54,7 @@ export function configText(
     section(
       "Сервер",
       wrap(
-        `Порт: ${config.server.port === 0 ? "0 (свободный)" : config.server.port}\nПриоритет: --port → TASKS_PORT → server.port`,
+        `Порт: ${config.server.port === 0 ? "0 (свободный)" : config.server.port}\nПриоритет: --port → TASKS_PORT → server.port${config.server.url ? `\nURL CLI в конфиге: ${safeText(config.server.url)}` : ""}`,
         options.width,
       ),
       options,

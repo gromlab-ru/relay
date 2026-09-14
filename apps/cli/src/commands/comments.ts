@@ -1,11 +1,10 @@
 import type { Command } from "commander";
-import { CommentService } from "@tasks/core/application/comments";
 import { listComments } from "../queries/comments.js";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
 import { commandGroup, registerCommand } from "../command.js";
-import { pageFrom, pageOptions } from "../options.js";
-import type { PagingOptions } from "../options.js";
+import { pageFrom, pageOptions, recordOptions, requestId } from "../options.js";
+import type { PagingOptions, RequestOptions } from "../options.js";
 import { textInputOptions, readTextInput } from "../text-input.js";
 import type { TextInputOptions } from "../text-input.js";
 import { MAX_COMMENT_BYTES } from "@tasks/core/domain/comment";
@@ -28,7 +27,7 @@ export function registerComments(program: Command, runtime: Runtime): void {
       ["tasks-cli comment list 3", "Найти ID комментария для полного чтения"],
     ],
   });
-  registerCommand<TextInputOptions>(comments, runtime, {
+  registerCommand<TextInputOptions & RequestOptions>(comments, runtime, {
     name: "add <task-id>",
     description: "Добавить комментарий к задаче",
     arguments: taskArgument,
@@ -44,11 +43,16 @@ export function registerComments(program: Command, runtime: Runtime): void {
         "Многострочный комментарий",
       ],
     ],
-    configure: textInputOptions,
+    configure: (command) => recordOptions(textInputOptions(command)),
     async run(context, { options, argument }) {
       const actor = author(context);
       const text = await readTextInput(context.runtime.input, options, MAX_COMMENT_BYTES);
-      const comment = await new CommentService(context.workspace).add(argument(), text, actor);
+      const comment = await context.backend.comments.add(
+        argument(),
+        text,
+        actor,
+        requestId(options),
+      );
       return {
         data: { id: comment.id, taskId: comment.taskId },
         text: (view) =>
@@ -70,7 +74,7 @@ export function registerComments(program: Command, runtime: Runtime): void {
       pageOptions(command).option("--author <actor>", "Точный идентификатор автора"),
     run: (context, input) =>
       listComments(
-        context.workspace,
+        context.backend.comments,
         input.argument(),
         pageFrom(context, input.options),
         input.options.author,
@@ -84,10 +88,7 @@ export function registerComments(program: Command, runtime: Runtime): void {
       "Возвращает полную запись, принадлежащую указанной задаче.\nID комментария возьмите из comment add или comment list.",
     examples: [["tasks-cli comment get 3 <comment-id>", "Прочитать выбранный комментарий"]],
     async run(context, input) {
-      const comment = await new CommentService(context.workspace).get(
-        input.argument(),
-        input.argument(1),
-      );
+      const comment = await context.backend.comments.get(input.argument(), input.argument(1));
       return { data: comment, text: (options) => commentText(comment, options) };
     },
   });
