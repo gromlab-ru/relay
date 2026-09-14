@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "tasks": "tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts"
+    "tasks": "tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts",
+    "demo:reset": "node demo/seed.mjs --write",
+    "demo:check": "node demo/seed.mjs --check",
+    "demo:stats": "node demo/seed.mjs --stats"
   },
   "devDependencies": {
     "@gromlab/tasks-cli": "workspace:*",
