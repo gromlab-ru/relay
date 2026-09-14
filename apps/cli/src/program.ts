@@ -5,6 +5,7 @@ import { registerLogs } from "./commands/logs.js";
 import { registerProject } from "./commands/project.js";
 import { registerTasks } from "./commands/tasks.js";
 import { registerServer } from "./commands/server.js";
+import { registerOverview } from "./commands/overview.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -34,6 +35,7 @@ export function createProgram(runtime: Runtime): Command {
     .exitOverride()
     .configureOutput({ writeOut: (text) => runtime.stdout.write(text), writeErr: () => {} });
   registerProject(program, runtime);
+  registerOverview(program, runtime);
   registerTasks(program, runtime);
   registerAssignments(program, runtime);
   registerComments(program, runtime);
@@ -46,6 +48,7 @@ export function createProgram(runtime: Runtime): Command {
       ["tasks-cli init", "Подготовить текущий проект"],
       ['tasks-cli create "Реализовать API" --group backend --actor human', "Создать первую задачу"],
       ["tasks-cli list", "Посмотреть незавершённые задачи по группам"],
+      ["tasks-cli overview", "Обзор прогресса и выбор следующего действия"],
       [
         "tasks-cli claim 1 --status in_progress --actor backend-agent",
         "Взять свободную задачу в работу",

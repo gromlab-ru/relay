@@ -11,6 +11,8 @@ import { decodeCursor, encodeCursor } from "../../shared/cursor.js";
 import { invariant } from "../../shared/errors.js";
 import { TaskRepository, resolveTask } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
+import { buildOverview, overviewQuerySchema } from "./overview.js";
+import type { OverviewData, OverviewQueryInput } from "./overview.js";
 
 export const boardQuerySchema = z.strictObject({
   search: z.string().max(4096).optional(),
@@ -98,6 +100,12 @@ export class TaskQueries {
     for (const task of [...tasks.values()].sort((a, b) => a.id - b.id))
       hash.update(JSON.stringify(task));
     return { tasks, version: hash.digest("hex") };
+  }
+
+  async overview(reference?: TaskReference, input: OverviewQueryInput = {}): Promise<OverviewData> {
+    const query = parse(overviewQuerySchema, input, "параметры обзора");
+    const { tasks, version } = await this.snapshot();
+    return buildOverview(tasks, this.workspace.config, version, reference, query);
   }
 
   async board(input: BoardQueryInput = {}) {

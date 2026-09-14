@@ -38,6 +38,9 @@ Web: <http://127.0.0.1:5173>. Корневой dev использует этот
 
 ```bash
 pnpm --silent run playground list --all --limit 20
+pnpm --silent run playground overview
+pnpm --silent run playground overview 9
+pnpm --silent run playground overview 1 --limit 20 --max-bytes 65536 --format json
 pnpm --silent run playground tree 1 --depth 1
 pnpm --silent run playground tree 8
 pnpm --silent run playground list --group frontend --limit 20
@@ -73,6 +76,15 @@ pnpm --silent run playground group list
 
 Страница UI содержит 40 карточек, страница истории — 20 записей. Колонки `todo`
 и `done` и длинная история позволяют проверить реальную подгрузку на содержательных данных.
+
+`overview` показывает прогресс, готовую работу, проверку и влияние блокеров.
+Для #83 он находит три непосредственно зависимые рабочие задачи (#77, #84, #87),
+не увеличивая влияние за счёт родительского эпика #8. Все три станут доступны после
+его успешного завершения. `overview 9` учитывает внешний UX-блокер #28.
+
+Счётчик карточек без подзадач равен **173**: 170 рабочих и 3 исторические отменённые.
+У #9 непосредственных детей **13**: 12 рабочих и историческая #190. Обзор показывает
+отмену отдельно от четырёх успешно выполненных работ.
 
 ## Восстановить исходное демо
 
