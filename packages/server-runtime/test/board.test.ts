@@ -129,7 +129,7 @@ test("смена storageDir между страницами возвращает
     JSON.stringify({ ...workspace.config, storageDir: ".new-tasks" }),
   );
   const response = await app.inject(`/api/v1/board?cursor=${page.meta.nextCursor}`);
-  assert.equal(response.statusCode, 409);
+  assert.equal(response.statusCode, 409, response.body);
   assert.equal(response.json().error.code, "BOARD_CHANGED");
 });
 

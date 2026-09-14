@@ -1,7 +1,0 @@
-.root {
-  background: var(--app-color-canvas);
-}
-
-.main {
-  min-block-size: 100vh;
-}

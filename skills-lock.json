@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "react-reference": {
+      "source": "gromlab-ru/js-reference",
+      "sourceType": "github",
+      "skillPath": "skills/react-reference/SKILL.md",
+      "computedHash": "b1ba6a1ad329c6424a5d52f18507c42ae86df685ca1c7755db17f43b1a357606"
+    },
+    "rest-api-codegen-ru": {
+      "source": "gromlab-ru/rest-api-codegen",
+      "sourceType": "github",
+      "skillPath": "skills/rest-api-codegen-ru/SKILL.md",
+      "computedHash": "d5ef9c3ae0f68664b01b5526ea4706a3fa532cb93065185287328ab20d7ca5a1"
+    },
+    "svg-sprites-ru": {
+      "source": "gromlab-ru/svg-sprites",
+      "sourceType": "github",
+      "skillPath": "skills/svg-sprites-ru/SKILL.md",
+      "computedHash": "cc9370059c7bd50250035013681b25546c86b744dde00e7afcaacae3cdada32f"
+    },
+    "unit-architecture": {
+      "source": "gromlab-ru/unit-architecture",
+      "sourceType": "github",
+      "skillPath": "skills/unit-architecture/SKILL.md",
+      "computedHash": "853c2ea474f070956976ad24dc9cc1834f51c3bdfc1e708d06fcc7d319a71bd3"
+    }
+  }
+}

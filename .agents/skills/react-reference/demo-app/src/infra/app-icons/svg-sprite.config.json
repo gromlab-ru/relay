@@ -1,8 +1,0 @@
-{
-  "mode": "react@vite",
-  "name": "app",
-  "input": [
-    "../../shared/assets/svg/app-mark.svg",
-    "../../shared/assets/svg/sign-out.svg"
-  ]
-}

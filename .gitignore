@@ -6,3 +6,6 @@ coverage/
 *.tgz
 .artifacts/
 .npmrc
+
+# Проектные копии скиллов; известные источники перечислены в skills-lock.json.
+/.agents/skills/

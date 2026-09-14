@@ -82,7 +82,9 @@ export async function openWorkspace(cwd: string, explicit?: string): Promise<Wor
     : join(await realpath(dirname(storage)), basename(storage));
   const runtime = await prepareRuntime(root);
   // Git не хранит пустые каталоги. Во время миграции место для нового каталога оставляем свободным.
-  if (!(await exists(root)) && !(await exists(join(runtime, MIGRATION_STATE)))) await mkdir(root);
+  if (!(await exists(root)) && !(await exists(join(runtime, MIGRATION_STATE))))
+    // Несколько запросов и наблюдатель могут впервые открыть один каталог одновременно.
+    await mkdir(root, { recursive: true });
   return new Workspace(configPath, root, config);
 }
 

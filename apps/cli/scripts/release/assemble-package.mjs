@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { isBuiltin } from "node:module";
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { cliRoot, readCliManifest, repoRoot, stageDirectory } from "../lib/project.mjs";
 import { distributionManifest, releaseMetadata } from "./metadata.mjs";
+import { filesBelow, packageMarkdown } from "../lib/documentation.mjs";
 
 const manifest = await readCliManifest();
 releaseMetadata(manifest);
@@ -63,28 +64,32 @@ assert(
   "The server must remain a lazy-loaded ESM chunk",
 );
 await cp(join(cliRoot, "dist/web"), join(stageDirectory, "dist/web"), { recursive: true });
-for (const path of ["README.md", "CHANGELOG.md", "docs"]) {
-  await cp(join(cliRoot, path), join(stageDirectory, path), { recursive: true });
-}
-for (const [source, destination] of [
-  ["docs/PLAN.md", "PLAN.md"],
-  ["apps/web/UI_SPEC.md", "UI_SPEC.md"],
-]) {
-  assert(source && destination);
-  const document = (await readFile(join(repoRoot, source), "utf8"))
-    .replaceAll("(../apps/web/UI_SPEC.md)", "(UI_SPEC.md)")
-    .replaceAll("(../apps/cli/docs/RELEASING.md)", "(docs/RELEASING.md)")
-    .replaceAll("(../../docs/PLAN.md)", "(PLAN.md)")
-    .replaceAll("(../cli/README.md)", "(README.md)")
-    .replaceAll(
-      /\((?:\.\.\/){1,2}packages\/contracts\/docs\/API\.md\)/g,
-      "(https://github.com/gromlab-ru/tasks-cli/blob/main/packages/contracts/docs/API.md)",
-    )
-    .replaceAll(
-      "(AGENTS.md)",
-      "(https://github.com/gromlab-ru/tasks-cli/blob/main/apps/web/AGENTS.md)",
-    );
-  await writeFile(join(stageDirectory, destination), document);
+// Один источник витрины; карта сохраняет локальную навигацию документов в архиве.
+const documentation = new Map([
+  ["README.md", "README.md"],
+  ["apps/cli/CHANGELOG.md", "CHANGELOG.md"],
+  ["apps/web/UI_SPEC.md", "docs/development/UI_SPEC.md"],
+  ...["CLI", "TERMINAL", "EXTENDING", "RELEASING"].map(
+    (name) => /** @type {[string, string]} */ ([`apps/cli/docs/${name}.md`, `docs/${name}.md`]),
+  ),
+  ...(await filesBelow(join(repoRoot, "docs"))).map(
+    (path) => /** @type {[string, string]} */ ([`docs/${path}`, `docs/${path}`]),
+  ),
+]);
+for (const [source, destination] of documentation) {
+  const target = join(stageDirectory, destination);
+  await mkdir(dirname(target), { recursive: true });
+  if (source.endsWith(".md")) {
+    const markdown = await packageMarkdown({
+      root: repoRoot,
+      source,
+      markdown: await readFile(join(repoRoot, source), "utf8"),
+      version: manifest.version,
+      files: documentation,
+      absolute: source === "README.md",
+    });
+    await writeFile(target, markdown);
+  } else await cp(join(repoRoot, source), target);
 }
 await writeFile(join(stageDirectory, "package.json"), JSON.stringify(staged, null, 2) + "\n");
 console.log(`Staged self-contained CLI: ${stageDirectory}`);
