@@ -142,6 +142,91 @@ test("HTTP и local сохраняют JSON, текст, фильтры, кур�
   assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
 });
 
+test("конфиг сам выбирает API; оркестратор назначает задачу, субагент пишет контекст без переменных URL", async (t) => {
+  const app = await setup(t);
+  const server = await app.start();
+  const config = {
+    ...app.workspace.config,
+    server: { port: Number(new URL(server.url).port), url: server.url },
+  };
+  await writeFile(join(app.root, "tasks.config.json"), JSON.stringify(config));
+  const agent = await app.agent(server.url);
+  await writeFile(join(agent, "tasks.config.json"), JSON.stringify(config));
+  const options = {
+    env: { TASKS_SERVER_URL: undefined, TASKS_CONFIG: undefined, TASKS_ACTOR: undefined },
+  };
+  successful(await invoke(app.root, ["create", "Поручение", "--actor", "orchestrator"], options));
+  successful(
+    await invoke(
+      app.root,
+      [
+        "update",
+        1,
+        "--assignee",
+        "backend-agent",
+        "--status",
+        "in_progress",
+        "--actor",
+        "orchestrator",
+      ],
+      options,
+    ),
+  );
+
+  const assigned = successful(
+    await invoke<{
+      assignee: string;
+      status: string;
+      ready: boolean;
+    }>(agent, ["get", 1], options),
+  ).data;
+  assert.equal(assigned.assignee, "backend-agent");
+  assert.equal(assigned.status, "in_progress");
+  assert.equal(assigned.ready, false);
+  const log = [
+    "log",
+    "add",
+    1,
+    "--actor",
+    "backend-agent",
+    "--text",
+    "Контекст сохранён",
+    "--request-id",
+    "assigned-step",
+  ];
+  const first = successful(await invoke(agent, log, options));
+  assert.deepEqual(successful(await invoke(agent, log, options)), first);
+  successful(
+    await invoke(
+      agent,
+      ["update", 1, "--summary", "Результат для оркестратора", "--actor", "backend-agent"],
+      options,
+    ),
+  );
+  const beforeReview = await app.tasks.repository.resolve(1);
+  assert.equal(beforeReview.status, "in_progress");
+  assert.equal(beforeReview.assignee, "backend-agent");
+  assert.equal(Object.keys(beforeReview.logs).length, 1);
+  assert.deepEqual(beforeReview.summary, ["Результат для оркестратора"]);
+  successful(await invoke(app.root, ["status", 1, "review", "--actor", "orchestrator"], options));
+  assert.equal((await app.tasks.repository.resolve(1)).updatedBy, "orchestrator");
+  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+
+  await server.close();
+  failed(await invoke(agent, ["get", 1], options), "SERVER_UNAVAILABLE", 5);
+  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+
+  // Порт без URL не заставляет CLI обращаться к серверу или использовать его данные.
+  await writeFile(
+    join(agent, "tasks.config.json"),
+    JSON.stringify({ ...config, server: { port: config.server.port } }),
+  );
+  successful(await invoke(agent, ["create", "Локальная база", "--actor", "orchestrator"], options));
+  const local = successful(await invoke<{ title: string }>(agent, ["get", 1], options)).data;
+  assert.equal(local.title, "Локальная база");
+  assert.equal((await app.tasks.repository.resolve(1)).title, "Поручение");
+});
+
 test("десять агентов в Git worktree пишут только оркестратору; claim и параллельные логи атомарны", async (t) => {
   const app = await setup(t);
   for (let i = 0; i < 12; i++) await app.tasks.create({ title: `Задача ${i + 1}` }, "orchestrator");

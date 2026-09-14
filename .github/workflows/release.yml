@@ -77,3 +77,37 @@ jobs:
         run: pnpm run release:publish
         env:
           RELEASE_TAG: ${{ github.ref_name }}
+
+  github-release:
+    name: Создать GitHub Release
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Получить описание выпуска
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
+        with:
+          persist-credentials: false
+      - name: Подготовить Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # Версия 7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Создать релиз после публикации npm
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node apps/cli/scripts/release/release-notes.mjs > "$RUNNER_TEMP/tasks-release-notes.md"
+          if ! gh release view "$RELEASE_TAG" --json url; then
+            flags=(--latest)
+            if [[ "$RELEASE_TAG" == *-* ]]; then
+              flags=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" --verify-tag --title "Tasks $RELEASE_TAG" \
+              --notes-file "$RUNNER_TEMP/tasks-release-notes.md" "${flags[@]}"
+          fi

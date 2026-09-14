@@ -5,6 +5,7 @@ import { artifactDirectory, readCliManifest, stageDirectory } from "../lib/proje
 import { runNpm } from "../lib/npm.mjs";
 import { releaseMetadata } from "./metadata.mjs";
 import { smokePackage } from "./smoke-package.mjs";
+import { checkDocumentation } from "../lib/documentation.mjs";
 
 const manifest = await readCliManifest();
 const metadata = releaseMetadata(manifest);
@@ -37,10 +38,15 @@ for (const required of [
   "package.json",
   "dist/cli/main.js",
   "dist/web/index.html",
-  "PLAN.md",
-  "UI_SPEC.md",
   "README.md",
   "CHANGELOG.md",
+  "docs/README.md",
+  "docs/GETTING_STARTED.md",
+  "docs/guides/ORCHESTRATION.md",
+  "docs/reference/CLI.md",
+  "docs/reference/API.md",
+  "docs/reference/FORMAT.md",
+  "docs/assets/board.png",
   "docs/CLI.md",
   "docs/TERMINAL.md",
   "docs/EXTENDING.md",
@@ -50,16 +56,20 @@ for (const required of [
 }
 for (const path of paths) {
   assert(
-    /^(?:dist\/|docs\/|package\.json$|README\.md$|CHANGELOG\.md$|PLAN\.md$|UI_SPEC\.md$|LICENSE(?:\.md|\.txt)?$)/.test(
+    /^(?:dist\/|docs\/|package\.json$|README\.md$|CHANGELOG\.md$|LICENSE(?:\.md|\.txt)?$)/.test(
       path,
     ),
     `Неожиданный файл в npm-архиве: ${path}`,
   );
   assert(
-    !path.includes(".tsbuildinfo") && !path.includes("/reference/") && !path.includes("/test/"),
+    !path.includes(".tsbuildinfo") && !path.includes("/.agents/") && !path.includes("/test/"),
     `В архив попал служебный файл: ${path}`,
   );
 }
 const archive = join(artifactDirectory, entry.filename);
+await checkDocumentation(
+  stageDirectory,
+  paths.filter((path) => path.endsWith(".md")),
+);
 await smokePackage(archive, manifest);
 console.log(`Проверен npm-архив: ${archive}`);

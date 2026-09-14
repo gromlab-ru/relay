@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { npxCommand, runNpm, runNpx } from "../lib/npm.mjs";
 import { checkServerSurface, startServerProcess } from "../../test/helpers/server-process.mjs";
+import { checkDocumentation, filesBelow, inspectMarkdown } from "../lib/documentation.mjs";
 
 /**
  * Проверяем установленный архив в отдельном проекте без исходников и devDependencies.
@@ -35,6 +36,34 @@ export async function smokePackage(archive, manifest) {
     );
     assert.equal(installed.version, manifest.version, "Установлен архив с другой версией");
     assert.equal(installed.name, manifest.name);
+    const packageRoot = join(directory, "node_modules", manifest.name);
+    const readme = await readFile(join(packageRoot, "README.md"), "utf8");
+    assert(readme.includes("оркестратора и субагентов"), "В npm попал README другого владельца");
+    const destinations = inspectMarkdown(readme).destinations.map((node) => node.url);
+    assert(
+      destinations.includes(
+        `https://github.com/gromlab-ru/tasks-cli/blob/v${manifest.version}/skills/tasks-cli/SKILL.md`,
+      ),
+      "README npm должен ссылаться на скилл той же версии",
+    );
+    assert(
+      destinations.includes(
+        `https://raw.githubusercontent.com/gromlab-ru/tasks-cli/v${manifest.version}/docs/assets/board.png`,
+      ),
+      "README npm должен содержать версионный raw-адрес иллюстрации",
+    );
+    assert(
+      destinations.every((url) => /^(?:https?:|#)/.test(url)),
+      "В README npm остались относительные ссылки",
+    );
+    const image = await readFile(join(packageRoot, "docs/assets/board.png"));
+    assert.equal(image.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", "Иллюстрация не PNG");
+    await checkDocumentation(
+      packageRoot,
+      (await filesBelow(join(packageRoot, "docs")))
+        .filter((path) => path.endsWith(".md"))
+        .map((path) => `docs/${path}`),
+    );
     assert.equal(installed.scripts, undefined, "Release archives must not run build scripts");
     assert.equal(installed.devDependencies, undefined);
     assert(
