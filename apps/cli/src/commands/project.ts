@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { validateWorkspace } from "@tasks/core/application/validate";
+import { invariant } from "@tasks/core/shared/errors";
 import { listGroups } from "../queries/groups.js";
 import { migrateTasks } from "@tasks/core/application/tasks/migrate";
 import { initialize } from "@tasks/core/storage/workspace";
@@ -33,10 +33,15 @@ export function registerProject(program: Command, runtime: Runtime): void {
   });
   init.action(async () => {
     const globals = init.optsWithGlobals<GlobalOptions>();
+    invariant(
+      globals.local || !(globals.serverUrl ?? runtime.env.TASKS_SERVER_URL),
+      "LOCAL_ONLY",
+      "Для инициализации локальной рабочей копии при настроенном HTTP укажите --local.",
+    );
     const workspace = await initialize(
       runtime.cwd,
       init.opts<{ storage: string }>().storage,
-      globals.config,
+      globals.config ?? runtime.env.TASKS_CONFIG,
     );
     runtime.output = outputOptions(runtime, globals, workspace.config.output);
     printResult(
@@ -59,7 +64,7 @@ export function registerProject(program: Command, runtime: Runtime): void {
       ["tasks-cli validate --format json", "Получить диагностику для автоматизации"],
     ],
     async run(context) {
-      const data = await validateWorkspace(context.workspace);
+      const data = await context.backend.validate();
       return {
         data,
         text: (options) =>
@@ -77,7 +82,12 @@ export function registerProject(program: Command, runtime: Runtime): void {
       ["tasks-cli validate", "Проверить результат"],
     ],
     async run(context) {
-      const data = await migrateTasks(context.workspace, author(context));
+      invariant(
+        context.backend.localWorkspace,
+        "LOCAL_ONLY",
+        "Миграция выполняется с --local в хранилище оркестратора.",
+      );
+      const data = await migrateTasks(context.backend.localWorkspace, author(context));
       return {
         data,
         text: (options) =>

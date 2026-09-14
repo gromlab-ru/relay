@@ -1,6 +1,5 @@
 import { Option } from "commander";
 import type { Command } from "commander";
-import { LogService } from "@tasks/core/application/logs/service";
 import { listLogs } from "../queries/logs/list.js";
 import type { LogFilters } from "../queries/logs/list.js";
 import { searchLogs } from "../queries/logs/search.js";
@@ -12,8 +11,8 @@ import { palette } from "../presentation/theme.js";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
 import { commandGroup, registerCommand } from "../command.js";
-import { logFilterOptions, pageFrom, pageOptions } from "../options.js";
-import type { PagingOptions } from "../options.js";
+import { logFilterOptions, pageFrom, pageOptions, recordOptions, requestId } from "../options.js";
+import type { PagingOptions, RequestOptions } from "../options.js";
 import { textInputOptions, readTextInput } from "../text-input.js";
 import type { TextInputOptions } from "../text-input.js";
 
@@ -24,7 +23,7 @@ interface FilterOptions extends PagingOptions {
   since?: string;
   until?: string;
 }
-interface AddOptions extends TextInputOptions {
+interface AddOptions extends TextInputOptions, RequestOptions {
   kind: Log["kind"];
   title: string;
   summary: string;
@@ -70,7 +69,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
       ],
     ],
     configure: (command) =>
-      textInputOptions(command)
+      recordOptions(textInputOptions(command))
         .addOption(
           new Option("--kind <kind>", "Тип записи")
             .choices(logKindSchema.options)
@@ -83,7 +82,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
       const actor = author(context);
       const body = await readTextInput(context.runtime.input, input.options, MAX_REPORT_BYTES);
       const { kind, title, summary, sessionId } = input.options;
-      const log = await new LogService(context.workspace).add(
+      const log = await context.backend.logs.add(
         input.argument(),
         {
           kind,
@@ -93,6 +92,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
           body: toLines(body),
         },
         actor,
+        requestId(input.options),
       );
       return {
         data: { id: log.id, taskId: log.taskId },
@@ -113,7 +113,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
     ],
     configure: (command) => logFilterOptions(pageOptions(command)),
     async run(context, input) {
-      const records = await new LogService(context.workspace).records(input.argument());
+      const records = await context.backend.logs.records(input.argument());
       return listLogs(
         records.logs,
         records.taskId,
@@ -130,7 +130,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
       "Возвращает отчёт целиком с заголовком, автором и телом Markdown.\nДля большого отчёта увеличьте --max-bytes; запись не обрезается.",
     examples: [["tasks-cli log get 3 <log-id> --max-bytes 524288", "Прочитать большой отчёт"]],
     async run(context, input) {
-      const log = await new LogService(context.workspace).get(input.argument(), input.argument(1));
+      const log = await context.backend.logs.get(input.argument(), input.argument(1));
       return { data: log, text: (options) => logText(log, options) };
     },
   });
@@ -153,7 +153,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
         "Буквальная подстрока с учётом регистра",
       ),
     async run(context, input) {
-      const records = await new LogService(context.workspace).records(input.argument());
+      const records = await context.backend.logs.records(input.argument());
       return searchLogs(
         records.logs,
         records.taskId,

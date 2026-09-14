@@ -6,42 +6,12 @@
   padding: 0 var(--tasks-page-gutter) 1.25rem;
 }
 
-.tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 3px;
-  border: 1px solid var(--tasks-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--tasks-subtle);
-}
-
-.tab {
-  padding: 0.375rem 0.65rem;
-  border: 0;
-  border-radius: var(--mantine-radius-sm);
-  background: none;
-  color: var(--tasks-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-
-  &._active {
-    background: var(--tasks-surface);
-    color: var(--tasks-ink);
-    box-shadow: 0 1px 3px #10182a10;
-  }
-}
-
 .tools {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   flex: 1;
   gap: 0.5rem;
-
-  @media (--lg) {
-    justify-content: flex-end;
-  }
 }
 
 .search {
@@ -54,6 +24,7 @@
 }
 
 .total {
+  margin-left: auto;
   padding-left: 0.5rem;
   color: var(--tasks-soft);
   font-size: 0.75rem;

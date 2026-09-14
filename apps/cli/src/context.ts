@@ -1,12 +1,11 @@
 import type { Command } from "commander";
 import type { Readable, Writable } from "node:stream";
-import { TaskService } from "@tasks/core/application/tasks/service";
 import type { MutationOptions } from "@tasks/core/application/tasks/service";
 import type { Result, OutputFormat } from "./queries/result.js";
 import { actorSchema, parse } from "@tasks/core/domain/validation";
 import { invariant } from "@tasks/core/shared/errors";
-import { openWorkspace } from "@tasks/core/storage/workspace";
-import type { Workspace } from "@tasks/core/storage/workspace";
+import { connectBackend } from "./backend/connect.js";
+import type { Backend, TasksBackend, WorkspaceInfo } from "./backend/types.js";
 import { InputReader } from "./input.js";
 import { printResult } from "./output.js";
 import type { OutputOptions } from "./output.js";
@@ -16,6 +15,8 @@ import { palette } from "./presentation/theme.js";
 
 export interface GlobalOptions {
   config?: string;
+  serverUrl?: string;
+  local?: boolean;
   actor?: string;
   format?: OutputFormat;
   maxBytes?: number;
@@ -30,8 +31,9 @@ export interface Runtime {
   helpCommand?: string;
 }
 export interface CommandContext {
-  workspace: Workspace;
-  tasks: TaskService;
+  workspace: WorkspaceInfo;
+  tasks: TasksBackend;
+  backend: Backend;
   runtime: Runtime;
   output: OutputOptions;
   globals: GlobalOptions;
@@ -67,12 +69,14 @@ export function action(
 ): void {
   command.action(async () => {
     const globals = command.optsWithGlobals<GlobalOptions>();
-    const workspace = await openWorkspace(runtime.cwd, globals.config);
+    const backend = await connectBackend(runtime, globals, command.name() === "migrate");
+    const workspace = backend.workspace;
     const output = outputOptions(runtime, globals, workspace.config.output);
     runtime.output = output;
     const context: CommandContext = {
       workspace,
-      tasks: new TaskService(workspace),
+      tasks: backend.tasks,
+      backend,
       globals,
       output,
       runtime,

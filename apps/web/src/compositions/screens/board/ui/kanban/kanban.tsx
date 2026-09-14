@@ -6,18 +6,23 @@ import {
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  closestCorners,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import type {
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  KeyboardCoordinateGetter,
+} from "@dnd-kit/core";
 import { notifications } from "@mantine/notifications";
 import { TaskCard, moveTask, readTaskPreview, toTaskError, useTaskActions } from "domains/tasks";
 import type { TaskPreview } from "domains/tasks";
 import { isDefined } from "shared/value-predicates";
 import { KanbanColumn } from "compositions/screens/board/ui/kanban/ui/kanban-column";
 import { getDropPosition } from "./helpers/drop-position";
+import { getBoardCollisions } from "./helpers/get-board-collisions";
+import { getKeyboardCoordinates } from "./helpers/get-keyboard-coordinates";
 import type { KanbanProps } from "./types/kanban-props.type";
 import styles from "./styles/kanban.module.css";
 
@@ -36,7 +41,14 @@ export const Kanban = (props: KanbanProps) => {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: (event: KeyboardEvent, args: Parameters<KeyboardCoordinateGetter>[1]) =>
+        getKeyboardCoordinates(
+          event,
+          args,
+          project.statuses.map((status) => status.id),
+        ),
+    }),
   );
 
   /**
@@ -95,7 +107,7 @@ export const Kanban = (props: KanbanProps) => {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={getBoardCollisions}
       onDragStart={handleStart}
       onDragOver={handleOver}
       onDragEnd={handleEnd}

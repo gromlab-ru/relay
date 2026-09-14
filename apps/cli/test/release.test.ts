@@ -43,6 +43,7 @@ test("дистрибутив содержит внешние зависимос�
     ...manifest(),
     dependencies: {
       "@tasks/core": "workspace:*",
+      "@tasks/rest-sdk": "workspace:*",
       "@tasks/server-runtime": "workspace:*",
       commander: "^14.0.0",
     },
@@ -52,6 +53,7 @@ test("дистрибутив содержит внешние зависимос�
   };
   const workspaces = [
     { name: "@tasks/contracts", version: "0.0.0", private: true, dependencies: {} },
+    { name: "@tasks/rest-sdk", version: "0.0.0", private: true, dependencies: {} },
     {
       name: "@tasks/core",
       version: "0.0.0",

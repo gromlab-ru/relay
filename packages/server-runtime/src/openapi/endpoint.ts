@@ -7,8 +7,8 @@ import type { SchemaName } from "./schemas.js";
 
 export const ref = (name: SchemaName) => ({ $ref: `#/components/schemas/${name}` });
 
-export function jsonSchema(schema: z.ZodType): SchemaObject {
-  const { $schema, ...result } = z.toJSONSchema(schema, { target: "draft-7", io: "output" });
+export function jsonSchema(schema: z.ZodType, io: "input" | "output" = "output"): SchemaObject {
+  const { $schema, ...result } = z.toJSONSchema(schema, { target: "draft-7", io });
   return result as SchemaObject;
 }
 
@@ -64,9 +64,11 @@ export function ApiEndpoint(options: {
       }),
     );
   if (options.query) {
-    const query = jsonSchema(schemas[options.query]);
+    const query = jsonSchema(schemas[options.query], "input");
     for (const [name, schema] of Object.entries(query.properties ?? {}))
-      decorators.push(ApiQuery({ name, required: false, schema }));
+      decorators.push(
+        ApiQuery({ name, required: query.required?.includes(name) ?? false, schema }),
+      );
   }
   return applyDecorators(...decorators);
 }

@@ -118,7 +118,7 @@ test("новая команда получает аргументы, типиз�
     examples: [["tasks-cli inspect 1 --title-only", "Выбрать название"]],
     configure: (command) => command.option("--title-only", "Выбрать название"),
     async run(context, input) {
-      const task = await context.tasks.repository.resolve(input.argument());
+      const { task } = await context.tasks.document(input.argument());
       return { data: input.options.titleOnly ? { title: task.title } : task };
     },
   });

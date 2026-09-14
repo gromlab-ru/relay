@@ -5,10 +5,6 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "@tasks/web#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".cache/**"]
-    },
     "@tasks/server#build": {
       "dependsOn": ["^build", "@tasks/web#build"],
       "outputs": ["dist/**"]
@@ -47,10 +43,6 @@
       "dependsOn": ["build"],
       "outputs": []
     },
-    "@tasks/web#typecheck": {
-      "dependsOn": ["build"],
-      "outputs": [".cache/**"]
-    },
     "test": {
       "dependsOn": ["build"],
       "outputs": []
@@ -81,7 +73,8 @@
         "$TURBO_ROOT$/turbo.json",
         "$TURBO_ROOT$/apps/cli/package.json",
         "$TURBO_ROOT$/apps/cli/scripts/clean.mjs",
-        "$TURBO_ROOT$/apps/web/package.json"
+        "$TURBO_ROOT$/apps/web/package.json",
+        "$TURBO_ROOT$/packages/rest-sdk/**"
       ],
       "outputs": []
     },

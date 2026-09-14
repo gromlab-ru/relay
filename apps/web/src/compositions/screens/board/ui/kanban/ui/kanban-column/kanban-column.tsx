@@ -33,6 +33,7 @@ export const KanbanColumn = (props: KanbanColumnProps) => {
   const dropId = `column:${status.id}`;
   const { setNodeRef, isOver } = useDroppable({ id: dropId, data: { status: status.id } });
   const items = board.data?.items ?? [];
+  const isInitialLoading = board.isLoading && board.data === undefined;
   const isEmpty = !board.isLoading && board.error === undefined && isEmptyArray(items);
   const hasMore = isDefined(board.data?.cursor);
   const rows = items.map((task, index) => ({
@@ -65,7 +66,7 @@ export const KanbanColumn = (props: KanbanColumnProps) => {
         </Tooltip>
       </div>
       <div className={styles.body}>
-        {board.isLoading && (
+        {isInitialLoading && (
           <div className={styles.skeletons}>
             <Skeleton height={132} radius="md" />
             <Skeleton height={100} radius="md" />
@@ -96,6 +97,7 @@ export const KanbanColumn = (props: KanbanColumnProps) => {
         )}
         {hasMore && (
           <Button
+            className={styles.loadMore}
             variant="subtle"
             color="gray"
             size="xs"

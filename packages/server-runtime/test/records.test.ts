@@ -108,7 +108,7 @@ test("отчёты поддерживают метаданные, фильтр k
   for (const payload of [
     { text: " " },
     { text: "x", kind: "invalid" },
-    { text: "x", actor: "forged" },
+    { text: "x", actor: "\n" },
     { text: "x".repeat(256 * 1024 + 1) },
   ])
     assert.equal(

@@ -3,7 +3,17 @@ import { configSchema } from "@tasks/core/domain/config";
 import { taskFieldsSchema, taskSchema } from "@tasks/core/domain/task";
 import { commentSchema, MAX_COMMENT_BYTES } from "@tasks/core/domain/comment";
 import { logSchema, MAX_REPORT_BYTES } from "@tasks/core/domain/log";
-import { taskIdSchema, text } from "@tasks/core/domain/validation";
+import { actorSchema, taskIdSchema, text } from "@tasks/core/domain/validation";
+import { requestIdSchema } from "@tasks/core/application/record-request";
+import {
+  taskListQuerySchema,
+  taskListDataSchema,
+  taskDocumentDataSchema,
+  taskLinksDataSchema,
+  taskTreeDataSchema,
+  groupDataSchema,
+} from "@tasks/core/application/queries/project";
+import { overviewQuerySchema, overviewDataSchema } from "@tasks/core/application/queries/overview";
 import { boardQuerySchema } from "@tasks/core/application/queries/tasks";
 import { commentQuerySchema, logQuerySchema } from "@tasks/core/application/queries/records";
 import { API_CONTRACT_VERSION } from "@tasks/contracts";
@@ -33,7 +43,7 @@ const revision = z
   .describe("Ожидаемая revision документа; при несовпадении HTTP 409 REVISION_CONFLICT");
 export const createTaskSchema = writableFields
   .partial()
-  .extend({ title: writableFields.shape.title })
+  .extend({ title: writableFields.shape.title, actor: actorSchema.optional() })
   .meta({
     examples: [
       {
@@ -49,7 +59,8 @@ export const updateTaskSchema = z
       .partial()
       .refine((patch) => Object.keys(patch).length > 0, "Изменения не заданы")
       .meta({ minProperties: 1 }),
-    ifRevision: revision,
+    ifRevision: revision.optional(),
+    actor: actorSchema.optional(),
   })
   .meta({ examples: [{ patch: { summary: ["Контракт готов"] }, ifRevision: 1 }] });
 export const moveTaskSchema = z
@@ -59,13 +70,22 @@ export const moveTaskSchema = z
       .nullable()
       .describe("ID карточки, перед которой вставляется задача; null — конец полной колонки"),
     ifRevision: revision,
+    actor: actorSchema.optional(),
   })
   .meta({ examples: [{ status: "review", beforeId: null, ifRevision: 2 }] });
 export const claimTaskSchema = z
-  .strictObject({ ifRevision: revision, status: z.string().min(1).optional() })
+  .strictObject({
+    ifRevision: revision.optional(),
+    status: z.string().min(1).optional(),
+    actor: actorSchema.optional(),
+  })
   .meta({ examples: [{ ifRevision: 1, status: "in_progress" }] });
 export const releaseTaskSchema = z
-  .strictObject({ ifRevision: revision, force: z.boolean().optional() })
+  .strictObject({
+    ifRevision: revision.optional(),
+    force: z.boolean().optional(),
+    actor: actorSchema.optional(),
+  })
   .meta({ examples: [{ ifRevision: 2 }] });
 const bodyText = (maxBytes: number) =>
   text(maxBytes)
@@ -76,7 +96,11 @@ const bodyText = (maxBytes: number) =>
       description: `Непустой текст, до ${maxBytes} байт UTF-8`,
     });
 export const addCommentSchema = z
-  .strictObject({ text: bodyText(MAX_COMMENT_BYTES) })
+  .strictObject({
+    text: bodyText(MAX_COMMENT_BYTES),
+    actor: actorSchema.optional(),
+    requestId: requestIdSchema.optional(),
+  })
   .meta({ examples: [{ text: "## Проверка\n\nДобавьте интеграционный сценарий." }] });
 export const addLogSchema = z
   .strictObject({
@@ -87,6 +111,8 @@ export const addLogSchema = z
       .describe("До 1024 байт UTF-8; по умолчанию пустая строка"),
     summary: text(4096).optional().describe("До 4096 байт UTF-8; по умолчанию пустой текст"),
     sessionId: logSchema.shape.sessionId.unwrap().optional(),
+    actor: actorSchema.optional(),
+    requestId: requestIdSchema.optional(),
   })
   .meta({
     examples: [
@@ -99,6 +125,19 @@ export const addLogSchema = z
     ],
   });
 export { boardQuerySchema, commentQuerySchema, logQuerySchema };
+export const dependencySchema = z.strictObject({
+  dependencyId: taskIdSchema,
+  action: z.enum(["add", "remove"]),
+  actor: actorSchema.optional(),
+  ifRevision: revision.optional(),
+});
+export const treeQuerySchema = z.strictObject({
+  depth: z.number().int().min(0).max(100).default(3),
+});
+export const markdownQuerySchema = z.strictObject({ field: z.enum(["description", "summary"]) });
+export const projectOverviewQuerySchema = overviewQuerySchema.extend({
+  rootId: taskIdSchema.optional(),
+});
 
 const taskCardSchema = z
   .strictObject(taskSchema.shape)
@@ -124,6 +163,7 @@ const boardCardSchema = taskCardSchema
     childrenCompleted: z.number().int().nonnegative(),
   });
 const contextSchema = z.strictObject({
+  capabilities: z.array(z.string()).optional(),
   project: z.string(),
   projectId: z.string().describe("Стабильный идентификатор пути конфигурации проекта"),
   configPath: z.string(),
@@ -133,6 +173,7 @@ const contextSchema = z.strictObject({
 });
 const serverEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("connected"), data: z.strictObject({ projectId: z.string() }) }),
+  z.strictObject({ type: z.literal("heartbeat"), data: z.strictObject({ timestamp: z.string() }) }),
   z.strictObject({
     type: z.literal("changed"),
     data: z.strictObject({
@@ -148,6 +189,24 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  TaskListQuery: taskListQuerySchema,
+  TaskListData: taskListDataSchema,
+  TaskDocumentData: taskDocumentDataSchema,
+  TaskMarkdownQuery: markdownQuerySchema,
+  TaskMarkdownData: z.object({ id: taskIdSchema, lines: z.array(z.string()) }),
+  TaskLinksData: taskLinksDataSchema,
+  TaskTreeData: taskTreeDataSchema,
+  TreeQuery: treeQuerySchema,
+  GroupsData: groupDataSchema,
+  OverviewQuery: projectOverviewQuerySchema,
+  OverviewData: overviewDataSchema,
+  ChangeDependencyRequest: dependencySchema,
+  ValidationData: z.object({
+    valid: z.boolean(),
+    tasks: z.number(),
+    comments: z.number(),
+    logs: z.number(),
+  }),
   ServerEvent: serverEventSchema,
   HealthResponse: z.strictObject({
     status: z.literal("ok"),
@@ -184,6 +243,16 @@ export const schemas = {
       .record(z.string(), z.number().int().nonnegative())
       .describe("Счётчики всех отфильтрованных задач до пагинации, включая пустые колонки"),
     groups: z.array(z.string()),
+    groupCounts: z
+      .array(
+        z.strictObject({
+          group: z.string().nullable(),
+          count: z.number().int().nonnegative(),
+        }),
+      )
+      .describe(
+        "Полные размеры групп проекта независимо от фильтров и пагинации; null — без группы",
+      ),
     assignees: z.array(z.string()),
     tags: z.array(z.string()),
     version: z.string().describe("Версия полного снимка задач и конфигурации"),
@@ -203,6 +272,7 @@ export const schemas = {
       code: z.string(),
       message: z.string(),
       details: z.unknown().optional(),
+      exitCode: z.number().int().min(1).max(255).optional(),
     }),
   }),
 };

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { BoardQuery, CreateTaskRequest, UpdateTaskRequest } from "@tasks/contracts";
 import { tasksApi } from "infra/tasks-api";
+import type { BoardQuery, CreateTaskRequest, UpdateTaskRequest } from "infra/tasks-api";
 import { TASK_PREVIEW_SCHEMA, TASK_SCHEMA } from "../types/task.type";
 import type {
   BoardFilters,
@@ -20,6 +20,9 @@ const BOARD_SCHEMA = z.object({
   total: z.number(),
   counts: z.record(z.string(), z.number()),
   groups: z.array(z.string()),
+  groupCounts: z.array(
+    z.object({ group: z.string().nullable(), count: z.number().int().nonnegative() }),
+  ),
   assignees: z.array(z.string()),
   tags: z.array(z.string()),
   version: z.string(),
@@ -65,6 +68,7 @@ export const getBoard = async (
       tag: filters.tag || undefined,
       blocked: filters.blocked || undefined,
       unassigned: filters.unassigned || undefined,
+      ungrouped: filters.ungrouped || undefined,
       status,
       cursor,
       limit,

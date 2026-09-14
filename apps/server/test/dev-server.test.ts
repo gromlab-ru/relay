@@ -42,6 +42,7 @@ for (const configuration of ["default", "relative"] as const)
         "apps/web",
         "packages/core",
         "packages/contracts",
+        "packages/rest-sdk",
         "packages/server-runtime",
         "packages/typescript-config",
       ];

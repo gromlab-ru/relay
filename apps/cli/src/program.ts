@@ -5,6 +5,7 @@ import { registerLogs } from "./commands/logs.js";
 import { registerProject } from "./commands/project.js";
 import { registerTasks } from "./commands/tasks.js";
 import { registerServer } from "./commands/server.js";
+import { registerOverview } from "./commands/overview.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -15,7 +16,9 @@ export function createProgram(runtime: Runtime): Command {
     .description("Локальный трекер задач для AI-оркестратора и субагентов")
     .version(packageVersion, "-V, --version", "Показать версию CLI")
     .helpOption("-h, --help", "Справка, параметры и примеры")
-    .option("--config <path>", "Явный путь к tasks.config.json")
+    .option("--config <path>", "Явный путь к tasks.config.json; приоритет над TASKS_CONFIG")
+    .option("--server-url <url>", "Адрес сервера; приоритет над TASKS_SERVER_URL и server.url")
+    .option("--local", "Работать напрямую с локальным Core, игнорируя HTTP-настройки")
     .option("--actor <id>", "Автор записи, например human; приоритет над TASKS_ACTOR")
     .addOption(new Option("--format <format>", "Формат ответа").choices(["json", "text"]))
     .addOption(
@@ -34,6 +37,7 @@ export function createProgram(runtime: Runtime): Command {
     .exitOverride()
     .configureOutput({ writeOut: (text) => runtime.stdout.write(text), writeErr: () => {} });
   registerProject(program, runtime);
+  registerOverview(program, runtime);
   registerTasks(program, runtime);
   registerAssignments(program, runtime);
   registerComments(program, runtime);
@@ -41,11 +45,12 @@ export function createProgram(runtime: Runtime): Command {
   registerServer(program, runtime);
   addCommandHelp(program, {
     details:
-      "Быстрый старт: init → create → list → claim → status.\nID задачи — число от 1. Для записи нужен --actor или переменная TASKS_ACTOR.\nСправка с примерами: tasks-cli <команда> --help; вложенные команды: tasks-cli log add --help.\nЧтение не требует автора. --format json возвращает {ok, data, meta} или {ok, error}.",
+      "Быстрый старт: init → create → list → claim → status.\nURL: --server-url → TASKS_SERVER_URL → server.url. При заданном URL команды работают через сервер.\n--local принудительно выбирает Core и игнорирует HTTP. При недоступном сервере автоматического перехода к файлам нет.\nID задачи — число от 1. Для записи нужен --actor или переменная TASKS_ACTOR.\nСправка с примерами: tasks-cli <команда> --help; вложенные команды: tasks-cli log add --help.\nЧтение не требует автора. --format json возвращает {ok, data, meta} или {ok, error}.",
     examples: [
       ["tasks-cli init", "Подготовить текущий проект"],
       ['tasks-cli create "Реализовать API" --group backend --actor human', "Создать первую задачу"],
       ["tasks-cli list", "Посмотреть незавершённые задачи по группам"],
+      ["tasks-cli overview", "Обзор прогресса и выбор следующего действия"],
       [
         "tasks-cli claim 1 --status in_progress --actor backend-agent",
         "Взять свободную задачу в работу",

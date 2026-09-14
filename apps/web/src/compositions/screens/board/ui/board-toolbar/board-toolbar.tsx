@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ActionIcon, Button, Checkbox, Popover, Select, Stack, TextInput } from "@mantine/core";
 import { ListFilter, Search, X } from "lucide-react";
 import { BOARD_FILTERS_SCHEMA } from "domains/tasks";
+import { isNonEmptyArray } from "shared/value-predicates";
 import type { BoardToolbarProps } from "./types/board-toolbar-props.type";
 import styles from "./styles/board-toolbar.module.css";
 
@@ -15,48 +16,25 @@ import styles from "./styles/board-toolbar.module.css";
 export const BoardToolbar = (props: BoardToolbarProps) => {
   const { filters, board, actor, onChange, className, ...rootAttrs } = props;
   const [isOpen, setOpen] = useState(false);
-  const count = [
-    filters.group,
-    filters.assignee,
-    filters.tag,
-    filters.blocked,
-    filters.unassigned,
-  ].filter(Boolean).length;
+  const count = [filters.assignee, filters.tag, filters.blocked, filters.unassigned].filter(
+    Boolean,
+  ).length;
   const hasFilters = count > 0 || filters.search !== "";
   const isMine = filters.assignee === actor;
-  const isAll = !isMine && !filters.blocked;
+  const mineAssignee = isMine ? "" : actor;
   const filterLabel = count > 0 ? `Фильтры · ${count}` : "Фильтры";
-  const totalLabel = board === undefined ? "Загружаем…" : `${board.total} задач`;
+  const totalLabel = board === undefined ? "Загружаем…" : `Задач: ${board.total}`;
+  const activeFilterItems = [
+    filters.assignee && `Исполнитель: ${filters.assignee}`,
+    filters.tag && `Тег: ${filters.tag}`,
+    filters.blocked && "Заблокированные",
+    filters.unassigned && "Без исполнителя",
+  ]
+    .filter(Boolean)
+    .map(String);
+  const hasActiveFilters = isNonEmptyArray(activeFilterItems);
   return (
     <div {...rootAttrs} className={clsx(styles.root, className)}>
-      <div className={styles.tabs} role="group" aria-label="Быстрые фильтры">
-        <button
-          type="button"
-          className={clsx(styles.tab, isAll && styles._active)}
-          aria-pressed={isAll}
-          onClick={() => onChange({ ...filters, assignee: "", blocked: false, unassigned: false })}
-        >
-          Все задачи
-        </button>
-        <button
-          type="button"
-          className={clsx(styles.tab, isMine && styles._active)}
-          aria-pressed={isMine}
-          onClick={() =>
-            onChange({ ...filters, assignee: actor, blocked: false, unassigned: false })
-          }
-        >
-          Мои
-        </button>
-        <button
-          type="button"
-          className={clsx(styles.tab, filters.blocked && styles._active)}
-          aria-pressed={filters.blocked}
-          onClick={() => onChange({ ...filters, blocked: true, assignee: "" })}
-        >
-          Заблокированные
-        </button>
-      </div>
       <div className={styles.tools}>
         <TextInput
           className={styles.search}
@@ -88,15 +66,6 @@ export const BoardToolbar = (props: BoardToolbarProps) => {
           <Popover.Dropdown>
             <Stack gap="sm">
               <Select
-                label="Группа"
-                placeholder="Все группы"
-                clearable
-                searchable
-                data={board?.groups ?? []}
-                value={filters.group || null}
-                onChange={(group) => onChange({ ...filters, group: group ?? "" })}
-              />
-              <Select
                 label="Исполнитель"
                 placeholder="Все исполнители"
                 clearable
@@ -115,6 +84,17 @@ export const BoardToolbar = (props: BoardToolbarProps) => {
                 data={board?.tags ?? []}
                 value={filters.tag || null}
                 onChange={(tag) => onChange({ ...filters, tag: tag ?? "" })}
+              />
+              <Checkbox
+                label="Назначены мне"
+                checked={isMine}
+                onChange={() =>
+                  onChange({
+                    ...filters,
+                    assignee: mineAssignee,
+                    unassigned: false,
+                  })
+                }
               />
               <Checkbox
                 label="Без исполнителя"
@@ -137,26 +117,22 @@ export const BoardToolbar = (props: BoardToolbarProps) => {
         {hasFilters && (
           <ActionIcon
             aria-label="Сбросить фильтры"
-            onClick={() => onChange(BOARD_FILTERS_SCHEMA.parse({}))}
+            onClick={() =>
+              onChange(
+                BOARD_FILTERS_SCHEMA.parse({ group: filters.group, ungrouped: filters.ungrouped }),
+              )
+            }
           >
             <X size={15} />
           </ActionIcon>
         )}
         <span className={styles.total}>{totalLabel}</span>
       </div>
-      {hasFilters && (
+      {hasActiveFilters && (
         <div className={styles.activeFilters} aria-label="Активные фильтры">
-          {[
-            filters.group && `Группа: ${filters.group}`,
-            filters.assignee && `Исполнитель: ${filters.assignee}`,
-            filters.tag && `Тег: ${filters.tag}`,
-            filters.blocked && "Заблокированные",
-            filters.unassigned && "Без исполнителя",
-          ]
-            .filter(Boolean)
-            .map((label) => (
-              <span key={String(label)}>{label}</span>
-            ))}
+          {activeFilterItems.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
         </div>
       )}
     </div>

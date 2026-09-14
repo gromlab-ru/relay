@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { MarkdownLink } from "ui/markdown-link";
 import { MarkdownCheckbox } from "./ui/markdown-checkbox/markdown-checkbox";
 import type { MarkdownViewProps } from "./types/markdown-view-props.type";
 import styles from "./styles/markdown-view.module.css";
@@ -21,7 +22,11 @@ export const MarkdownView = (props: MarkdownViewProps) => {
     );
   return (
     <div {...rootAttrs} className={clsx(styles.root, className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ input: MarkdownCheckbox }} skipHtml>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{ input: MarkdownCheckbox, a: MarkdownLink }}
+        skipHtml
+      >
         {text}
       </ReactMarkdown>
     </div>

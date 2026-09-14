@@ -81,10 +81,19 @@ export const BOARD_FILTERS_SCHEMA = z.object({
   tag: z.string().default(""),
   blocked: z.boolean().default(false),
   unassigned: z.boolean().default(false),
+  ungrouped: z.boolean().default(false),
 });
 
 /** Значения фильтров доски. */
 export type BoardFilters = z.infer<typeof BOARD_FILTERS_SCHEMA>;
+
+/** Размер группы по всему проекту, включая конечные задачи. */
+export type TaskGroup = {
+  /** Название группы; null — задачи без группы. */
+  group: string | null;
+  /** Число задач до фильтрации и пагинации. */
+  count: number;
+};
 
 /** Страница задач с метаданными всей отфильтрованной выборки. */
 export type BoardPage = {
@@ -96,6 +105,8 @@ export type BoardPage = {
   counts: Record<string, number>;
   /** Известные группы проекта. */
   groups: string[];
+  /** Полные размеры групп для навигации по проекту. */
+  groupCounts: TaskGroup[];
   /** Известные исполнители. */
   assignees: string[];
   /** Известные теги. */

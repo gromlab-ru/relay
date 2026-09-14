@@ -6,7 +6,7 @@ import { useGetProject } from "domains/project";
 /** Состояние синхронизации рабочего проекта. */
 export type TaskConnection = {
   /** Доступна актуализация задач. */
-  state: "connected" | "reconnecting" | "storage-error";
+  state: "connecting" | "connected" | "reconnecting" | "disconnected" | "storage-error";
   /** Последовательность уведомлений для повторной сверки REST. */
   sequence: number;
   /** Причина временной недоступности данных. */

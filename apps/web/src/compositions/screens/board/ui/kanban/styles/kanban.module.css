@@ -4,12 +4,12 @@
   flex: 1;
   gap: 1.125rem;
   min-height: 18rem;
+  min-width: 0;
   padding: 0 var(--tasks-page-gutter) 1rem;
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: light-dark(#c5cada, #41485b) transparent;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
   scroll-padding-inline: var(--tasks-page-gutter);
 }
 

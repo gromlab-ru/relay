@@ -38,6 +38,7 @@ export type {
   TaskDetail,
   BoardFilters,
   BoardPage,
+  TaskGroup,
   TaskRecord,
   LogKind,
 } from "./types/task.type";

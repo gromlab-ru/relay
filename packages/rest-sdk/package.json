@@ -1,0 +1,56 @@
+{
+  "name": "@tasks/rest-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "tasks-source": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./http-client": {
+      "types": "./dist/http-client.d.ts",
+      "tasks-source": "./src/http-client.ts",
+      "import": "./dist/http-client.js"
+    },
+    "./create-api-client": {
+      "types": "./dist/create-api-client.d.ts",
+      "tasks-source": "./src/create-api-client.ts",
+      "import": "./dist/create-api-client.js"
+    },
+    "./operations": {
+      "types": "./dist/operations/index.d.ts",
+      "tasks-source": "./src/operations/index.ts",
+      "import": "./dist/operations/index.js"
+    },
+    "./operations/*": {
+      "types": "./dist/operations/*.d.ts",
+      "tasks-source": "./src/operations/*.ts",
+      "import": "./dist/operations/*.js"
+    },
+    "./operations-tree": {
+      "types": "./dist/operations-tree.d.ts",
+      "tasks-source": "./src/operations-tree.ts",
+      "import": "./dist/operations-tree.js"
+    },
+    "./data-contracts": {
+      "types": "./dist/data-contracts.d.ts",
+      "tasks-source": "./src/data-contracts.ts",
+      "import": "./dist/data-contracts.js"
+    }
+  },
+  "scripts": {
+    "generate": "pnpm dlx @gromlab/rest-api-codegen@5.2.4 --input http://127.0.0.1:3000/api/openapi.json --output src",
+    "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

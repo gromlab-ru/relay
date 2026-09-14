@@ -16,7 +16,7 @@ export interface ApiSuccess<T> {
 }
 export interface ApiFailure {
   ok: false;
-  error: { code: string; message: string; details?: unknown };
+  error: { code: string; message: string; exitCode?: number; details?: unknown };
 }
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 export function success<T>(data: T, meta?: PageMeta): ApiSuccess<T> {
@@ -37,10 +37,11 @@ export interface ProjectConfig {
   readyStatuses: string[];
   statuses: Record<string, StatusDefinition>;
   /** Настроенный порт сервера; 0 выбирает свободный порт при запуске. */
-  server: { port: number };
+  server: { port: number; url?: string | undefined };
   output: { format: "text" | "json"; defaultLimit: number; maxBytes: number };
 }
 export interface ContextResponse {
+  capabilities?: string[];
   project: string;
   projectId: string;
   configPath: string;
@@ -105,6 +106,8 @@ export interface BoardResponse {
   total: number;
   counts: Record<string, number>;
   groups: string[];
+  /** Полные размеры групп проекта до фильтрации и пагинации; null — без группы. */
+  groupCounts: { group: string | null; count: number }[];
   assignees: string[];
   tags: string[];
   version: string;
@@ -118,6 +121,7 @@ export interface BoardQuery {
   ready?: boolean;
   blocked?: boolean;
   unassigned?: boolean;
+  ungrouped?: boolean;
   limit?: number;
   cursor?: string;
 }
@@ -130,22 +134,28 @@ export interface TaskDetailResponse {
   dependencies: BoardCard[];
   blocks: BoardCard[];
 }
-export type CreateTaskRequest = Pick<TaskFields, "title"> & Partial<Omit<TaskFields, "title">>;
-export interface UpdateTaskRequest {
-  patch: Partial<TaskFields>;
-  ifRevision: number;
+export interface MutationMetadata {
+  /** Автор конкретной операции; без него используется автор сервера. */
+  actor?: string;
 }
-export interface MoveTaskRequest {
+export type CreateTaskRequest = Pick<TaskFields, "title"> &
+  Partial<Omit<TaskFields, "title">> &
+  MutationMetadata;
+export interface UpdateTaskRequest extends MutationMetadata {
+  patch: Partial<TaskFields>;
+  ifRevision?: number;
+}
+export interface MoveTaskRequest extends MutationMetadata {
   status: string;
   beforeId: number | null;
   ifRevision: number;
 }
-export interface ClaimTaskRequest {
-  ifRevision: number;
+export interface ClaimTaskRequest extends MutationMetadata {
+  ifRevision?: number;
   status?: string;
 }
-export interface ReleaseTaskRequest {
-  ifRevision: number;
+export interface ReleaseTaskRequest extends MutationMetadata {
+  ifRevision?: number;
   force?: boolean;
 }
 
@@ -167,8 +177,10 @@ export interface LogRecord extends CommentRecord {
 export interface RecordsPage<T> {
   items: T[];
 }
-export interface AddCommentRequest {
+export interface AddCommentRequest extends MutationMetadata {
   text: string;
+  /** Ключ идемпотентности в пределах задачи и типа записи. */
+  requestId?: string;
 }
 export interface AddLogRequest extends AddCommentRequest {
   kind?: LogKind;
@@ -184,7 +196,119 @@ export interface RecordsQuery {
   cursor?: string;
 }
 
+export interface ChangeDependencyRequest extends MutationMetadata {
+  dependencyId: number;
+  action: "add" | "remove";
+  ifRevision?: number;
+}
+
+export type TaskBrief = Pick<
+  TaskCard,
+  | "id"
+  | "title"
+  | "status"
+  | "group"
+  | "tags"
+  | "parentId"
+  | "assignee"
+  | "revision"
+  | "createdAt"
+  | "updatedAt"
+>;
+export interface TaskListQuery {
+  status?: string;
+  group?: string;
+  assignee?: string;
+  parent?: string | number;
+  tag?: string;
+  search?: string;
+  ready?: boolean;
+  all?: boolean;
+  sort?: "id" | "board";
+}
+export interface TaskListData {
+  items: (TaskBrief & { blockedBy: number[] })[];
+  readyIds: number[];
+}
+export type TaskReference = Pick<TaskCard, "id" | "title" | "status">;
+export interface TaskDocument extends Omit<TaskCard, "commentCount" | "logCount"> {
+  comments: Record<string, CommentRecord>;
+  logs: Record<string, LogRecord>;
+}
+export interface TaskDocumentData {
+  task: TaskDocument;
+  related: TaskReference[];
+  blockedBy: number[];
+  ready: boolean;
+}
+export interface TaskMarkdownQuery {
+  field: "description" | "summary";
+}
+export interface TaskMarkdownData {
+  id: number;
+  lines: string[];
+}
+export interface TaskLinksData {
+  task: TaskReference;
+  id: number;
+  parent: TaskReference | null;
+  children: TaskReference[];
+  dependsOn: TaskReference[];
+  blocks: TaskReference[];
+  blockedBy: number[];
+}
+export interface TaskTreeData {
+  items: (TaskBrief & { depth: number })[];
+  truncated: boolean;
+  blockedCounts: Record<string, number>;
+}
+export type GroupsData = { name: string; total: number; completed: number; terminal: number }[];
+export interface ValidationData {
+  valid: boolean;
+  tasks: number;
+  comments: number;
+  logs: number;
+}
+export interface OverviewQuery {
+  rootId?: number;
+  limit?: number;
+  reviewStatuses?: string[];
+}
+export type OverviewTask = Pick<
+  TaskCard,
+  "id" | "title" | "status" | "group" | "assignee" | "parentId" | "revision"
+> & { blockedByCount: number };
+export interface OverviewCounts {
+  total: number;
+  open: number;
+  completed: number;
+  terminal: number;
+  byStatus: Record<string, number>;
+}
+export interface OverviewImpact {
+  blockedCount: number;
+  unblocksCount: number;
+  readyAfterCompletionCount: number;
+}
+export interface OverviewSection<T> {
+  total: number;
+  items: T[];
+}
+export interface OverviewData {
+  root: OverviewTask | null;
+  version: string;
+  limit: number;
+  counts: OverviewCounts;
+  leafCounts: OverviewCounts;
+  reviewStatuses: string[];
+  progress: OverviewSection<OverviewTask & { children: OverviewCounts }>;
+  ready: OverviewSection<OverviewTask>;
+  review: OverviewSection<OverviewTask & OverviewImpact>;
+  blockers: OverviewSection<OverviewTask & OverviewImpact & { outsideScope: boolean }>;
+}
+
 export type ServerEvent =
   | { type: "connected"; data: { projectId: string } }
+  | { type: "heartbeat"; data: { timestamp: string } }
   | { type: "changed"; data: { source: "api" | "storage"; taskIds?: number[]; version?: string } }
   | { type: "workspace-error"; data: { code: string; message: string } };

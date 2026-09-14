@@ -1,5 +1,4 @@
 import type { Command } from "commander";
-import { claimTask, releaseTask, changeDependency } from "@tasks/core/application/tasks/assignment";
 import { changed, mutation } from "../context.js";
 import type { Runtime } from "../context.js";
 import { registerCommand, commandGroup } from "../command.js";
@@ -74,8 +73,7 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
       ),
     run: async (context, input) =>
       changed(
-        await claimTask(
-          context.tasks,
+        await context.tasks.claim(
           input.argument(),
           mutation(context, input.options),
           input.options.status,
@@ -96,8 +94,7 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
       revisionOption(command).option("--force", "Снять назначение другого исполнителя"),
     run: async (context, input) =>
       changed(
-        await releaseTask(
-          context.tasks,
+        await context.tasks.release(
           input.argument(),
           mutation(context, input.options),
           !!input.options.force,
@@ -131,8 +128,7 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
       configure: revisionOption,
       run: async (context, input) =>
         changed(
-          await changeDependency(
-            context.tasks,
+          await context.tasks.dependency(
             input.argument(),
             input.argument(1),
             verb === "add",

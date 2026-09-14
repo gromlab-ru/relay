@@ -3,6 +3,28 @@ import { z } from "zod";
 /** Порт локального HTTP-сервера; 0 поручает ОС выбрать свободный порт. */
 export const serverPortSchema = z.number().int().min(0).max(65535);
 
+/** Адрес API без префикса /api/v1; локальный режим выбирается отдельно. */
+export const serverUrlSchema = z.url().superRefine((value, context) => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return;
+  }
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== "/"
+  )
+    context.addIssue({
+      code: "custom",
+      message: "Ожидается HTTP(S) origin без пути, credentials, query и hash",
+    });
+});
+
 export const statusColorSchema = z.enum([
   "black",
   "red",
@@ -29,7 +51,9 @@ export const configSchema = z
     defaultStatus: z.string().min(1),
     readyStatuses: z.array(z.string()).min(1),
     statuses: z.record(z.string().regex(/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u), statusSchema),
-    server: z.strictObject({ port: serverPortSchema.default(3000) }).default({ port: 3000 }),
+    server: z
+      .strictObject({ port: serverPortSchema.default(3000), url: serverUrlSchema.optional() })
+      .default({ port: 3000 }),
     output: z
       .strictObject({
         format: z.enum(["json", "text"]).default("text"),

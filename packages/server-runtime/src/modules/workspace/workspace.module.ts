@@ -6,6 +6,7 @@ import type { ContextResponse } from "@tasks/contracts";
 import { AppError } from "@tasks/core/shared/errors";
 import { openWorkspace } from "@tasks/core/storage/workspace";
 import type { Workspace } from "@tasks/core/storage/workspace";
+import { actorSchema, parse } from "@tasks/core/domain/validation";
 
 export interface WorkspaceOptions {
   cwd: string;
@@ -33,9 +34,21 @@ export class WorkspaceService {
     }
   }
 
+  actor(override?: string): string {
+    return parse(actorSchema, override ?? this.options.actor, "автор запроса");
+  }
+
+  mutation(input: { actor?: string; ifRevision?: number }) {
+    return {
+      actor: this.actor(input.actor),
+      ...(input.ifRevision === undefined ? {} : { ifRevision: input.ifRevision }),
+    };
+  }
+
   context(workspace: Workspace): ContextResponse {
     return {
       project: basename(dirname(workspace.configPath)),
+      capabilities: ["cli-http-v1", "record-request-v1"],
       projectId: this.projectId,
       configPath: workspace.configPath,
       storagePath: workspace.root,

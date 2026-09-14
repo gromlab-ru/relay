@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
-  { ignores: ["src/infra/tasks-api/generated/**", ".templates/**"] },
+  { ignores: [".templates/**"] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

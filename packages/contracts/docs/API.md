@@ -21,8 +21,9 @@ npx @gromlab/tasks-cli server --actor human --open
 API работает и без фронтенда. Полный CLI-дистрибутив включает `dist/web` и отдаёт UI на `/`.
 Standalone-приложение подключает `apps/web/dist`; без статики корневой адрес возвращает 404.
 Все тела запросов — UTF-8 JSON с `Content-Type: application/json`, лимит 1 МиБ.
-Автор изменений задаётся серверным `--actor` / `TASKS_ACTOR`; значение доступно
-в контексте. Поле исполнителя `assignee` имеет отдельное значение.
+Автор мутации задаётся необязательным `actor` в JSON-запросе. Это позволяет CLI
+передать своего `--actor` / `TASKS_ACTOR`, в том числе Unicode. Без поля используется
+автор серверного `--actor` / `TASKS_ACTOR`, доступный в контексте. `assignee` — отдельное поле.
 
 Успех:
 
@@ -47,30 +48,42 @@ Standalone-приложение подключает `apps/web/dist`; без с�
 или маршрут, 409 — конфликт ревизии/порядка/назначения/зависимостей,
 413 — размер тела, 415 — Content-Type, 500 — повреждение хранилища или ошибка IO.
 Исключения Nest также нормализуются в `ApiFailure`.
+Ошибки Core дополнительно содержат `error.exitCode`, чтобы HTTP-клиент CLI сохранял
+код завершения локальной операции. `context.capabilities` содержит `cli-http-v1`
+и `record-request-v1`; эти возможности появились в пакете 0.3.0.
 
 ## Маршруты
 
 В таблице пути указаны относительно `/api/v1`; типы относятся к `data`.
 
-| Метод | Путь                             | Запрос               | Ответ                                 | operationId    |
-| ----- | -------------------------------- | -------------------- | ------------------------------------- | -------------- |
-| GET   | `/health`                        | —                    | `HealthResponse`                      | `getHealth`    |
-| GET   | `/context`                       | —                    | `ContextResponse`                     | `getContext`   |
-| GET   | `/board`                         | `BoardQuery`         | `BoardResponse` + `meta`              | `getBoard`     |
-| GET   | `/tasks`                         | `BoardQuery`         | `BoardResponse` + `meta`              | `listTasks`    |
-| POST  | `/tasks`                         | `CreateTaskRequest`  | `TaskCard`, HTTP 201                  | `createTask`   |
-| GET   | `/tasks/:id`                     | —                    | `TaskDetailResponse`                  | `getTask`      |
-| PATCH | `/tasks/:id`                     | `UpdateTaskRequest`  | `TaskCard`                            | `updateTask`   |
-| POST  | `/tasks/:id/move`                | `MoveTaskRequest`    | `TaskCard`                            | `moveTask`     |
-| POST  | `/tasks/:id/claim`               | `ClaimTaskRequest`   | `TaskCard`                            | `claimTask`    |
-| POST  | `/tasks/:id/release`             | `ReleaseTaskRequest` | `TaskCard`                            | `releaseTask`  |
-| GET   | `/tasks/:id/comments`            | `RecordsQuery`       | `RecordsPage<CommentRecord>` + `meta` | `listComments` |
-| POST  | `/tasks/:id/comments`            | `AddCommentRequest`  | `CommentRecord`, HTTP 201             | `addComment`   |
-| GET   | `/tasks/:id/comments/:commentId` | —                    | `CommentRecord`                       | `getComment`   |
-| GET   | `/tasks/:id/logs`                | `RecordsQuery`       | `RecordsPage<LogRecord>` + `meta`     | `listLogs`     |
-| POST  | `/tasks/:id/logs`                | `AddLogRequest`      | `LogRecord`, HTTP 201                 | `addLog`       |
-| GET   | `/tasks/:id/logs/:logId`         | —                    | `LogRecord`                           | `getLog`       |
-| GET   | `/events`                        | EventSource          | SSE, `ServerEvent`                    | `watchEvents`  |
+| Метод | Путь                             | Запрос                          | Ответ                                 | operationId        |
+| ----- | -------------------------------- | ------------------------------- | ------------------------------------- | ------------------ |
+| GET   | `/health`                        | —                               | `HealthResponse`                      | `getHealth`        |
+| GET   | `/context`                       | —                               | `ContextResponse`                     | `getContext`       |
+| GET   | `/board`                         | `BoardQuery`                    | `BoardResponse` + `meta`              | `getBoard`         |
+| GET   | `/tasks`                         | `BoardQuery`                    | `BoardResponse` + `meta`              | `listTasks`        |
+| POST  | `/tasks`                         | `CreateTaskRequest`             | `TaskCard`, HTTP 201                  | `createTask`       |
+| GET   | `/tasks/:id`                     | —                               | `TaskDetailResponse`                  | `getTask`          |
+| PATCH | `/tasks/:id`                     | `UpdateTaskRequest`             | `TaskCard`                            | `updateTask`       |
+| POST  | `/tasks/:id/move`                | `MoveTaskRequest`               | `TaskCard`                            | `moveTask`         |
+| POST  | `/tasks/:id/claim`               | `ClaimTaskRequest`              | `TaskCard`                            | `claimTask`        |
+| POST  | `/tasks/:id/release`             | `ReleaseTaskRequest`            | `TaskCard`                            | `releaseTask`      |
+| GET   | `/tasks/:id/comments`            | `RecordsQuery`                  | `RecordsPage<CommentRecord>` + `meta` | `listComments`     |
+| POST  | `/tasks/:id/comments`            | `AddCommentRequest`             | `CommentRecord`, HTTP 201             | `addComment`       |
+| GET   | `/tasks/:id/comments/:commentId` | —                               | `CommentRecord`                       | `getComment`       |
+| GET   | `/tasks/:id/logs`                | `RecordsQuery`                  | `RecordsPage<LogRecord>` + `meta`     | `listLogs`         |
+| POST  | `/tasks/:id/logs`                | `AddLogRequest`                 | `LogRecord`, HTTP 201                 | `addLog`           |
+| GET   | `/tasks/:id/logs/:logId`         | —                               | `LogRecord`                           | `getLog`           |
+| GET   | `/events`                        | EventSource                     | SSE, `ServerEvent`                    | `watchEvents`      |
+| GET   | `/task-list`                     | `TaskListQuery`                 | `TaskListData`                        | `getTaskList`      |
+| GET   | `/tasks/:id/document`            | —                               | `TaskDocumentData`                    | `getTaskDocument`  |
+| GET   | `/tasks/:id/markdown`            | `field=description\|summary`    | `{id, lines}`                         | `getTaskMarkdown`  |
+| GET   | `/tasks/:id/links`               | —                               | `TaskLinksData`                       | `getTaskLinks`     |
+| GET   | `/tasks/:id/tree`                | `depth` (0–100, по умолчанию 3) | `TaskTreeData`                        | `getTaskTree`      |
+| GET   | `/groups`                        | —                               | `GroupsData`                          | `getGroups`        |
+| GET   | `/overview`                      | `OverviewQuery`                 | `OverviewData`                        | `getOverview`      |
+| GET   | `/validation`                    | —                               | `ValidationData`                      | `validateProject`  |
+| POST  | `/tasks/:id/dependencies`        | `ChangeDependencyRequest`       | `TaskCard`                            | `changeDependency` |
 
 `health.stage` равен `ready`: продуктовые маршруты доступны. Health проверяет доступность
 процесса; состояние конкретного проекта проверяется при выполнении операций и через SSE.
@@ -115,6 +128,11 @@ ID — положительное безопасное целое число. Г
 `GET /tasks/:id` возвращает обёртку с `task` и актуальными связями, блокерами, `ready`.
 Комментарии и логи загружаются через отдельные маршруты, а их счётчики входят в карточку.
 
+`ifRevision` у PATCH, claim, release и изменения зависимости необязателен:
+без него операция применяется к актуальному документу под блокировкой Core.
+При переданном значении несовпадение всегда возвращает 409 `REVISION_CONFLICT`.
+Перемещение через `/move` требует ревизию. UI передаёт её при сохранении редактора.
+
 ## Порядок и назначения
 
 Перемещение:
@@ -135,7 +153,7 @@ ID — положительное безопасное целое число. Г
 ```
 
 `status` необязателен. Задача должна быть свободной, находиться в `readyStatuses`
-и иметь удовлетворённые зависимости. Исполнителем становится автор контекста.
+и иметь удовлетворённые зависимости. Исполнителем становится автор запроса.
 Release принимает `{ "ifRevision": 5 }`; снятие чужого назначения требует явного
 `force: true`. Release сохраняет статус.
 
@@ -146,7 +164,7 @@ Release принимает `{ "ifRevision": 5 }`; снятие чужого на
 ## Списки и пагинация
 
 API доски по умолчанию включает все статусы. Фильтры `status`, `group`,
-`assignee`, `tag`, `search`, `ready`, `blocked`, `unassigned` объединяются через И.
+`assignee`, `tag`, `search`, `ready`, `blocked`, `unassigned`, `ungrouped` объединяются через И.
 Boolean-параметры передаются как `true`/`false`. Поиск задач включает ID, название,
 описание и summary без учёта регистра. Группы и исполнители сравниваются точно.
 
@@ -155,6 +173,10 @@ Boolean-параметры передаются как `true`/`false`. Поис�
 внутри колонки — сохранённый rank с детерминированным разрешением совпадений.
 `total` и `counts` относятся ко всем отфильтрованным задачам до пагинации; `counts`
 содержит также пустые колонки. Варианты групп, исполнителей и тегов берутся из полного снимка.
+`groupCounts: Array<{ group: string | null; count: number }>` содержит полные размеры
+групп проекта независимо от любых фильтров и пагинации. Сумма равна числу всех задач
+проекта; конечные задачи тоже учитываются. `ungrouped=true` выбирает `group: null`,
+`ungrouped=false` — задачи с назначенной группой.
 Лимит страницы доски: по умолчанию 200, диапазон 1–500.
 
 **Одинаковая пагинация у доски, комментариев и отчётов:**
@@ -204,6 +226,41 @@ Boolean-параметры передаются как `true`/`false`. Поис�
 error, summary. Добавление увеличивает ревизию задачи и атомарно объединяется
 с существующими записями. Оно не заменяет остальные поля документа.
 
+Оба POST принимают `requestId` (1–128 ASCII-символов: буквы, цифры, `.`, `_`, `:`, `-`,
+первый символ — буква или цифра). Область ключа — задача и тип записи. Пример:
+
+```json
+{ "actor": "agent-1", "requestId": "wave-1-step-2", "text": "Обработчик готов" }
+```
+
+Повтор с тем же автором и нормализованным содержимым возвращает исходную запись
+с прежним `createdAt` и ID, без изменения revision задачи. Повтор с другим содержимым
+или автором даёт 409 `IDEMPOTENCY_CONFLICT`. Ключ детерминирует ID вложенной записи,
+поэтому дедупликация атомарна, переживает рестарт и работает также при локальном вызове Core.
+
+## Read models для CLI
+
+`/task-list` возвращает всю отфильтрованную краткую выборку, без описаний и истории,
+с порядком `id` или `board` и отдельными `readyIds`. Фильтры: `status`, `group`,
+`assignee`, `parent`, `tag`, `search`, `ready`, `all`, `sort`. По умолчанию выбраны
+неконечные статусы; поиск совпадает с CLI и не включает ID. CLI применяет свой
+байтовый бюджет и курсор к результату. Пагинация `/board` является отдельным контрактом.
+
+`/document` возвращает полный документ с комментариями/логами и краткие прямые связи.
+`/markdown?field=summary` или `description` читает только выбранный текст без графа.
+`/links`, `/tree`, `/groups` и `/overview` вычисляются в Core. Обзор принимает `rootId`,
+`limit` (1–100, по умолчанию 5), повторяемый `reviewStatuses` и использует один снимок.
+Дерево содержит плоские `items` с глубиной, `truncated` и `blockedCounts`.
+
+Изменение зависимости выполняется атомарно:
+
+```json
+{ "dependencyId": 2, "action": "add", "actor": "agent-1", "ifRevision": 3 }
+```
+
+`action` — `add` или `remove`; остальные зависимости сохраняются под той же блокировкой.
+`/validation` проверяет все документы и граф проекта.
+
 Лимиты UTF-8: название 1024 байта, описание и тело отчёта 256 КиБ,
 summary 4096 байт, комментарий 64 КиБ, JSON одной задачи 16 МиБ.
 
@@ -212,6 +269,8 @@ summary 4096 байт, комментарий 64 КиБ, JSON одной зад�
 `GET /api/v1/events` возвращает `text/event-stream`; типы событий заданы в Contracts:
 
 - `connected`: `{ projectId }` — соединение установлено, клиент сверяет состояние.
+- `heartbeat`: `{ timestamp }` — каждые 15 секунд; сохраняет поток активным при простое.
+  Не означает изменения данных и не требует повторных REST-запросов.
 - `changed`: `{ source: "api" | "storage", taskIds?, version? }` — данные изменились.
 - `workspace-error`: `{ code, message }` — хранилище временно недоступно/некорректно.
 

@@ -11,6 +11,8 @@ import { decodeCursor, encodeCursor } from "../../shared/cursor.js";
 import { invariant } from "../../shared/errors.js";
 import { TaskRepository, resolveTask } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
+import { buildOverview, overviewQuerySchema } from "./overview.js";
+import type { OverviewData, OverviewQueryInput } from "./overview.js";
 
 export const boardQuerySchema = z.strictObject({
   search: z.string().max(4096).optional(),
@@ -21,6 +23,7 @@ export const boardQuerySchema = z.strictObject({
   ready: z.boolean().optional(),
   blocked: z.boolean().optional(),
   unassigned: z.boolean().optional(),
+  ungrouped: z.boolean().optional(),
   limit: z.number().int().min(1).max(500).default(200),
   cursor: z.string().min(1).max(4096).optional(),
 });
@@ -36,6 +39,7 @@ export interface TaskFilters {
   ready?: boolean | undefined;
   blocked?: boolean | undefined;
   unassigned?: boolean | undefined;
+  ungrouped?: boolean | undefined;
 }
 
 /** Общие правила выборки для CLI и API; интерфейс задаёт только режим списка. */
@@ -62,6 +66,7 @@ export function selectTasks(
       (parentId === undefined || task.parentId === parentId) &&
       (filters.tag === undefined || task.tags.includes(filters.tag)) &&
       (filters.unassigned === undefined || (task.assignee === null) === filters.unassigned) &&
+      (filters.ungrouped === undefined || (task.group === null) === filters.ungrouped) &&
       (filters.ready === undefined || isReady(task, tasks, config) === filters.ready) &&
       (filters.blocked === undefined ||
         blockedBy(task, tasks, config).length > 0 === filters.blocked) &&
@@ -100,6 +105,12 @@ export class TaskQueries {
     return { tasks, version: hash.digest("hex") };
   }
 
+  async overview(reference?: TaskReference, input: OverviewQueryInput = {}): Promise<OverviewData> {
+    const query = parse(overviewQuerySchema, input, "параметры обзора");
+    const { tasks, version } = await this.snapshot();
+    return buildOverview(tasks, this.workspace.config, version, reference, query);
+  }
+
   async board(input: BoardQueryInput = {}) {
     const { limit, cursor, ...filters } = parse(boardQuerySchema, input, "параметры доски");
     const { tasks, version } = await this.snapshot();
@@ -131,6 +142,12 @@ export class TaskQueries {
     );
     const counts = Object.fromEntries(columns.map((status) => [status, 0]));
     for (const task of matching) counts[task.status] = (counts[task.status] ?? 0) + 1;
+    const groupsMap = new Map<string | null, number>();
+    for (const task of tasks.values())
+      groupsMap.set(task.group, (groupsMap.get(task.group) ?? 0) + 1);
+    const groupCounts = [...groupsMap]
+      .sort(([left], [right]) => (left ?? "").localeCompare(right ?? ""))
+      .map(([group, count]) => ({ group, count }));
     const selected = matching.slice(offset, offset + limit);
     const hasMore = offset + selected.length < matching.length;
     return {
@@ -138,6 +155,7 @@ export class TaskQueries {
         items: selected.map(view.card),
         total: matching.length,
         counts,
+        groupCounts,
         version,
         groups: [
           ...new Set(
