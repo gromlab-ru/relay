@@ -16,13 +16,14 @@ export const WorkspaceHeader = (props: WorkspaceHeaderProps) => {
   const { project, onCreate, onHelp, className, ...rootAttrs } = props;
   const { colorScheme, setColorScheme } = useThemeColorScheme();
   const connection = useTaskConnection();
-  const state = connection.data?.state ?? "reconnecting";
-  const statusLabel =
-    state === "connected"
-      ? "Синхронизировано"
-      : state === "storage-error"
-        ? "Проверьте хранилище"
-        : "Соединяемся…";
+  const state = connection.data?.state ?? "connecting";
+  const statusLabel = {
+    connecting: "Соединяемся…",
+    connected: "Синхронизировано",
+    reconnecting: "Переподключаемся…",
+    disconnected: "Нет соединения",
+    "storage-error": "Проверьте хранилище",
+  }[state];
   const name = project?.name ?? "Рабочее пространство";
   const actor = project?.actor ?? "…";
   const isUnavailable = project === undefined;

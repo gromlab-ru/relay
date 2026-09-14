@@ -43,3 +43,32 @@
 
 Панель задачи и создание используют `lazy.ts` вместо начального `index.ts`:
 их код и Markdown-редактор загружаются при открытии соответствующего сценария.
+
+## Навигация по группам
+
+Из `apps/web` выполнено:
+
+```bash
+pnpm run create ui-unit group-navigation src/compositions/screens/board/ui
+```
+
+Создан `src/compositions/screens/board/ui/group-navigation/group-navigation.tsx`.
+Юнит принадлежит доске, принимает размеры групп и callback выбора. Через `index.ts`
+опубликован только компонент.
+
+## Ссылки Markdown
+
+Из `apps/web` выполнено:
+
+```bash
+pnpm run create ui-unit markdown-link src/ui
+pnpm run create ui-component task-link src/compositions/screens/board/ui
+pnpm run create ui-component markdown-link-provider src/ui/markdown-link/providers
+```
+
+- `src/ui/markdown-link/markdown-link.tsx` — универсальное отображение ссылки через настроенный компонент.
+- `src/ui/markdown-link/providers/markdown-link-provider/markdown-link-provider.tsx` — настройка ссылок для дерева React, включая порталы.
+- `src/compositions/screens/board/ui/task-link/task-link.tsx` — внутренняя реализация маршрутизации ссылок доски через `Link` React Router.
+
+Настройка навигации находится у доски. UI-компонент получает её через Provider;
+Markdown-предпросмотр использует тот же контракт. Ненужные CSS Modules удалены.

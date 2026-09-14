@@ -13,4 +13,4 @@ apps/ui/reference/
 apps/server/reference/
 apps/web/.templates/
 apps/web/.cache/
-apps/web/src/infra/tasks-api/generated/
+packages/rest-sdk/src/

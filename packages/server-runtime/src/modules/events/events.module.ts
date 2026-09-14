@@ -15,7 +15,7 @@ class EventsController {
     operationId: "watchEvents",
     summary: "Подписаться на изменения проекта",
     description:
-      "SSE-уведомления connected, changed и workspace-error. Поле event соответствует type, JSON в data — полю data схемы ServerEvent. После подключения и восстановления соединения перечитайте REST. Доставка может объединять и повторять изменения; воспроизведение по Last-Event-ID не поддерживается.",
+      "SSE-уведомления connected, changed и workspace-error; heartbeat каждые 15 секунд поддерживает поток при простое и не требует перечитывать REST. Поле event соответствует type, JSON в data — полю data схемы ServerEvent. После подключения и восстановления соединения перечитайте REST. Доставка может объединять и повторять изменения; воспроизведение по Last-Event-ID не поддерживается.",
   })
   @ApiExtension("x-sse-event-schema", ref("ServerEvent"))
   @ApiResponse({

@@ -1,6 +1,4 @@
 {
-  "version": 2,
-  "id": 65,
   "title": "Сделать доступный календарь выбора периода",
   "description": [
     "## Пользовательский результат",
@@ -56,15 +54,17 @@
     21
   ],
   "assignee": "frontend-agent",
-  "rank": "65/1",
+  "rank": "138/1",
   "summary": [
     "Демо: ожидает приёмки. Проверьте выбор периода на границе месяца с клавиатуры. День возврата должен быть подписан прямо в интерфейсе, без обращения к документации."
   ],
+  "version": 2,
+  "id": 65,
   "createdAt": "2026-09-01T09:00:00.000Z",
-  "updatedAt": "2026-09-14T12:00:00.000Z",
+  "updatedAt": "2026-09-14T09:16:27.153Z",
   "createdBy": "orchestrator",
-  "updatedBy": "frontend-agent",
-  "revision": 4,
+  "updatedBy": "human",
+  "revision": 6,
   "comments": {
     "cmt_87a20ba2d4df449ad9dc0408448cf4c2": {
       "version": 1,

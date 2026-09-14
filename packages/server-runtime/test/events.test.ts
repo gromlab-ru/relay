@@ -14,8 +14,14 @@ async function connect(url: string) {
   const decoder = new TextDecoder();
   let buffer = "";
   return {
-    async next(predicate: (event: ServerEvent) => boolean = () => true): Promise<ServerEvent> {
-      const timer = setTimeout(() => controller.abort(new Error("SSE: событие не получено")), 5000);
+    async next(
+      predicate: (event: ServerEvent) => boolean = () => true,
+      timeout = 5000,
+    ): Promise<ServerEvent> {
+      const timer = setTimeout(
+        () => controller.abort(new Error("SSE: событие не получено")),
+        timeout,
+      );
       try {
         while (true) {
           const boundary = buffer.indexOf("\n\n");
@@ -169,6 +175,24 @@ test(
     version = (await app.inject("/api/v1/board")).json().data.version;
     await stream.next((event) => event.type === "changed" && event.data.version === version);
     assert.equal((await app.inject("/api/v1/board")).json().data.total, 0);
+  },
+);
+
+test(
+  "SSE поддерживает соединение heartbeat при отсутствии изменений задач",
+  { timeout: 25000 },
+  async (t) => {
+    const { app } = await fixture(t);
+    await app.listen(0, "127.0.0.1");
+    const stream = await connect(await app.getUrl());
+    t.after(() => stream.close());
+    assert.equal((await stream.next()).type, "connected");
+    const heartbeat = await stream.next(() => true, 20_000);
+    assert.equal(heartbeat.type, "heartbeat");
+    if (heartbeat.type === "heartbeat")
+      assert(Number.isFinite(Date.parse(heartbeat.data.timestamp)));
+    await app.inject({ method: "POST", url: "/api/v1/tasks", payload: { title: "После простоя" } });
+    assert.equal((await stream.next()).type, "changed");
   },
 );
 

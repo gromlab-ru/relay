@@ -1,8 +1,8 @@
 .root {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  min-height: 35rem;
+  min-height: 100dvh;
+  min-width: 0;
   background: var(--tasks-canvas);
   color: var(--tasks-ink);
 }
@@ -12,6 +12,7 @@
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 .intro {
   display: flex;

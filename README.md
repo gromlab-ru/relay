@@ -76,19 +76,20 @@ pnpm --silent run playground list --format json
 
 ## Структура
 
-| Workspace                                                      | Ответственность                                          |
-| -------------------------------------------------------------- | -------------------------------------------------------- |
-| [`apps/cli`](apps/cli/README.md)                               | Commander, терминал, сборка и публикация продукта        |
-| [`apps/server`](apps/server/README.md)                         | Standalone backend, dev-настройки и управление процессом |
-| [`apps/web`](apps/web/README.md)                               | React, Vite, Mantine и канбан-доска                      |
-| [`apps/playground`](apps/playground/README.md)                 | Приватный демонстрационный проект и CLI-сценарии         |
-| `packages/core`                                                | Предметные операции и файловое хранилище                 |
-| [`packages/contracts`](packages/contracts/README.md)           | Переносимые контракты REST и SSE                         |
-| [`packages/server-runtime`](packages/server-runtime/README.md) | Общая NestJS-реализация для CLI и standalone backend     |
-| `packages/typescript-config`                                   | Общие строгие настройки TypeScript                       |
+| Workspace                                                      | Ответственность                                            |
+| -------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`apps/cli`](apps/cli/README.md)                               | Commander, терминал, сборка и публикация продукта          |
+| [`apps/server`](apps/server/README.md)                         | Standalone backend, dev-настройки и управление процессом   |
+| [`apps/web`](apps/web/README.md)                               | React, Vite, Mantine и канбан-доска                        |
+| [`apps/playground`](apps/playground/README.md)                 | Приватный демонстрационный проект и CLI-сценарии           |
+| `packages/core`                                                | Предметные операции и файловое хранилище                   |
+| [`packages/contracts`](packages/contracts/README.md)           | Переносимые контракты REST и SSE                           |
+| [`packages/rest-sdk`](packages/rest-sdk/README.md)             | Сгенерированный ESM-клиент API и декларации для приложений |
+| [`packages/server-runtime`](packages/server-runtime/README.md) | Общая NestJS-реализация для CLI и standalone backend       |
+| `packages/typescript-config`                                   | Общие строгие настройки TypeScript                         |
 
 CLI и standalone backend используют `@tasks/server-runtime`, который зависит от Core
-и Contracts. Web зависит только от Contracts, не от серверного кода. Зависимости объявляются
+и Contracts. Web использует `@tasks/rest-sdk`, собранный из OpenAPI сервера. Зависимости объявляются
 в манифестах потребителей; межпакетные импорты проходят через `exports`.
 
 Состав workspaces определяет `pnpm-workspace.yaml`, внутренние зависимости используют

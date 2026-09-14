@@ -12,6 +12,12 @@ export type ServerEvent =
       };
     }
   | {
+      type: "heartbeat";
+      data: {
+        timestamp: string;
+      };
+    }
+  | {
       type: "changed";
       data: {
         source: ServerEventSourceEnum;
@@ -226,6 +232,7 @@ export interface BoardQuery {
   ready?: boolean;
   blocked?: boolean;
   unassigned?: boolean;
+  ungrouped?: boolean;
   /**
    * @min 1
    * @max 500
@@ -786,6 +793,15 @@ export interface BoardResponse {
   /** Счётчики всех отфильтрованных задач до пагинации, включая пустые колонки */
   counts: Partial<Record<string, number>>;
   groups: string[];
+  /** Полные размеры групп проекта независимо от фильтров и пагинации; null — без группы */
+  groupCounts: {
+    group: string | null;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    count: number;
+  }[];
   assignees: string[];
   tags: string[];
   /** Версия полного снимка задач и конфигурации */
@@ -977,6 +993,7 @@ export interface GetBoardParams {
   ready?: boolean;
   blocked?: boolean;
   unassigned?: boolean;
+  ungrouped?: boolean;
   /**
    * @min 1
    * @max 500
@@ -1003,6 +1020,7 @@ export interface ListTasksParams {
   ready?: boolean;
   blocked?: boolean;
   unassigned?: boolean;
+  ungrouped?: boolean;
   /**
    * @min 1
    * @max 500

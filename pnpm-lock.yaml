@@ -121,9 +121,9 @@ importers:
       '@mantine/notifications':
         specifier: ^9.6.1
         version: 9.6.1(@mantine/core@9.6.1(@mantine/hooks@9.6.1(react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@mantine/hooks@9.6.1(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@tasks/contracts':
+      '@tasks/rest-sdk':
         specifier: workspace:*
-        version: link:../../packages/contracts
+        version: link:../../packages/rest-sdk
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -237,6 +237,12 @@ importers:
       tsx:
         specifier: ^4.20.5
         version: 4.23.13
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
+  packages/rest-sdk:
+    devDependencies:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3

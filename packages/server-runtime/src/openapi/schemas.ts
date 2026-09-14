@@ -133,6 +133,7 @@ const contextSchema = z.strictObject({
 });
 const serverEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("connected"), data: z.strictObject({ projectId: z.string() }) }),
+  z.strictObject({ type: z.literal("heartbeat"), data: z.strictObject({ timestamp: z.string() }) }),
   z.strictObject({
     type: z.literal("changed"),
     data: z.strictObject({
@@ -184,6 +185,16 @@ export const schemas = {
       .record(z.string(), z.number().int().nonnegative())
       .describe("Счётчики всех отфильтрованных задач до пагинации, включая пустые колонки"),
     groups: z.array(z.string()),
+    groupCounts: z
+      .array(
+        z.strictObject({
+          group: z.string().nullable(),
+          count: z.number().int().nonnegative(),
+        }),
+      )
+      .describe(
+        "Полные размеры групп проекта независимо от фильтров и пагинации; null — без группы",
+      ),
     assignees: z.array(z.string()),
     tags: z.array(z.string()),
     version: z.string().describe("Версия полного снимка задач и конфигурации"),

@@ -105,6 +105,8 @@ export interface BoardResponse {
   total: number;
   counts: Record<string, number>;
   groups: string[];
+  /** Полные размеры групп проекта до фильтрации и пагинации; null — без группы. */
+  groupCounts: { group: string | null; count: number }[];
   assignees: string[];
   tags: string[];
   version: string;
@@ -118,6 +120,7 @@ export interface BoardQuery {
   ready?: boolean;
   blocked?: boolean;
   unassigned?: boolean;
+  ungrouped?: boolean;
   limit?: number;
   cursor?: string;
 }
@@ -186,5 +189,6 @@ export interface RecordsQuery {
 
 export type ServerEvent =
   | { type: "connected"; data: { projectId: string } }
+  | { type: "heartbeat"; data: { timestamp: string } }
   | { type: "changed"; data: { source: "api" | "storage"; taskIds?: number[]; version?: string } }
   | { type: "workspace-error"; data: { code: string; message: string } };

@@ -14,7 +14,7 @@ export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
     if (this.query && value && typeof value === "object" && !Array.isArray(value)) {
       value = Object.fromEntries(
         Object.entries(value).map(([key, item]) => {
-          if (["ready", "blocked", "unassigned"].includes(key)) {
+          if (["ready", "blocked", "unassigned", "ungrouped"].includes(key)) {
             if (item === "true") return [key, true];
             if (item === "false") return [key, false];
           }

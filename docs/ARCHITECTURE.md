@@ -37,7 +37,7 @@ Swagger доступен по `/api/docs`, OpenAPI 3.1 — по `/api/openapi.js
 CLI импортирует операции через `@tasks/core/*` и лениво загружает `@tasks/server-runtime`
 для команды `server`. Самостоятельный `@tasks/server` использует тот же runtime;
 Node-реализация не импортируется из другого приложения. Runtime зависит от Core
-и `@tasks/contracts`; web использует только переносимый контракт.
+и `@tasks/contracts`; web использует сгенерированный `@tasks/rest-sdk`.
 
 Корневой приватный пакет управляет pnpm workspaces и Turbo. Состав пакетов задаёт
 `pnpm-workspace.yaml`, зависимости фиксируются в `pnpm-lock.yaml`. Внутренние зависимости

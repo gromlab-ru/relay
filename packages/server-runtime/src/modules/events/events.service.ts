@@ -10,6 +10,9 @@ import { TaskQueries } from "@tasks/core/application/queries/tasks";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { httpFailure } from "../../common/errors.js";
 
+/** Поддерживает SSE активным при простое, до типичных таймаутов прокси. */
+const HEARTBEAT_INTERVAL = 15_000;
+
 @Injectable()
 export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly events = new Subject<ServerEvent>();
@@ -20,6 +23,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   private storageRoot: string | undefined;
   private debounce: NodeJS.Timeout | undefined;
   private poll: NodeJS.Timeout | undefined;
+  private heartbeat: NodeJS.Timeout | undefined;
   private refreshing: Promise<void> | undefined;
   private pending = false;
   private stopped = false;
@@ -31,6 +35,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     // Восстановление после пропущенного fs.watch, удаления или замены каталога.
     this.poll = setInterval(() => void this.refresh(), 3000);
     this.poll.unref();
+    this.heartbeat = setInterval(() => {
+      this.events.next({ type: "heartbeat", data: { timestamp: new Date().toISOString() } });
+    }, HEARTBEAT_INTERVAL);
+    this.heartbeat.unref();
   }
 
   stream(): Observable<ServerEvent> {
@@ -167,6 +175,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     this.stopped = true;
     clearTimeout(this.debounce);
     clearInterval(this.poll);
+    clearInterval(this.heartbeat);
     for (const watcher of this.watchers.values()) watcher.close();
     this.watchers.clear();
     this.events.complete();

@@ -8,7 +8,7 @@ import type { ApiFailure } from "../data-contracts.js";
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * @description SSE-уведомления connected, changed и workspace-error. Поле event соответствует type, JSON в data — полю data схемы ServerEvent. После подключения и восстановления соединения перечитайте REST. Доставка может объединять и повторять изменения; воспроизведение по Last-Event-ID не поддерживается.
+ * @description SSE-уведомления connected, changed и workspace-error; heartbeat каждые 15 секунд поддерживает поток при простое и не требует перечитывать REST. Поле event соответствует type, JSON в data — полю data схемы ServerEvent. После подключения и восстановления соединения перечитайте REST. Доставка может объединять и повторять изменения; воспроизведение по Last-Event-ID не поддерживается.
  *
  * @tags events
  * @name WatchEvents

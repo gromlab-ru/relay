@@ -31,6 +31,10 @@ test("доска включает все статусы, компактные к
   assert.equal("description" in board.data.items[0], false);
   assert.equal("logs" in board.data.items[0], false);
   assert.deepEqual(board.data.groups, ["backend"]);
+  assert.deepEqual(board.data.groupCounts, [
+    { group: null, count: 3 },
+    { group: "backend", count: 1 },
+  ]);
   assert.deepEqual(board.data.assignees, ["agent"]);
   assert.deepEqual(board.data.tags, ["api"]);
   const match = (
@@ -43,6 +47,16 @@ test("доска включает все статусы, компактные к
     [task.id],
   );
   assert.equal(match.data.total, 1);
+  assert.deepEqual(match.data.groupCounts, board.data.groupCounts);
+  const ungrouped = (await app.inject("/api/v1/board?ungrouped=true&limit=1")).json();
+  assert.equal(ungrouped.data.total, 3);
+  assert.equal(ungrouped.data.items[0].group, null);
+  assert.deepEqual(ungrouped.data.groupCounts, board.data.groupCounts);
+  assert.equal((await app.inject("/api/v1/board?ungrouped=false")).json().data.total, 1);
+  assert.equal(
+    (await app.inject("/api/v1/board?group=backend&ungrouped=true")).json().data.total,
+    0,
+  );
   assert.equal(
     (await app.inject(`/api/v1/board?search=${task.id}`)).json().data.items[0].id,
     task.id,
@@ -52,6 +66,7 @@ test("доска включает все статусы, компактные к
   for (const query of [
     "ready=0",
     "ready=yes",
+    "ungrouped=yes",
     "limit=no",
     "limit=0",
     "limit=501",
@@ -96,8 +111,10 @@ test("пагинация не скрывает задачи за стандар�
   const page = (await app.inject("/api/v1/board")).json();
   assert.equal(page.data.total, 205);
   assert.equal(page.data.items.length, 200);
+  assert.deepEqual(page.data.groupCounts, [{ group: null, count: 205 }]);
   const next = (await app.inject(`/api/v1/board?cursor=${page.meta.nextCursor}`)).json();
   assert.equal(next.data.items.length, 5);
+  assert.deepEqual(next.data.groupCounts, page.data.groupCounts);
   assert.equal(next.meta.hasMore, false);
   assert.equal((await app.inject("/api/v1/board?limit=500")).json().data.items.length, 205);
 });

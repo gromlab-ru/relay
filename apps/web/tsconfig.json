@@ -22,7 +22,6 @@
       "shared/*": ["./src/shared/*"]
     }
   },
-  "references": [{ "path": "./tsconfig.api.json" }],
   "include": ["src", "*.ts"],
-  "exclude": [".templates", "src/infra/tasks-api/generated"]
+  "exclude": [".templates"]
 }

@@ -4,9 +4,8 @@ import { RouteError } from "./route-error/route-error";
 
 export const appRouter = createBrowserRouter([
   {
-    path: "/",
+    path: "*",
     Component: BoardScreen,
     errorElement: <RouteError />,
-    children: [{ path: "tasks/:id" }, { path: "*" }],
   },
 ]);

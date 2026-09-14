@@ -5,7 +5,6 @@
   width: 16rem;
   max-width: 22rem;
   min-width: 0;
-  scroll-snap-align: start;
 }
 
 .heading {
@@ -74,10 +73,6 @@
   flex: 1;
   min-height: 12rem;
   padding: 0.125rem 0.125rem 1rem;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: light-dark(#c5cada, #41485b) transparent;
-  overscroll-behavior-y: contain;
 }
 
 .skeletons {
@@ -85,7 +80,13 @@
   gap: 0.625rem;
 }
 
+.loadMore {
+  /* При добавлении карточек фокус на кнопке не должен уводить страницу к новому концу списка. */
+  overflow-anchor: none;
+}
+
 .dropZone {
+  flex: 1;
   min-height: 5rem;
   padding: 0.375rem;
   border: 1px solid transparent;

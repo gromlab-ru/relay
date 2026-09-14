@@ -68,7 +68,7 @@ MCP ──── REST ─────────→ NestJS
 - CLI использует `@tasks/core/*`; команда `server` лениво загружает `@tasks/server-runtime`.
 - Самостоятельный `@tasks/server` использует тот же `@tasks/server-runtime`, а не код CLI.
 - NestJS в Server Runtime использует `@tasks/core/*` и `@tasks/contracts`.
-- React использует типы `@tasks/contracts` и HTTP-клиент, без серверных зависимостей.
+- React использует `@tasks/rest-sdk`: сгенерированные из OpenAPI типы, операции и HTTP-клиент.
 - Core содержит бизнес-правила и файловые операции. Представления CLI находятся в `apps/cli`.
 - Contracts пригоден для браузера и содержит только переносимые типы и константы.
 

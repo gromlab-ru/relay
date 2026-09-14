@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { BOARD_FILTERS_SCHEMA } from "domains/tasks";
 import type { BoardFilters } from "domains/tasks";
 
@@ -12,6 +13,7 @@ export const readBoardFilters = (params: URLSearchParams): BoardFilters =>
     tag: params.get("tag") ?? "",
     blocked: params.get("blocked") === "true",
     unassigned: params.get("unassigned") === "true",
+    ungrouped: params.get("ungrouped") === "true",
   });
 
 /**
@@ -25,6 +27,7 @@ export const writeBoardFilters = (filters: BoardFilters): URLSearchParams => {
   if (filters.tag !== "") params.set("tag", filters.tag);
   if (filters.blocked) params.set("blocked", "true");
   if (filters.unassigned) params.set("unassigned", "true");
+  if (filters.ungrouped) params.set("ungrouped", "true");
   return params;
 };
 
@@ -35,4 +38,12 @@ export const readTaskId = (value: string | undefined): number | null => {
   if (value === undefined || !/^\d+$/.test(value)) return null;
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
+};
+
+/**
+ * Проверяет, была ли панель открыта из доски, а не по внешней прямой ссылке.
+ */
+export const readBoardOrigin = (state: unknown): boolean => {
+  const result = z.object({ fromBoard: z.boolean() }).safeParse(state);
+  return result.success && result.data.fromBoard;
 };
