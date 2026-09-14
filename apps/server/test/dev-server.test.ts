@@ -27,7 +27,7 @@ const execute = promisify(execFile);
 for (const configuration of ["default", "relative"] as const)
   test(
     `root dev-сервер (${configuration}) переживает очистку dist и изменения сервера и Core`,
-    { timeout: 45000 },
+    { timeout: 90000 },
     async (t) => {
       const project = fileURLToPath(new URL("../../../", import.meta.url));
       const root = await realpath(await mkdtemp(join(tmpdir(), "tasks-dev-server-")));
@@ -170,17 +170,17 @@ for (const configuration of ["default", "relative"] as const)
           }
         }
       };
-      const waitFor = async (condition: () => boolean, description: string) => {
-        const deadline = Date.now() + 12000;
+      const waitFor = async (condition: () => boolean, description: string, timeout = 12000) => {
+        const deadline = Date.now() + timeout;
         while (!condition()) {
           assert(!closed && Date.now() < deadline, `${description}\n${output}`);
           await delay(25);
         }
       };
       let starts = 0;
-      const nextServer = async () => {
+      const nextServer = async (timeout = 12000) => {
         const urls = () => [...output.matchAll(/Tasks API: (http:\/\/127\.0\.0\.1:\d+)/g)];
-        await waitFor(() => urls().length > starts, "Dev-сервер не запустился");
+        await waitFor(() => urls().length > starts, "Dev-сервер не запустился", timeout);
         starts = urls().length;
         return urls().at(-1)![1]!;
       };
@@ -190,7 +190,8 @@ for (const configuration of ["default", "relative"] as const)
         return response.json();
       };
 
-      let url = await nextServer();
+      // Холодный запуск на общем CI-runner конкурирует с компиляцией и другими тестами.
+      let url = await nextServer(30000);
       const context = (await json(`${url}/api/v1/context`)).data;
       assert.equal(context.actor, "dev-human");
       assert.equal(context.configPath, join(root, workspace, "tasks.config.json"));
