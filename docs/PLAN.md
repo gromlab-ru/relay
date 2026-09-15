@@ -1,4 +1,4 @@
-# План реализации Tasks: CLI + NestJS + React
+# План реализации Tasks: CLI + MCP + NestJS + React
 
 Материал проектирования и приёмки этапов. Актуальные пользовательские инструкции —
 в [навигаторе документации](README.md), технические команды — в [разработке](DEVELOPMENT.md).
@@ -7,8 +7,9 @@
 
 ## 1. Цель продукта и способ распространения
 
-**Продукт распространяется одним npm-пакетом `@gromlab/tasks-cli` и запускается
-пользователем через NPX.** Пользователь работает из каталога своего проекта:
+**Продукт распространяется пакетами `@gromlab/tasks-cli` и `@gromlab/tasks-mcp`,
+которые запускаются через NPX.** CLI включает API и UI, MCP — самостоятельный HTTP-сервис.
+Пользователь работает из каталога своего проекта или корня оркестратора:
 
 ```bash
 npx @gromlab/tasks-cli init
@@ -29,7 +30,10 @@ REST API, OpenAPI, Swagger и SSE. При наличии `dist/web/index.html` �
 
 ## 2. Подтверждённые требования
 
-- Node.js 22+; один локальный проект за запуск сервера.
+- Node.js 22+; один проект за запуск REST API, один или несколько проектов за запуск MCP.
+- Два вида конфига: проектный `tasks.config.json` и реестр `tasks.orchestrator.json`.
+- CLI выбирает проект префиксом или `--project`; MCP — полем `project`.
+- MCP использует REST SDK и автоматически поднимает локальный API без URL; реестр обновляется без перезапуска.
 - React + TypeScript; полноценный канбан с созданием и редактированием задач.
 - Все настроенные статусы представлены колонками, включая выполненные и отменённые.
 - Колонки, их порядок и цвета берутся из `tasks.config.json`.
@@ -46,6 +50,7 @@ apps/
   cli/src/                 Commander, команды и терминальные представления
   cli/test/                регрессии CLI, запуск server и проверки публикации
   cli/scripts/             локальная сборка, упаковка и публикация CLI
+  mcp/                     отдельный MCP-пакет, HTTP-инструменты и проверки
   server/src/main.ts       самостоятельная точка входа сервера
   server/test/             source-watch, перезапуск и остановка dev-сервера
   web/src/                 React + Vite канбан
@@ -53,6 +58,7 @@ apps/
 packages/
   core/src/                domain, application, storage, shared
   core/test/               проверки ядра и границ импортов
+  project-runtime/         реестр проектов и общие адаптеры CLI/MCP
   contracts/src/           независимые от Node/Nest/React типы REST и SSE
   contracts/test/          проверка совместимости DTO и типов ядра
   server-runtime/src/      NestJS: модули, контроллеры, HTTP, Swagger, статика
@@ -81,7 +87,7 @@ MCP ──── REST ────────┘       │
 Корневой `package.json` приватный и управляет pnpm workspaces и Turbo. Состав пакетов
 задаёт `pnpm-workspace.yaml`, общий lockfile — `pnpm-lock.yaml`. Внутренние зависимости
 объявляются как `workspace:*` в манифестах потребителей, межпакетные импорты используют `exports`.
-Версия публикуемого продукта принадлежит `apps/cli/package.json`.
+Версии публичных пакетов принадлежат `apps/cli/package.json` и `apps/mcp/package.json`.
 Каждый Node-пакет собирается своим `tsc -p tsconfig.json` в локальный `dist`,
 без межпакетных TypeScript project references и корневых алиасов исходников.
 Порядок сборки и кеширование задаёт Turbo; web сохраняет собственный браузерный tsconfig.

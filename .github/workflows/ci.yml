@@ -9,6 +9,9 @@ on:
       artifact_id:
         description: Идентификатор проверенного npm-архива
         value: ${{ jobs.package.outputs.artifact_id }}
+      mcp_artifact_id:
+        description: Идентификатор проверенного MCP npm-архива
+        value: ${{ jobs.package.outputs.mcp_artifact_id }}
 
 permissions:
   contents: read
@@ -72,6 +75,7 @@ jobs:
     timeout-minutes: 15
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      mcp_artifact_id: ${{ steps.upload-mcp.outputs.artifact-id }}
     steps:
       - name: Получить исходники
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
@@ -92,12 +96,25 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Собрать архив и проверить установку CLI
         run: pnpm run package:check
+      - name: Собрать архив и проверить MCP через SDK
+        run: pnpm run package:check:mcp
       - name: Сохранить проверенный архив
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
         with:
           name: npm-package
           path: apps/cli/.artifacts/npm/*.tgz
+          include-hidden-files: true
+          if-no-files-found: error
+          overwrite: true
+          compression-level: 0
+          retention-days: 14
+      - name: Сохранить проверенный MCP-архив
+        id: upload-mcp
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
+        with:
+          name: npm-mcp-package
+          path: apps/mcp/.artifacts/npm/*.tgz
           include-hidden-files: true
           if-no-files-found: error
           overwrite: true

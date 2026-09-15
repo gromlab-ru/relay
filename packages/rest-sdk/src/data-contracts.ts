@@ -494,6 +494,14 @@ export interface ContextResponse {
         }
       >
     >;
+    mcp?: {
+      /**
+       * @min 0
+       * @max 65535
+       * @default 3010
+       */
+      port: number;
+    };
     /** @default {"port":3000} */
     server: {
       /**
@@ -1158,6 +1166,14 @@ export interface BoardResponse {
           }
         >
       >;
+      mcp?: {
+        /**
+         * @min 0
+         * @max 65535
+         * @default 3010
+         */
+        port: number;
+      };
       /** @default {"port":3000} */
       server: {
         /**

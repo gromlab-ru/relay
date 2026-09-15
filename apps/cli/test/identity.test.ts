@@ -5,7 +5,7 @@ import { test } from "node:test";
 import type { Task } from "@tasks/core/domain/task";
 import { TaskService } from "@tasks/core/application/tasks/service";
 import { getTask } from "../src/queries/tasks/queries.js";
-import { createLocalBackend } from "../src/backend/local.js";
+import { createLocalBackend } from "@tasks/project-runtime/backend/local";
 import { TaskRepository } from "@tasks/core/storage/tasks";
 import { openWorkspace } from "@tasks/core/storage/workspace";
 import { failed, fixture, successful } from "./helpers/cli.js";

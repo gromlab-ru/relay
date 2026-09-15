@@ -53,7 +53,7 @@ registerCommand<{ titleOnly?: boolean }>(program, runtime, {
 или относительные импорты исходников другого workspace.
 
 Команды обращаются к `context.tasks` и `context.backend.comments/logs/validate`.
-Контракт `apps/cli/src/backend/types.ts` реализован локальным Core и HTTP через
+Контракт `packages/project-runtime/src/backend/types.ts` реализован локальным Core и HTTP через
 `@tasks/rest-sdk`. Новая рабочая операция должна поддерживать оба адаптера;
 файловый `Workspace` доступен только локальной служебной операции через `localWorkspace`.
 Расширение API сопровождается OpenAPI и регенерацией SDK. Терминальное представление

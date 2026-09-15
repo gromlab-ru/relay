@@ -1,0 +1,529 @@
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
+  ToolSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+import manifest from "#manifest" with { type: "json" };
+import { asAppError, invariant } from "@tasks/core/shared/errors";
+import { actorSchema, parse, taskIdSchema } from "@tasks/core/domain/validation";
+import { taskFieldsSchema } from "@tasks/core/domain/task";
+import { logKindSchema, logBrief } from "@tasks/core/domain/log";
+import { toLines, toText } from "@tasks/core/domain/markdown";
+import { taskListQuerySchema } from "@tasks/core/application/queries/project";
+import { overviewQuerySchema } from "@tasks/core/application/queries/overview";
+import { requestIdSchema } from "@tasks/core/application/record-request";
+import { entryTarget, projectEntrySchema, projectNameSchema } from "@tasks/project-runtime/config";
+import { registerProject, unregisterProject } from "@tasks/project-runtime/registry";
+import type { Backend } from "@tasks/project-runtime/backend/types";
+import type { Projects } from "./projects.js";
+import { checked, page, paging, response } from "./output.js";
+import type { Result } from "./output.js";
+
+/** Ответ записи не зависит от размера уже сохранённого документа. */
+async function changed(operation: Promise<{ id: number; revision: number }>): Promise<Result> {
+  const { id, revision } = await operation;
+  return { data: { id, revision } };
+}
+
+const selector = {
+  project: projectNameSchema
+    .optional()
+    .describe("Имя из projects_list; обязательно для реестра, опускается при проектном конфиге"),
+  maxBytes: z
+    .number()
+    .int()
+    .min(1024)
+    .max(16 * 1024 * 1024)
+    .optional(),
+};
+const revision = { actor: actorSchema, ifRevision: z.number().int().positive().optional() };
+const task = { id: taskIdSchema };
+const taskInputSchema = taskFieldsSchema.extend({
+  description: z
+    .union([z.string().transform(toLines), taskFieldsSchema.shape.description])
+    .pipe(taskFieldsSchema.shape.description),
+  summary: z
+    .union([z.string().transform(toLines), taskFieldsSchema.shape.summary])
+    .pipe(taskFieldsSchema.shape.summary),
+});
+
+function defined<T extends object>(value: T): { [K in keyof T]: Exclude<T[K], undefined> } {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as {
+    [K in keyof T]: Exclude<T[K], undefined>;
+  };
+}
+
+export function createTools(projects: Projects): Server {
+  const server = new Server(
+    { name: manifest.name, version: manifest.version },
+    {
+      capabilities: { tools: {} },
+      instructions:
+        "projects_list показывает режим и доступные проекты. В режиме registry передавайте project в каждом вызове; в режиме project опускайте его. Оркестратор назначает задачи и меняет статусы, субагент читает выданный ID и пишет отчёты. actor передаётся в каждой записи. Для повторяемых комментариев и отчётов используйте один requestId. Конфиг перечитывается без перезапуска.",
+    },
+  );
+  const tools = new Map<
+    string,
+    { definition: Tool; call: (input: unknown) => Promise<CallToolResult> }
+  >();
+
+  function define<S extends z.ZodRawShape>(
+    name: string,
+    description: string,
+    shape: S,
+    readOnly: boolean,
+    action: (input: z.output<z.ZodObject<S>>) => Promise<CallToolResult>,
+  ) {
+    const schema = z.strictObject(shape);
+    tools.set(name, {
+      definition: {
+        name,
+        description,
+        inputSchema: ToolSchema.shape.inputSchema.parse(z.toJSONSchema(schema, { io: "input" })),
+        annotations: {
+          readOnlyHint: readOnly,
+          destructiveHint: !readOnly,
+          idempotentHint: readOnly,
+          openWorldHint: false,
+        },
+      },
+      async call(input) {
+        try {
+          return await action(parse(schema, input ?? {}, name));
+        } catch (error) {
+          const failure = asAppError(error);
+          return response(
+            {
+              ok: false,
+              error: {
+                code: failure.code,
+                message: failure.message,
+                ...(failure.details === undefined ? {} : { details: failure.details }),
+              },
+            },
+            true,
+          );
+        }
+      },
+    });
+  }
+
+  function projectTool<S extends z.ZodRawShape>(
+    name: string,
+    description: string,
+    shape: S,
+    readOnly: boolean,
+    action: (
+      backend: Backend,
+      input: z.output<z.ZodObject<S>>,
+      scope: unknown,
+      budget: number,
+      meta: Record<string, unknown>,
+    ) => Promise<Result>,
+  ) {
+    define(name, description, shape, readOnly, async (input) => {
+      const { project, maxBytes } = z.object(selector).parse(input);
+      return projects.withBackend(project, async (backend, target) => {
+        const meta = { project: project ?? null, configPath: backend.workspace.configPath };
+        const budget = maxBytes ?? backend.workspace.config.output.maxBytes;
+        const filters = Object.fromEntries(
+          Object.entries(input).filter(([key]) => !["cursor", "limit", "maxBytes"].includes(key)),
+        );
+        const scope = { name, target, storage: backend.workspace.root, filters };
+        const result = await action(backend, input, scope, budget, meta);
+        return checked({ ...result, meta: { ...meta, ...result.meta } }, budget);
+      });
+    });
+  }
+
+  define(
+    "projects_list",
+    "Показать актуальный режим, проекты, пути и подключения",
+    { ...selector, ...paging },
+    true,
+    async (input) => {
+      const source = await projects.source();
+      invariant(
+        input.project === undefined,
+        "INVALID_ARGUMENT",
+        "projects_list относится ко всему конфигу",
+      );
+      const items: Record<string, unknown>[] =
+        source.kind === "project"
+          ? [{ project: null, configPath: source.path }]
+          : Object.entries(source.value.projects).map(([name, entry]) => ({
+              ...entry,
+              ...entryTarget(source.path, name, entry),
+            }));
+      const budget = input.maxBytes ?? 16384;
+      return checked(
+        page(items, input, { tool: "projects_list", path: source.path }, budget, {
+          mode: source.kind,
+          configPath: source.path,
+        }),
+        budget,
+      );
+    },
+  );
+  define(
+    "project_register",
+    "Сохранить проект в реестре; replace разрешает заменить подключение. Пути относительны к реестру на сервере",
+    {
+      project: projectNameSchema,
+      ...projectEntrySchema.shape,
+      replace: z.boolean().default(false),
+    },
+    false,
+    async (input) => {
+      const source = await projects.source();
+      invariant(
+        source.kind === "registry",
+        "REGISTRY_REQUIRED",
+        "Регистрация доступна при запуске с конфигом проектов",
+      );
+      const { project, replace, ...entry } = input;
+      const data = await registerProject(source.path, project, entry, replace);
+      await projects.source();
+      return checked({ data }, 16384);
+    },
+  );
+  define(
+    "project_unregister",
+    "Удалить регистрацию, сохранив файлы и задачи проекта",
+    { project: projectNameSchema },
+    false,
+    async ({ project }) => {
+      const source = await projects.source();
+      invariant(source.kind === "registry", "REGISTRY_REQUIRED", "Требуется конфиг проектов");
+      const data = await unregisterProject(source.path, project);
+      await projects.source();
+      return checked({ data }, 16384);
+    },
+  );
+
+  projectTool(
+    "project_config",
+    "Прочитать настройки и пути выбранного проекта через REST API",
+    selector,
+    true,
+    async (backend) => ({ data: { ...backend.workspace, storagePath: backend.workspace.root } }),
+  );
+  projectTool(
+    "project_validate",
+    "Проверить документы и граф задач проекта",
+    selector,
+    true,
+    async (backend) => ({ data: await backend.validate() }),
+  );
+  projectTool(
+    "project_overview",
+    "Обзор прогресса, готовых задач, проверки и блокеров",
+    { ...selector, id: taskIdSchema.optional(), ...overviewQuerySchema.shape },
+    true,
+    async (backend, { id, limit, reviewStatuses }) => ({
+      data: await backend.tasks.overview(id, {
+        limit,
+        ...(reviewStatuses ? { reviewStatuses } : {}),
+      }),
+    }),
+  );
+  projectTool(
+    "project_groups",
+    "Группы задач и прогресс",
+    { ...selector, ...paging },
+    true,
+    async (backend, input, scope, budget, meta) =>
+      page(await backend.tasks.groups(), input, scope, budget, meta),
+  );
+  projectTool(
+    "tasks_list",
+    "Список задач; по умолчанию только незавершённые",
+    { ...selector, ...taskListQuerySchema.shape, ...paging },
+    true,
+    async (backend, input, scope, budget, meta) => {
+      const {
+        project: _project,
+        maxBytes: _bytes,
+        limit: _limit,
+        cursor: _cursor,
+        ...filters
+      } = input;
+      const data = await backend.tasks.list(filters);
+      return page(
+        data.items.map((item) => ({ ...item, ready: data.readyIds.includes(item.id) })),
+        input,
+        scope,
+        budget,
+        meta,
+      );
+    },
+  );
+  projectTool(
+    "task_get",
+    "Прочитать карточку; full включает историю, fields выбирает нужные поля",
+    {
+      ...selector,
+      ...task,
+      full: z.boolean().default(false),
+      fields: z.array(z.string()).min(1).optional(),
+    },
+    true,
+    async (backend, { id, full, fields }) => {
+      const { task: document, blockedBy, ready } = await backend.tasks.document(id);
+      const { comments, logs, ...card } = document;
+      const complete = {
+        ...document,
+        blockedBy,
+        ready,
+        commentCount: Object.keys(comments).length,
+        logCount: Object.keys(logs).length,
+      };
+      if (fields) {
+        for (const field of fields)
+          invariant(Object.hasOwn(complete, field), "UNKNOWN_FIELD", `Неизвестное поле ${field}`);
+        return {
+          data: Object.fromEntries(
+            fields.map((field) => [field, complete[field as keyof typeof complete]]),
+          ),
+        };
+      }
+      return {
+        data: full
+          ? complete
+          : {
+              ...card,
+              blockedBy,
+              ready,
+              commentCount: complete.commentCount,
+              logCount: complete.logCount,
+            },
+      };
+    },
+  );
+  projectTool(
+    "task_markdown",
+    "Прочитать описание или summary задачи",
+    { ...selector, ...task, field: z.enum(["description", "summary"]) },
+    true,
+    async (backend, { id, field }) => ({
+      data: { id, field, lines: await backend.tasks.markdown(id, field) },
+    }),
+  );
+  projectTool(
+    "task_links",
+    "Родитель, дети, зависимости и блокируемые задачи",
+    { ...selector, ...task },
+    true,
+    async (backend, { id }) => ({ data: await backend.tasks.links(id) }),
+  );
+  projectTool(
+    "task_tree",
+    "Дерево подзадач с ограничением глубины",
+    { ...selector, ...task, depth: z.number().int().min(0).max(100).default(10) },
+    true,
+    async (backend, { id, depth }) => ({ data: await backend.tasks.tree(id, depth) }),
+  );
+  projectTool(
+    "task_create",
+    "Создать задачу. После неподтверждённого ответа проверьте состояние перед повтором",
+    {
+      ...selector,
+      ...taskInputSchema.partial().shape,
+      title: taskFieldsSchema.shape.title,
+      actor: actorSchema,
+    },
+    false,
+    async (backend, input) => {
+      const { project: _project, maxBytes: _bytes, actor, ...fields } = input;
+      return changed(backend.tasks.create(defined(fields), actor));
+    },
+  );
+  projectTool(
+    "task_update",
+    "Атомарно изменить поля задачи; ifRevision проверяет прочитанную ревизию",
+    { ...selector, ...task, ...revision, patch: taskInputSchema.partial() },
+    false,
+    async (backend, { id, patch, actor, ifRevision }) =>
+      changed(
+        backend.tasks.update(id, defined(patch), {
+          actor,
+          ...(ifRevision === undefined ? {} : { ifRevision }),
+        }),
+      ),
+  );
+  projectTool(
+    "task_status",
+    "Изменить статус задачи",
+    { ...selector, ...task, ...revision, status: z.string().min(1) },
+    false,
+    async (backend, { id, status, actor, ifRevision }) =>
+      changed(
+        backend.tasks.update(
+          id,
+          { status },
+          { actor, ...(ifRevision === undefined ? {} : { ifRevision }) },
+        ),
+      ),
+  );
+  projectTool(
+    "task_claim",
+    "Оркестратор занимает свободную готовую задачу указанным автором",
+    { ...selector, ...task, ...revision, status: z.string().optional() },
+    false,
+    async (backend, { id, actor, ifRevision, status }) =>
+      changed(
+        backend.tasks.claim(
+          id,
+          { actor, ...(ifRevision === undefined ? {} : { ifRevision }) },
+          status,
+        ),
+      ),
+  );
+  projectTool(
+    "task_release",
+    "Оркестратор снимает назначение задачи",
+    { ...selector, ...task, ...revision, force: z.boolean().default(false) },
+    false,
+    async (backend, { id, actor, ifRevision, force }) =>
+      changed(
+        backend.tasks.release(
+          id,
+          { actor, ...(ifRevision === undefined ? {} : { ifRevision }) },
+          force,
+        ),
+      ),
+  );
+  projectTool(
+    "task_dependency",
+    "Добавить или удалить зависимость в пределах проекта",
+    {
+      ...selector,
+      ...task,
+      ...revision,
+      dependencyId: taskIdSchema,
+      action: z.enum(["add", "remove"]),
+    },
+    false,
+    async (backend, { id, dependencyId, action, actor, ifRevision }) =>
+      changed(
+        backend.tasks.dependency(id, dependencyId, action === "add", {
+          actor,
+          ...(ifRevision === undefined ? {} : { ifRevision }),
+        }),
+      ),
+  );
+
+  projectTool(
+    "comment_add",
+    "Добавить комментарий; повторяйте с тем же requestId, автором и текстом",
+    {
+      ...selector,
+      ...task,
+      actor: actorSchema,
+      text: z.string().min(1),
+      requestId: requestIdSchema,
+    },
+    false,
+    async (backend, { id, actor, text, requestId }) => {
+      const saved = await backend.comments.add(id, text, actor, requestId);
+      return { data: { id: saved.id, taskId: saved.taskId, requestId } };
+    },
+  );
+  projectTool(
+    "comment_get",
+    "Прочитать комментарий полностью",
+    { ...selector, ...task, commentId: z.string().regex(/^cmt_[a-f0-9]{32}$/) },
+    true,
+    async (backend, { id, commentId }) => ({ data: await backend.comments.get(id, commentId) }),
+  );
+  projectTool(
+    "comments_list",
+    "Комментарии задачи, от новых к старым",
+    { ...selector, ...task, ...paging },
+    true,
+    async (backend, input, scope, budget, meta) => {
+      const { comments } = await backend.comments.records(input.id);
+      comments.sort((a, b) => `${b.createdAt}/${b.id}`.localeCompare(`${a.createdAt}/${a.id}`));
+      return page(comments, input, scope, budget, meta);
+    },
+  );
+  projectTool(
+    "log_add",
+    "Записать отчёт агента; requestId обеспечивает повтор без дубликатов",
+    {
+      ...selector,
+      ...task,
+      actor: actorSchema,
+      text: z.string().min(1),
+      requestId: requestIdSchema,
+      kind: logKindSchema.default("progress"),
+      title: z.string().default(""),
+      summary: z.string().default(""),
+      sessionId: z.string().optional(),
+    },
+    false,
+    async (backend, { id, actor, text, requestId, kind, title, summary, sessionId }) => {
+      const saved = await backend.logs.add(
+        id,
+        {
+          body: toLines(text),
+          kind,
+          title,
+          summary: toLines(summary),
+          sessionId: sessionId ?? null,
+        },
+        actor,
+        requestId,
+      );
+      return { data: { id: saved.id, taskId: saved.taskId, requestId } };
+    },
+  );
+  projectTool(
+    "log_get",
+    "Прочитать отчёт полностью",
+    { ...selector, ...task, logId: z.string().regex(/^log_[a-f0-9]{32}$/) },
+    true,
+    async (backend, { id, logId }) => ({ data: await backend.logs.get(id, logId) }),
+  );
+  projectTool(
+    "logs_list",
+    "Краткие отчёты с фильтрами и поиском в тексте",
+    {
+      ...selector,
+      ...task,
+      ...paging,
+      actor: actorSchema.optional(),
+      kind: logKindSchema.optional(),
+      sessionId: z.string().optional(),
+      search: z.string().min(1).optional(),
+    },
+    true,
+    async (backend, input, scope, budget, meta) => {
+      const { logs } = await backend.logs.records(input.id);
+      const selected = logs.filter(
+        (log) =>
+          (!input.actor || log.actor === input.actor) &&
+          (!input.kind || log.kind === input.kind) &&
+          (!input.sessionId || log.sessionId === input.sessionId) &&
+          (!input.search || toText(log.body).includes(input.search)),
+      );
+      selected.sort((a, b) => `${b.createdAt}/${b.id}`.localeCompare(`${a.createdAt}/${a.id}`));
+      return page(selected.map(logBrief), input, scope, budget, meta);
+    },
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: [...tools.values()].map((tool) => tool.definition),
+  }));
+  server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
+    const tool = tools.get(params.name);
+    if (!tool) throw new McpError(ErrorCode.InvalidParams, `Неизвестный инструмент ${params.name}`);
+    return tool.call(params.arguments);
+  });
+  return server;
+}

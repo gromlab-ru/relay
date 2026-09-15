@@ -13,6 +13,8 @@ export interface PageOptions {
   cursor?: string;
   text?: TextOptions;
   all?: boolean;
+  project?: string;
+  storage?: string;
 }
 
 export function creationKey(item: { createdAt: string; id: string }): string {
@@ -32,6 +34,7 @@ export function paginate<T>(
   descending = false,
   render?: (items: readonly T[], options: TextOptions) => string,
 ): Result {
+  if (options.project) scope = { project: options.project, storage: options.storage, query: scope };
   const order = descending ? -1 : 1;
   const after = options.cursor ? decodeCursor(options.cursor, scope, z.string()) : undefined;
   const available = [...items]
@@ -45,6 +48,7 @@ export function paginate<T>(
       data: { items: page },
       ...(render ? { text: (view: TextOptions) => render(page, view) } : {}),
       meta: {
+        ...(options.project ? { project: options.project } : {}),
         hasMore,
         nextCursor: hasMore && selected.length ? encodeCursor(scope, key(selected.at(-1)!)) : null,
         truncated,

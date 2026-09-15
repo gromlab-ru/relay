@@ -1,5 +1,7 @@
 import type { Command } from "commander";
-import { invariant } from "@tasks/core/shared/errors";
+import { AppError, invariant } from "@tasks/core/shared/errors";
+import { selectProject } from "@tasks/project-runtime/config";
+import { cliConfiguration } from "../configuration.js";
 import { listGroups } from "../queries/groups.js";
 import { migrateTasks } from "@tasks/core/application/tasks/migrate";
 import { initialize } from "@tasks/core/storage/workspace";
@@ -33,15 +35,34 @@ export function registerProject(program: Command, runtime: Runtime): void {
   });
   init.action(async () => {
     const globals = init.optsWithGlobals<GlobalOptions>();
+    let config = globals.config ?? runtime.env.TASKS_CONFIG;
+    const source = await cliConfiguration(runtime, globals).catch((error: unknown) => {
+      if (
+        error instanceof AppError &&
+        ["CONFIG_NOT_FOUND", "NOT_FOUND"].includes(error.code) &&
+        !globals.project
+      )
+        return undefined;
+      throw error;
+    });
+    if (source && (source.kind === "registry" || globals.project || config !== undefined)) {
+      const selected = selectProject(source, globals.project);
+      config = selected.configPath;
+      invariant(config, "LOCAL_CONFIG_REQUIRED", "Для init нужен локальный путь проекта");
+    }
     invariant(
-      globals.local || !(globals.serverUrl ?? runtime.env.TASKS_SERVER_URL),
+      globals.local ||
+        !(
+          globals.serverUrl ??
+          (source?.kind === "registry" ? undefined : runtime.env.TASKS_SERVER_URL)
+        ),
       "LOCAL_ONLY",
       "Для инициализации локальной рабочей копии при настроенном HTTP укажите --local.",
     );
     const workspace = await initialize(
       runtime.cwd,
       init.opts<{ storage: string }>().storage,
-      globals.config ?? runtime.env.TASKS_CONFIG,
+      config,
     );
     runtime.output = outputOptions(runtime, globals, workspace.config.output);
     printResult(

@@ -5,6 +5,8 @@ import { createCommand } from "../command.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { integer } from "../options.js";
 import { invariant } from "@tasks/core/shared/errors";
+import { selectProject } from "@tasks/project-runtime/config";
+import { cliConfiguration } from "../configuration.js";
 
 export function registerServer(program: Command, runtime: Runtime) {
   const command = createCommand(program, {
@@ -40,7 +42,13 @@ export function registerServer(program: Command, runtime: Runtime) {
       (runtime.env.TASKS_PORT === undefined
         ? undefined
         : integer(0, 65535)(runtime.env.TASKS_PORT));
-    const config = globals.config ?? runtime.env.TASKS_CONFIG;
+    const selected = selectProject(await cliConfiguration(runtime, globals), globals.project);
+    const config = selected.configPath;
+    invariant(
+      config,
+      "LOCAL_CONFIG_REQUIRED",
+      "Для запуска REST API нужен локальный конфиг проекта",
+    );
     const { startServer } = await import("@tasks/server-runtime");
     const server = await startServer({
       cwd: runtime.cwd,

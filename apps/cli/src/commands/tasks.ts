@@ -102,6 +102,9 @@ export function registerTasks(program: Command, runtime: Runtime): void {
       );
       return listTasks(context.tasks, filters, {
         ...context.output,
+        ...(context.globals.project
+          ? { project: context.globals.project, storage: context.workspace.root }
+          : {}),
         ...(limit === undefined ? {} : { limit }),
         ...(cursor === undefined ? {} : { cursor }),
       });

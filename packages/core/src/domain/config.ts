@@ -3,6 +3,9 @@ import { z } from "zod";
 /** Порт локального HTTP-сервера; 0 поручает ОС выбрать свободный порт. */
 export const serverPortSchema = z.number().int().min(0).max(65535);
 
+/** MCP запускается отдельно от REST API; 0 выбирает свободный порт. */
+export const mcpConfigSchema = z.strictObject({ port: serverPortSchema.default(3010) });
+
 /** Адрес API без префикса /api/v1; локальный режим выбирается отдельно. */
 export const serverUrlSchema = z.url().superRefine((value, context) => {
   let url: URL;
@@ -51,6 +54,7 @@ export const configSchema = z
     defaultStatus: z.string().min(1),
     readyStatuses: z.array(z.string()).min(1),
     statuses: z.record(z.string().regex(/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u), statusSchema),
+    mcp: mcpConfigSchema.optional(),
     server: z
       .strictObject({ port: serverPortSchema.default(3000), url: serverUrlSchema.optional() })
       .default({ port: 3000 }),

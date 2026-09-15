@@ -33,6 +33,11 @@ test("Core и Contracts изолированы от приложений, сер
       "apps/server/src",
       /^(?:commander|picocolors|@tasks\/cli|@gromlab\/tasks-cli)|apps\/cli|cli\/(?:src|dist)/,
     ],
+    ["packages/project-runtime/src", /^(?:commander|picocolors|@tasks\/server-runtime)|apps\//],
+    [
+      "apps/mcp/src",
+      /apps\/cli|cli\/(?:src|dist)|@tasks\/core\/(?:storage|application\/(?:tasks\/service|comments|logs\/service))/,
+    ],
     [
       "apps/web/src",
       /^(?:node:|@nestjs|@tasks\/(?:core|server-runtime|server))|apps\/server|packages\/(?:core|server-runtime)/,

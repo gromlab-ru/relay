@@ -68,22 +68,34 @@ pnpm --silent run playground list --format json
 CLI и backend использовать исходники библиотек через tsx. Web использует compiled
 SDK; его dev-скрипт сначала собирает `@tasks/rest-sdk`.
 
+MCP запускается отдельным процессом, например:
+
+```bash
+pnpm run dev:mcp --config /absolute/path/tasks.orchestrator.json
+```
+
+`dev:mcp` сначала собирает зависимости, затем выполняет точку входа через tsx.
+REST runtime загружается из скомпилированного JavaScript с Nest decorator metadata.
+По умолчанию MCP слушает http://127.0.0.1:3010/mcp; `--config` принимает оба вида конфигов.
+
 ## Структура
 
-| Workspace                                                       | Ответственность                                         |
-| --------------------------------------------------------------- | ------------------------------------------------------- |
-| [apps/cli](../apps/cli/README.md)                               | Команды, терминал, локальный/HTTP-адаптеры и публикация |
-| [apps/server](../apps/server/README.md)                         | Standalone-точка входа и управление dev-процессом       |
-| [apps/web](../apps/web/README.md)                               | React, Mantine, SWR, dnd-kit; профиль Unit Architecture |
-| [apps/playground](../apps/playground/README.md)                 | Демонстрационные данные и CLI-сценарии                  |
-| [packages/core](../packages/core)                               | Domain, application, файловое хранение и блокировки     |
-| [packages/contracts](../packages/contracts/README.md)           | Переносимые REST/SSE-контракты                          |
-| [packages/rest-sdk](../packages/rest-sdk/README.md)             | Сгенерированный ESM-клиент OpenAPI                      |
-| [packages/server-runtime](../packages/server-runtime/README.md) | Общая NestJS/Fastify-реализация                         |
-| [packages/typescript-config](../packages/typescript-config)     | Общие строгие настройки Node-пакетов                    |
+| Workspace                                                         | Ответственность                                                             |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [apps/cli](../apps/cli/README.md)                                 | Команды, выбор проекта, терминал и публикация                               |
+| [apps/mcp](../apps/mcp/README.md)                                 | MCP-инструменты, HTTP, управление автоматическими API и отдельный npm-пакет |
+| [packages/project-runtime](../packages/project-runtime/README.md) | Реестр, разрешение конфигов, общий Backend для CLI/MCP                      |
+| [apps/server](../apps/server/README.md)                           | Standalone-точка входа и управление dev-процессом                           |
+| [apps/web](../apps/web/README.md)                                 | React, Mantine, SWR, dnd-kit; профиль Unit Architecture                     |
+| [apps/playground](../apps/playground/README.md)                   | Демонстрационные данные и CLI-сценарии                                      |
+| [packages/core](../packages/core)                                 | Domain, application, файловое хранение и блокировки                         |
+| [packages/contracts](../packages/contracts/README.md)             | Переносимые REST/SSE-контракты                                              |
+| [packages/rest-sdk](../packages/rest-sdk/README.md)               | Сгенерированный ESM-клиент OpenAPI                                          |
+| [packages/server-runtime](../packages/server-runtime/README.md)   | Общая NestJS/Fastify-реализация                                             |
+| [packages/typescript-config](../packages/typescript-config)       | Общие строгие настройки Node-пакетов                                        |
 
 Слои и инварианты описаны в [архитектуре](ARCHITECTURE.md).
-Сервер использует Core, а не CLI. SDK используется CLI и web. Межпакетных
+Сервер использует Core, а не CLI. SDK используется CLI, MCP и web. Межпакетных
 TypeScript project references и корневых алиасов исходников нет. Каждый workspace
 собирается в свой `dist`; порядок и кеширование задаёт Turbo.
 
@@ -97,6 +109,9 @@ TypeScript project references и корневых алиасов исходни�
 | `pnpm run dev:server`                                                | Backend с наблюдением за исходниками                            |
 | `pnpm run dev:web` / `dev:ui`                                        | Vite; API запускается отдельно                                  |
 | `pnpm --silent run dev:cli <args>`                                   | CLI из исходников                                               |
+| `pnpm run dev:mcp <args>` / `start:mcp <args>`                       | Разработка / запуск собранного MCP                              |
+| `pnpm run build:mcp` / `test:mcp`                                    | Сборка и интеграционные проверки MCP                            |
+| `pnpm run package:check:mcp`                                         | MCP npm-архив и запуск с автоматическими API вне репозитория    |
 | `pnpm --silent run playground <args>`                                | CLI на демопроекте                                              |
 | `pnpm run build`                                                     | Все workspaces                                                  |
 | `pnpm run build:cli` / `build:server` / `build:web`                  | Выборочная сборка с зависимостями                               |
@@ -119,6 +134,7 @@ TypeScript project references и корневых алиасов исходни�
 
 Тесты расположены у владельцев: CLI — `apps/cli/test`, Core — `packages/core/test`,
 API/SSE — `packages/server-runtime/test`, standalone/dev — `apps/server/test`.
+MCP — `apps/mcp/test`, реестр и маршрутизация — `packages/project-runtime/test`.
 Contracts проверяет совместимость типов с Core. CI запускает проверки на Node.js 22 и 24.
 
 Для web действуют [инструкции приложения](../apps/web/AGENTS.md): Unit Architecture,
@@ -128,7 +144,7 @@ headless agent-browser. Автотесты frontend не добавляются 
 
 ## Документация и поставка
 
-Корневой `README.md` — единая витрина GitHub/npm. Пользовательская документация
+Корневой `README.md` — витрина GitHub/npm CLI; `apps/mcp/README.md` — витрина отдельного MCP-пакета. Пользовательская документация
 принадлежит `docs`, README workspaces описывают их разработку.
 Точные параметры должны соответствовать `CommandDefinition` и `--help`.
 Проверка CLI сопоставляет справочник с зарегистрированными командами и параметрами.
@@ -145,4 +161,6 @@ headless agent-browser. Автотесты frontend не добавляются 
 
 Подготовка архива использует dev-инструменты; готовый npm-пакет содержит только
 production-зависимости, CLI и готовый web. Публикуется именно проверенный `.tgz`.
+MCP упаковывается отдельно с Core, Project Runtime, REST SDK и Server Runtime в JavaScript,
+со своим README и CHANGELOG. Общие проверки метаданных и публикации находятся в `scripts/release`.
 [Добавление команды](development/EXTENDING.md) · [Релизный процесс](development/RELEASING.md).
