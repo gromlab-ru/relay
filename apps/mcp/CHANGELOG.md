@@ -1,5 +1,10 @@
 # История изменений Relay MCP
 
+## 0.1.1
+
+- Исправлен запуск публикации в GitHub Actions через `pnpm run`.
+- Первый автоматический выпуск Relay MCP через npm Trusted Publishing с provenance.
+
 ## 0.1.0
 
 - Самостоятельный npm-пакет `@gromlab/relay-mcp` со Streamable HTTP и одновременным доступом агентов.

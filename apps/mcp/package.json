@@ -1,6 +1,6 @@
 {
   "name": "@gromlab/relay-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Общий MCP-сервер задач для оркестратора и субагентов: один или несколько проектов, REST SDK и обновляемый реестр",
   "type": "module",
   "imports": {

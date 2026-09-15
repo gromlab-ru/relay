@@ -81,7 +81,12 @@ jobs:
           merge-multiple: true
           digest-mismatch: error
       - name: Опубликовать новую версию или подтвердить совпадение существующей
-        run: node scripts/release/relay.mjs publish "$RELAY_COMPONENT"
+        run: |
+          case "$RELAY_COMPONENT" in
+            cli) pnpm run release:publish ;;
+            server) pnpm run release:publish:server ;;
+            mcp) pnpm run release:publish:mcp ;;
+          esac
         env:
           RELEASE_TAG: ${{ github.ref_name }}
           RELAY_COMPONENT: ${{ needs.metadata.outputs.component }}
