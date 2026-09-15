@@ -87,7 +87,7 @@ export const CreateTask = (props: CreateTaskProps) => {
   const handleSubmit = async (values: TaskInput): Promise<void> => {
     setError(null);
     try {
-      const id = await createTask(values);
+      const id = await createTask(project.id, values);
       discardTaskDraft(key);
       await refresh();
       onCreated(id);

@@ -38,13 +38,29 @@ function decode<T>(schema: z.ZodType<T>, value: unknown): T {
   return result.data;
 }
 
-/** Единственный REST-адаптер CLI и MCP; все запросы выполняет существующий SDK. */
-export async function createHttpBackend(url: string): Promise<Backend> {
-  const api = createApiClient(
-    new HttpClient({ baseUrl: url, timeout: 15000, redirect: "error" }),
+function projectClient(url: string, project?: string) {
+  return createApiClient(
+    new HttpClient({
+      baseUrl: url,
+      timeout: 15000,
+      redirect: "error",
+      onRequest: (request) =>
+        project === undefined
+          ? request
+          : {
+              ...request,
+              path: request.path.replace(
+                /^\/api\/v1\//,
+                `/api/v1/projects/${encodeURIComponent(project)}/`,
+              ),
+            },
+    }),
     operationsTree,
   );
+}
 
+/** Единственный REST-адаптер CLI и MCP; после подключения проект закреплён по UUID. */
+export async function createHttpBackend(url: string, project?: string): Promise<Backend> {
   async function call<T>(
     operation: () => Promise<{ ok: true; data: T }>,
     mode: "read" | "write" = "read",
@@ -96,14 +112,15 @@ export async function createHttpBackend(url: string): Promise<Backend> {
     }
   }
 
-  const context = await call(() => api.context.getContext());
-  if (!context.capabilities?.includes("cli-http-v1"))
+  const context = await call(() => projectClient(url, project).context.getContext());
+  if (!context.capabilities?.includes("relay-projects-v1"))
     throw new AppError(
       "SERVER_INCOMPATIBLE",
-      "HTTP-режим CLI требует сервер @gromlab/tasks-cli версии 0.3.0 или новее. Обновите и перезапустите сервер.",
+      "Требуется Relay Server с поддержкой relay-projects-v1. Обновите и перезапустите сервер.",
       5,
       { url },
     );
+  const api = projectClient(url, decode(z.string().min(1), context.projectId));
   const workspace: WorkspaceInfo = {
     config: parse(configSchema, context.config, "конфигурация сервера"),
     configPath: context.configPath,

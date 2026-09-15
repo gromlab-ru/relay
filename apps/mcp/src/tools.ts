@@ -17,8 +17,7 @@ import { toLines, toText } from "@tasks/core/domain/markdown";
 import { taskListQuerySchema } from "@tasks/core/application/queries/project";
 import { overviewQuerySchema } from "@tasks/core/application/queries/overview";
 import { requestIdSchema } from "@tasks/core/application/record-request";
-import { entryTarget, projectEntrySchema, projectNameSchema } from "@tasks/project-runtime/config";
-import { registerProject, unregisterProject } from "@tasks/project-runtime/registry";
+import { projectEntrySchema, projectNameSchema } from "@tasks/project-runtime/config";
 import type { Backend } from "@tasks/project-runtime/backend/types";
 import type { Projects } from "./projects.js";
 import { checked, page, paging, response } from "./output.js";
@@ -64,7 +63,7 @@ export function createTools(projects: Projects): Server {
     {
       capabilities: { tools: {} },
       instructions:
-        "projects_list показывает режим и доступные проекты. В режиме registry передавайте project в каждом вызове; в режиме project опускайте его. Оркестратор назначает задачи и меняет статусы, субагент читает выданный ID и пишет отчёты. actor передаётся в каждой записи. Для повторяемых комментариев и отчётов используйте один requestId. Конфиг перечитывается без перезапуска.",
+        "projects_list показывает режим Relay Server и доступные проекты. В workspace передавайте project в каждом проектном вызове; в local проект можно опустить. Оркестратор назначает задачи и меняет статусы, субагент читает выданный ID и пишет отчёты. actor передаётся в каждой записи. Для повторяемых комментариев и отчётов используйте один requestId. Реестр читается с сервера без перезапуска MCP.",
     },
   );
   const tools = new Map<
@@ -153,18 +152,12 @@ export function createTools(projects: Projects): Server {
         "INVALID_ARGUMENT",
         "projects_list относится ко всему конфигу",
       );
-      const items: Record<string, unknown>[] =
-        source.kind === "project"
-          ? [{ project: null, configPath: source.path }]
-          : Object.entries(source.value.projects).map(([name, entry]) => ({
-              ...entry,
-              ...entryTarget(source.path, name, entry),
-            }));
+      const items = source.projects;
       const budget = input.maxBytes ?? 16384;
       return checked(
-        page(items, input, { tool: "projects_list", path: source.path }, budget, {
-          mode: source.kind,
-          configPath: source.path,
+        page(items, input, { tool: "projects_list", url: projects.url }, budget, {
+          mode: source.mode,
+          configPath: source.configPath,
         }),
         budget,
       );
@@ -182,13 +175,17 @@ export function createTools(projects: Projects): Server {
     async (input) => {
       const source = await projects.source();
       invariant(
-        source.kind === "registry",
+        source.mode === "workspace",
         "REGISTRY_REQUIRED",
         "Регистрация доступна при запуске с конфигом проектов",
       );
       const { project, replace, ...entry } = input;
-      const data = await registerProject(source.path, project, entry, replace);
-      await projects.source();
+      const data = (
+        await projects.api.projects.registerProject(
+          { project: encodeURIComponent(project) },
+          defined({ path: entry.path, config: entry.config, replace }),
+        )
+      ).data;
       return checked({ data }, 16384);
     },
   );
@@ -199,9 +196,10 @@ export function createTools(projects: Projects): Server {
     false,
     async ({ project }) => {
       const source = await projects.source();
-      invariant(source.kind === "registry", "REGISTRY_REQUIRED", "Требуется конфиг проектов");
-      const data = await unregisterProject(source.path, project);
-      await projects.source();
+      invariant(source.mode === "workspace", "WORKSPACE_REQUIRED", "Требуется workspace");
+      const data = (
+        await projects.api.projects.unregisterProject({ project: encodeURIComponent(project) })
+      ).data;
       return checked({ data }, 16384);
     },
   );

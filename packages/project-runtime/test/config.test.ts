@@ -12,23 +12,31 @@ test("поиск выбирает ближайший конфиг, реестр 
   t.after(() => rm(root, { recursive: true, force: true }));
   const project = join(root, "app");
   await mkdir(join(project, "src"), { recursive: true });
-  await writeFile(join(project, "tasks.config.json"), JSON.stringify(defaultConfig));
+  await mkdir(join(project, ".relay"));
+  await writeFile(join(project, ".relay/config.json"), JSON.stringify(defaultConfig));
   await initializeRegistry(root);
-  const registry = join(root, "tasks.orchestrator.json");
+  const registry = join(root, "relay.workspace.json");
   await registerProject(registry, "app", { path: "app" });
   assert.equal((await readConfiguration(join(project, "src"))).kind, "project");
   const source = await readConfiguration(join(project, "src"), undefined, true);
   assert.equal(source.path, registry);
   assert.equal(
     (await resolveProject(source, "app")).configPath,
-    join(project, "tasks.config.json"),
+    join(project, ".relay/config.json"),
   );
-  assert.deepEqual((await readdir(project)).sort(), ["src", "tasks.config.json"]);
-  await writeFile(join(root, "tasks.config.json"), JSON.stringify(defaultConfig));
+  assert.deepEqual((await readdir(project)).sort(), [".relay", "src"]);
+  await mkdir(join(root, ".relay"), { recursive: true });
+  await writeFile(join(root, ".relay/config.json"), JSON.stringify(defaultConfig));
   assert.equal((await readConfiguration(root)).kind, "registry");
-  assert.equal((await readConfiguration(root, "tasks.config.json")).kind, "project");
+  assert.equal((await readConfiguration(root, ".relay/config.json")).kind, "project");
   await assert.rejects(resolveProject(source), { code: "PROJECT_REQUIRED" });
   await assert.rejects(resolveProject(source, "missing"), { code: "PROJECT_NOT_FOUND" });
+  await mkdir(join(project, "src/.relay"));
+  await writeFile(
+    join(project, "src/.relay/config.json"),
+    JSON.stringify({ version: 1, mode: "workspace", projects: {} }),
+  );
+  await assert.rejects(readConfiguration(join(project, "src")), { code: "VALIDATION_ERROR" });
 });
 
 test("параллельные регистрации сохраняются, повторы идемпотентны, замена явная", async (t) => {
@@ -37,10 +45,10 @@ test("параллельные регистрации сохраняются, п
   const { configPath } = await initializeRegistry(root);
   await Promise.all(
     Array.from({ length: 12 }, (_, id) =>
-      registerProject(configPath, `p${id}`, { serverUrl: `http://127.0.0.1:${4000 + id}` }),
+      registerProject(configPath, `p${id}`, { path: `project-${id}` }),
     ),
   );
-  await registerProject(configPath, "p0", { serverUrl: "http://127.0.0.1:4000" });
+  await registerProject(configPath, "p0", { path: "project-0" });
   const before = await readFile(configPath, "utf8");
   await assert.rejects(registerProject(configPath, "p0", { path: "." }), {
     code: "PROJECT_EXISTS",

@@ -19,7 +19,7 @@ test("порядок доски сохраняется в карточках п�
     cards.map((task) => task.id),
     [3, 1, 2],
   );
-  assert.deepEqual((await readdir(join(app.root, ".tasks"))).sort(), [
+  assert.deepEqual((await readdir(join(app.root, ".relay/tasks"))).sort(), [
     "1.json",
     "2.json",
     "3.json",
@@ -31,7 +31,7 @@ test("перемещение проверяет revision и блокеры до 
   await app.create("Зависимость");
   await app.create("Зависимая задача", { dependsOn: [1] });
   const service = new TaskService(await openWorkspace(app.root));
-  const path = join(app.root, ".tasks", "2.json");
+  const path = join(app.root, ".relay/tasks", "2.json");
   const before = await readFile(path, "utf8");
   await assert.rejects(moveTask(service, 2, "done", null, { actor: "human", ifRevision: 1 }), {
     code: "TASK_BLOCKED",

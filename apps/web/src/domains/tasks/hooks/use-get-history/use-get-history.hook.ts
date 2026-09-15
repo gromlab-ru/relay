@@ -36,8 +36,8 @@ export const useGetHistory = (
   };
   const history = useSWRInfinite<HistoryPage, TaskError, typeof getKey>(
     getKey,
-    ([, , , taskId, section, actor, reportKind, cursor]) =>
-      getHistory(taskId, section, actor, reportKind, cursor),
+    ([, projectId, , taskId, section, actor, reportKind, cursor]) =>
+      getHistory(projectId, taskId, section, actor, reportKind, cursor),
     { revalidateFirstPage: true },
   );
   const sequence = connection.data?.sequence;

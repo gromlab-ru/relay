@@ -4,42 +4,81 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+import { addCommentForProject } from "./operations/add-comment-for-project.js";
 import { addComment } from "./operations/add-comment.js";
+import { addLogForProject } from "./operations/add-log-for-project.js";
 import { addLog } from "./operations/add-log.js";
+import { changeDependencyForProject } from "./operations/change-dependency-for-project.js";
 import { changeDependency } from "./operations/change-dependency.js";
+import { claimTaskForProject } from "./operations/claim-task-for-project.js";
 import { claimTask } from "./operations/claim-task.js";
+import { createTaskForProject } from "./operations/create-task-for-project.js";
 import { createTask } from "./operations/create-task.js";
+import { getBoardForProject } from "./operations/get-board-for-project.js";
 import { getBoard } from "./operations/get-board.js";
+import { getCommentForProject } from "./operations/get-comment-for-project.js";
 import { getComment } from "./operations/get-comment.js";
+import { getContextForProject } from "./operations/get-context-for-project.js";
 import { getContext } from "./operations/get-context.js";
+import { getGroupsForProject } from "./operations/get-groups-for-project.js";
 import { getGroups } from "./operations/get-groups.js";
 import { getHealth } from "./operations/get-health.js";
+import { getLogForProject } from "./operations/get-log-for-project.js";
 import { getLog } from "./operations/get-log.js";
+import { getOverviewForProject } from "./operations/get-overview-for-project.js";
 import { getOverview } from "./operations/get-overview.js";
+import { getProjects } from "./operations/get-projects.js";
+import { getServerContext } from "./operations/get-server-context.js";
+import { getTaskDocumentForProject } from "./operations/get-task-document-for-project.js";
 import { getTaskDocument } from "./operations/get-task-document.js";
+import { getTaskForProject } from "./operations/get-task-for-project.js";
+import { getTaskLinksForProject } from "./operations/get-task-links-for-project.js";
 import { getTaskLinks } from "./operations/get-task-links.js";
+import { getTaskListForProject } from "./operations/get-task-list-for-project.js";
 import { getTaskList } from "./operations/get-task-list.js";
+import { getTaskMarkdownForProject } from "./operations/get-task-markdown-for-project.js";
 import { getTaskMarkdown } from "./operations/get-task-markdown.js";
+import { getTaskTreeForProject } from "./operations/get-task-tree-for-project.js";
 import { getTaskTree } from "./operations/get-task-tree.js";
 import { getTask } from "./operations/get-task.js";
+import { listCommentsForProject } from "./operations/list-comments-for-project.js";
 import { listComments } from "./operations/list-comments.js";
+import { listLogsForProject } from "./operations/list-logs-for-project.js";
 import { listLogs } from "./operations/list-logs.js";
+import { listTasksForProject } from "./operations/list-tasks-for-project.js";
 import { listTasks } from "./operations/list-tasks.js";
+import { moveTaskForProject } from "./operations/move-task-for-project.js";
 import { moveTask } from "./operations/move-task.js";
+import { registerProject } from "./operations/register-project.js";
+import { releaseTaskForProject } from "./operations/release-task-for-project.js";
 import { releaseTask } from "./operations/release-task.js";
+import { unregisterProject } from "./operations/unregister-project.js";
+import { updateTaskForProject } from "./operations/update-task-for-project.js";
 import { updateTask } from "./operations/update-task.js";
+import { validateProjectForProject } from "./operations/validate-project-for-project.js";
 import { validateProject } from "./operations/validate-project.js";
+import { watchEventsForProject } from "./operations/watch-events-for-project.js";
 import { watchEvents } from "./operations/watch-events.js";
 
 export const operationsTree = {
   health: {
     getHealth: getHealth,
   },
+  server: {
+    getServerContext: getServerContext,
+  },
+  projects: {
+    getProjects: getProjects,
+    registerProject: registerProject,
+    unregisterProject: unregisterProject,
+  },
   context: {
     getContext: getContext,
+    getContextForProject: getContextForProject,
   },
   board: {
     getBoard: getBoard,
+    getBoardForProject: getBoardForProject,
   },
   tasks: {
     listTasks: listTasks,
@@ -49,6 +88,13 @@ export const operationsTree = {
     moveTask: moveTask,
     claimTask: claimTask,
     releaseTask: releaseTask,
+    listTasksForProject: listTasksForProject,
+    createTaskForProject: createTaskForProject,
+    getTaskForProject: getTaskForProject,
+    updateTaskForProject: updateTaskForProject,
+    moveTaskForProject: moveTaskForProject,
+    claimTaskForProject: claimTaskForProject,
+    releaseTaskForProject: releaseTaskForProject,
   },
   project: {
     getTaskList: getTaskList,
@@ -60,19 +106,35 @@ export const operationsTree = {
     getOverview: getOverview,
     validateProject: validateProject,
     changeDependency: changeDependency,
+    getTaskListForProject: getTaskListForProject,
+    getTaskDocumentForProject: getTaskDocumentForProject,
+    getTaskMarkdownForProject: getTaskMarkdownForProject,
+    getTaskLinksForProject: getTaskLinksForProject,
+    getTaskTreeForProject: getTaskTreeForProject,
+    getGroupsForProject: getGroupsForProject,
+    getOverviewForProject: getOverviewForProject,
+    validateProjectForProject: validateProjectForProject,
+    changeDependencyForProject: changeDependencyForProject,
   },
   comments: {
     listComments: listComments,
     addComment: addComment,
     getComment: getComment,
+    listCommentsForProject: listCommentsForProject,
+    addCommentForProject: addCommentForProject,
+    getCommentForProject: getCommentForProject,
   },
   logs: {
     listLogs: listLogs,
     addLog: addLog,
     getLog: getLog,
+    listLogsForProject: listLogsForProject,
+    addLogForProject: addLogForProject,
+    getLogForProject: getLogForProject,
   },
   events: {
     watchEvents: watchEvents,
+    watchEventsForProject: watchEventsForProject,
   },
 } as const;
 

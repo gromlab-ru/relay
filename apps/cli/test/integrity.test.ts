@@ -9,7 +9,7 @@ import { failed, fixture, successful } from "./helpers/cli.js";
 test("отсутствующие поля сохранённой задачи не подменяются значениями по умолчанию", async (t) => {
   const app = await fixture(t);
   const id = await app.create("Повреждённая карточка");
-  const path = join(app.root, ".tasks", `${id}.json`);
+  const path = join(app.root, ".relay/tasks", `${id}.json`);
   const task = JSON.parse(await readFile(path, "utf8"));
   delete task.dependsOn;
   await writeFile(path, JSON.stringify(task));

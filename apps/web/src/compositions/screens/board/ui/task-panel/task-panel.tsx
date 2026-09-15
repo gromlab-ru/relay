@@ -89,6 +89,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
     if (isEditing)
       notifications.show({
         message: "Черновик сохранён. Продолжите при следующем открытии задачи.",
+        closeButtonProps: { "aria-label": "Закрыть уведомление" },
         color: "indigo",
       });
     onClose();
@@ -99,10 +100,14 @@ export const TaskPanel = (props: TaskPanelProps) => {
    */
   const handleCopy = async (): Promise<void> => {
     try {
-      await copyText(`${window.location.origin}/tasks/${taskId}`);
+      await copyText(
+        `${window.location.origin}/projects/${encodeURIComponent(project.id)}/tasks/${taskId}`,
+      );
       notifications.show({ message: "Ссылка скопирована", color: "green" });
     } catch {
-      setActionError(`Ссылка на задачу: ${window.location.origin}/tasks/${taskId}`);
+      setActionError(
+        `Ссылка на задачу: ${window.location.origin}/projects/${encodeURIComponent(project.id)}/tasks/${taskId}`,
+      );
     }
   };
 
@@ -169,7 +174,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
             data={statuses}
             onChange={(status) => {
               if (status !== null && status !== task.status)
-                void handleAction(() => updateTask(task.id, { status }, task.revision));
+                void handleAction(() => updateTask(project.id, task.id, { status }, task.revision));
             }}
             disabled={isDisabled}
             allowDeselect={false}
@@ -182,7 +187,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
               variant="light"
               leftSection={<UserRoundCheck size={13} />}
               disabled={isDisabled}
-              onClick={() => void handleAction(() => claimTask(task.id, task.revision))}
+              onClick={() => void handleAction(() => claimTask(project.id, task.id, task.revision))}
             >
               Взять себе
             </Button>
@@ -208,7 +213,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
                     key={status.id}
                     onClick={() =>
                       void handleAction(() =>
-                        updateTask(task.id, { status: status.id }, task.revision),
+                        updateTask(project.id, task.id, { status: status.id }, task.revision),
                       )
                     }
                   >
@@ -243,7 +248,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
                       setReleaseConfirm(true);
                       return;
                     }
-                    void handleAction(() => releaseTask(task.id, task.revision));
+                    void handleAction(() => releaseTask(project.id, task.id, task.revision));
                   }}
                 >
                   Освободить задачу
@@ -254,7 +259,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
                   onClick={() => {
                     if (reopenStatus)
                       void handleAction(() =>
-                        updateTask(task.id, { status: reopenStatus.id }, task.revision),
+                        updateTask(project.id, task.id, { status: reopenStatus.id }, task.revision),
                       );
                   }}
                 >
@@ -267,7 +272,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
                   color="red"
                   onClick={() =>
                     void handleAction(() =>
-                      updateTask(task.id, { status: status.id }, task.revision),
+                      updateTask(project.id, task.id, { status: status.id }, task.revision),
                     )
                   }
                 >
@@ -378,7 +383,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
           <Button
             onClick={() => {
               setReleaseConfirm(false);
-              void handleAction(() => releaseTask(task.id, task.revision, true));
+              void handleAction(() => releaseTask(project.id, task.id, task.revision, true));
             }}
           >
             Освободить

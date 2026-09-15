@@ -19,15 +19,15 @@ export function registerTasks(program: Command, runtime: Runtime): void {
     description: "Создать задачу и получить её ID",
     arguments: { title: "Название в кавычках; альтернатива --title" },
     details:
-      "ID назначается автоматически: максимальный существующий ID + 1, первая задача — 1.\nДля записи нужен --actor или TASKS_ACTOR. Описание можно передать через --stdin.\n--parent задаёт иерархию; --depends-on — задачи, завершения которых нужно дождаться.",
+      "ID назначается автоматически: максимальный существующий ID + 1, первая задача — 1.\nДля записи нужен --actor или RELAY_ACTOR. Описание можно передать через --stdin.\n--parent задаёт иерархию; --depends-on — задачи, завершения которых нужно дождаться.",
     examples: [
-      ['tasks-cli create "Добавить API" --group backend --actor human', "Создать задачу в группе"],
+      ['relay-cli create "Добавить API" --group backend --actor human', "Создать задачу в группе"],
       [
-        'tasks-cli create --title "Форма регистрации" --parent 1 --depends-on 2 --actor frontend',
+        'relay-cli create --title "Форма регистрации" --parent 1 --depends-on 2 --actor frontend',
         "Создать подзадачу с зависимостью",
       ],
       [
-        "tasks-cli create \"Контракт\" --actor human --stdin <<'MD'\n## Требования\n\n- Описать POST /users.\nMD",
+        "relay-cli create \"Контракт\" --actor human --stdin <<'MD'\n## Требования\n\n- Описать POST /users.\nMD",
         "Передать многострочное описание",
       ],
     ],
@@ -42,7 +42,7 @@ export function registerTasks(program: Command, runtime: Runtime): void {
       invariant(
         fields.title !== undefined,
         "TITLE_REQUIRED",
-        'Укажите название: tasks-cli create "Название задачи" --actor <автор>',
+        'Укажите название: relay-cli create "Название задачи" --actor <автор>',
       );
       return changed(await context.tasks.create({ ...fields, title: fields.title }, actor));
     },
@@ -54,20 +54,20 @@ export function registerTasks(program: Command, runtime: Runtime): void {
     details:
       "По умолчанию показаны все незавершённые задачи: статусы с terminal: false, включая заблокированные.\n--all включает завершённые и отменённые; явный --status выбирает только указанный статус.\n--ready оставляет свободные задачи в разрешённых статусах с выполненными зависимостями.\nБез --limit количество задач ограничено только --max-bytes; большой список возвращает курсор продолжения.\n--all можно сочетать с --limit и --cursor. При продолжении повторяйте фильтры, включая --all.\nТекст разделён на группы, внутри каждой — порядок по ID. JSON возвращает плоский data.items по ID.",
     examples: [
-      ["tasks-cli list", "Текущая работа и очередь по группам"],
-      ["tasks-cli list --all", "Включить историю: выполненные и отменённые задачи"],
-      ["tasks-cli list --status done", "Показать выполненные задачи"],
-      ["tasks-cli list --group backend --ready", "Найти доступную работу в группе"],
+      ["relay-cli list", "Текущая работа и очередь по группам"],
+      ["relay-cli list --all", "Включить историю: выполненные и отменённые задачи"],
+      ["relay-cli list --status done", "Показать выполненные задачи"],
+      ["relay-cli list --group backend --ready", "Найти доступную работу в группе"],
       [
-        "tasks-cli list --status in_progress --assignee backend-agent",
+        "relay-cli list --status in_progress --assignee backend-agent",
         "Работа конкретного исполнителя",
       ],
       [
-        'tasks-cli list --search "контракт" --format json',
+        'relay-cli list --search "контракт" --format json',
         "Найти текст в названии, описании или результате",
       ],
       [
-        "tasks-cli list --limit 10 --cursor <курсор-из-ответа>",
+        "relay-cli list --limit 10 --cursor <курсор-из-ответа>",
         "Продолжить предыдущую страницу с теми же фильтрами",
       ],
     ],
@@ -118,10 +118,10 @@ export function registerTasks(program: Command, runtime: Runtime): void {
     details:
       "Обычная карточка содержит описание, результат, связи и счётчики записей.\n--full добавляет комментарии и отчёты целиком. --fields выбирает только нужные поля.\nЕсли ответ слишком велик, выберите поля или увеличьте --max-bytes.",
     examples: [
-      ["tasks-cli get 3", "Карточка задачи"],
-      ["tasks-cli get 3 --full --max-bytes 262144", "Прочитать весь контекст"],
+      ["relay-cli get 3", "Карточка задачи"],
+      ["relay-cli get 3 --full --max-bytes 262144", "Прочитать весь контекст"],
       [
-        "tasks-cli get 3 --fields id,status,summary,revision --format json",
+        "relay-cli get 3 --fields id,status,summary,revision --format json",
         "Компактный ответ для агента",
       ],
     ],
@@ -144,8 +144,8 @@ export function registerTasks(program: Command, runtime: Runtime): void {
       details:
         "Выводит только выбранный Markdown-текст с сохранением абзацев и отступов.\nВ JSON многострочный текст представлен массивом строк. Изменение выполняется командой update.",
       examples: [
-        [`tasks-cli ${field} 3`, "Прочитать текст"],
-        [`tasks-cli update 3 --${field} "Новый текст" --actor human`, "Изменить текст"],
+        [`relay-cli ${field} 3`, "Прочитать текст"],
+        [`relay-cli update 3 --${field} "Новый текст" --actor human`, "Изменить текст"],
       ],
       run: (context, input) => taskMarkdown(context.tasks, input.argument(), field),
     });
@@ -159,12 +159,12 @@ export function registerTasks(program: Command, runtime: Runtime): void {
       "Неуказанные поля сохраняются. Пустая строка очищает description, summary, tags и depends-on.\nДля группы и родителя используйте --clear-group / --clear-parent. Исполнитель снимается через release.\n--depends-on заменяет весь набор; для одной связи используйте deps add/remove.\n--if-revision защищает от изменения карточки после вашего чтения, включая новые комментарии и отчёты.",
     examples: [
       [
-        'tasks-cli update 3 --summary "API готов" --if-revision 4 --actor backend',
+        'relay-cli update 3 --summary "API готов" --if-revision 4 --actor backend',
         "Сохранить результат с проверкой версии",
       ],
-      ['tasks-cli update 3 --clear-group --tags "" --actor human', "Очистить группу и теги"],
+      ['relay-cli update 3 --clear-group --tags "" --actor human', "Очистить группу и теги"],
       [
-        "tasks-cli update 3 --description-file requirements.md --actor human",
+        "relay-cli update 3 --description-file requirements.md --actor human",
         "Заменить описание из файла",
       ],
     ],
@@ -187,7 +187,7 @@ export function registerTasks(program: Command, runtime: Runtime): void {
     arguments: taskArgument,
     details:
       "Показывает родителя, подзадачи, зависимости и задачи, которые зависят от этой.\nНезавершённые зависимости выделены в секцию «Ожидает завершения».",
-    examples: [["tasks-cli links 3", "Понять, что блокирует задачу и кого блокирует она"]],
+    examples: [["relay-cli links 3", "Понять, что блокирует задачу и кого блокирует она"]],
     run: (context, input) => taskLinks(context.tasks, input.argument()),
   });
 
@@ -198,8 +198,8 @@ export function registerTasks(program: Command, runtime: Runtime): void {
     details:
       "Корень имеет глубину 0. По умолчанию выводятся три уровня потомков.\nРодительство задаёт декомпозицию, а блокирующие связи задаются отдельно через deps.\nВ JSON дерево представлено плоским списком с полем depth.",
     examples: [
-      ["tasks-cli tree 1 --depth 2", "Посмотреть два уровня подзадач"],
-      ["tasks-cli tree 1 --depth 100 --format json", "Прочитать глубокую иерархию"],
+      ["relay-cli tree 1 --depth 2", "Посмотреть два уровня подзадач"],
+      ["relay-cli tree 1 --depth 100 --format json", "Прочитать глубокую иерархию"],
     ],
     configure: (command) =>
       command.option("--depth <depth>", "Глубина от 0 до 100; корень — 0", integer(0, 100), 3),

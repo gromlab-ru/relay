@@ -1,5 +1,18 @@
 # Журнал создания TSX
 
+## Режимы Relay
+
+Из `apps/web` выполнены команды:
+
+```bash
+pnpm run create ui-component project-scope src/domains/project/providers
+pnpm run create ui-unit relay src/compositions/screens
+```
+
+Созданы `src/domains/project/providers/project-scope/project-scope.tsx` и
+`src/compositions/screens/relay/relay.screen.tsx` (переименован после генерации).
+Провайдер принадлежит домену проекта, экран — выбору проекта и маршрутизации.
+
 Все команды выполнены из `apps/web` через закреплённый CLI:
 `npm run create -- ...` (`npx --yes @gromlab/create@0.2.0 --skip-update`).
 Общие формы находятся в `.templates`. После генерации типы, разметка, стили и

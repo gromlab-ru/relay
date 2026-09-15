@@ -5,35 +5,42 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "@tasks/server#build": {
+    "@gromlab/relay-server#build": {
       "dependsOn": ["^build", "@tasks/web#build"],
       "outputs": ["dist/**"]
     },
-    "@gromlab/tasks-cli#build": {
-      "dependsOn": ["^build", "@tasks/web#build"],
+    "@gromlab/relay-cli#build": {
+      "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
     "dev": {
       "cache": false,
       "persistent": true,
       "passThroughEnv": [
-        "TASKS_CONFIG",
-        "TASKS_ACTOR",
-        "TASKS_PORT",
-        "TASKS_API_URL",
-        "TASKS_WEB_PORT"
+        "RELAY_CONFIG",
+        "RELAY_ACTOR",
+        "RELAY_PORT",
+        "RELAY_API_URL",
+        "RELAY_WEB_PORT"
       ]
     },
-    "@gromlab/tasks-cli#dev": {
+    "@gromlab/relay-cli#dev": {
       "cache": false,
       "persistent": false,
-      "passThroughEnv": ["TASKS_ACTOR", "NO_COLOR", "FORCE_COLOR", "TERM"]
+      "passThroughEnv": [
+        "RELAY_CONFIG",
+        "RELAY_ACTOR",
+        "RELAY_SERVER_URL",
+        "NO_COLOR",
+        "FORCE_COLOR",
+        "TERM"
+      ]
     },
     "start": {
       "dependsOn": ["build", "@tasks/web#build"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["TASKS_CONFIG", "TASKS_ACTOR", "TASKS_PORT", "TASKS_WEB_PORT"]
+      "passThroughEnv": ["RELAY_CONFIG", "RELAY_ACTOR", "RELAY_PORT", "RELAY_WEB_PORT"]
     },
     "lint": {
       "dependsOn": ["^build"],
@@ -47,14 +54,14 @@
       "dependsOn": ["build"],
       "outputs": []
     },
-    "@gromlab/tasks-cli#test": {
+    "@gromlab/relay-cli#test": {
       "dependsOn": ["build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/docs/**",
-        "$TURBO_ROOT$/skills/tasks-cli/**",
+        "$TURBO_ROOT$/skills/relay-cli/**",
         "$TURBO_ROOT$/scripts/release/**"
       ],
       "outputs": []
@@ -72,18 +79,18 @@
       ],
       "outputs": []
     },
-    "@gromlab/tasks-mcp#test": {
+    "@gromlab/relay-mcp#test": {
       "dependsOn": ["build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/release/**"],
       "outputs": []
     },
-    "@gromlab/tasks-mcp#start": {
+    "@gromlab/relay-mcp#start": {
       "dependsOn": ["build"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["TASKS_CONFIG", "TASKS_MCP_PORT"]
+      "passThroughEnv": ["RELAY_CONFIG", "RELAY_MCP_PORT", "RELAY_SERVER_URL"]
     },
-    "@tasks/server#test": {
+    "@gromlab/relay-server#test": {
       "dependsOn": ["build"],
       "inputs": [
         "$TURBO_DEFAULT$",

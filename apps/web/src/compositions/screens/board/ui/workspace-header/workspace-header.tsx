@@ -32,7 +32,7 @@ export const WorkspaceHeader = (props: WorkspaceHeaderProps) => {
       <div className={styles.identity}>
         <span className={styles.brand}>
           <Layers3 size={19} strokeWidth={1.8} />
-          <span>tasks</span>
+          <span>Relay</span>
         </span>
         <span className={styles.separator}>/</span>
         <Menu position="bottom-start" width={280}>
@@ -43,7 +43,7 @@ export const WorkspaceHeader = (props: WorkspaceHeaderProps) => {
             </button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Label>Локальный проект</Menu.Label>
+            <Menu.Label>Текущий проект</Menu.Label>
             <Menu.Item disabled>{project?.configPath}</Menu.Item>
             <Menu.Label>Автор изменений: {actor}</Menu.Label>
             <Menu.Item

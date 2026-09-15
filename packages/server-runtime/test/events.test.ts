@@ -4,10 +4,17 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ServerEvent } from "@tasks/contracts";
 import { fixture } from "./helpers/server.js";
+import { initialize } from "@tasks/core/storage/workspace";
+import { initializeRegistry, registerProject } from "@tasks/project-runtime/registry";
+import { startServer } from "@tasks/server-runtime";
 
-async function connect(url: string) {
+async function connect(url: string, project?: string) {
   const controller = new AbortController();
-  const response = await fetch(`${url}/api/v1/events`, { signal: controller.signal });
+  const path =
+    project === undefined
+      ? "/api/v1/events"
+      : `/api/v1/projects/${encodeURIComponent(project)}/events`;
+  const response = await fetch(`${url}${path}`, { signal: controller.signal });
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type")!, /text\/event-stream/);
   const reader = response.body!.getReader();
@@ -103,6 +110,64 @@ test(
 );
 
 test(
+  "workspace изолирует SSE проектов и освобождает удалённую регистрацию",
+  { timeout: 15000 },
+  async (t) => {
+    const { root, tasks } = await fixture(t);
+    await tasks.create({ title: "Исходная А" }, "test");
+    await initialize(join(root, "b"), "tasks");
+    const registry = await initializeRegistry(root);
+    await registerProject(registry.configPath, "a", { path: "." });
+    await registerProject(registry.configPath, "b", { path: "b" });
+    const server = await startServer({ cwd: root, actor: "test", port: 0 });
+    const a = await connect(server.url, "a");
+    const b = await connect(server.url, "b");
+    try {
+      const first = await a.next();
+      const second = await b.next();
+      assert.equal(first.type, "connected");
+      assert.equal(second.type, "connected");
+      assert.notDeepEqual(first.data, second.data);
+      const createdA = await server.app.inject({
+        method: "POST",
+        url: "/api/v1/projects/a/tasks",
+        payload: { title: "Вторая А" },
+      });
+      assert.equal(createdA.statusCode, 201, createdA.body);
+      const eventA = await a.next(
+        (event) => event.type === "changed" && event.data.source === "api",
+      );
+      assert.equal(eventA.type, "changed");
+      if (eventA.type === "changed") assert.deepEqual(eventA.data.taskIds, [2]);
+      const createdB = await server.app.inject({
+        method: "POST",
+        url: "/api/v1/projects/b/tasks",
+        payload: { title: "Первая Б" },
+      });
+      assert.equal(createdB.statusCode, 201, createdB.body);
+      const eventB = await b.next(
+        (event) => event.type === "changed" && event.data.source === "api",
+      );
+      assert.equal(eventB.type, "changed");
+      if (eventB.type === "changed") assert.deepEqual(eventB.data.taskIds, [1]);
+      assert.equal(
+        (await server.app.inject({ method: "DELETE", url: "/api/v1/projects/b" })).statusCode,
+        200,
+      );
+      await b.end();
+      assert.equal((await server.app.inject("/api/v1/projects/b/tasks/1")).statusCode, 404);
+      assert.equal(
+        (await server.app.inject("/api/v1/projects/a/tasks/2")).json().data.task.title,
+        "Вторая А",
+      );
+    } finally {
+      await Promise.all([a.close(), b.close()]);
+      await server.close();
+    }
+  },
+);
+
+test(
   "SSE замечает замену конфига, сообщает ошибку и восстанавливается",
   { timeout: 15000 },
   async (t) => {
@@ -171,7 +236,7 @@ test(
       JSON.stringify({ ...workspace.config, storageDir: ".other-tasks" }),
     );
     const context = (await app.inject("/api/v1/context")).json().data;
-    assert.equal(context.storagePath, join(root, ".other-tasks"));
+    assert.equal(context.storagePath, join(root, ".relay/.other-tasks"));
     version = (await app.inject("/api/v1/board")).json().data.version;
     await stream.next((event) => event.type === "changed" && event.data.version === version);
     assert.equal((await app.inject("/api/v1/board")).json().data.total, 0);

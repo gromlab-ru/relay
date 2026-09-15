@@ -11,7 +11,7 @@ import { failed, fixture, invokeRaw, successful } from "./helpers/cli.js";
 
 test("list показывает всю незавершённую работу; all и явный status выбирают историю", async (t) => {
   const app = await fixture(t);
-  const configPath = join(app.root, "tasks.config.json");
+  const configPath = join(app.root, ".relay/config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as Config;
   config.statuses.waiting = { terminal: false, satisfiesDependencies: false };
   config.statuses.archived = { terminal: true, satisfiesDependencies: false };
@@ -66,7 +66,7 @@ test("list показывает всю незавершённую работу; 
 
 test("открытость определяется terminal, а не стандартным названием статуса", async (t) => {
   const app = await fixture(t);
-  const path = join(app.root, "tasks.config.json");
+  const path = join(app.root, ".relay/config.json");
   const config = JSON.parse(await readFile(path, "utf8")) as Config;
   config.statuses.done = { terminal: false, satisfiesDependencies: false };
   config.statuses.in_progress = { terminal: true, satisfiesDependencies: false };
@@ -91,7 +91,7 @@ test("у пустого рабочего списка есть подсказк�
   const open = await invokeRaw(app.root, ["list"]);
   assert.equal(open.code, 0, open.stdout);
   assert.match(open.stdout, /Открытых задач нет\./);
-  assert.match(open.stdout, /История: tasks-cli list --all/);
+  assert.match(open.stdout, /История: relay-cli list --all/);
   assert.doesNotMatch(open.stdout, /Группа:/);
   const filtered = await invokeRaw(app.root, ["list", "--status", "review"]);
   assert.equal(filtered.code, 0, filtered.stdout);
@@ -104,7 +104,7 @@ test("у пустого рабочего списка есть подсказк�
 
 test("лимит конфигурации относится к другим спискам; list ограничивается только явным limit и бюджетом", async (t) => {
   const app = await fixture(t);
-  const path = join(app.root, "tasks.config.json");
+  const path = join(app.root, ".relay/config.json");
   const config = JSON.parse(await readFile(path, "utf8")) as Config;
   config.output.defaultLimit = 1;
   await writeFile(path, JSON.stringify(config));

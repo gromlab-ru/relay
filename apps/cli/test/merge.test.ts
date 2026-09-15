@@ -16,12 +16,12 @@ test("чистое текстовое слияние разных карточе
   const right = join(app.root, "right");
   for (const copy of [left, right]) {
     await mkdir(copy);
-    await cp(join(app.root, ".tasks"), join(copy, ".tasks"), { recursive: true });
-    await cp(join(app.root, "tasks.config.json"), join(copy, "tasks.config.json"));
+    await cp(join(app.root, ".relay/tasks"), join(copy, ".relay/tasks"), { recursive: true });
+    await cp(join(app.root, ".relay/config.json"), join(copy, ".relay/config.json"));
   }
   successful(await invoke(left, ["deps", "add", first, second]));
   successful(await invoke(right, ["deps", "add", second, first]));
-  const path = (root: string, id: number) => join(root, ".tasks", `${id}.json`);
+  const path = (root: string, id: number) => join(root, ".relay/tasks", `${id}.json`);
   // merge-file проверяет реальный алгоритм Git без создания репозитория и коммитов.
   for (const id of [first, second]) {
     const merged = await execute("git", [

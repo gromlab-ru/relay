@@ -11,5 +11,7 @@ import { getTaskKey } from "./get-task-key";
  */
 export const useGetTask = (id: number | null): SWRResponse<TaskDetail, TaskError> => {
   const project = useGetProject();
-  return useSWR(getTaskKey(project.data?.id, id), ([, , , taskId]) => getTask(taskId));
+  return useSWR(getTaskKey(project.data?.id, id), ([, projectId, , taskId]) =>
+    getTask(projectId, taskId),
+  );
 };

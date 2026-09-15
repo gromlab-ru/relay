@@ -9,7 +9,7 @@ import { binary, fixture, successful } from "./helpers/cli.js";
 test("прерывание перед публикацией JSON оставляет предыдущую карточку целой", async (t) => {
   const app = await fixture(t);
   const id = await app.create("Исходная карточка");
-  const target = join(app.root, ".tasks", `${id}.json`);
+  const target = join(app.root, ".relay/tasks", `${id}.json`);
   const before = await readFile(target, "utf8");
   const moduleUrl = import.meta.resolve("@tasks/core/storage/files");
   // Останавливаем настоящий процесс после fsync временного файла, до rename.
@@ -27,7 +27,7 @@ test("прерывание перед публикацией JSON оставля
   `,
     ],
     {
-      env: { ...process.env, TARGET: target, STAGING: join(app.root, ".tasks-runtime") },
+      env: { ...process.env, TARGET: target, STAGING: join(app.root, ".relay/runtime") },
       stdio: "ignore",
     },
   );
@@ -83,7 +83,10 @@ test("устаревшая блокировка погибшего процес�
     });
   `,
     ],
-    { env: { ...process.env, STORAGE: join(app.root, ".tasks") }, stdio: ["pipe", "pipe", "pipe"] },
+    {
+      env: { ...process.env, STORAGE: join(app.root, ".relay/tasks") },
+      stdio: ["pipe", "pipe", "pipe"],
+    },
   );
   t.after(() => {
     child.kill("SIGKILL");
@@ -93,7 +96,7 @@ test("устаревшая блокировка погибшего процес�
   child.kill("SIGKILL");
   await exit;
   const stale = new Date(Date.now() - 30000);
-  await utimes(join(app.root, ".tasks-runtime", "write.lock"), stale, stale);
+  await utimes(join(app.root, ".relay/runtime", "write.lock"), stale, stale);
   await app.create("После восстановления");
   successful(await app.run(["validate"]));
 });

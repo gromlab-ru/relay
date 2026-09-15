@@ -13,8 +13,8 @@ test("API и Swagger работают без фронтенда", async (t) => {
   });
   const context = (await app.inject("/api/v1/context")).json();
   assert.equal(context.data.actor, "web-human");
-  assert.equal(context.data.storagePath, join(root, ".tasks"));
-  assert.equal(context.data.configPath, join(root, "tasks.config.json"));
+  assert.equal(context.data.storagePath, join(root, ".relay/tasks"));
+  assert.equal(context.data.configPath, join(root, ".relay/config.json"));
   assert.equal((await app.inject("/api/docs")).statusCode, 200);
   const document = (await app.inject("/api/openapi.json")).json();
   assert.equal(document.openapi, "3.1.0");

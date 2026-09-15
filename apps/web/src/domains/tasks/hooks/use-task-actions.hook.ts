@@ -1,5 +1,6 @@
 import { useSWRConfig } from "swr";
 import type { Key } from "swr";
+import { useProjectId } from "domains/project";
 
 /**
  * Находит обычные GET-проекции задач и контекста для повторной сверки.
@@ -15,5 +16,9 @@ export const useTaskActions = (): {
   /** Повторная сверка связанных GET-проекций. */ refresh: () => Promise<unknown>;
 } => {
   const { mutate } = useSWRConfig();
-  return { refresh: () => mutate(isTaskCacheKey) };
+  const projectId = useProjectId();
+  return {
+    refresh: () =>
+      mutate((key) => isTaskCacheKey(key) && Array.isArray(key) && key[1] === projectId),
+  };
 };

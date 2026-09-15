@@ -1,58 +1,28 @@
-# CLI workspace
+# Relay CLI
 
-Этот каталог владеет CLI и поставкой npm-продукта `@gromlab/tasks-cli`.
-Обзор продукта находится в [корневом README](../../README.md), пользовательские
-руководства — в [документации](../../docs/README.md).
-
-## Разработка
-
-Команды выполняются из корня монорепозитория после `pnpm install --frozen-lockfile`:
+`@gromlab/relay-cli` — терминальный клиент Relay. Команда: `relay-cli`.
+Требуется Node.js 22+.
 
 ```bash
-pnpm --silent run dev:cli --help
-pnpm --silent run dev:cli --config "$PWD/apps/playground/tasks.config.json" list --format json
-pnpm run build:cli
-pnpm run test:cli
-pnpm run docs:check
-pnpm run package:check
+npx @gromlab/relay-cli init
+npx @gromlab/relay-cli create "Первая задача" --actor human
+npx @gromlab/relay-cli list
 ```
 
-`dev:cli` сохраняет рабочий каталог и использует `tasks-source` через tsx.
-`--silent` сохраняет чистый JSON-вывод. Для проверок записи используйте временный
-проект с отдельным конфигом. Общий запуск API и web: `pnpm run dev`.
+`.relay/config.json` выбирает local: прямой Core либо HTTP по `server.url`.
+`relay.workspace.json` выбирает workspace: общий сервер и явный проект.
 
-## Ответственность
+```bash
+npx @gromlab/relay-cli a list
+npx @gromlab/relay-cli --project b get 1
+npx @gromlab/relay-cli --server-url http://127.0.0.1:3000 --project a get 1
+```
 
-- `src/commands` — определения Commander, аргументы и вызовы операций.
-- `src/backend`, `src/configuration` — выбор транспорта и проекта из параметров CLI.
-- `@tasks/project-runtime` — общий с MCP реестр и адаптеры Core/HTTP через SDK.
-- `src/queries`, `src/presentation` — выборки для терминала, оформление и байтовая пагинация.
-- `scripts/release` — самодостаточный пакет, проверка установки и публикация.
-- `scripts/release` в корне репозитория — общие правила метаданных и публикации CLI/MCP.
-- `scripts/lib/documentation.mjs` — ссылки документации и подготовка README для npm.
-- `test` — поведение CLI, конкурентность, транспорт и поставка.
+`--config` переопределяет `RELAY_CONFIG` и поиск вверх. `--server-url` переопределяет
+`RELAY_SERVER_URL` и конфиг. `--local` доступен для прямой работы с одним проектом.
+Автор мутации: `--actor` или `RELAY_ACTOR`.
 
-Бизнес-правила принадлежат Core. `server` лениво загружает Server Runtime.
-Turbo сначала собирает библиотеки и web; CLI копирует UI в `dist/web`.
-Версия продукта задаётся в этом workspace-манифесте. Публикуется проверенный архив
-из `package:check`, содержащий корневой README и документацию.
+Сервер с Web запускается отдельным пакетом `@gromlab/relay-server`.
 
-[Окружение и команды](../../docs/DEVELOPMENT.md) ·
-[Добавление команды](../../docs/development/EXTENDING.md) ·
-[Релизы](../../docs/development/RELEASING.md)
-
-## Работа агентов через общий сервер
-
-[Руководство по оркестрации на одном хосте](../../docs/guides/ORCHESTRATION.md).
-
-## Сквозной пример: регистрация пользователей
-
-[Жизненный цикл задач оркестратора и субагентов](../../docs/guides/WORKFLOW.md).
-
-## Обзор большого проекта
-
-[Команда overview и правила подсчёта](../../docs/reference/OVERVIEW.md).
-
-## Справка и документация
-
-[Справочник CLI](../../docs/reference/CLI.md) · [Все руководства](../../docs/README.md).
+Исходники: <https://github.com/gromlab-ru/relay>.
+Разработка: `pnpm run build:cli`, `pnpm run test:cli`, `pnpm run package:check` из корня.

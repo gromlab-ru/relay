@@ -11,6 +11,7 @@ import { EventsModule } from "./modules/events/events.module.js";
 import { WorkspaceModule } from "./modules/workspace/workspace.module.js";
 import type { WorkspaceOptions } from "./modules/workspace/workspace.module.js";
 import { ProjectModule } from "./modules/project/project.module.js";
+import { ServerModule } from "./modules/workspace/server.module.js";
 
 @Module({})
 export class AppModule {
@@ -28,6 +29,7 @@ export class AppModule {
       imports: [
         WorkspaceModule.register(workspace),
         HealthModule,
+        ServerModule,
         ContextModule,
         BoardModule,
         TasksModule,

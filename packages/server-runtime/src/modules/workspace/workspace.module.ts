@@ -1,60 +1,49 @@
-import { Global, Inject, Injectable, Module } from "@nestjs/common";
+import { Global, Inject, Injectable, Module, Scope } from "@nestjs/common";
 import type { DynamicModule } from "@nestjs/common";
-import { createHash } from "node:crypto";
-import { basename, dirname } from "node:path";
-import type { ContextResponse } from "@tasks/contracts";
-import { AppError } from "@tasks/core/shared/errors";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import { REQUEST } from "@nestjs/core";
+import type { FastifyRequest } from "fastify";
 import type { Workspace } from "@tasks/core/storage/workspace";
-import { actorSchema, parse } from "@tasks/core/domain/validation";
+import { ProjectCatalog } from "./catalog.js";
+import type { ProjectContext, WorkspaceOptions } from "./catalog.js";
+import { PROJECT_SELECTOR } from "./routing.js";
 
-export interface WorkspaceOptions {
-  cwd: string;
-  configPath: string;
-  actor: string;
-}
-const WORKSPACE_OPTIONS = Symbol("WORKSPACE_OPTIONS");
+export type { WorkspaceOptions } from "./catalog.js";
 
-@Injectable()
+/** Контекст запроса никогда не разделяется между параллельными клиентами. */
+@Injectable({ scope: Scope.REQUEST })
 export class WorkspaceService {
-  readonly projectId: string;
+  private project: Promise<ProjectContext> | undefined;
+  private selected: ProjectContext | undefined;
+  constructor(
+    @Inject(ProjectCatalog) private readonly catalog: ProjectCatalog,
+    @Inject(REQUEST) private readonly request: FastifyRequest,
+  ) {}
 
-  constructor(@Inject(WORKSPACE_OPTIONS) readonly options: WorkspaceOptions) {
-    this.projectId = createHash("sha256").update(options.configPath).digest("hex").slice(0, 24);
+  async resolve(): Promise<ProjectContext> {
+    const raw = this.request.raw as typeof this.request.raw & { [PROJECT_SELECTOR]?: string };
+    this.project ??= this.catalog.select(raw[PROJECT_SELECTOR]);
+    this.selected = await this.project;
+    return this.selected;
   }
 
-  /** Каждый запрос получает собственный неизменяемый контекст актуального конфига. */
-  async open(): Promise<Workspace> {
-    try {
-      return await openWorkspace(this.options.cwd, this.options.configPath);
-    } catch (error) {
-      if (error instanceof AppError && error.code === "VALIDATION_ERROR")
-        throw new AppError("INVALID_CONFIG", "Конфигурация проекта некорректна", 5, error.details);
-      throw error;
-    }
+  async open() {
+    return (await this.resolve()).open();
   }
 
-  actor(override?: string): string {
-    return parse(actorSchema, override ?? this.options.actor, "автор запроса");
+  context(workspace: Workspace) {
+    if (!this.selected) throw new Error("Контекст проекта ещё не разрешён");
+    return this.selected.context(workspace);
   }
 
   mutation(input: { actor?: string; ifRevision?: number }) {
     return {
-      actor: this.actor(input.actor),
+      actor: this.catalog.actor(input.actor),
       ...(input.ifRevision === undefined ? {} : { ifRevision: input.ifRevision }),
     };
   }
 
-  context(workspace: Workspace): ContextResponse {
-    return {
-      project: basename(dirname(workspace.configPath)),
-      capabilities: ["cli-http-v1", "record-request-v1"],
-      projectId: this.projectId,
-      configPath: workspace.configPath,
-      storagePath: workspace.root,
-      actor: this.options.actor,
-      config: workspace.config,
-    };
+  actor(override?: string) {
+    return this.catalog.actor(override);
   }
 }
 
@@ -64,8 +53,11 @@ export class WorkspaceModule {
   static register(options: WorkspaceOptions): DynamicModule {
     return {
       module: WorkspaceModule,
-      providers: [{ provide: WORKSPACE_OPTIONS, useValue: options }, WorkspaceService],
-      exports: [WorkspaceService],
+      providers: [
+        { provide: ProjectCatalog, useValue: new ProjectCatalog(options) },
+        WorkspaceService,
+      ],
+      exports: [ProjectCatalog, WorkspaceService],
     };
   }
 }

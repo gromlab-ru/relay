@@ -1,4 +1,5 @@
 import { Link, useLocation, useMatch } from "react-router-dom";
+import { useProjectId } from "domains/project";
 import { readBoardOrigin, readTaskId } from "../../helpers/board-location";
 import { readLinkTarget } from "../../helpers/read-link-target";
 import type { TaskLinkProps } from "./types/task-link-props.type";
@@ -13,10 +14,14 @@ import type { TaskLinkProps } from "./types/task-link-props.type";
 export const TaskLink = (props: TaskLinkProps) => {
   const { href, children, ...anchorAttrs } = props;
   const location = useLocation();
-  const isTaskOpen = useMatch("/tasks/:id") !== null;
+  const projectPath = `/projects/${encodeURIComponent(useProjectId())}`;
+  const isTaskOpen = useMatch("/projects/:project/tasks/:id") !== null;
   const destination = readLinkTarget(href, window.location.href);
-  const taskId = readTaskId(destination?.pathname.match(/^\/tasks\/(\d+)\/?$/)?.[1]);
-  const isBoardLink = destination?.pathname === "/";
+  const path = destination?.pathname.startsWith(`${projectPath}/`)
+    ? destination.pathname.slice(projectPath.length)
+    : destination?.pathname;
+  const taskId = readTaskId(path?.match(/^\/tasks\/(\d+)\/?$/)?.[1]);
+  const isBoardLink = path === "/";
   const isAppLink =
     destination?.origin === window.location.origin && (isBoardLink || taskId !== null);
   const isAnchor = href?.startsWith("#") ?? false;
@@ -29,11 +34,13 @@ export const TaskLink = (props: TaskLinkProps) => {
     );
   }
   const to = {
-    pathname: destination.pathname,
+    pathname: `${projectPath}${path}`,
     search: destination.search || location.search,
     hash: destination.hash,
   };
-  const state = { fromBoard: location.pathname === "/" || readBoardOrigin(location.state) };
+  const state = {
+    fromBoard: location.pathname === `${projectPath}/` || readBoardOrigin(location.state),
+  };
   return (
     <Link {...anchorAttrs} to={to} state={state} replace={isTaskOpen}>
       {children}

@@ -40,7 +40,7 @@ test("многострочные описания разрешены, а кор�
   const app = await fixture(t);
   failed(await app.run(["create", "--title", "Первая\nВторая"]), "VALIDATION_ERROR");
   const id = await app.create("Корректное название");
-  const file = join(app.root, ".tasks", `${id}.json`);
+  const file = join(app.root, ".relay/tasks", `${id}.json`);
   const before = await readFile(file, "utf8");
   for (const args of [
     ["update", id, "--title", "Нельзя\nТак"],

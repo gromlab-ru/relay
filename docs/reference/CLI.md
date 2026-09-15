@@ -2,13 +2,13 @@
 
 [Документация](../README.md) → Справочники → CLI
 
-Все команды запускаются как `npx @gromlab/tasks-cli <команда>`.
-С реестром проектов: `npx @gromlab/tasks-cli <проект> <команда>` или
-`npx @gromlab/tasks-cli --project <проект> <команда>`. Имя требуется и для реестра
+Все команды запускаются как `npx @gromlab/relay-cli <команда>`.
+В workspace: `npx @gromlab/relay-cli <проект> <команда>` или
+`npx @gromlab/relay-cli --project <проект> <команда>`. Имя требуется и для реестра
 с одной записью. `--config` принимает проектный конфиг либо реестр; правила поиска
 описаны в [конфигурации](CONFIGURATION.md).
 В синтаксисе `<id>` — числовой ID из ответа, квадратные скобки обозначают
-необязательную часть. Чтение не требует автора; запись требует `--actor` или `TASKS_ACTOR`.
+необязательную часть. Чтение не требует автора; запись требует `--actor` или `RELAY_ACTOR`.
 Примеры используют оркестратора для постановки и приёмки, субагента — для выполнения.
 
 Основной процесс использует явное назначение оркестратором. Субагент читает выданный ID
@@ -34,11 +34,11 @@
 
 | Параметр              | Значение                                                         |
 | --------------------- | ---------------------------------------------------------------- |
-| `--config <path>`     | Явный конфиг; приоритет над `TASKS_CONFIG` и поиском вверх       |
+| `--config <path>`     | Явный конфиг; приоритет над `RELAY_CONFIG` и поиском вверх       |
 | `--project <name>`    | Имя проекта из реестра; альтернатива префиксу перед командой     |
 | `--server-url <url>`  | HTTP(S) origin без пути; приоритет над окружением и `server.url` |
 | `--local`             | Прямой Core с игнорированием HTTP-настроек                       |
-| `--actor <id>`        | Автор записи; приоритет над `TASKS_ACTOR`                        |
+| `--actor <id>`        | Автор записи; приоритет над `RELAY_ACTOR`                        |
 | `--format <format>`   | `text` или `json`; по умолчанию `output.format`                  |
 | `--color <mode>`      | `auto`, `always`, `never`; по умолчанию `auto`                   |
 | `--max-bytes <bytes>` | `1024–16777216`; по умолчанию `output.maxBytes`, обычно 16384    |
@@ -50,20 +50,20 @@
 `comment`, `log` показывают справку. Справка и версия всегда текстовые.
 
 ```bash
-npx @gromlab/tasks-cli --help
-npx @gromlab/tasks-cli create --help
-npx @gromlab/tasks-cli log add --help
+npx @gromlab/relay-cli --help
+npx @gromlab/relay-cli create --help
+npx @gromlab/relay-cli log add --help
 ```
 
 <a id="http-режим-и-local"></a>
 
 ### HTTP-режим и --local
 
-Выбор: `--local` → `--server-url` → `TASKS_SERVER_URL` → `server.url` → Core.
-В режиме реестра `TASKS_SERVER_URL` игнорируется, а `projects.<имя>.serverUrl`
-имеет приоритет над `server.url` проектного конфига.
-Рабочие команды используют оба транспорта. В HTTP настройки проекта определяет
-сервер; файлы ввода читает вызывающий агент. `server` всегда локален;
+В local: `--local` → `--server-url` → `RELAY_SERVER_URL` → `server.url` → Core.
+В workspace используется только общий сервер; `--local` возвращает
+`WORKSPACE_REQUIRES_SERVER`. URL берётся из флага, окружения или workspace-конфига.
+В HTTP настройки проекта определяет сервер; файлы ввода читает вызывающий агент.
+Сервер запускается отдельной командой `relay-server`;
 `init` и `migrate` при настроенном HTTP требуют явного локального режима.
 Подробности: [конфигурация](CONFIGURATION.md), [оркестрация](../guides/ORCHESTRATION.md).
 
@@ -71,41 +71,41 @@ npx @gromlab/tasks-cli log add --help
 
 ### projects init
 
-**Синтаксис:** `projects init`. Создаёт `tasks.orchestrator.json` с пустым реестром
-и `mcp.port: 3010`. `--config` или `TASKS_CONFIG` задаёт путь нового файла.
+**Синтаксис:** `projects init`. Создаёт `relay.workspace.json` с пустым реестром,
+`server.port: 3000` и `mcp.port: 3010`. `--config` или `RELAY_CONFIG` задаёт путь нового файла.
 Существующий файл не заменяется. Автор не требуется.
 
 ### projects list
 
-**Синтаксис:** `projects list`. Возвращает `data.items` с именами, путями и URL,
-а также `meta.configPath` реестра. Читает настройки без открытия всех баз.
+**Синтаксис:** `projects list`. Читает общий сервер и возвращает `data.mode`,
+`data.projects`, `data.defaultProject` и путь конфигурации.
 
 ### projects add
 
 **Синтаксис:** `projects add <name> [path] [--project-config <path>] [--server-url <url>] [--replace]`.
 `path` относительно реестра; `--project-config` относительно каталога проекта.
-Для remote-only достаточно `--server-url`. Повтор той же записи идемпотентен;
-замена требует `--replace`. Регистрация не создаёт базу; для новой базы вызовите
-`<проект> init`. Пример: `tasks-cli projects add backend ../backend`.
+`--server-url` задаёт адрес общего сервера workspace. Повтор той же записи идемпотентен;
+замена требует `--replace`. Сначала выполните `relay-cli init` в каталоге проекта.
+Пример регистрации: `relay-cli projects add backend ../backend`.
 
 ### projects remove
 
 **Синтаксис:** `projects remove <name>`. Удаляет регистрацию, сохраняя файлы и задачи.
-Возвращает `{ project, removed }`; повтор даёт `removed: false`.
+Возвращает актуальный контекст сервера, повторное удаление идемпотентно.
 Все команды `projects` выбирают реестр через `--config`, окружение или поиск вверх.
 
 ### init
 
 **Синтаксис:** `init [--storage <path>]`.
 
-Создаёт конфиг и каталог базы. `--storage` по умолчанию `.tasks`, путь разрешается
+Создаёт `.relay/config.json` и базу `.relay/tasks`. `--storage` по умолчанию `tasks`, путь разрешается
 относительно конфига. `--config` задаёт место нового конфига. Автор не требуется.
 Результат: `{ configPath, storageDir }`; существующий конфиг даёт `ALREADY_INITIALIZED`.
 При явном HTTP в аргументах/окружении используйте `--local`.
 
 ```bash
-npx @gromlab/tasks-cli init
-npx @gromlab/tasks-cli --local init --config /work/project/tasks.config.json --storage .tasks
+npx @gromlab/relay-cli init
+npx @gromlab/relay-cli --local init --config /work/project/.relay/config.json --storage tasks
 ```
 
 Примеры показывают разные способы инициализации. Далее: [create](#create), [первый проект](../GETTING_STARTED.md).
@@ -116,10 +116,10 @@ npx @gromlab/tasks-cli --local init --config /work/project/tasks.config.json --s
 
 Возвращает конфигурацию в `data` и пути в `meta.configPath`, `meta.storagePath`.
 В HTTP это конфигурация сервера. Ошибки: `CONFIG_NOT_FOUND`, ошибки схемы и IO.
-Изменения настроек выполняются в `tasks.config.json`.
+Изменения настроек выполняются в `.relay/config.json`.
 
 ```bash
-npx @gromlab/tasks-cli config get --format json
+npx @gromlab/relay-cli config get --format json
 ```
 
 См. [полную конфигурацию](CONFIGURATION.md).
@@ -135,7 +135,7 @@ npx @gromlab/tasks-cli config get --format json
 Ошибки: `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli group list --all
+npx @gromlab/relay-cli group list --all
 ```
 
 См. [list](#list) для задач группы.
@@ -149,7 +149,7 @@ npx @gromlab/tasks-cli group list --all
 Нарушения дают `VALIDATION_FAILED` или ошибку чтения; диагностика содержит детали.
 
 ```bash
-npx @gromlab/tasks-cli validate --format json
+npx @gromlab/relay-cli validate --format json
 ```
 
 См. [Git и слияние](../guides/GIT.md).
@@ -158,30 +158,30 @@ npx @gromlab/tasks-cli validate --format json
 
 **Синтаксис:** `migrate`. Нужен автор; при HTTP нужен `--local`.
 
-Переводит UUID-документы v1 в v2 и старую вложенную структуру в `.tasks/*.json`.
+Переводит UUID-документы v1 в v2 и старую вложенную структуру в выбранном каталоге задач.
 Возвращает `migrated`, `total`, при переносе — `backupPath`, `mappingPath`,
 а при изменении структуры — `flattened`. Повтор на актуальной базе не меняет данные.
 Прерванный перенос продолжается повтором команды. Ошибка состояния — `MIGRATION_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli --local migrate --actor orchestrator
+npx @gromlab/relay-cli --local migrate --actor orchestrator
 ```
 
 См. [порядок миграции и резервную копию](../guides/MIGRATION.md).
 
 ### server
 
-**Синтаксис:** `server [--port <number>] [--open]`. Нужен автор.
+Сервер поставляется отдельно: `relay-server [--port <number>] [--open]`.
 
 Запускает UI, REST, Swagger и SSE на `127.0.0.1`. `--port`: `0–65535`; приоритет
-над `TASKS_PORT`, `server.port`, затем `3000`. `0` выбирает свободный порт.
+над `RELAY_PORT`, `server.port`, затем `3000`. `0` выбирает свободный порт.
 `--open` открывает доску в браузере. Команда работает до `Ctrl+C`.
-В JSON первое сообщение содержит `{ url, actor, pid }`.
+С `--format json` первое сообщение содержит `{ url, pid }`.
 Автор сервера подписывает дополнения из UI; CLI-агенты передают собственных авторов.
 При занятом порте выберите другой порт и обновите URL клиентов.
 
 ```bash
-npx @gromlab/tasks-cli server --actor human --open
+npx @gromlab/relay-server --actor human --open
 ```
 
 См. [веб-доску](../guides/WEB.md), [оркестрацию](../guides/ORCHESTRATION.md), [API](API.md).
@@ -223,7 +223,7 @@ npx @gromlab/tasks-cli server --actor human --open
 Ошибки: `TITLE_REQUIRED`, `CONFLICTING_OPTIONS`, `VALIDATION_ERROR`, ошибки графа.
 
 ```bash
-npx @gromlab/tasks-cli create "API пользователей" --group backend --actor orchestrator
+npx @gromlab/relay-cli create "API пользователей" --group backend --actor orchestrator
 ```
 
 Далее: [get](#get), [claim](#claim), [сквозной сценарий](../guides/WORKFLOW.md).
@@ -252,8 +252,8 @@ npx @gromlab/tasks-cli create "API пользователей" --group backend -
 Ошибки: `UNKNOWN_STATUS`, `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli list --ready --group backend --format json
-npx @gromlab/tasks-cli list --all --limit 20
+npx @gromlab/relay-cli list --ready --group backend --format json
+npx @gromlab/relay-cli list --all --limit 20
 ```
 
 См. [пагинацию](OUTPUT.md#страницы) и [claim](#claim).
@@ -268,8 +268,8 @@ npx @gromlab/tasks-cli list --all --limit 20
 Ошибки: `TASK_NOT_FOUND`, `UNKNOWN_FIELD`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli get 1 --fields id,status,summary,revision --format json
-npx @gromlab/tasks-cli get 1 --full --max-bytes 262144
+npx @gromlab/relay-cli get 1 --fields id,status,summary,revision --format json
+npx @gromlab/relay-cli get 1 --full --max-bytes 262144
 ```
 
 См. [формат задачи](FORMAT.md), [description](#description), [summary](#summary).
@@ -284,7 +284,7 @@ npx @gromlab/tasks-cli get 1 --full --max-bytes 262144
 Ошибки: `EMPTY_UPDATE`, `REVISION_CONFLICT`, ошибки ввода, схемы и графа.
 
 ```bash
-npx @gromlab/tasks-cli update 1 --summary "Контракт готов" --actor backend-agent
+npx @gromlab/relay-cli update 1 --summary "Контракт готов" --actor backend-agent
 ```
 
 См. [конкурентность](../concepts/TASKS.md#ревизии-и-параллельные-изменения).
@@ -297,7 +297,7 @@ npx @gromlab/tasks-cli update 1 --summary "Контракт готов" --actor 
 Ошибки: `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli description 1
+npx @gromlab/relay-cli description 1
 ```
 
 Изменение: [update](#update) с `--description` или файловым источником.
@@ -310,7 +310,7 @@ npx @gromlab/tasks-cli description 1
 Ошибки: `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli summary 1
+npx @gromlab/relay-cli summary 1
 ```
 
 Изменение: [update](#update) с `--summary`; история: [log list](#log-list).
@@ -327,8 +327,8 @@ npx @gromlab/tasks-cli summary 1
 Ошибки: `INVALID_REVIEW_STATUS`, `UNKNOWN_STATUS`, `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli overview --format json
-npx @gromlab/tasks-cli overview 1 --limit 10
+npx @gromlab/relay-cli overview --format json
+npx @gromlab/relay-cli overview 1 --limit 10
 ```
 
 Полный контракт и расчёты — [обзор проекта](OVERVIEW.md).
@@ -346,7 +346,7 @@ npx @gromlab/tasks-cli overview 1 --limit 10
 зависимостей. Ошибки: `UNKNOWN_STATUS`, `TASK_BLOCKED`, `REVISION_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli status 1 done --actor orchestrator
+npx @gromlab/relay-cli status 1 done --actor orchestrator
 ```
 
 См. [семантику статусов](../concepts/TASKS.md#статусы).
@@ -360,7 +360,7 @@ npx @gromlab/tasks-cli status 1 done --actor orchestrator
 Ошибки: `TASK_NOT_FOUND`, `VALIDATION_ERROR`, `REVISION_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli assign 1 backend-agent --actor orchestrator
+npx @gromlab/relay-cli assign 1 backend-agent --actor orchestrator
 ```
 
 ### claim
@@ -372,7 +372,7 @@ npx @gromlab/tasks-cli assign 1 backend-agent --actor orchestrator
 Ошибки: `TASK_ASSIGNED`, `TASK_BLOCKED`, `TASK_NOT_READY`, `REVISION_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli claim 1 --status in_progress --actor backend-agent
+npx @gromlab/relay-cli claim 1 --status in_progress --actor backend-agent
 ```
 
 См. [list --ready](#list). В основном процессе используйте
@@ -386,7 +386,7 @@ npx @gromlab/tasks-cli claim 1 --status in_progress --actor backend-agent
 Ошибки: `ASSIGNEE_MISMATCH`, `REVISION_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli release 1 --force --actor orchestrator
+npx @gromlab/relay-cli release 1 --force --actor orchestrator
 ```
 
 См. [передачу работы](../guides/WORKFLOW.md#продолжение-и-передача-работы).
@@ -402,7 +402,7 @@ npx @gromlab/tasks-cli release 1 --force --actor orchestrator
 Ошибки: `TASK_NOT_FOUND`, `DEPENDENCY_CYCLE`, `TASK_BLOCKED`, `REVISION_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli deps add 3 2 --actor orchestrator
+npx @gromlab/relay-cli deps add 3 2 --actor orchestrator
 ```
 
 Здесь задача `3` ждёт задачу `2`. См. [links](#links).
@@ -415,7 +415,7 @@ npx @gromlab/tasks-cli deps add 3 2 --actor orchestrator
 Ошибки: `TASK_NOT_FOUND`, `REVISION_CONFLICT`, нарушения оставшегося графа.
 
 ```bash
-npx @gromlab/tasks-cli deps remove 3 2 --actor orchestrator
+npx @gromlab/relay-cli deps remove 3 2 --actor orchestrator
 ```
 
 ### links
@@ -426,7 +426,7 @@ npx @gromlab/tasks-cli deps remove 3 2 --actor orchestrator
 Ошибка: `TASK_NOT_FOUND`; для большого ответа возможен `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli links 3
+npx @gromlab/relay-cli links 3
 ```
 
 См. [разницу связей](../concepts/TASKS.md#связи-и-готовность).
@@ -440,7 +440,7 @@ JSON содержит плоский список с глубиной; при о
 Ошибки: `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli tree 1 --depth 2
+npx @gromlab/relay-cli tree 1 --depth 2
 ```
 
 См. [overview](#overview) для сводки дерева.
@@ -459,7 +459,7 @@ npx @gromlab/tasks-cli tree 1 --depth 2
 `INPUT_TOO_LARGE`, `TASK_NOT_FOUND`, `IDEMPOTENCY_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli comment add 1 --text "Добавьте проверку ошибок" --actor orchestrator
+npx @gromlab/relay-cli comment add 1 --text "Добавьте проверку ошибок" --actor orchestrator
 ```
 
 См. [повтор записи](../guides/ORCHESTRATION.md#повтор-отчёта).
@@ -474,7 +474,7 @@ npx @gromlab/tasks-cli comment add 1 --text "Добавьте проверку �
 Ошибки: `TASK_NOT_FOUND`, `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli comment list 1 --author orchestrator --limit 5
+npx @gromlab/relay-cli comment list 1 --author orchestrator --limit 5
 ```
 
 ### comment get
@@ -485,7 +485,7 @@ npx @gromlab/tasks-cli comment list 1 --author orchestrator --limit 5
 и должен принадлежать указанной задаче. Ошибки: `COMMENT_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli comment get 1 "<comment-id>"
+npx @gromlab/relay-cli comment get 1 "<comment-id>"
 ```
 
 ## Отчёты
@@ -509,7 +509,7 @@ npx @gromlab/tasks-cli comment get 1 "<comment-id>"
 Ошибки: ошибки ввода, `TASK_NOT_FOUND`, `IDEMPOTENCY_CONFLICT`.
 
 ```bash
-npx @gromlab/tasks-cli log add 1 --kind progress --session-id wave-1 \
+npx @gromlab/relay-cli log add 1 --kind progress --session-id wave-1 \
   --request-id backend-step-1 --text "Контракт готов" --actor backend-agent
 ```
 
@@ -531,7 +531,7 @@ npx @gromlab/tasks-cli log add 1 --kind progress --session-id wave-1 \
 Ошибки: `INVALID_DATE`, `INVALID_CURSOR`, `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli log list 1 --kind summary --limit 5
+npx @gromlab/relay-cli log list 1 --kind summary --limit 5
 ```
 
 ### log get
@@ -542,7 +542,7 @@ npx @gromlab/tasks-cli log list 1 --kind summary --limit 5
 списка или поиска. Ошибки: `LOG_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli log get 1 "<log-id>" --max-bytes 524288
+npx @gromlab/relay-cli log get 1 "<log-id>" --max-bytes 524288
 ```
 
 ### log search
@@ -555,7 +555,7 @@ npx @gromlab/tasks-cli log get 1 "<log-id>" --max-bytes 524288
 Ошибки: `INVALID_ARGUMENT`, `INVALID_DATE`, `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
 
 ```bash
-npx @gromlab/tasks-cli log search 1 --query "Контракт" --kind progress
+npx @gromlab/relay-cli log search 1 --query "Контракт" --kind progress
 ```
 
 Далее: [вывод](OUTPUT.md), [ошибки](ERRORS.md), [сценарии оркестрации](../guides/ORCHESTRATION.md).

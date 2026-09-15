@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { tasksApi } from "infra/tasks-api";
+import { getProjectApi } from "infra/tasks-api";
 
 const STATUS_SCHEMA = z.object({
   terminal: z.boolean(),
@@ -61,8 +61,8 @@ const STATUS_LABELS: Record<string, string> = {
 /**
  * Преобразует конфигурацию сервера в рабочую модель проекта.
  */
-export const getProject = async (): Promise<Project> => {
-  const response = await tasksApi.context.getContext();
+export const getProject = async (projectId: string): Promise<Project> => {
+  const response = await getProjectApi(projectId).context.getContext();
   const context = CONTEXT_SCHEMA.parse(response.data);
   return {
     id: context.projectId,

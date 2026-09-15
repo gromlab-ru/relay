@@ -4,6 +4,26 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface ServerContextResponse {
+  mode: ServerContextResponseModeEnum;
+  configPath: string;
+  defaultProject: string | null;
+  projects: {
+    key: string;
+    id: string;
+    name: string;
+    configPath: string;
+    available: boolean;
+    error?: string;
+  }[];
+}
+
+export interface RegisterProjectRequest {
+  path?: string;
+  config?: string;
+  replace?: boolean;
+}
+
 export interface TaskListQuery {
   status?: string;
   group?: string;
@@ -476,6 +496,13 @@ export interface ContextResponse {
   actor: string;
   config: {
     version: 1;
+    /** @default "local" */
+    mode: "local";
+    /**
+     * @format uuid
+     * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+     */
+    projectId?: string;
     /** @minLength 1 */
     storageDir: string;
     /** @minLength 1 */
@@ -1148,6 +1175,13 @@ export interface BoardResponse {
     actor: string;
     config: {
       version: 1;
+      /** @default "local" */
+      mode: "local";
+      /**
+       * @format uuid
+       * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+       */
+      projectId?: string;
       /** @minLength 1 */
       storageDir: string;
       /** @minLength 1 */
@@ -1392,6 +1426,8 @@ export interface ApiFailure {
   };
 }
 
+export type ServerContextResponseModeEnum = "local" | "workspace";
+
 export type TaskListQuerySortEnum = "id" | "board";
 
 export type TaskDocumentDataKindEnum =
@@ -1469,6 +1505,22 @@ export type LogsPageKindEnum =
   | "summary";
 
 export type GetHealthOkEnum = true;
+
+export type GetServerContextOkEnum = true;
+
+export type GetProjectsOkEnum = true;
+
+export type RegisterProjectOkEnum = true;
+
+export interface RegisterProjectParams {
+  project: string;
+}
+
+export type UnregisterProjectOkEnum = true;
+
+export interface UnregisterProjectParams {
+  project: string;
+}
 
 export type GetContextOkEnum = true;
 
@@ -1804,4 +1856,407 @@ export interface GetLogParams {
   id: number;
   /** @pattern ^log_[a-f0-9]{32}$ */
   logId: string;
+}
+
+export type GetContextForProjectOkEnum = true;
+
+export interface GetContextForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetBoardForProjectOkEnum = true;
+
+export interface GetBoardForProjectParams {
+  /** @maxLength 4096 */
+  search?: string;
+  /** @minLength 1 */
+  status?: string;
+  group?: string;
+  assignee?: string;
+  tag?: string;
+  ready?: boolean;
+  blocked?: boolean;
+  unassigned?: boolean;
+  ungrouped?: boolean;
+  /**
+   * @min 1
+   * @max 500
+   * @default 200
+   */
+  limit?: number;
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  cursor?: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ListTasksForProjectOkEnum = true;
+
+export interface ListTasksForProjectParams {
+  /** @maxLength 4096 */
+  search?: string;
+  /** @minLength 1 */
+  status?: string;
+  group?: string;
+  assignee?: string;
+  tag?: string;
+  ready?: boolean;
+  blocked?: boolean;
+  unassigned?: boolean;
+  ungrouped?: boolean;
+  /**
+   * @min 1
+   * @max 500
+   * @default 200
+   */
+  limit?: number;
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  cursor?: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type CreateTaskForProjectOkEnum = true;
+
+export interface CreateTaskForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskForProjectOkEnum = true;
+
+export interface GetTaskForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type UpdateTaskForProjectOkEnum = true;
+
+export interface UpdateTaskForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type MoveTaskForProjectOkEnum = true;
+
+export interface MoveTaskForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ClaimTaskForProjectOkEnum = true;
+
+export interface ClaimTaskForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ReleaseTaskForProjectOkEnum = true;
+
+export interface ReleaseTaskForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskListForProjectOkEnum = true;
+
+export interface GetTaskListForProjectParams {
+  status?: string;
+  group?: string;
+  assignee?: string;
+  parent?: string | number;
+  tag?: string;
+  /** @maxLength 4096 */
+  search?: string;
+  ready?: boolean;
+  all?: boolean;
+  sort?: SortEnum1;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type SortEnum1 = "id" | "board";
+
+export type GetTaskListForProjectParams1SortEnum = "id" | "board";
+
+export type GetTaskDocumentForProjectOkEnum = true;
+
+export interface GetTaskDocumentForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskMarkdownForProjectOkEnum = true;
+
+export interface GetTaskMarkdownForProjectParams {
+  field: FieldEnum1;
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type FieldEnum1 = "description" | "summary";
+
+export type GetTaskMarkdownForProjectParams1FieldEnum =
+  | "description"
+  | "summary";
+
+export type GetTaskLinksForProjectOkEnum = true;
+
+export interface GetTaskLinksForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskTreeForProjectOkEnum = true;
+
+export interface GetTaskTreeForProjectParams {
+  /**
+   * @min 0
+   * @max 100
+   * @default 3
+   */
+  depth?: number;
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetGroupsForProjectOkEnum = true;
+
+export interface GetGroupsForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetOverviewForProjectOkEnum = true;
+
+export interface GetOverviewForProjectParams {
+  /**
+   * @min 1
+   * @max 100
+   * @default 5
+   */
+  limit?: number;
+  /**
+   * @maxItems 100
+   * @minItems 1
+   */
+  reviewStatuses?: string[];
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  rootId?: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ValidateProjectForProjectOkEnum = true;
+
+export interface ValidateProjectForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ChangeDependencyForProjectOkEnum = true;
+
+export interface ChangeDependencyForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ListCommentsForProjectOkEnum = true;
+
+export interface ListCommentsForProjectParams {
+  author?: string;
+  /** @maxLength 4096 */
+  search?: string;
+  /**
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  cursor?: string;
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type AddCommentForProjectOkEnum = true;
+
+export interface AddCommentForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetCommentForProjectOkEnum = true;
+
+export interface GetCommentForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** @pattern ^cmt_[a-f0-9]{32}$ */
+  commentId: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type ListLogsForProjectOkEnum = true;
+
+export interface ListLogsForProjectParams {
+  author?: string;
+  /** @maxLength 4096 */
+  search?: string;
+  /**
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  cursor?: string;
+  kind?: KindEnum1;
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type KindEnum1 =
+  | "progress"
+  | "decision"
+  | "execution"
+  | "error"
+  | "summary";
+
+export type ListLogsForProjectParams1KindEnum =
+  | "progress"
+  | "decision"
+  | "execution"
+  | "error"
+  | "summary";
+
+export type AddLogForProjectOkEnum = true;
+
+export interface AddLogForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetLogForProjectOkEnum = true;
+
+export interface GetLogForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** @pattern ^log_[a-f0-9]{32}$ */
+  logId: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export interface WatchEventsForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
 }

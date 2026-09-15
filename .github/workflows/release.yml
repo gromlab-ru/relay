@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*", "mcp-v*"]
+    tags: ["cli-v*", "server-v*", "mcp-v*"]
 
 permissions:
   contents: read
@@ -17,6 +17,8 @@ jobs:
     name: Проверить релизный тег
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    outputs:
+      component: ${{ steps.component.outputs.name }}
     steps:
       - name: Получить исходники тега
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
@@ -32,7 +34,12 @@ jobs:
         with:
           run_install: false
       - name: Сверить тег и версию манифеста пакета
-        run: ${{ startsWith(github.ref_name, 'mcp-v') && 'pnpm run release:check:mcp' || 'pnpm run release:check' }}
+        id: component
+        shell: bash
+        run: |
+          component="${RELEASE_TAG%%-v*}"
+          node scripts/release/relay.mjs check "$component"
+          echo "name=$component" >> "$GITHUB_OUTPUT"
         env:
           RELEASE_TAG: ${{ github.ref_name }}
 
@@ -43,7 +50,7 @@ jobs:
 
   publish:
     name: Опубликовать проверенный архив в npm
-    needs: ci
+    needs: [metadata, ci]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -69,18 +76,19 @@ jobs:
       - name: Получить архив из проверок этого запуска
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # Версия 8.0.1
         with:
-          artifact-ids: ${{ startsWith(github.ref_name, 'mcp-v') && needs.ci.outputs.mcp_artifact_id || needs.ci.outputs.artifact_id }}
-          path: ${{ startsWith(github.ref_name, 'mcp-v') && 'apps/mcp/.artifacts/npm' || 'apps/cli/.artifacts/npm' }}
+          artifact-ids: ${{ needs.metadata.outputs.component == 'mcp' && needs.ci.outputs.mcp_artifact_id || needs.metadata.outputs.component == 'server' && needs.ci.outputs.server_artifact_id || needs.ci.outputs.artifact_id }}
+          path: apps/${{ needs.metadata.outputs.component }}/.artifacts/npm
           merge-multiple: true
           digest-mismatch: error
       - name: Опубликовать новую версию или подтвердить совпадение существующей
-        run: ${{ startsWith(github.ref_name, 'mcp-v') && 'pnpm run release:publish:mcp' || 'pnpm run release:publish' }}
+        run: node scripts/release/relay.mjs publish "$RELAY_COMPONENT"
         env:
           RELEASE_TAG: ${{ github.ref_name }}
+          RELAY_COMPONENT: ${{ needs.metadata.outputs.component }}
 
   github-release:
     name: Создать GitHub Release
-    needs: publish
+    needs: [metadata, publish]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -101,18 +109,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
+          RELAY_COMPONENT: ${{ needs.metadata.outputs.component }}
         run: |
-          if [[ "$RELEASE_TAG" == mcp-v* ]]; then
-            node scripts/release/mcp.mjs notes > "$RUNNER_TEMP/tasks-release-notes.md"
-          else
-            node apps/cli/scripts/release/release-notes.mjs > "$RUNNER_TEMP/tasks-release-notes.md"
-          fi
+          node scripts/release/relay.mjs notes "$RELAY_COMPONENT" > "$RUNNER_TEMP/relay-release-notes.md"
           if ! gh release view "$RELEASE_TAG" --json url; then
             flags=(--latest)
-            version="${RELEASE_TAG#mcp-}"
+            version="${RELEASE_TAG#*-v}"
             if [[ "$version" == *-* ]]; then
               flags=(--prerelease)
             fi
-            gh release create "$RELEASE_TAG" --verify-tag --title "Tasks $RELEASE_TAG" \
-              --notes-file "$RUNNER_TEMP/tasks-release-notes.md" "${flags[@]}"
+            gh release create "$RELEASE_TAG" --verify-tag --title "Relay $RELEASE_TAG" \
+              --notes-file "$RUNNER_TEMP/relay-release-notes.md" "${flags[@]}"
           fi

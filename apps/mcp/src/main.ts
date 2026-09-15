@@ -4,26 +4,40 @@ import manifest from "#manifest" with { type: "json" };
 import { startMcp } from "./server.js";
 import { asAppError } from "@tasks/core/shared/errors";
 
-const command = new Command("tasks-mcp")
+const command = new Command("relay-mcp")
   .description("Общий HTTP MCP-сервер задач для одного проекта или реестра проектов")
   .version(manifest.version)
+  .option("--server-url <url>", "Адрес Relay Server; приоритет над RELAY_SERVER_URL")
+  .option("--format <format>", "Формат сообщения запуска: text или json", "text")
   .option(
     "--config <path>",
-    "Проектный конфиг или реестр; по умолчанию TASKS_CONFIG или поиск вверх",
+    "Проектный конфиг или workspace; по умолчанию RELAY_CONFIG или поиск вверх",
   )
-  .option("--port <number>", "Порт MCP: TASKS_MCP_PORT, mcp.port или 3010; 0 выбирает свободный")
+  .option("--port <number>", "Порт MCP: RELAY_MCP_PORT, mcp.port или 3010; 0 выбирает свободный")
   .exitOverride();
 try {
   command.parse();
-  const options = command.opts<{ config?: string; port?: string }>();
-  const config = options.config ?? process.env.TASKS_CONFIG;
-  const port = options.port ?? process.env.TASKS_MCP_PORT;
+  const options = command.opts<{
+    config?: string;
+    port?: string;
+    serverUrl?: string;
+    format: string;
+  }>();
+  const config = options.config ?? process.env.RELAY_CONFIG;
+  const port = options.port ?? process.env.RELAY_MCP_PORT;
+  const serverUrl = options.serverUrl ?? process.env.RELAY_SERVER_URL;
   const server = await startMcp({
     cwd: process.cwd(),
     ...(config ? { config } : {}),
+    ...(serverUrl ? { serverUrl } : {}),
     ...(port === undefined ? {} : { port: /^\d+$/.test(port) ? Number(port) : NaN }),
   });
-  process.stderr.write(`Tasks MCP: ${server.url}\nКонфиг: ${server.configPath}\n`);
+  if (options.format === "json")
+    console.log(JSON.stringify({ ok: true, data: { url: server.url, pid: process.pid } }));
+  else
+    process.stderr.write(
+      `Relay MCP: ${server.url}\nRelay Server: ${serverUrl ?? "из конфигурации"}\n`,
+    );
   await new Promise<void>((resolve, reject) => {
     const stop = () => {
       process.removeListener("SIGINT", stop);

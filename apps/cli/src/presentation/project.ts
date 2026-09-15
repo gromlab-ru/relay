@@ -17,8 +17,8 @@ export function initializedText(
       options.width,
     ),
     "",
-    colors.dim('Следующий шаг: tasks-cli create "Первая задача" --actor human'),
-    colors.dim("Справка и примеры: tasks-cli create --help"),
+    colors.dim('Следующий шаг: relay-cli create "Первая задача" --actor human'),
+    colors.dim("Справка и примеры: relay-cli create --help"),
   ].join("\n");
 }
 
@@ -54,7 +54,7 @@ export function configText(
     section(
       "Сервер",
       wrap(
-        `Порт: ${config.server.port === 0 ? "0 (свободный)" : config.server.port}\nПриоритет: --port → TASKS_PORT → server.port${config.server.url ? `\nURL CLI в конфиге: ${safeText(config.server.url)}` : ""}`,
+        `Порт: ${config.server.port === 0 ? "0 (свободный)" : config.server.port}\nПриоритет: --port → RELAY_PORT → server.port${config.server.url ? `\nURL CLI в конфиге: ${safeText(config.server.url)}` : ""}`,
         options.width,
       ),
       options,

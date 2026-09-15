@@ -37,7 +37,7 @@ function legacy(n: number, number?: number): LegacyTask {
 }
 async function seed(root: string, tasks: LegacyTask[]) {
   for (const task of tasks)
-    await writeFile(join(root, ".tasks", `${task.id}.json`), JSON.stringify(task));
+    await writeFile(join(root, ".relay/tasks", `${task.id}.json`), JSON.stringify(task));
 }
 interface MigrationResult {
   migrated: number;
@@ -101,14 +101,14 @@ test("миграция сохраняет номера, разрешает ду�
   assert.deepEqual(migrated.logs[logId], { ...first.logs[logId], taskId: 4 });
   assert.equal(successful(await app.run<Task>(["get", 5])).data.parentId, 4);
   assert.deepEqual(successful(await app.run<Task>(["get", 6])).data.dependsOn, [4, 5]);
-  const files = (await readdir(join(app.root, ".tasks"))).sort();
+  const files = (await readdir(join(app.root, ".relay/tasks"))).sort();
   assert.deepEqual(files, ["4.json", "5.json", "6.json"]);
   const before = await Promise.all(
-    files.map((file) => readFile(join(app.root, ".tasks", file), "utf8")),
+    files.map((file) => readFile(join(app.root, ".relay/tasks", file), "utf8")),
   );
   assert.equal(successful(await app.run<MigrationResult>(["migrate"])).data.migrated, 0);
   assert.deepEqual(
-    await Promise.all(files.map((file) => readFile(join(app.root, ".tasks", file), "utf8"))),
+    await Promise.all(files.map((file) => readFile(join(app.root, ".relay/tasks", file), "utf8"))),
     before,
   );
   assert.equal(await app.create("После миграции"), 7);
@@ -132,11 +132,11 @@ test("ошибка старых связей обнаруживается до �
   const task = legacy(1);
   task.dependsOn = [oldId(9)];
   await seed(app.root, [task]);
-  const path = join(app.root, ".tasks", `${task.id}.json`);
+  const path = join(app.root, ".relay/tasks", `${task.id}.json`);
   const before = await readFile(path, "utf8");
   failed(await app.run(["migrate"]), "MISSING_REFERENCE", 4);
   assert.equal(await readFile(path, "utf8"), before);
-  assert.deepEqual(await readdir(join(app.root, ".tasks")), [`${task.id}.json`]);
+  assert.deepEqual(await readdir(join(app.root, ".relay/tasks")), [`${task.id}.json`]);
 });
 
 test("миграция восстанавливается после остановки на каждой границе публикации", async (t) => {
@@ -162,7 +162,7 @@ test("миграция восстанавливается после остан�
         fs.rename = async (from, to) => {
           await rename(from, to);
           if ((process.env.POINT === 'backup' && String(to).endsWith('/original')) ||
-              (process.env.POINT === 'publish' && String(to) === process.env.ROOT + '/.tasks'))
+              (process.env.POINT === 'publish' && String(to) === process.env.ROOT + '/.relay/tasks'))
             process.kill(process.pid, 'SIGKILL');
         };
         fs.link = async (from, to) => {
@@ -184,7 +184,7 @@ test("миграция восстанавливается после остан�
       const [, signal] = await once(child, "exit");
       assert.equal(signal, "SIGKILL");
       const stale = new Date(Date.now() - 30000);
-      await utimes(join(app.root, ".tasks-runtime", "write.lock"), stale, stale);
+      await utimes(join(app.root, ".relay/runtime", "write.lock"), stale, stale);
       failed(await app.run(["get", 1]), "MIGRATION_IN_PROGRESS", 4);
       const result = successful(await app.run<MigrationResult>(["migrate"])).data;
       assert.equal(result.migrated, 2);
@@ -202,7 +202,7 @@ test("миграция делает плоским старое хранилищ
   const app = await fixture(t);
   await app.create("Существующая задача");
   await app.run(["comment", "add", 1, "--text", "Контекст"]);
-  const root = join(app.root, ".tasks");
+  const root = join(app.root, ".relay/tasks");
   const before = await readFile(join(root, "1.json"), "utf8");
   await mkdir(join(root, "tasks"));
   await mkdir(join(root, ".runtime"));

@@ -18,8 +18,8 @@ export type TaskConnection = {
  */
 export const useTaskConnection = (): SWRSubscriptionResponse<TaskConnection, Error> => {
   const project = useGetProject();
-  const key = project.data ? ["tasks/events", project.data.id] : null;
-  return useSWRSubscription(key, (_key, { next }: SWRSubscriptionOptions<TaskConnection, Error>) =>
-    subscribeWorkspace((signal) => next(null, { ...signal })),
+  const key = project.data ? (["tasks/events", project.data.id] as const) : null;
+  return useSWRSubscription(key, (scope, { next }: SWRSubscriptionOptions<TaskConnection, Error>) =>
+    subscribeWorkspace(scope[1], (signal) => next(null, { ...signal })),
   );
 };

@@ -17,7 +17,7 @@ export const useGetBoard = (
   const project = useGetProject();
   return useSWR(
     getBoardKey(project.data?.id, filters, status, count),
-    ([, , , query, column, limit]) => getBoardSlice(query, column, limit),
+    ([, projectId, , query, column, limit]) => getBoardSlice(projectId, query, column, limit),
     { keepPreviousData: true },
   );
 };

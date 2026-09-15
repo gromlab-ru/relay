@@ -3,6 +3,7 @@ import type { CallHandler, ExecutionContext, NestInterceptor } from "@nestjs/com
 import type { FastifyRequest } from "fastify";
 import { tap } from "rxjs";
 import { EventsService } from "./events.service.js";
+import { PROJECT_SELECTOR } from "../workspace/routing.js";
 
 @Injectable()
 export class MutationEventsInterceptor implements NestInterceptor {
@@ -10,6 +11,8 @@ export class MutationEventsInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler) {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
+    const raw = request.raw as typeof request.raw & { [PROJECT_SELECTOR]?: string };
+    const project = raw[PROJECT_SELECTOR];
     if (!["POST", "PATCH"].includes(request.method)) return next.handle();
     return next.handle().pipe(
       tap((result: unknown) => {
@@ -24,7 +27,8 @@ export class MutationEventsInterceptor implements NestInterceptor {
         const data = result.data;
         if (!data || typeof data !== "object") return;
         const taskId = "taskId" in data ? data.taskId : "id" in data ? data.id : undefined;
-        if (typeof taskId === "number") this.events.apiChanged(taskId);
+        if (typeof taskId === "number")
+          void this.events.apiChanged(project, taskId).catch(() => {});
       }),
     );
   }

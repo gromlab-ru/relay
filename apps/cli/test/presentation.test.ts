@@ -201,7 +201,7 @@ test("рабочий список разделён на группы, включ
 
 test("цвета статусов из конфига применяются во всех представлениях и не меняют семантику", async (t) => {
   const app = await fixture(t);
-  const path = join(app.root, "tasks.config.json");
+  const path = join(app.root, ".relay/config.json");
   const config = JSON.parse(await readFile(path, "utf8"));
   config.statuses.review.color = "blue";
   config.statuses.todo.color = "none";

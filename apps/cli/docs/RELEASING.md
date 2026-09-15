@@ -1,11 +1,11 @@
-# Релизы @gromlab/tasks-cli
+# Релизы @gromlab/relay-cli
 
 Актуальный процесс находится в [руководстве по релизам](../../../docs/development/RELEASING.md).
 
 ## Релиз по тегу
 
-[Порядок выпуска](../../../docs/development/RELEASING.md#релиз-по-тегу).
+[Порядок выпуска](../../../docs/development/RELEASING.md#последующие-публикации-через-ci).
 
 ## Уже опубликованная версия и повторный запуск
 
-[Сверка integrity и повтор](../../../docs/development/RELEASING.md#уже-опубликованная-версия-и-повторный-запуск).
+[Сверка integrity и повтор](../../../docs/development/RELEASING.md#первая-публикация-локально).

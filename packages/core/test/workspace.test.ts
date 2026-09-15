@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -11,9 +11,10 @@ import { prepareRuntime } from "@tasks/core/storage/lock";
 async function fixture(t: TestContext) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), "tasks-workspace-")));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const configPath = join(directory, "tasks.config.json");
+  await mkdir(join(directory, ".relay"));
+  const configPath = join(directory, ".relay/config.json");
   await writeFile(configPath, JSON.stringify(defaultConfig));
-  return { directory, configPath, root: join(directory, ".tasks") };
+  return { directory, configPath, root: join(directory, ".relay/tasks") };
 }
 
 test("параллельное открытие новой базы не конфликтует при создании каталога", async (t) => {

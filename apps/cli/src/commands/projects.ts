@@ -1,10 +1,7 @@
 import type { Command } from "commander";
-import { entryTarget } from "@tasks/project-runtime/config";
-import {
-  initializeRegistry,
-  registerProject,
-  unregisterProject,
-} from "@tasks/project-runtime/registry";
+import { serverAddress } from "@tasks/project-runtime/config";
+import { initializeRegistry } from "@tasks/project-runtime/registry";
+import { createServerApi } from "@tasks/project-runtime/backend/server";
 import { invariant } from "@tasks/core/shared/errors";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { outputOptions } from "../context.js";
@@ -15,12 +12,12 @@ import { printResult } from "../output.js";
 export function registerProjects(program: Command, runtime: Runtime) {
   const group = commandGroup(program, {
     name: "projects",
-    description: "Реестр проектов оркестратора",
+    description: "Проекты Relay workspace",
     details:
-      "Пути разрешаются относительно tasks.orchestrator.json. Изменения доступны CLI и MCP сразу после записи.",
+      "Пути разрешаются относительно relay.workspace.json. Регистрациями управляет запущенный Relay Server.",
     examples: [
-      ["tasks-cli projects init", "Создать пустой реестр"],
-      ["tasks-cli projects add backend ../backend", "Зарегистрировать проект"],
+      ["relay-cli projects init", "Создать пустой workspace"],
+      ["relay-cli projects add backend ../backend", "Зарегистрировать инициализированный проект"],
     ],
   });
   for (const operation of ["init", "list", "add", "remove"] as const) {
@@ -38,10 +35,10 @@ export function registerProjects(program: Command, runtime: Runtime) {
         remove: "Удалить регистрацию проекта, сохранив его данные",
       }[operation],
       details:
-        "--config выбирает реестр. Для add --server-url задаёт REST API, --project-config — конфиг относительно path. --replace разрешает заменить существующее подключение.",
+        "--config выбирает workspace. --server-url задаёт общий Relay Server; --project-config — конфиг проекта относительно path. --replace разрешает заменить регистрацию.",
       examples: [
         [
-          `tasks-cli projects ${operation}${operation === "add" ? " backend ../backend" : operation === "remove" ? " backend" : ""}`,
+          `relay-cli projects ${operation}${operation === "add" ? " backend ../backend" : operation === "remove" ? " backend" : ""}`,
           "Управление реестром",
         ],
       ],
@@ -66,7 +63,7 @@ export function registerProjects(program: Command, runtime: Runtime) {
         printResult(
           runtime.stdout,
           {
-            data: await initializeRegistry(runtime.cwd, globals.config ?? runtime.env.TASKS_CONFIG),
+            data: await initializeRegistry(runtime.cwd, globals.config ?? runtime.env.RELAY_CONFIG),
           },
           runtime.output,
         );
@@ -74,28 +71,32 @@ export function registerProjects(program: Command, runtime: Runtime) {
       }
       const source = await cliConfiguration(runtime, globals, true);
       invariant(source.kind === "registry", "REGISTRY_REQUIRED", "Требуется конфиг проектов");
+      invariant(
+        !globals.local,
+        "WORKSPACE_REQUIRES_SERVER",
+        "Проекты workspace управляются через Relay Server",
+      );
+      const api = createServerApi(
+        globals.serverUrl ?? runtime.env.RELAY_SERVER_URL ?? serverAddress(source),
+      );
       let data: unknown;
-      if (operation === "list")
-        data = {
-          items: Object.entries(source.value.projects).map(([name, entry]) => ({
-            ...entry,
-            ...entryTarget(source.path, name, entry),
-          })),
-        };
+      if (operation === "list") data = (await api.projects.getProjects()).data;
       else if (operation === "remove")
-        data = await unregisterProject(source.path, command.args[0]!);
+        data = (
+          await api.projects.unregisterProject({ project: encodeURIComponent(command.args[0]!) })
+        ).data;
       else {
         const options = command.opts<{ projectConfig?: string; replace?: boolean }>();
-        data = await registerProject(
-          source.path,
-          command.args[0]!,
-          {
-            ...(command.args[1] === undefined ? {} : { path: command.args[1] }),
-            ...(options.projectConfig === undefined ? {} : { config: options.projectConfig }),
-            ...(globals.serverUrl === undefined ? {} : { serverUrl: globals.serverUrl }),
-          },
-          options.replace,
-        );
+        data = (
+          await api.projects.registerProject(
+            { project: encodeURIComponent(command.args[0]!) },
+            {
+              ...(command.args[1] === undefined ? {} : { path: command.args[1] }),
+              ...(options.projectConfig === undefined ? {} : { config: options.projectConfig }),
+              ...(options.replace === undefined ? {} : { replace: options.replace }),
+            },
+          )
+        ).data;
       }
       printResult(runtime.stdout, { data, meta: { configPath: source.path } }, runtime.output);
     });

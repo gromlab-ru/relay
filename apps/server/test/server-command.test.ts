@@ -3,17 +3,20 @@ import { once } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createServer as createTcpServer } from "node:net";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-import { binary, failed, fixture } from "./helpers/cli.js";
-import { checkServerSurface, startServerProcess } from "./helpers/server-process.mjs";
+import { fixture } from "../../cli/test/helpers/cli.js";
+import { checkServerSurface, startServerProcess } from "../../cli/test/helpers/server-process.mjs";
 import type { ApiSuccess, ContextResponse } from "@tasks/contracts";
 import { startServer } from "@tasks/server-runtime";
 import { defaultConfig } from "@tasks/core/domain/config";
 
+const binary = fileURLToPath(new URL("../dist/main.js", import.meta.url));
+
 test("server раздаёт React-статику, API и Swagger из чужого каталога с общими данными CLI", async (t) => {
   const app = await fixture(t);
   const server = await startServerProcess(
-    [binary, "server", "--actor", "web-human", "--port", "0", "--format", "json"],
+    [binary, "--actor", "web-human", "--port", "0", "--format", "json"],
     app.root,
   );
   t.after(() => server.close());
@@ -22,8 +25,8 @@ test("server раздаёт React-статику, API и Swagger из чужог
     await fetch(`${server.url}/api/v1/context`)
   ).json()) as ApiSuccess<ContextResponse>;
   assert.equal(context.data.actor, "web-human");
-  assert.equal(context.data.configPath, join(app.root, "tasks.config.json"));
-  assert.equal(context.data.storagePath, join(app.root, ".tasks"));
+  assert.equal(context.data.configPath, join(app.root, ".relay/config.json"));
+  assert.equal(context.data.storagePath, join(app.root, ".relay/tasks"));
   const created = await fetch(`${server.url}/api/v1/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -60,7 +63,7 @@ test("server раздаёт React-статику, API и Swagger из чужог
   await server.close();
 });
 
-test("порт сервера: --port → TASKS_PORT → server.port из выбранного конфига", async (t) => {
+test("порт сервера: --port → RELAY_PORT → server.port из выбранного конфига", async (t) => {
   const app = await fixture(t);
   const occupied = createTcpServer();
   t.after(() => new Promise<void>((resolve) => occupied.close(() => resolve())));
@@ -84,7 +87,6 @@ test("порт сервера: --port → TASKS_PORT → server.port из выб
       const server = await startServerProcess(
         [
           binary,
-          "server",
           "--actor",
           "port-check",
           "--config",
@@ -95,8 +97,8 @@ test("порт сервера: --port → TASKS_PORT → server.port из выб
         ],
         nested,
         {
-          TASKS_PORT: source === "config" ? undefined : source === "environment" ? "0" : "invalid",
-          TASKS_CONFIG: undefined,
+          RELAY_PORT: source === "config" ? undefined : source === "environment" ? "0" : "invalid",
+          RELAY_CONFIG: undefined,
         },
       );
       try {
@@ -112,17 +114,20 @@ test("порт сервера: --port → TASKS_PORT → server.port из выб
   }
 });
 
-test("ошибочный TASKS_PORT не заменяется портом из конфига", async (t) => {
+test("ошибочный RELAY_PORT не заменяется портом из конфига", async (t) => {
   const app = await fixture(t);
   await writeFile(
-    join(app.root, "tasks.config.json"),
+    join(app.root, ".relay/config.json"),
     JSON.stringify({ ...defaultConfig, server: { port: 0 } }),
   );
   for (const port of ["", "invalid", "-1", "65536", "3000.5"]) {
-    const result = await app.run(["server", "--actor", "port-check"], {
-      env: { TASKS_PORT: port, TASKS_CONFIG: undefined },
-    });
-    failed(result, "INVALID_ARGUMENT");
+    await assert.rejects(
+      startServerProcess([binary, "--actor", "port-check", "--format", "json"], app.root, {
+        RELAY_PORT: port,
+        RELAY_CONFIG: undefined,
+      }),
+      /VALIDATION_ERROR/,
+    );
   }
 });
 

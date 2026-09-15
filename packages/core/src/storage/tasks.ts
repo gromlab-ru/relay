@@ -69,7 +69,7 @@ export class TaskRepository {
         for (const filename of await jsonFiles(this.workspace.root)) assertModernFilename(filename);
         throw new AppError(
           "TASK_NOT_FOUND",
-          `Задача ${id} не найдена. Посмотрите tasks-cli list`,
+          `Задача ${id} не найдена. Посмотрите relay-cli list`,
           3,
         );
       }
@@ -107,7 +107,7 @@ export class TaskRepository {
 export function resolveTask(reference: TaskReference, tasks: ReadonlyMap<number, Task>): Task {
   const id = parseTaskId(reference);
   const task = tasks.get(id);
-  invariant(task, "TASK_NOT_FOUND", `Задача ${id} не найдена. Посмотрите tasks-cli list`, 3);
+  invariant(task, "TASK_NOT_FOUND", `Задача ${id} не найдена. Посмотрите relay-cli list`, 3);
   return task;
 }
 
@@ -115,7 +115,7 @@ function assertModernFilename(filename: string): void {
   invariant(
     !filename.startsWith("tsk_"),
     "MIGRATION_REQUIRED",
-    "Хранилище использует UUID. Выполните tasks-cli migrate --actor <автор> для перехода на числовые ID",
+    "Хранилище использует UUID. Выполните relay-cli migrate --actor <автор> для перехода на числовые ID",
     4,
   );
 }

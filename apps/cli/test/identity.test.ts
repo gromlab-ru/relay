@@ -19,7 +19,7 @@ test("единственный ID — число от 1 во всех ответ
   assert.equal("number" in task, false);
   assert.equal(task.parentId, 1);
   assert.deepEqual(task.dependsOn, [1]);
-  assert.deepEqual((await readdir(join(app.root, ".tasks"))).sort(), ["1.json", "2.json"]);
+  assert.deepEqual((await readdir(join(app.root, ".relay/tasks"))).sort(), ["1.json", "2.json"]);
   successful(await app.run(["status", "1", "done"]));
   successful(await app.run(["claim", "2", "--status", "in_progress"]));
   const claimed = successful(await app.run<Task>(["get", "#2"])).data;
@@ -45,12 +45,12 @@ test("конкурентное создание выдаёт последова�
 test("пропуски ID не заполняются: новая задача получает max + 1", async (t) => {
   const app = await fixture(t);
   for (const title of ["Первая", "Вторая", "Третья"]) await app.create(title);
-  await rm(join(app.root, ".tasks", "2.json"));
+  await rm(join(app.root, ".relay/tasks", "2.json"));
   assert.equal(await app.create("После пропуска"), 4);
-  const path = join(app.root, ".tasks", "4.json");
+  const path = join(app.root, ".relay/tasks", "4.json");
   const task = JSON.parse(await readFile(path, "utf8")) as Task;
   task.id = Number.MAX_SAFE_INTEGER;
-  await writeFile(join(app.root, ".tasks", `${task.id}.json`), JSON.stringify(task));
+  await writeFile(join(app.root, ".relay/tasks", `${task.id}.json`), JSON.stringify(task));
   await rm(path);
   failed(await app.run(["create", "За пределами ID"]), "ID_EXHAUSTED", 4);
 });

@@ -11,6 +11,9 @@ importers:
       agent-browser:
         specifier: 0.37.1
         version: 0.37.1
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       prettier:
         specifier: ^3.6.2
         version: 3.9.6
@@ -29,9 +32,6 @@ importers:
       '@tasks/project-runtime':
         specifier: workspace:*
         version: link:../../packages/project-runtime
-      '@tasks/server-runtime':
-        specifier: workspace:*
-        version: link:../../packages/server-runtime
       commander:
         specifier: ^14.0.0
         version: 14.0.3
@@ -51,6 +51,9 @@ importers:
       '@tasks/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@tasks/server-runtime':
+        specifier: workspace:*
+        version: link:../../packages/server-runtime
       '@tasks/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -90,9 +93,6 @@ importers:
       '@tasks/rest-sdk':
         specifier: workspace:*
         version: link:../../packages/rest-sdk
-      '@tasks/server-runtime':
-        specifier: workspace:*
-        version: link:../../packages/server-runtime
       commander:
         specifier: ^14.0.0
         version: 14.0.3
@@ -100,6 +100,9 @@ importers:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
+      '@tasks/server-runtime':
+        specifier: workspace:*
+        version: link:../../packages/server-runtime
       '@tasks/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -118,7 +121,7 @@ importers:
 
   apps/playground:
     devDependencies:
-      '@gromlab/tasks-cli':
+      '@gromlab/relay-cli':
         specifier: workspace:*
         version: link:../cli
       tsx:
@@ -127,13 +130,22 @@ importers:
 
   apps/server:
     dependencies:
-      '@tasks/server-runtime':
-        specifier: workspace:*
-        version: link:../../packages/server-runtime
-    devDependencies:
       '@tasks/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tasks/server-runtime':
+        specifier: workspace:*
+        version: link:../../packages/server-runtime
+      commander:
+        specifier: ^14.0.0
+        version: 14.0.3
+    devDependencies:
+      '@gromlab/relay-cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@tasks/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tasks/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -353,6 +365,9 @@ importers:
       '@tasks/core':
         specifier: workspace:*
         version: link:../core
+      '@tasks/project-runtime':
+        specifier: workspace:*
+        version: link:../project-runtime
       fastify:
         specifier: ^5.12.1
         version: 5.12.1

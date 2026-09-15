@@ -12,7 +12,7 @@ import { failed, fixture, invokeRaw, successful } from "./helpers/cli.js";
 
 test("справка каждой команды содержит объяснение, примеры и общие параметры без конфига", async (t) => {
   const app = await fixture(t);
-  await rm(join(app.root, "tasks.config.json"));
+  await rm(join(app.root, ".relay/config.json"));
   const program = createProgram(
     runtime(
       Readable.from([]),
@@ -38,7 +38,7 @@ test("справка каждой команды содержит объясне
     assert.equal(result.code, 0, result.stdout);
     assert.equal(result.stderr, "");
     assert.match(result.stdout, /Примеры:/, path.join(" "));
-    assert.match(result.stdout, /tasks-cli /, path.join(" "));
+    assert.match(result.stdout, /relay-cli /, path.join(" "));
     assert.match(result.stdout, /--actor/);
     assert.match(result.stdout, /--format/);
   }
@@ -54,7 +54,7 @@ test("ошибка синтаксиса указывает справку име
   const result = await app.run(["log", "get", 1]);
   failed(result, "INVALID_ARGUMENT");
   assert.ok(!result.body.ok);
-  assert.match(JSON.stringify(result.body.error.details), /tasks-cli log get --help/);
+  assert.match(JSON.stringify(result.body.error.details), /relay-cli log get --help/);
   const unknown = await app.run(["log", "ad"]);
   failed(unknown, "INVALID_ARGUMENT");
   assert.match(unknown.stdout, /add/);

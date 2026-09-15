@@ -126,7 +126,7 @@ test("циклы, отсутствующие ссылки и устаревша�
 
 test("конфиг задаёт семантику произвольных статусов и находится из подкаталога", async (t) => {
   const app = await fixture(t);
-  const configPath = join(app.root, "tasks.config.json");
+  const configPath = join(app.root, ".relay/config.json");
   const config = JSON.parse(await readFile(configPath, "utf8"));
   config.defaultStatus = "очередь";
   config.readyStatuses = ["очередь"];
@@ -154,7 +154,7 @@ test("конфиг задаёт семантику произвольных ст
 test("длинный ввод, автор и аргументы проверяются до изменения данных", async (t) => {
   const app = await fixture(t);
   failed(
-    await app.run(["create", "--title", "Без автора"], { env: { TASKS_ACTOR: "" } }),
+    await app.run(["create", "--title", "Без автора"], { env: { RELAY_ACTOR: "" } }),
     "ACTOR_REQUIRED",
   );
   failed(await app.run(["list", "--limit", "NaN"]), "INVALID_ARGUMENT");

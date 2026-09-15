@@ -46,10 +46,10 @@ export function registerLogs(program: Command, runtime: Runtime): void {
       "Типы: progress — ход работы, decision — решение, execution — выполнение,\nerror — ошибка, summary — итог. Отчёты хранятся в JSON задачи и увеличивают её revision.",
     examples: [
       [
-        'tasks-cli log add 3 --kind summary --text "API готов, тесты прошли" --actor backend',
+        'relay-cli log add 3 --kind summary --text "API готов, тесты прошли" --actor backend',
         "Зафиксировать итог",
       ],
-      ["tasks-cli log list 3 --kind summary", "Найти итоговые отчёты"],
+      ["relay-cli log list 3 --kind summary", "Найти итоговые отчёты"],
     ],
   });
   registerCommand<AddOptions>(logs, runtime, {
@@ -60,11 +60,11 @@ export function registerLogs(program: Command, runtime: Runtime): void {
       "Выберите один источник тела: --text, --stdin или --file. Лимит тела — 256 КиБ UTF-8.\n--title — однострочный заголовок, --summary — короткое содержание для log list.\n--session-id связывает записи одной сессии. Ввод читается до захвата блокировки.",
     examples: [
       [
-        'tasks-cli log add 3 --kind decision --title "Контракт ошибок" --text "Используем {code, message}" --actor backend',
+        'relay-cli log add 3 --kind decision --title "Контракт ошибок" --text "Используем {code, message}" --actor backend',
         "Сохранить принятое решение",
       ],
       [
-        "tasks-cli log add 3 --kind summary --title \"Результат\" --actor backend --stdin <<'MD'\n## Сделано\n\n- Реализован API.\n- Интеграционные тесты прошли.\nMD",
+        "relay-cli log add 3 --kind summary --title \"Результат\" --actor backend --stdin <<'MD'\n## Сделано\n\n- Реализован API.\n- Интеграционные тесты прошли.\nMD",
         "Записать многострочный отчёт",
       ],
     ],
@@ -108,8 +108,8 @@ export function registerLogs(program: Command, runtime: Runtime): void {
     details:
       "От новых записей к старым. Полное тело читается через log get.\nФильтры объединяются условием И. Даты: YYYY-MM-DD или ISO 8601 с часовым поясом.",
     examples: [
-      ["tasks-cli log list 3 --kind summary --limit 5", "Последние итоги работы"],
-      ["tasks-cli log list 3 --author backend --since 2026-09-01 --all", "Отчёты автора за период"],
+      ["relay-cli log list 3 --kind summary --limit 5", "Последние итоги работы"],
+      ["relay-cli log list 3 --author backend --since 2026-09-01 --all", "Отчёты автора за период"],
     ],
     configure: (command) => logFilterOptions(pageOptions(command)),
     async run(context, input) {
@@ -128,7 +128,7 @@ export function registerLogs(program: Command, runtime: Runtime): void {
     arguments: { ...taskArgument, "log-id": "Полный log_… из log list или log search" },
     details:
       "Возвращает отчёт целиком с заголовком, автором и телом Markdown.\nДля большого отчёта увеличьте --max-bytes; запись не обрезается.",
-    examples: [["tasks-cli log get 3 <log-id> --max-bytes 524288", "Прочитать большой отчёт"]],
+    examples: [["relay-cli log get 3 <log-id> --max-bytes 524288", "Прочитать большой отчёт"]],
     async run(context, input) {
       const log = await context.backend.logs.get(input.argument(), input.argument(1));
       return { data: log, text: (options) => logText(log, options) };
@@ -141,9 +141,9 @@ export function registerLogs(program: Command, runtime: Runtime): void {
     details:
       "Буквальный поиск в теле отчёта, с учётом регистра.\nРезультат содержит ID отчёта, номер первой подходящей строки, число совпавших строк и фрагмент.\nПолный отчёт читается через log get. Доступны те же фильтры и страницы, что у log list.",
     examples: [
-      ['tasks-cli log search 3 --query "тесты" --kind summary', "Найти итоги проверок"],
+      ['relay-cli log search 3 --query "тесты" --kind summary', "Найти итоги проверок"],
       [
-        'tasks-cli log search 3 --query "Ошибка" --all --format json',
+        'relay-cli log search 3 --query "Ошибка" --all --format json',
         "Получить все совпавшие отчёты",
       ],
     ],

@@ -1,13 +1,34 @@
 {
-  "name": "@tasks/server",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@gromlab/relay-server",
+  "version": "0.1.0",
+  "description": "Relay Server: локальный проект или workspace, REST API и веб-интерфейс",
+  "bin": {
+    "relay-server": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gromlab-ru/relay.git",
+    "directory": "apps/server"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "type": "module",
   "imports": {
     "#manifest": "./package.json"
   },
   "scripts": {
-    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "build": "pnpm run clean && tsc -p tsconfig.json && node scripts/assets.mjs",
+    "package:check": "node ../../scripts/package.mjs server",
+    "prepack": "node -e \"throw new Error('Публикуйте проверенный архив из pnpm run package:check:server')\"",
     "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
     "dev": "concurrently --kill-others \"tsc -p tsconfig.dev.json --watch --preserveWatchOutput\" \"tsx --tsconfig tsconfig.dev.json --watch --watch-preserve-output --conditions=tasks-source src/main.ts\"",
     "start": "node dist/main.js",
@@ -15,10 +36,13 @@
     "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@tasks/server-runtime": "workspace:*"
+    "@tasks/server-runtime": "workspace:*",
+    "@tasks/core": "workspace:*",
+    "commander": "^14.0.0"
   },
   "devDependencies": {
-    "@tasks/core": "workspace:*",
+    "@gromlab/relay-cli": "workspace:*",
+    "@tasks/contracts": "workspace:*",
     "@tasks/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "concurrently": "^10.0.5",

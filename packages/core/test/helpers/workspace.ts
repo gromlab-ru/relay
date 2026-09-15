@@ -9,7 +9,7 @@ import type { TaskFields } from "@tasks/core/domain/task";
 export async function fixture(t: TestContext) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "tasks-core-")));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const workspace = await initialize(root, ".tasks");
+  const workspace = await initialize(root, "tasks");
   const tasks = new TaskService(workspace);
   return {
     root,

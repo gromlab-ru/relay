@@ -47,9 +47,9 @@ async function setup(t: TestContext) {
   };
   const agent = async (url: string, name = "agent") => {
     const directory = join(base, name);
-    await mkdir(directory);
+    await mkdir(join(directory, ".relay"), { recursive: true });
     await writeFile(
-      join(directory, "tasks.config.json"),
+      join(directory, ".relay/config.json"),
       JSON.stringify({ ...workspace.config, server: { port: 3000, url } }),
     );
     return directory;
@@ -109,7 +109,7 @@ test("HTTP и local сохраняют JSON, текст, фильтры, кур�
   ];
   for (const command of commands) {
     const local = successful(await invoke(app.root, ["--local", ...command]));
-    const remote = successful(await invoke(agent, command, { env: { TASKS_ACTOR: "" } }));
+    const remote = successful(await invoke(agent, command, { env: { RELAY_ACTOR: "" } }));
     assert.deepEqual(remote, local, command.join(" "));
   }
   for (const command of [["list"], ["get", "1", "--full"], ["tree", "1"], ["overview"]]) {
@@ -139,7 +139,7 @@ test("HTTP и local сохраняют JSON, текст, фильтры, кур�
     assert.notEqual(local.code, 0);
     assert.deepEqual(remote, local, command.join(" "));
   }
-  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+  assert.deepEqual(await readdir(join(agent, ".relay")), ["config.json"]);
 });
 
 test("конфиг сам выбирает API; оркестратор назначает задачу, субагент пишет контекст без переменных URL", async (t) => {
@@ -149,11 +149,11 @@ test("конфиг сам выбирает API; оркестратор назн�
     ...app.workspace.config,
     server: { port: Number(new URL(server.url).port), url: server.url },
   };
-  await writeFile(join(app.root, "tasks.config.json"), JSON.stringify(config));
+  await writeFile(join(app.root, ".relay/config.json"), JSON.stringify(config));
   const agent = await app.agent(server.url);
-  await writeFile(join(agent, "tasks.config.json"), JSON.stringify(config));
+  await writeFile(join(agent, ".relay/config.json"), JSON.stringify(config));
   const options = {
-    env: { TASKS_SERVER_URL: undefined, TASKS_CONFIG: undefined, TASKS_ACTOR: undefined },
+    env: { RELAY_SERVER_URL: undefined, RELAY_CONFIG: undefined, RELAY_ACTOR: undefined },
   };
   successful(await invoke(app.root, ["create", "Поручение", "--actor", "orchestrator"], options));
   successful(
@@ -210,15 +210,15 @@ test("конфиг сам выбирает API; оркестратор назн�
   assert.deepEqual(beforeReview.summary, ["Результат для оркестратора"]);
   successful(await invoke(app.root, ["status", 1, "review", "--actor", "orchestrator"], options));
   assert.equal((await app.tasks.repository.resolve(1)).updatedBy, "orchestrator");
-  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+  assert.deepEqual(await readdir(join(agent, ".relay")), ["config.json"]);
 
   await server.close();
   failed(await invoke(agent, ["get", 1], options), "SERVER_UNAVAILABLE", 5);
-  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+  assert.deepEqual(await readdir(join(agent, ".relay")), ["config.json"]);
 
   // Порт без URL не заставляет CLI обращаться к серверу или использовать его данные.
   await writeFile(
-    join(agent, "tasks.config.json"),
+    join(agent, ".relay/config.json"),
     JSON.stringify({ ...config, server: { port: config.server.port } }),
   );
   successful(await invoke(agent, ["create", "Локальная база", "--actor", "orchestrator"], options));
@@ -231,14 +231,14 @@ test("десять агентов в Git worktree пишут только орк
   const app = await setup(t);
   for (let i = 0; i < 12; i++) await app.tasks.create({ title: `Задача ${i + 1}` }, "orchestrator");
   const server = await app.start();
-  const configPath = join(app.root, "tasks.config.json");
+  const configPath = join(app.root, ".relay/config.json");
   await writeFile(
     configPath,
     JSON.stringify({ ...app.workspace.config, server: { port: 3000, url: server.url } }),
   );
   const git = (...args: string[]) => exec("git", args, { cwd: app.root });
   await git("init", "--initial-branch=orchestrator");
-  await git("add", "tasks.config.json", ".tasks");
+  await git("add", ".relay/config.json", ".relay/tasks");
   await git(
     "-c",
     "user.name=Тест",
@@ -298,8 +298,11 @@ test("десять агентов в Git worktree пишут только орк
     assert.equal(task.updatedBy, `агент-${i}`);
     assert.deepEqual(task.summary, [`Готов шаг ${i}`]);
     for (let id = 1; id <= 12; id++)
-      assert.equal(await readFile(join(directory, ".tasks", `${id}.json`), "utf8"), seed[id - 1]);
-    assert.equal((await readdir(directory)).includes(".tasks-runtime"), false);
+      assert.equal(
+        await readFile(join(directory, ".relay/tasks", `${id}.json`), "utf8"),
+        seed[id - 1],
+      );
+    assert.equal((await readdir(join(directory, ".relay"))).includes("runtime"), false);
   }
   await server.close();
   const saved = successful(
@@ -325,9 +328,9 @@ test("--local принудителен; аварийная запись и по�
     "checkpoint-1",
   ];
   const first = successful(await invoke(agent, args));
-  const local = ["--local", "--config", join(app.root, "tasks.config.json"), ...args];
+  const local = ["--local", "--config", join(app.root, ".relay/config.json"), ...args];
   assert.deepEqual(
-    successful(await invoke(agent, local, { env: { TASKS_SERVER_URL: "invalid URL" } })),
+    successful(await invoke(agent, local, { env: { RELAY_SERVER_URL: "invalid URL" } })),
     first,
   );
   assert.equal((await app.tasks.repository.resolve(1)).revision, 2);
@@ -337,12 +340,12 @@ test("--local принудителен; аварийная запись и по�
     "SERVER_UNAVAILABLE",
     5,
   );
-  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+  assert.deepEqual(await readdir(join(agent, ".relay")), ["config.json"]);
   assert.deepEqual(successful(await invoke(agent, local)), first);
   const fallback = [
     "--local",
     "--config",
-    join(app.root, "tasks.config.json"),
+    join(app.root, ".relay/config.json"),
     "--actor",
     "orchestrator",
     "comment",
@@ -394,7 +397,7 @@ test("потерянный ответ POST повторяется с тем же
     const data = await upstream.text();
     const lostLog = request.method === "POST" && request.url?.endsWith("/logs") && ++logPosts === 1;
     const lostCreate =
-      request.method === "POST" && request.url === "/api/v1/tasks" && ++createPosts === 1;
+      request.method === "POST" && request.url?.endsWith("/tasks") && ++createPosts === 1;
     if (lostLog || lostCreate) {
       response.destroy();
       return;
@@ -427,11 +430,11 @@ test("URL из окружения работает без локального �
   const server = await app.start();
   const directory = join(app.base, "empty");
   await mkdir(directory);
-  const env = { TASKS_SERVER_URL: server.url };
+  const env = { RELAY_SERVER_URL: server.url };
   successful(await invoke(directory, ["get", 1], { env }));
   successful(
     await invoke(directory, ["--server-url", server.url, "get", 1], {
-      env: { TASKS_SERVER_URL: "http://127.0.0.1:1" },
+      env: { RELAY_SERVER_URL: "http://127.0.0.1:1" },
     }),
   );
   failed(await invoke(directory, ["migrate"], { env }), "LOCAL_ONLY");
@@ -457,7 +460,7 @@ test("URL из окружения работает без локального �
     ],
     {
       cwd: directory,
-      env: { ...process.env, INIT_CWD: directory, TASKS_SERVER_URL: server.url },
+      env: { ...process.env, INIT_CWD: directory, RELAY_SERVER_URL: server.url },
     },
   );
   assert.equal(JSON.parse(source.stdout).data.title, "Удалённая задача");
@@ -505,7 +508,7 @@ test("HTTP-мутации сохраняют исполнителей, лока�
   const writes = await Promise.all(
     Array.from({ length: 10 }, (_, index) =>
       invoke(agent, [
-        ...(index % 2 ? ["--local", "--config", join(app.root, "tasks.config.json")] : []),
+        ...(index % 2 ? ["--local", "--config", join(app.root, ".relay/config.json")] : []),
         "--actor",
         `writer-${index}`,
         "comment",
@@ -552,5 +555,5 @@ test("сервер без поддержки HTTP CLI отклоняется д�
   const agent = await app.agent(`http://127.0.0.1:${address.port}`);
   failed(await invoke(agent, ["create", "Не записывать"]), "SERVER_INCOMPATIBLE", 5);
   assert.equal(posts, 0);
-  assert.deepEqual(await readdir(agent), ["tasks.config.json"]);
+  assert.deepEqual(await readdir(join(agent, ".relay")), ["config.json"]);
 });

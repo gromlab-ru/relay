@@ -24,13 +24,13 @@ test("описание, комментарии и отчёты находятс�
       input: body,
     }),
   ).data.id;
-  const path = join(app.root, ".tasks", `${id}.json`);
+  const path = join(app.root, ".relay/tasks", `${id}.json`);
   const stored: Task = JSON.parse(await readFile(path, "utf8"));
   assert.deepEqual(stored.description, toLines(description));
   assert.deepEqual(stored.comments[comment]?.body, toLines(body));
   assert.deepEqual(stored.logs[log]?.body, toLines(body));
   assert.equal(stored.revision, 3);
-  assert.deepEqual(await readdir(join(app.root, ".tasks")), [`${id}.json`]);
+  assert.deepEqual(await readdir(join(app.root, ".relay/tasks")), [`${id}.json`]);
   const card = successful(
     await app.run<{ commentCount: number; logCount: number }>(["get", id]),
   ).data;
@@ -48,7 +48,7 @@ test("вложенные записи проверяются вместе с з�
   const taskId = await app.create("Проверка внутренностей");
   const logId = successful(await app.run<{ id: string }>(["log", "add", taskId, "--text", "Отчёт"]))
     .data.id;
-  const path = join(app.root, ".tasks", `${taskId}.json`);
+  const path = join(app.root, ".relay/tasks", `${taskId}.json`);
   const task: Task = JSON.parse(await readFile(path, "utf8"));
   task.logs[logId]!.taskId = 999;
   await writeFile(path, JSON.stringify(task));
@@ -59,7 +59,7 @@ test("вложенные записи проверяются вместе с з�
 test("ошибочный или незавершённый ввод не изменяет JSON задачи", async (t) => {
   const app = await fixture(t);
   const taskId = await app.create("Проверка ввода");
-  const path = join(app.root, ".tasks", `${taskId}.json`);
+  const path = join(app.root, ".relay/tasks", `${taskId}.json`);
   const original = await readFile(path, "utf8");
   failed(
     await app.run(["log", "add", taskId, "--stdin"], { input: Buffer.from([0x61, 0xc3]) }),

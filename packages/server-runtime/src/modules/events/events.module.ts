@@ -4,11 +4,15 @@ import { ApiExtension, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagge
 import { EventsService } from "./events.service.js";
 import { MutationEventsInterceptor } from "./mutation-events.interceptor.js";
 import { ref } from "../../openapi/endpoint.js";
+import { WorkspaceService } from "../workspace/workspace.module.js";
 
 @ApiTags("events")
 @Controller("events")
 class EventsController {
-  constructor(@Inject(EventsService) private readonly events: EventsService) {}
+  constructor(
+    @Inject(EventsService) private readonly events: EventsService,
+    @Inject(WorkspaceService) private readonly workspace: WorkspaceService,
+  ) {}
 
   @Sse()
   @ApiOperation({
@@ -34,7 +38,7 @@ class EventsController {
     schema: ref("ApiFailure"),
   })
   get() {
-    return this.events.stream();
+    return this.events.stream(this.workspace);
   }
 }
 

@@ -43,6 +43,7 @@ for (const configuration of ["default", "relative"] as const)
         "packages/core",
         "packages/contracts",
         "packages/rest-sdk",
+        "packages/project-runtime",
         "packages/server-runtime",
         "packages/typescript-config",
       ];
@@ -104,8 +105,8 @@ for (const configuration of ["default", "relative"] as const)
           "packages/server-runtime/src/bootstrap.ts",
         ].map((path) => pathToFileURL(join(root, path)).href),
       );
-      const workspace = configuration === "default" ? "apps/playground" : "custom tasks";
-      await initialize(join(root, workspace), ".tasks");
+      const workspace = configuration === "default" ? "apps/playground/local" : "custom tasks";
+      await initialize(join(root, workspace), "tasks");
       const executable = process.env.npm_execpath;
       assert(executable, "Запускайте тест через pnpm run test:server");
       let pnpmCli = await realpath(executable);
@@ -120,11 +121,11 @@ for (const configuration of ["default", "relative"] as const)
         ...process.env,
         CI: "true",
         GITHUB_ACTIONS: "true",
-        TASKS_PORT: "0",
-        TASKS_ACTOR: "dev-human",
+        RELAY_PORT: "0",
+        RELAY_ACTOR: "dev-human",
       };
-      delete env.TASKS_CONFIG;
-      if (configuration === "relative") env.TASKS_CONFIG = `${workspace}/tasks.config.json`;
+      delete env.RELAY_CONFIG;
+      if (configuration === "relative") env.RELAY_CONFIG = `${workspace}/.relay/config.json`;
       const grouped = process.platform !== "win32";
       // В Actions Turbo буферизует grouped-логи до завершения задачи; ждём URL из живого потока.
       const child = spawn(process.execPath, [pnpmCli, "run", "dev:server", "--log-order=stream"], {
@@ -179,7 +180,7 @@ for (const configuration of ["default", "relative"] as const)
       };
       let starts = 0;
       const nextServer = async (timeout = 12000) => {
-        const urls = () => [...output.matchAll(/Tasks API: (http:\/\/127\.0\.0\.1:\d+)/g)];
+        const urls = () => [...output.matchAll(/Relay: (http:\/\/127\.0\.0\.1:\d+)/g)];
         await waitFor(() => urls().length > starts, "Dev-сервер не запустился", timeout);
         starts = urls().length;
         return urls().at(-1)![1]!;
@@ -194,7 +195,7 @@ for (const configuration of ["default", "relative"] as const)
       let url = await nextServer(30000);
       const context = (await json(`${url}/api/v1/context`)).data;
       assert.equal(context.actor, "dev-human");
-      assert.equal(context.configPath, join(root, workspace, "tasks.config.json"));
+      assert.equal(context.configPath, join(root, workspace, ".relay/config.json"));
       await waitFor(
         () => output.includes("Found 0 errors"),
         "Проверка типов не завершилась успешно",
@@ -221,9 +222,9 @@ for (const configuration of ["default", "relative"] as const)
       assert.equal((await json(`${url}/api/v1/health`)).data.stage, "scaffold");
 
       // Статика разрешается от package.json также при запуске исходников через tsx.
-      await mkdir(join(root, "apps/web/dist"), { recursive: true });
+      await mkdir(join(root, "apps/server/dist/web"), { recursive: true });
       const html = "<!doctype html><html>Built frontend fixture</html>";
-      await writeFile(join(root, "apps/web/dist/index.html"), html);
+      await writeFile(join(root, "apps/server/dist/web/index.html"), html);
       const corePath = join(root, "packages/core/src/domain/task.ts");
       const core = await readFile(corePath, "utf8");
       assert(core.includes("summary: [],"));

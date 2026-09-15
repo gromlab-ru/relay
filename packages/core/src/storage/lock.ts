@@ -5,6 +5,9 @@ import { AppError } from "../shared/errors.js";
 
 /** Служебные файлы находятся рядом с хранилищем, на той же файловой системе. */
 export function runtimeDirectory(root: string): string {
+  if (basename(root) === "relay.workspace.json")
+    return join(dirname(root), ".relay/runtime/workspace");
+  if (basename(dirname(root)) === ".relay") return join(dirname(root), "runtime");
   return join(dirname(root), `.${basename(root).replace(/^\.+/, "") || "tasks"}-runtime`);
 }
 

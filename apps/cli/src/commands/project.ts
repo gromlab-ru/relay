@@ -22,20 +22,20 @@ export function registerProject(program: Command, runtime: Runtime): void {
     name: "init",
     description: "Создать конфиг и хранилище проекта",
     details:
-      "Создаёт tasks.config.json и каталог .tasks рядом с ним. Существующий конфиг не заменяется.\n--storage разрешается относительно конфигурации. --config задаёт её явный путь.\nПосле init задайте TASKS_ACTOR и создайте первую задачу.",
+      "Создаёт .relay/config.json и базу .relay/tasks. Существующий конфиг не заменяется.\n--storage разрешается относительно конфигурации. --config задаёт её явный путь.\nПосле init задайте RELAY_ACTOR и создайте первую задачу.",
     examples: [
-      ["tasks-cli init", "Начать в текущем проекте"],
+      ["relay-cli init", "Начать в текущем проекте"],
       [
-        "tasks-cli init --config /work/project/tasks.config.json --storage .tasks",
+        "relay-cli init --config /work/project/.relay/config.json --storage tasks",
         "Подготовить общее хранилище для нескольких worktree",
       ],
     ],
     configure: (command) =>
-      command.option("--storage <path>", "Каталог данных относительно конфига", ".tasks"),
+      command.option("--storage <path>", "Каталог данных относительно конфига", "tasks"),
   });
   init.action(async () => {
     const globals = init.optsWithGlobals<GlobalOptions>();
-    let config = globals.config ?? runtime.env.TASKS_CONFIG;
+    let config = globals.config ?? runtime.env.RELAY_CONFIG;
     const source = await cliConfiguration(runtime, globals).catch((error: unknown) => {
       if (
         error instanceof AppError &&
@@ -45,7 +45,7 @@ export function registerProject(program: Command, runtime: Runtime): void {
         return undefined;
       throw error;
     });
-    if (source && (source.kind === "registry" || globals.project || config !== undefined)) {
+    if (source && globals.project) {
       const selected = selectProject(source, globals.project);
       config = selected.configPath;
       invariant(config, "LOCAL_CONFIG_REQUIRED", "Для init нужен локальный путь проекта");
@@ -54,7 +54,7 @@ export function registerProject(program: Command, runtime: Runtime): void {
       globals.local ||
         !(
           globals.serverUrl ??
-          (source?.kind === "registry" ? undefined : runtime.env.TASKS_SERVER_URL)
+          (source?.kind === "registry" ? undefined : runtime.env.RELAY_SERVER_URL)
         ),
       "LOCAL_ONLY",
       "Для инициализации локальной рабочей копии при настроенном HTTP укажите --local.",
@@ -81,8 +81,8 @@ export function registerProject(program: Command, runtime: Runtime): void {
     details:
       "Проверяет схемы, ID и имена файлов, принадлежность комментариев и отчётов, статусы,\nссылки и циклы. Выполняйте после ручного редактирования JSON и Git-слияния.\nОшибка целостности возвращает код завершения 5 и список нарушений.",
     examples: [
-      ["tasks-cli validate", "Проверить проект"],
-      ["tasks-cli validate --format json", "Получить диагностику для автоматизации"],
+      ["relay-cli validate", "Проверить проект"],
+      ["relay-cli validate --format json", "Получить диагностику для автоматизации"],
     ],
     async run(context) {
       const data = await context.backend.validate();
@@ -99,8 +99,8 @@ export function registerProject(program: Command, runtime: Runtime): void {
     details:
       "Переносит задачи из .tasks/tasks/ в .tasks/*.json; также переводит UUID-документы в v2.\nСсылки и контекст сохраняются. Исходники и журнал находятся в соседнем служебном каталоге.\nПрерванный запуск продолжается повторной командой. Актуальное хранилище не изменяется.",
     examples: [
-      ["tasks-cli migrate --actor human", "Мигрировать данные и получить путь к резервной копии"],
-      ["tasks-cli validate", "Проверить результат"],
+      ["relay-cli migrate --actor human", "Мигрировать данные и получить путь к резервной копии"],
+      ["relay-cli validate", "Проверить результат"],
     ],
     async run(context) {
       invariant(
@@ -139,10 +139,10 @@ export function registerProject(program: Command, runtime: Runtime): void {
     name: "config",
     description: "Настройки проекта и статусов",
     details:
-      'Настройки хранятся в tasks.config.json. config get показывает путь и актуальные значения.\nЦвет статуса задаётся полем statuses.<имя>.color, например "blue".\nДоступны black, red, green, yellow, blue, magenta, cyan, white, gray и none.',
+      'Настройки хранятся в .relay/config.json. config get показывает путь и актуальные значения.\nЦвет статуса задаётся полем statuses.<имя>.color, например "blue".\nДоступны black, red, green, yellow, blue, magenta, cyan, white, gray и none.',
     examples: [
-      ["tasks-cli config get", "Посмотреть статусы, цвета и лимиты"],
-      ["tasks-cli config get --format json", "Прочитать конфигурацию программно"],
+      ["relay-cli config get", "Посмотреть статусы, цвета и лимиты"],
+      ["relay-cli config get --format json", "Прочитать конфигурацию программно"],
     ],
   });
   registerCommand(config, runtime, {
@@ -151,9 +151,9 @@ export function registerProject(program: Command, runtime: Runtime): void {
     details:
       "Конфиг ищется вверх от текущего каталога; --config имеет приоритет.\nterminal определяет конечный статус, satisfiesDependencies — успешное завершение.\ncolor управляет только оформлением; --color never и JSON отключают ANSI.",
     examples: [
-      ["tasks-cli config get", "Показать настройки текущего проекта"],
+      ["relay-cli config get", "Показать настройки текущего проекта"],
       [
-        "tasks-cli config get --config /work/project/tasks.config.json",
+        "relay-cli config get --config /work/project/.relay/config.json",
         "Посмотреть настройки общего хранилища",
       ],
     ],
@@ -177,8 +177,8 @@ export function registerProject(program: Command, runtime: Runtime): void {
     details:
       "Группы возникают из поля group у задач. Задать группу: create/update --group <имя>.\ngroup list показывает сводку; list --group <имя> — сами задачи.",
     examples: [
-      ["tasks-cli group list", "Сравнить прогресс групп"],
-      ["tasks-cli list --group backend", "Развернуть текущие задачи группы"],
+      ["relay-cli group list", "Сравнить прогресс групп"],
+      ["relay-cli list --group backend", "Развернуть текущие задачи группы"],
     ],
   });
   registerCommand<PagingOptions>(group, runtime, {
@@ -187,8 +187,8 @@ export function registerProject(program: Command, runtime: Runtime): void {
     details:
       "Для каждой группы: total — все задачи, completed — успешно выполненные,\nterminal — все конечные, включая отменённые. Группы упорядочены по имени.",
     examples: [
-      ["tasks-cli group list --all", "Сводка всех групп"],
-      ["tasks-cli group list --format json", "Получить счётчики в JSON"],
+      ["relay-cli group list --all", "Сводка всех групп"],
+      ["relay-cli group list --format json", "Получить счётчики в JSON"],
     ],
     configure: pageOptions,
     run: (context, input) => listGroups(context.tasks, pageFrom(context, input.options)),

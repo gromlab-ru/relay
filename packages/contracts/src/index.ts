@@ -4,6 +4,22 @@ export const API_CONTRACT_VERSION = 1 as const;
 export const API_DOCS_PATH = "/api/docs";
 export const OPENAPI_PATH = "/api/openapi.json";
 
+export type RelayMode = "local" | "workspace";
+export interface RelayProject {
+  key: string;
+  id: string;
+  name: string;
+  configPath: string;
+  available: boolean;
+  error?: string;
+}
+export interface ServerContextResponse {
+  mode: RelayMode;
+  configPath: string;
+  projects: RelayProject[];
+  defaultProject: string | null;
+}
+
 export interface PageMeta {
   hasMore: boolean;
   nextCursor: string | null;
@@ -32,6 +48,8 @@ export interface StatusDefinition {
 }
 export interface ProjectConfig {
   version: 1;
+  mode: "local";
+  projectId?: string | undefined;
   storageDir: string;
   defaultStatus: string;
   readyStatuses: string[];

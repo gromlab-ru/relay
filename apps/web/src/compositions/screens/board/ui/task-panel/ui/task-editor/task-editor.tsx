@@ -158,7 +158,7 @@ export const TaskEditor = (props: TaskEditorProps) => {
       return;
     }
     try {
-      await updateTask(task.id, diffTaskInput(base.values, values), base.revision);
+      await updateTask(project.id, task.id, diffTaskInput(base.values, values), base.revision);
       discardTaskDraft(key);
       setDraft(null);
       setEditing(false);
@@ -173,7 +173,7 @@ export const TaskEditor = (props: TaskEditorProps) => {
       const result = toTaskError(failure);
       if (result.code === "REVISION_CONFLICT") {
         try {
-          setConflict((await getTask(task.id)).task);
+          setConflict((await getTask(project.id, task.id)).task);
         } catch {
           setError(result.message);
         }

@@ -1,4 +1,4 @@
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { configSchema, mcpConfigSchema, serverUrlSchema } from "@tasks/core/domain/config";
 import { parse } from "@tasks/core/domain/validation";
@@ -6,21 +6,27 @@ import { AppError, invariant } from "@tasks/core/shared/errors";
 import { exists, readJson } from "@tasks/core/storage/files";
 import { CONFIG_NAME } from "@tasks/core/storage/workspace";
 
-export const REGISTRY_NAME = "tasks.orchestrator.json";
+export const REGISTRY_NAME = "relay.workspace.json";
 export const projectNameSchema = z.string().regex(/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u);
 const pathSchema = z.string().trim().min(1);
 export const projectEntrySchema = z
   .strictObject({
     path: pathSchema.optional(),
     config: pathSchema.optional(),
-    serverUrl: serverUrlSchema.optional(),
   })
-  .refine((entry) => entry.path || entry.config || entry.serverUrl, {
-    message: "Укажите path, config или serverUrl проекта",
+  .refine((entry) => entry.path || entry.config, {
+    message: "Укажите локальный path или config проекта",
   });
 export const registrySchema = z.strictObject({
   version: z.literal(1),
+  mode: z.literal("workspace").default("workspace"),
   projects: z.record(projectNameSchema, projectEntrySchema),
+  server: z
+    .strictObject({
+      port: z.number().int().min(0).max(65535).default(3000),
+      url: serverUrlSchema.optional(),
+    })
+    .default({ port: 3000 }),
   mcp: mcpConfigSchema.optional(),
 });
 export type Registry = z.infer<typeof registrySchema>;
@@ -28,6 +34,22 @@ export type ProjectEntry = z.infer<typeof projectEntrySchema>;
 export type Configuration =
   | { kind: "project"; path: string; value: z.infer<typeof configSchema> }
   | { kind: "registry"; path: string; value: Registry };
+
+/** Режим относится к конфигурации, а не к количеству зарегистрированных проектов. */
+export function configurationMode(source: Configuration): "local" | "workspace" {
+  return source.kind === "project" ? "local" : "workspace";
+}
+
+export function serverAddress(source: Configuration): string {
+  const server = source.value.server;
+  if (server.url) return server.url;
+  invariant(
+    server.port !== 0,
+    "SERVER_URL_REQUIRED",
+    "Для динамического порта укажите server.url или --server-url",
+  );
+  return `http://127.0.0.1:${server.port}`;
+}
 
 export async function locateConfiguration(cwd: string, explicit?: string, registryOnly = false) {
   if (explicit !== undefined) return resolve(cwd, explicit);
@@ -55,7 +77,11 @@ export async function readConfiguration(
 ): Promise<Configuration> {
   const path = await locateConfiguration(cwd, explicit, registryOnly);
   const value = await readJson(path);
-  if (typeof value === "object" && value !== null && Object.hasOwn(value, "projects"))
+  const localPath = basename(path) === "config.json" && basename(dirname(path)) === ".relay";
+  if (
+    basename(path) === REGISTRY_NAME ||
+    (!localPath && typeof value === "object" && value !== null && Object.hasOwn(value, "projects"))
+  )
     return { kind: "registry", path, value: parse(registrySchema, value, path) };
   invariant(!registryOnly, "REGISTRY_REQUIRED", `Ожидается конфиг проектов: ${path}`);
   return { kind: "project", path, value: parse(configSchema, value, path) };
@@ -83,7 +109,6 @@ export function entryTarget(
           ),
         }
       : {}),
-    ...(entry.serverUrl === undefined ? {} : { serverUrl: new URL(entry.serverUrl).origin }),
   };
 }
 
@@ -119,6 +144,10 @@ export async function resolveProject(
   project?: string,
 ): Promise<ProjectTarget> {
   const target = selectProject(source, project);
+  if (source.kind === "registry") {
+    target.serverUrl = serverAddress(source);
+    return target;
+  }
   if (target.serverUrl === undefined && target.configPath !== undefined) {
     const config = await readConfiguration(dirname(source.path), target.configPath);
     invariant(

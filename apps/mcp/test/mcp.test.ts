@@ -26,7 +26,7 @@ async function setup(t: TestContext) {
   });
   for (const name of ["a", "b"]) {
     await mkdir(join(root, name));
-    await initialize(join(root, name), ".tasks");
+    await initialize(join(root, name), "tasks");
   }
   const connect = async (url: string) => {
     const client = new Client({ name: "тест-агент", version: "1.0.0" });
@@ -35,9 +35,16 @@ async function setup(t: TestContext) {
     return client;
   };
   const start = async (config?: string) => {
-    const server = await startMcp({ cwd: root, port: 0, ...(config ? { config } : {}) });
+    const api = await startServer({
+      cwd: root,
+      port: 0,
+      actor: "api",
+      ...(config ? { config } : {}),
+    });
+    servers.push(api);
+    const server = await startMcp({ cwd: root, port: 0, serverUrl: api.url });
     servers.push(server);
-    return server;
+    return { ...server, api };
   };
   return { root, clients, servers, connect, start };
 }
@@ -59,7 +66,7 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   return { ...body, isError: result.isError };
 }
 
-test("несколько клиентов, горячий реестр, автоматический REST через SDK и изоляция задач/авторов", async (t) => {
+test("несколько MCP-клиентов, общий Relay Server, горячий реестр и изоляция задач/авторов", async (t) => {
   const app = await setup(t);
   const { configPath } = await initializeRegistry(app.root);
   await registerProject(configPath, "a", { path: "a" });
@@ -131,10 +138,10 @@ test("несколько клиентов, горячий реестр, авто
 
 test("один проект по прямому конфигу и автоматическому поиску, ошибки HTTP и завершение", async (t) => {
   const app = await setup(t);
-  const path = join(app.root, "a/tasks.config.json");
+  const path = join(app.root, "a/.relay/config.json");
   const server = await app.start(path);
   const client = await app.connect(server.url);
-  assert.equal((await call(client, "projects_list")).meta?.mode, "project");
+  assert.equal((await call(client, "projects_list")).meta?.mode, "local");
   assert.equal(
     (await call(client, "task_create", { title: "Одна база", actor: "orchestrator" })).ok,
     true,
@@ -142,7 +149,7 @@ test("один проект по прямому конфигу и автомат
   assert.equal((await call(client, "task_get", { id: 1 })).data?.title, "Одна база");
   assert.equal(
     (await call(client, "task_get", { project: "wrong", id: 1 })).error?.code,
-    "REGISTRY_REQUIRED",
+    "PROJECT_NOT_FOUND",
   );
   assert.equal(
     (await call(client, "task_create", { title: "Без автора" })).error?.code,
@@ -156,7 +163,7 @@ test("один проект по прямому конфигу и автомат
   await client.close();
   await server.close();
   await assert.rejects(fetch(server.url));
-  const next = await startMcp({ cwd: join(app.root, "a"), port: 0 });
+  const next = await startMcp({ cwd: join(app.root, "a"), port: 0, serverUrl: server.api.url });
   app.servers.push(next);
   const restored = await app.connect(next.url);
   assert.equal((await call(restored, "task_get", { id: 1 })).data?.title, "Одна база");
@@ -164,12 +171,11 @@ test("один проект по прямому конфигу и автомат
 
 test("явный REST URL, remote-only, пагинация и курсоры разных проектов", async (t) => {
   const app = await setup(t);
-  const api = await startServer({ cwd: join(app.root, "a"), port: 0, actor: "api" });
-  app.servers.push(api);
   const { configPath } = await initializeRegistry(app.root);
-  await registerProject(configPath, "remote", { serverUrl: api.url });
+  await registerProject(configPath, "remote", { path: "a" });
   await registerProject(configPath, "other", { path: "b" });
   const server = await app.start();
+  const api = server.api;
   const client = await app.connect(server.url);
   for (let i = 0; i < 3; i++)
     assert.equal(
@@ -200,15 +206,15 @@ test("явный REST URL, remote-only, пагинация и курсоры р�
     ).error?.code,
     "INVALID_CURSOR",
   );
-  const saved = JSON.parse(await readFile(join(app.root, "a/.tasks/1.json"), "utf8"));
+  const saved = JSON.parse(await readFile(join(app.root, "a/.relay/tasks/1.json"), "utf8"));
   assert.equal(saved.createdBy, "agent");
   await writeFile(
-    join(app.root, "b/tasks.config.json"),
+    join(app.root, "b/.relay/config.json"),
     JSON.stringify({ ...defaultConfig, server: { port: 3000, url: api.url } }),
   );
   assert.equal(
-    (await call(client, "task_get", { project: "other", id: 1 })).data?.title,
-    "Задача 0",
+    (await call(client, "task_get", { project: "other", id: 1 })).error?.code,
+    "TASK_NOT_FOUND",
   );
   await api.close();
   assert.equal(

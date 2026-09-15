@@ -50,7 +50,7 @@ export async function startServerProcess(args, cwd, env) {
           const result = JSON.parse(line);
           assert.equal(result.ok, true, line);
           assert.equal(typeof result.data.url, "string");
-          assert.match(result.data.url, /^http:\/\/127\.0\.0\.1:\d+$/);
+          assert.match(result.data.url, /^http:\/\/127\.0\.0\.1:\d+(?:\/mcp)?$/);
           assert(Number.isSafeInteger(result.data.pid) && result.data.pid > 0);
           clearTimeout(timer);
           resolve(result.data);

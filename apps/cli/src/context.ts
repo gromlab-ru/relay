@@ -89,8 +89,8 @@ export function action(
 }
 
 export function author(context: CommandContext): string {
-  const value = context.globals.actor ?? context.runtime.env.TASKS_ACTOR;
-  invariant(value, "ACTOR_REQUIRED", "Для записи укажите --actor или TASKS_ACTOR");
+  const value = context.globals.actor ?? context.runtime.env.RELAY_ACTOR;
+  invariant(value, "ACTOR_REQUIRED", "Для записи укажите --actor или RELAY_ACTOR");
   return parse(actorSchema, value, "автор");
 }
 

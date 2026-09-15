@@ -16,11 +16,11 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
       status: "Ключ статуса из config get, например in_progress или done",
     },
     details:
-      "Статусы определены в tasks.config.json. Команда config get показывает их семантику.\nУспешное завершение возможно только после выполнения зависимостей. Отмена их не завершает.\nСмена статуса не снимает исполнителя. Для записи нужен --actor или TASKS_ACTOR.",
+      "Статусы определены в .relay/config.json. Команда config get показывает их семантику.\nУспешное завершение возможно только после выполнения зависимостей. Отмена их не завершает.\nСмена статуса не снимает исполнителя. Для записи нужен --actor или RELAY_ACTOR.",
     examples: [
-      ["tasks-cli status 3 done --actor backend", "Завершить задачу"],
+      ["relay-cli status 3 done --actor backend", "Завершить задачу"],
       [
-        "tasks-cli status 3 todo --if-revision 5 --actor human",
+        "relay-cli status 3 todo --if-revision 5 --actor human",
         "Вернуть задачу в очередь с проверкой версии",
       ],
     ],
@@ -41,7 +41,7 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
     details:
       "Явное назначение оркестратором, в том числе для заблокированной задачи.\nДля конкурентного выбора свободной работы агентом используйте claim. --actor — автор назначения, а не новый исполнитель.",
     examples: [
-      ["tasks-cli assign 3 backend-agent --actor orchestrator", "Назначить работу агенту"],
+      ["relay-cli assign 3 backend-agent --actor orchestrator", "Назначить работу агенту"],
     ],
     configure: revisionOption,
     run: async (context, input) =>
@@ -58,11 +58,11 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
     description: "Атомарно взять свободную задачу в работу",
     arguments: taskArgument,
     details:
-      "Назначает задачу текущему --actor / TASKS_ACTOR. Она должна быть свободна, находиться\nв readyStatuses и иметь выполненные зависимости. При гонке успешен только один агент.\nБез --status статус сохраняется; с --status назначение и переход выполняются одной операцией.",
+      "Назначает задачу текущему --actor / RELAY_ACTOR. Она должна быть свободна, находиться\nв readyStatuses и иметь выполненные зависимости. При гонке успешен только один агент.\nБез --status статус сохраняется; с --status назначение и переход выполняются одной операцией.",
     examples: [
-      ["tasks-cli list --ready", "Найти доступную задачу"],
+      ["relay-cli list --ready", "Найти доступную задачу"],
       [
-        "tasks-cli claim 3 --status in_progress --actor backend-agent",
+        "relay-cli claim 3 --status in_progress --actor backend-agent",
         "Взять задачу и сразу начать работу",
       ],
     ],
@@ -87,8 +87,8 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
     details:
       "Исполнитель может освободить свою задачу. Для снятия чужого назначения нужен --force.\nСтатус сохраняется; при необходимости верните его в todo отдельной командой status.",
     examples: [
-      ["tasks-cli release 3 --actor backend-agent", "Освободить свою задачу"],
-      ["tasks-cli release 3 --force --actor orchestrator", "Снять чужое назначение"],
+      ["relay-cli release 3 --actor backend-agent", "Освободить свою задачу"],
+      ["relay-cli release 3 --force --actor orchestrator", "Снять чужое назначение"],
     ],
     configure: (command) =>
       revisionOption(command).option("--force", "Снять назначение другого исполнителя"),
@@ -108,8 +108,8 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
     details:
       "deps add A B означает: задача A ждёт завершения B.\nСвязь с родителем не создаёт такую зависимость. Циклы и самоссылки запрещены.",
     examples: [
-      ["tasks-cli deps add 3 2 --actor human", "Задача 3 должна дождаться задачи 2"],
-      ["tasks-cli links 3", "Посмотреть связи и блокеры"],
+      ["relay-cli deps add 3 2 --actor human", "Задача 3 должна дождаться задачи 2"],
+      ["relay-cli links 3", "Посмотреть связи и блокеры"],
     ],
   });
   for (const verb of ["add", "remove"] as const) {
@@ -121,7 +121,7 @@ export function registerAssignments(program: Command, runtime: Runtime): void {
         "Первый ID — зависимая задача, второй — её зависимость. Остальные связи сохраняются.\nУдовлетворённость связи определяется satisfiesDependencies в конфиге, а не названием статуса.",
       examples: [
         [
-          `tasks-cli deps ${verb} 3 2 --actor human`,
+          `relay-cli deps ${verb} 3 2 --actor human`,
           verb === "add" ? "Задача 2 блокирует задачу 3" : "Задача 3 больше не ждёт задачу 2",
         ],
       ],

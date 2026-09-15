@@ -45,7 +45,7 @@ export async function invokeRaw(
       [...(options.nodeArgs ?? []), binary, ...args.map(String)],
       {
         cwd,
-        env: { ...process.env, TASKS_ACTOR: "orchestrator", ...options.env },
+        env: { ...process.env, RELAY_ACTOR: "orchestrator", ...options.env },
         stdio: ["pipe", "pipe", "pipe"],
       },
     );

@@ -21,10 +21,10 @@ export function registerComments(program: Command, runtime: Runtime): void {
       "Комментарии хранятся внутри задачи и добавляются новыми записями.\nДля исправления напишите следующий комментарий. Добавление увеличивает revision задачи.",
     examples: [
       [
-        'tasks-cli comment add 3 --text "Контракт согласован" --actor human',
+        'relay-cli comment add 3 --text "Контракт согласован" --actor human',
         "Добавить комментарий",
       ],
-      ["tasks-cli comment list 3", "Найти ID комментария для полного чтения"],
+      ["relay-cli comment list 3", "Найти ID комментария для полного чтения"],
     ],
   });
   registerCommand<TextInputOptions & RequestOptions>(comments, runtime, {
@@ -35,11 +35,11 @@ export function registerComments(program: Command, runtime: Runtime): void {
       "Выберите ровно один источник: --text, --stdin или --file.\nПоддерживается многострочный Markdown до 64 КиБ UTF-8. Автор обязателен.",
     examples: [
       [
-        'tasks-cli comment add 3 --text "Нужен пример ответа API" --actor frontend',
+        'relay-cli comment add 3 --text "Нужен пример ответа API" --actor frontend',
         "Короткий комментарий",
       ],
       [
-        "tasks-cli comment add 3 --actor human --stdin <<'MD'\n## Проверка\n\n- Основной сценарий работает.\n- Осталось проверить ошибки.\nMD",
+        "relay-cli comment add 3 --actor human --stdin <<'MD'\n## Проверка\n\n- Основной сценарий работает.\n- Осталось проверить ошибки.\nMD",
         "Многострочный комментарий",
       ],
     ],
@@ -67,8 +67,8 @@ export function registerComments(program: Command, runtime: Runtime): void {
     details:
       "От новых записей к старым: ID, автор, время и короткий фрагмент.\nПолный текст доступен через comment get. --all выводит все записи в пределах --max-bytes.",
     examples: [
-      ["tasks-cli comment list 3 --author frontend --limit 5", "Последние комментарии исполнителя"],
-      ["tasks-cli comment list 3 --all --format json", "Получить весь список"],
+      ["relay-cli comment list 3 --author frontend --limit 5", "Последние комментарии исполнителя"],
+      ["relay-cli comment list 3 --all --format json", "Получить весь список"],
     ],
     configure: (command) =>
       pageOptions(command).option("--author <actor>", "Точный идентификатор автора"),
@@ -86,7 +86,7 @@ export function registerComments(program: Command, runtime: Runtime): void {
     arguments: { ...taskArgument, "comment-id": "Полный cmt_… из comment list" },
     details:
       "Возвращает полную запись, принадлежащую указанной задаче.\nID комментария возьмите из comment add или comment list.",
-    examples: [["tasks-cli comment get 3 <comment-id>", "Прочитать выбранный комментарий"]],
+    examples: [["relay-cli comment get 3 <comment-id>", "Прочитать выбранный комментарий"]],
     async run(context, input) {
       const comment = await context.backend.comments.get(input.argument(), input.argument(1));
       return { data: comment, text: (options) => commentText(comment, options) };

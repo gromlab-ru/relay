@@ -203,11 +203,11 @@ export async function packageMarkdown({
       url = encodePath(posix.relative(posix.dirname(current), included)) + local.suffix;
     } else {
       const path = encodePath(local.target);
-      const tag = encodeURIComponent(`v${version}`);
+      const tag = encodeURIComponent(`cli-v${version}`);
       const kind = (await stat(join(root, local.target))).isDirectory() ? "tree" : "blob";
       url = image
-        ? `https://raw.githubusercontent.com/gromlab-ru/tasks-cli/${tag}/${path}${local.suffix}`
-        : `https://github.com/gromlab-ru/tasks-cli/${kind}/${tag}/${path}${local.suffix}`;
+        ? `https://raw.githubusercontent.com/gromlab-ru/relay/${tag}/${path}${local.suffix}`
+        : `https://github.com/gromlab-ru/relay/${kind}/${tag}/${path}${local.suffix}`;
     }
     changes.push({ ...destinationRange(markdown, node), url });
   }

@@ -1,5 +1,4 @@
 import { RouterProvider } from "react-router-dom";
-import { TasksSync } from "domains/tasks";
 import { DataProvider } from "infra/query-cache";
 import { ThemeProvider } from "ui/themes";
 import { appRouter } from "./router/app-router";
@@ -13,7 +12,6 @@ import { appRouter } from "./router/app-router";
 export const App = () => (
   <ThemeProvider>
     <DataProvider>
-      <TasksSync />
       <RouterProvider router={appRouter} />
     </DataProvider>
   </ThemeProvider>

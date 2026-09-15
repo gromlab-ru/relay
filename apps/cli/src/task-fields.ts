@@ -31,7 +31,7 @@ export function fieldOptions(command: Command): Command {
     .option("--stdin", "Прочитать описание из stdin")
     .option("--summary <text>", "Краткий актуальный результат; пустая строка очищает поле")
     .option("--summary-file <path>", "Результат из UTF-8 файла; - означает stdin")
-    .option("--status <status>", "Статус из tasks.config.json; список: config get")
+    .option("--status <status>", "Статус из .relay/config.json; список: config get")
     .option("--group <name>", "Основная группа")
     .option("--clear-group", "Убрать группу")
     .option("--parent <id>", "Числовой ID родителя, например 1")

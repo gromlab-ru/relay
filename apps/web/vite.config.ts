@@ -7,9 +7,9 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   server: {
-    port: Number(process.env.TASKS_WEB_PORT ?? 5173),
+    port: Number(process.env.RELAY_WEB_PORT ?? 5173),
     strictPort: true,
-    proxy: { "/api": { target: process.env.TASKS_API_URL ?? "http://127.0.0.1:3000" } },
+    proxy: { "/api": { target: process.env.RELAY_API_URL ?? "http://127.0.0.1:3000" } },
   },
   build: {
     outDir: "dist",

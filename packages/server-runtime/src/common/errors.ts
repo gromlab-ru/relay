@@ -23,8 +23,14 @@ const conflicts = new Set([
   "MIGRATION_IN_PROGRESS",
   "ID_EXHAUSTED",
   "IDEMPOTENCY_CONFLICT",
+  "DUPLICATE_PROJECT_ID",
 ]);
-const missing = new Set(["TASK_NOT_FOUND", "COMMENT_NOT_FOUND", "LOG_NOT_FOUND"]);
+const missing = new Set([
+  "TASK_NOT_FOUND",
+  "COMMENT_NOT_FOUND",
+  "LOG_NOT_FOUND",
+  "PROJECT_NOT_FOUND",
+]);
 const httpCodes: Record<number, string> = {
   400: "BAD_REQUEST",
   403: "FORBIDDEN_ORIGIN",

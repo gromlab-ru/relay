@@ -1,4 +1,5 @@
 import { mkdir, realpath } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 import { configSchema, defaultConfig } from "../domain/config.js";
 import type { Config } from "../domain/config.js";
@@ -7,7 +8,7 @@ import { AppError, invariant, isErrno } from "../shared/errors.js";
 import { atomicJson, exists, readJson } from "./files.js";
 import { prepareRuntime, runtimeDirectory, withStorageLock } from "./lock.js";
 
-export const CONFIG_NAME = "tasks.config.json";
+export const CONFIG_NAME = ".relay/config.json";
 export const MIGRATION_STATE = "migration-v2.json";
 
 export class Workspace {
@@ -32,7 +33,7 @@ export class Workspace {
           (!(await exists(join(this.runtime, MIGRATION_STATE))) &&
             !(await exists(this.path(".runtime", MIGRATION_STATE)))),
         "MIGRATION_IN_PROGRESS",
-        "Миграция прервана. Продолжите: tasks-cli migrate --actor <автор>",
+        "Миграция прервана. Продолжите: relay-cli migrate --actor <автор>",
         4,
       );
       invariant(
@@ -41,7 +42,7 @@ export class Workspace {
             !(await exists(this.path(".runtime"))) &&
             !(await exists(this.path(".gitignore")))),
         "MIGRATION_REQUIRED",
-        "Обновите структуру хранилища: npx @gromlab/tasks-cli migrate --actor <автор>",
+        "Обновите структуру хранилища: npx @gromlab/relay-cli migrate --actor <автор>",
         4,
       );
       return operation(assertOwned);
@@ -97,7 +98,7 @@ export async function initialize(
   invariant(!(await exists(configPath)), "ALREADY_INITIALIZED", "Конфигурация уже существует", 4);
   const config = parse(
     configSchema,
-    { ...structuredClone(defaultConfig), storageDir },
+    { ...structuredClone(defaultConfig), projectId: randomUUID(), storageDir },
     "конфигурация",
   );
   const root = resolve(dirname(configPath), storageDir);

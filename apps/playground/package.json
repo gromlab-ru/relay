@@ -9,7 +9,7 @@
     "demo:stats": "node demo/seed.mjs --stats"
   },
   "devDependencies": {
-    "@gromlab/tasks-cli": "workspace:*",
+    "@gromlab/relay-cli": "workspace:*",
     "tsx": "^4.20.5"
   }
 }

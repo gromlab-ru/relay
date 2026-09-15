@@ -63,7 +63,7 @@ export const TaskHistory = (props: TaskHistoryProps) => {
   const handleSubmit = async (values: RecordInput): Promise<void> => {
     setError(null);
     try {
-      await addRecord(taskId, kind, values);
+      await addRecord(projectId, taskId, kind, values);
       form.setValues(RECORD_INPUT_SCHEMA.parse({}));
       form.resetDirty();
       removeStored(key);

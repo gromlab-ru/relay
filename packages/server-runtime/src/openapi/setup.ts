@@ -6,7 +6,7 @@ import { jsonSchema } from "./endpoint.js";
 
 export function setupOpenApi(app: INestApplication): void {
   const config = new DocumentBuilder()
-    .setTitle("Tasks API")
+    .setTitle("Relay API")
     .setDescription(
       "Локальный API задач для веб-приложения и MCP. Автор изменений задаётся при запуске сервера. Markdown передаётся массивами строк; rank и курсоры непрозрачны для клиента.",
     )
@@ -15,6 +15,32 @@ export function setupOpenApi(app: INestApplication): void {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   document.openapi = "3.1.0";
+  // Оба адреса используют одни контроллеры. Непроектные операции доступны на корне сервера.
+  for (const [path, item] of Object.entries(document.paths)) {
+    if (
+      !path.startsWith("/api/v1/") ||
+      ["/api/v1/server", "/api/v1/health"].includes(path) ||
+      path.startsWith("/api/v1/projects")
+    )
+      continue;
+    const scoped = structuredClone(item);
+    for (const method of ["get", "post", "put", "patch", "delete"] as const) {
+      const operation = scoped[method];
+      if (!operation) continue;
+      operation.operationId = `${operation.operationId}ForProject`;
+      operation.parameters = [
+        ...(operation.parameters ?? []),
+        {
+          name: "project",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+          description: "Имя из реестра или идентификатор проекта",
+        },
+      ];
+    }
+    document.paths[path.replace("/api/v1/", "/api/v1/projects/{project}/")] = scoped;
+  }
   document.components ??= {};
   document.components.schemas = Object.fromEntries(
     Object.entries(schemas).map(([name, schema]) => [name, jsonSchema(schema)]),

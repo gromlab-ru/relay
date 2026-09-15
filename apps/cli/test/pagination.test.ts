@@ -65,7 +65,7 @@ test("явный конфиг обеспечивает общее хранили
       "claim",
       id,
       "--config",
-      join(app.root, "tasks.config.json"),
+      join(app.root, ".relay/config.json"),
       "--actor",
       "worktree-agent",
     ]),
@@ -76,7 +76,7 @@ test("явный конфиг обеспечивает общее хранили
 
 test("пустое хранилище открывается после Git-клонирования без пустых каталогов", async (t) => {
   const app = await fixture(t);
-  await rm(join(app.root, ".tasks"), { recursive: true });
+  await rm(join(app.root, ".relay/tasks"), { recursive: true });
   const list = successful(await app.run<{ items: unknown[] }>(["list"]));
   assert.deepEqual(list.data.items, []);
   await app.create("Первая задача после клонирования");

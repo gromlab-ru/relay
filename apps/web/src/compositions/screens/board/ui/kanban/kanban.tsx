@@ -75,7 +75,13 @@ export const Kanban = (props: KanbanProps) => {
       return;
     setSaving(true);
     try {
-      await moveTask(active.id, status, getDropPosition(event).beforeId, active.revision);
+      await moveTask(
+        project.id,
+        active.id,
+        status,
+        getDropPosition(event).beforeId,
+        active.revision,
+      );
       await refresh();
     } catch (error) {
       notifications.show({

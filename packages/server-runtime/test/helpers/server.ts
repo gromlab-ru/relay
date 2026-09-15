@@ -8,7 +8,7 @@ import { createServer } from "@tasks/server-runtime";
 
 export async function fixture(t: TestContext, web = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "tasks-api-")));
-  const workspace = await initialize(root, ".tasks");
+  const workspace = await initialize(root, "tasks");
   const webRoot = join(root, "web");
   if (web) {
     await mkdir(join(webRoot, "assets"), { recursive: true });

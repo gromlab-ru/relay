@@ -223,7 +223,7 @@ test("повреждённое хранилище и конфигурация в
   const invalid = await app.inject("/api/v1/board");
   assert.equal(invalid.statusCode, 500);
   assert.equal(invalid.json().error.code, "INVALID_DATA");
-  await writeFile(join(root, "tasks.config.json"), JSON.stringify({ version: 999 }));
+  await writeFile(join(root, ".relay/config.json"), JSON.stringify({ version: 999 }));
   const config = await app.inject("/api/v1/context");
   assert.equal(config.statusCode, 500);
   assert.equal(config.json().error.code, "INVALID_CONFIG");

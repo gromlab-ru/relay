@@ -3,7 +3,7 @@ import { useLocation, useMatch, useNavigate, useSearchParams } from "react-route
 import { Alert, Button, Drawer, Group, Kbd, Modal, Stack, Text } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { Layers3, Plus } from "lucide-react";
-import { useGetProject } from "domains/project";
+import { useGetProject, useProjectId } from "domains/project";
 import { BOARD_FILTERS_SCHEMA, useGetBoard, useTaskConnection } from "domains/tasks";
 import type { BoardFilters } from "domains/tasks";
 import { readStored, writeStored } from "infra/browser-storage";
@@ -43,11 +43,13 @@ const CreateTask = lazy(() =>
  *  - прямых ссылок и истории браузера
  */
 export const BoardScreen = () => {
+  const scopeId = useProjectId();
+  const projectPath = `/projects/${encodeURIComponent(scopeId)}/`;
   const project = useGetProject();
   const connection = useTaskConnection();
   const location = useLocation();
   const navigate = useNavigate();
-  const match = useMatch("/tasks/:id");
+  const match = useMatch("/projects/:project/tasks/:id");
   const [params, setParams] = useSearchParams();
   const filters = readBoardFilters(params);
   const selectedGroup = filters.ungrouped ? null : filters.group || undefined;
@@ -61,7 +63,7 @@ export const BoardScreen = () => {
   const projectId = project.data?.id;
   const projectDefault = project.data?.defaultStatus;
   const search = location.search;
-  const isUnknownRoute = location.pathname !== "/" && selectedId === null;
+  const isUnknownRoute = location.pathname !== projectPath && selectedId === null;
   const hasFilters = Object.values(filters).some(Boolean);
   const isEmptyProject = !board.isValidating && board.data?.total === 0 && !hasFilters;
   const hasNoResults = !board.isValidating && board.data?.total === 0 && hasFilters;
@@ -97,9 +99,9 @@ export const BoardScreen = () => {
    * Переходит к задаче, сохраняя фильтры и одну точку возврата к доске.
    */
   const handleOpen = (id: number): void => {
-    navigate(`/tasks/${id}${search}`, {
+    navigate(`${projectPath}tasks/${id}${search}`, {
       replace: selectedId !== null,
-      state: { fromBoard: location.pathname === "/" || cameFromBoard },
+      state: { fromBoard: location.pathname === projectPath || cameFromBoard },
     });
   };
 
@@ -111,7 +113,7 @@ export const BoardScreen = () => {
       navigate(-1);
       return;
     }
-    navigate(`/${search}`, { replace: true });
+    navigate(`${projectPath}${search}`, { replace: true });
   };
 
   /**

@@ -7,7 +7,8 @@ import { resolve, join } from "node:path";
 import { API_PREFIX } from "@tasks/contracts";
 import { serverPortSchema } from "@tasks/core/domain/config";
 import { actorSchema, parse } from "@tasks/core/domain/validation";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import { readConfiguration, configurationMode } from "@tasks/project-runtime/config";
+import { projectRouting } from "./modules/workspace/routing.js";
 import { isErrno } from "@tasks/core/shared/errors";
 import { AppModule } from "./app.module.js";
 import { ApiExceptionFilter } from "./common/errors.js";
@@ -32,8 +33,8 @@ async function initializeServer(
   options: ServerOptions,
 ): Promise<{ app: NestFastifyApplication; port: number }> {
   const actor = parse(actorSchema, options.actor, "автор");
-  const workspace = await openWorkspace(options.cwd, options.config);
-  const port = parse(serverPortSchema, options.port ?? workspace.config.server.port, "порт");
+  const source = await readConfiguration(options.cwd, options.config);
+  const port = parse(serverPortSchema, options.port ?? source.value.server.port, "порт");
   const candidate = options.webRoot ? resolve(options.webRoot) : undefined;
   let webRoot: string | undefined;
   if (candidate) {
@@ -47,10 +48,14 @@ async function initializeServer(
     bodyLimit: 1024 * 1024,
     logger: false,
     forceCloseConnections: "idle",
+    rewriteUrl: projectRouting,
   });
   configureHttpPolicy(adapter.getInstance(), options.allowedOrigins ?? []);
   const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule.register({ cwd: options.cwd, configPath: workspace.configPath, actor }, webRoot),
+    AppModule.register(
+      { cwd: options.cwd, configPath: source.path, actor, mode: configurationMode(source) },
+      webRoot,
+    ),
     adapter,
     { logger: false, abortOnError: false },
   );

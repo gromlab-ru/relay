@@ -8,13 +8,13 @@ import { Observable, Subject } from "rxjs";
 import type { ServerEvent } from "@tasks/contracts";
 import { TaskQueries } from "@tasks/core/application/queries/tasks";
 import { WorkspaceService } from "../workspace/workspace.module.js";
+import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
 
 /** Поддерживает SSE активным при простое, до типичных таймаутов прокси. */
 const HEARTBEAT_INTERVAL = 15_000;
 
-@Injectable()
-export class EventsService implements OnModuleInit, OnModuleDestroy {
+class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private readonly events = new Subject<ServerEvent>();
   private readonly watchers = new Map<string, FSWatcher>();
   private fingerprints = new Map<number, string>();
@@ -28,7 +28,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   private pending = false;
   private stopped = false;
 
-  constructor(@Inject(WorkspaceService) private readonly workspace: WorkspaceService) {}
+  constructor(private readonly workspace: ProjectContext) {}
 
   async onModuleInit(): Promise<void> {
     await this.refresh();
@@ -180,5 +180,82 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     this.watchers.clear();
     this.events.complete();
     await this.refreshing;
+  }
+}
+
+/** Один наблюдатель на проект; реестр и потоки разных баз имеют независимый lifecycle. */
+@Injectable()
+export class EventsService implements OnModuleInit, OnModuleDestroy {
+  private readonly projects = new Map<
+    string,
+    { context: ProjectContext; events: ProjectEvents; ready: Promise<void> }
+  >();
+  private poll: NodeJS.Timeout | undefined;
+  private stopped = false;
+  private syncing: Promise<void> | undefined;
+
+  constructor(@Inject(ProjectCatalog) private readonly catalog: ProjectCatalog) {}
+
+  private async acquire(context: ProjectContext) {
+    const key = context.options.configPath;
+    let item = this.projects.get(key);
+    if (!item) {
+      const events = new ProjectEvents(context);
+      item = { context, events, ready: events.onModuleInit() };
+      this.projects.set(key, item);
+    }
+    await item.ready;
+    return item.events;
+  }
+
+  private async sync() {
+    const { projects } = await this.catalog.context();
+    if (this.stopped) return;
+    const paths = new Set(projects.map((project) => project.configPath));
+    for (const [path, item] of this.projects) {
+      if (!paths.has(path)) {
+        this.projects.delete(path);
+        await item.ready;
+        await item.events.onModuleDestroy();
+      }
+    }
+    for (const project of projects) {
+      if (this.stopped) return;
+      if (project.available) await this.acquire(await this.catalog.at(project.configPath));
+    }
+  }
+
+  async onModuleInit() {
+    await this.sync();
+    this.poll = setInterval(() => {
+      if (this.syncing || this.stopped) return;
+      this.syncing = this.sync()
+        .catch(() => {})
+        .finally(() => {
+          this.syncing = undefined;
+        });
+    }, 1000);
+    this.poll.unref();
+  }
+
+  async stream(workspace: WorkspaceService) {
+    return (await this.acquire(await workspace.resolve())).stream();
+  }
+
+  async apiChanged(project: string | undefined, id: number) {
+    if (!this.stopped) (await this.acquire(await this.catalog.select(project))).apiChanged(id);
+  }
+
+  async onModuleDestroy() {
+    this.stopped = true;
+    clearInterval(this.poll);
+    await this.syncing;
+    await Promise.all(
+      [...this.projects.values()].map(async (item) => {
+        await item.ready;
+        await item.events.onModuleDestroy();
+      }),
+    );
+    this.projects.clear();
   }
 }

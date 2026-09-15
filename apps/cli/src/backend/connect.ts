@@ -1,7 +1,7 @@
 import { serverUrlSchema } from "@tasks/core/domain/config";
 import { parse } from "@tasks/core/domain/validation";
 import { AppError, invariant } from "@tasks/core/shared/errors";
-import { resolveProject } from "@tasks/project-runtime/config";
+import { selectProject, serverAddress } from "@tasks/project-runtime/config";
 import { cliConfiguration } from "../configuration.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import type { Backend } from "./types.js";
@@ -16,18 +16,25 @@ export async function connectBackend(
     if (
       error instanceof AppError &&
       error.code === "CONFIG_NOT_FOUND" &&
-      !globals.project &&
       !globals.local &&
-      (globals.serverUrl ?? runtime.env.TASKS_SERVER_URL)
+      (globals.serverUrl ?? runtime.env.RELAY_SERVER_URL)
     )
       return undefined;
     throw error;
   });
-  const target = source ? await resolveProject(source, globals.project) : {};
+  invariant(
+    !(source?.kind === "registry" && globals.local),
+    "WORKSPACE_REQUIRES_SERVER",
+    "В workspace операции с данными выполняются через Relay Server",
+  );
+  const target =
+    source && !(globals.serverUrl && source.kind === "project" && globals.project)
+      ? selectProject(source, globals.project)
+      : {};
   const configuredUrl =
     globals.serverUrl ??
-    (source?.kind === "registry" ? undefined : runtime.env.TASKS_SERVER_URL) ??
-    target.serverUrl;
+    runtime.env.RELAY_SERVER_URL ??
+    (source?.kind === "registry" ? serverAddress(source) : target.serverUrl);
   if (!globals.local && configuredUrl !== undefined) {
     invariant(
       !localOnly,
@@ -36,7 +43,10 @@ export async function connectBackend(
     );
     const url = new URL(parse(serverUrlSchema, configuredUrl, "адрес сервера")).origin;
     const { createHttpBackend } = await import("@tasks/project-runtime/backend/http");
-    return createHttpBackend(url);
+    return createHttpBackend(
+      url,
+      globals.project ?? (source?.kind === "project" ? source.value.projectId : undefined),
+    );
   }
   invariant(
     target.configPath,

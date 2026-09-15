@@ -84,18 +84,18 @@ test("README npm получает версионные ссылки и raw-из�
   const urls = inspectMarkdown(result).destinations.map((node) => node.url);
   assert(
     urls.includes(
-      "https://github.com/gromlab-ru/tasks-cli/blob/v0.4.0-rc.1/docs/guide.md#режим---local",
+      "https://github.com/gromlab-ru/relay/blob/cli-v0.4.0-rc.1/docs/guide.md#режим---local",
     ),
   );
   assert.equal(
     urls.filter(
       (url) =>
         url ===
-        "https://raw.githubusercontent.com/gromlab-ru/tasks-cli/v0.4.0-rc.1/docs/assets/board%20(dark).png",
+        "https://raw.githubusercontent.com/gromlab-ru/relay/cli-v0.4.0-rc.1/docs/assets/board%20(dark).png",
     ).length,
     2,
   );
-  assert(urls.includes("https://github.com/gromlab-ru/tasks-cli/tree/v0.4.0-rc.1/apps/cli/"));
+  assert(urls.includes("https://github.com/gromlab-ru/relay/tree/cli-v0.4.0-rc.1/apps/cli/"));
   assert(urls.includes("#tasks"));
   assert(urls.includes("https://www.npmjs.com/package/@gromlab/tasks-cli"));
   assert(result.includes('"Текст ]( внутри title"'));
@@ -114,7 +114,7 @@ test("документы архива сохраняют локальные пе
     [
       "../README.md",
       "../CHANGELOG.md",
-      "https://github.com/gromlab-ru/tasks-cli/tree/v0.4.0-rc.1/apps/cli/",
+      "https://github.com/gromlab-ru/relay/tree/cli-v0.4.0-rc.1/apps/cli/",
     ],
   );
 });
@@ -142,17 +142,17 @@ test("справочник включает все зарегистрирова�
   check(program, []);
 });
 
-test("скилл tasks-cli сохраняет все локальные ссылки после установки без монорепозитория", async (t) => {
+test("скилл relay-cli сохраняет все локальные ссылки после установки без монорепозитория", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "tasks-skill-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const installed = join(directory, ".agents/skills/tasks-cli");
-  await cp(join(repoRoot, "skills/tasks-cli"), installed, { recursive: true });
+  const installed = join(directory, ".agents/skills/relay-cli");
+  await cp(join(repoRoot, "skills/relay-cli"), installed, { recursive: true });
   const paths = (await filesBelow(installed)).filter((path) => path.endsWith(".md"));
   assert(paths.includes("SKILL.md"));
   assert(paths.includes("reference/ORCHESTRATOR.md"));
   assert(paths.includes("reference/SUBAGENT.md"));
   await checkDocumentation(installed, paths);
   const markdown = await readFile(join(installed, "SKILL.md"), "utf8");
-  assert.match(markdown, /^---\nname: tasks-cli\ndescription: >-/);
+  assert.match(markdown, /^---\nname: relay-cli\ndescription: >-/);
   assert(markdown.split("\n").length <= 220, "Основной файл скилла перестал быть компактным");
 });

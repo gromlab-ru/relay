@@ -6,6 +6,7 @@ coverage/
 pnpm-lock.yaml
 .artifacts/
 .tasks-runtime/
+**/.relay/runtime/
 .agents/
 .npmrc
 apps/playground/.tasks/

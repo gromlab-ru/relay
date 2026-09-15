@@ -14,8 +14,8 @@ test("overview доступен без автора, поддерживает д
   await app.create("Проект", ["--status", "in_progress"]);
   await app.create("Контракт", ["--status", "review"]);
   await app.create("Экран", ["--parent", "1", "--depends-on", "2"]);
-  const before = await readFile(join(app.root, ".tasks", "3.json"), "utf8");
-  const output = await app.run<OverviewData>(["overview", "1"], { env: { TASKS_ACTOR: "" } });
+  const before = await readFile(join(app.root, ".relay/tasks", "3.json"), "utf8");
+  const output = await app.run<OverviewData>(["overview", "1"], { env: { RELAY_ACTOR: "" } });
   const result = successful(output);
   assert.equal(result.data.root?.id, 1);
   assert.equal(result.data.counts.total, 2);
@@ -24,7 +24,7 @@ test("overview доступен без автора, поддерживает д
   assert.equal(result.data.blockers.items[0]?.outsideScope, true);
   assert.equal(result.data.blockers.items[0]?.readyAfterCompletionCount, 1);
   assert.equal(result.meta?.truncated, false);
-  assert.equal(await readFile(join(app.root, ".tasks", "3.json"), "utf8"), before);
+  assert.equal(await readFile(join(app.root, ".relay/tasks", "3.json"), "utf8"), before);
   const text = await invokeRaw(app.root, ["overview", "1"]);
   assert.equal(text.code, 0, text.stdout);
   assert.match(text.stdout, /ПРОГРЕСС КРУПНЫХ ЗАДАЧ/);
@@ -51,7 +51,7 @@ test("overview валидирует аргументы, несколько ст�
   failed(await app.run(["overview", "--review-status", ""]), "VALIDATION_ERROR");
   failed(await app.run(["overview", "--cursor", "anything"]), "INVALID_ARGUMENT");
   successful(await app.run(["status", "1", "todo"]));
-  const path = join(app.root, "tasks.config.json");
+  const path = join(app.root, ".relay/config.json");
   const config = JSON.parse(await readFile(path, "utf8"));
   delete config.statuses.review;
   await writeFile(path, JSON.stringify(config));

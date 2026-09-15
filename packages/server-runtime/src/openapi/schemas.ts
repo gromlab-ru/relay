@@ -189,6 +189,26 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  ServerContextResponse: z.strictObject({
+    mode: z.enum(["local", "workspace"]),
+    configPath: z.string(),
+    defaultProject: z.string().nullable(),
+    projects: z.array(
+      z.strictObject({
+        key: z.string(),
+        id: z.string(),
+        name: z.string(),
+        configPath: z.string(),
+        available: z.boolean(),
+        error: z.string().optional(),
+      }),
+    ),
+  }),
+  RegisterProjectRequest: z.strictObject({
+    path: z.string().optional(),
+    config: z.string().optional(),
+    replace: z.boolean().optional(),
+  }),
   TaskListQuery: taskListQuerySchema,
   TaskListData: taskListDataSchema,
   TaskDocumentData: taskDocumentDataSchema,

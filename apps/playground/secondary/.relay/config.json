@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "mode": "local",
+  "projectId": "9a3450e7-75f4-4306-9d76-a105af940ec3",
+  "storageDir": "tasks",
+  "defaultStatus": "todo",
+  "readyStatuses": ["todo"],
+  "statuses": {
+    "todo": { "terminal": false, "satisfiesDependencies": false, "color": "cyan" },
+    "in_progress": { "terminal": false, "satisfiesDependencies": false, "color": "yellow" },
+    "done": { "terminal": true, "satisfiesDependencies": true, "color": "green" }
+  },
+  "server": { "port": 3001 }
+}

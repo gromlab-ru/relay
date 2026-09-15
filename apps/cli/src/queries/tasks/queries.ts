@@ -34,7 +34,7 @@ export async function listTasks(service: TasksBackend, filters: TaskFilters, pag
       : hasFilters
         ? "Задач по выбранным фильтрам нет."
         : openOnly
-          ? "Открытых задач нет.\nИстория: tasks-cli list --all"
+          ? "Открытых задач нет.\nИстория: relay-cli list --all"
           : "Задач нет.";
   return paginate(
     items,

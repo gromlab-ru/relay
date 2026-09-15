@@ -23,20 +23,20 @@ const versionPattern = new RegExp(
  * @param {string} [tag] Git-тег, если проверяется релиз.
  */
 export function releaseMetadata(manifest, tag) {
-  const mcp = manifest.name === "@gromlab/tasks-mcp";
-  assert(mcp || manifest.name === "@gromlab/tasks-cli", "Неверное имя публикуемого пакета");
+  const component = manifest.name.replace("@gromlab/relay-", "");
+  assert(["cli", "server", "mcp"].includes(component), "Неверное имя публикуемого пакета");
   assert(!manifest.private, "Приватный манифест нельзя публиковать");
   assert.equal(manifest.publishConfig.access, "public", "Ожидается публичный пакет");
   assert.equal(manifest.publishConfig.registry, "https://registry.npmjs.org");
   assert.equal(manifest.engines.node, ">=22", "CLI требует Node.js 22+");
   assert.equal(
-    manifest.bin[mcp ? "tasks-mcp" : "tasks-cli"],
-    mcp ? "dist/main.js" : "dist/cli/main.js",
+    manifest.bin[`relay-${component}`],
+    component === "cli" ? "dist/cli/main.js" : "dist/main.js",
     "Неожиданная точка входа пакета",
   );
   assert.equal(
     manifest.repository.url,
-    "git+https://github.com/gromlab-ru/tasks-cli.git",
+    "git+https://github.com/gromlab-ru/relay.git",
     "Неверный repository.url для npm provenance",
   );
   const parsed = versionPattern.exec(manifest.version);
@@ -47,14 +47,14 @@ export function releaseMetadata(manifest, tag) {
   if (tag !== undefined)
     assert.equal(
       tag,
-      `${mcp ? "mcp-v" : "v"}${manifest.version}`,
-      "Тег должен точно совпадать с версией пакета: v<version> для CLI, mcp-v<version> для MCP",
+      `${component}-v${manifest.version}`,
+      "Тег должен совпадать с версией: cli-v<version>, server-v<version> или mcp-v<version>",
     );
   return {
     name: manifest.name,
     version: manifest.version,
     distTag: parsed.groups?.prerelease ? "next" : "latest",
-    archiveName: `gromlab-tasks-${mcp ? "mcp" : "cli"}-${manifest.version}.tgz`,
+    archiveName: `gromlab-relay-${component}-${manifest.version}.tgz`,
   };
 }
 

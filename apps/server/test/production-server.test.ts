@@ -13,7 +13,7 @@ test(
   { timeout: 30000 },
   async (t) => {
     const root = await realpath(await mkdtemp(join(tmpdir(), "tasks-production-server-")));
-    const workspace = await initialize(root, ".tasks");
+    const workspace = await initialize(root, "tasks");
     await writeFile(
       workspace.configPath,
       JSON.stringify({ ...workspace.config, server: { port: 0 } }),
@@ -23,7 +23,7 @@ test(
       [fileURLToPath(new URL("./dist/main.js", import.meta.resolve("#manifest")))],
       {
         cwd: root,
-        env: { ...process.env, TASKS_CONFIG: workspace.configPath, TASKS_PORT: undefined },
+        env: { ...process.env, RELAY_CONFIG: workspace.configPath, RELAY_PORT: undefined },
         stdio: ["ignore", "pipe", "pipe"],
       },
     );
@@ -48,7 +48,7 @@ test(
       child.once("exit", () => reject(new Error(`Сервер завершился до запуска: ${output}`)));
       child.stdout.setEncoding("utf8").on("data", (text: string) => {
         output += text;
-        const match = output.match(/Tasks Web: (http:\/\/127\.0\.0\.1:\d+)/);
+        const match = output.match(/Relay: (http:\/\/127\.0\.0\.1:\d+)/);
         if (match?.[1]) resolve(match[1]);
       });
     });

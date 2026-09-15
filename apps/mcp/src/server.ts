@@ -1,16 +1,24 @@
 import { createServer } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { readConfiguration } from "@tasks/project-runtime/config";
+import { readConfiguration, serverAddress } from "@tasks/project-runtime/config";
 import { serverPortSchema } from "@tasks/core/domain/config";
 import { parse } from "@tasks/core/domain/validation";
 import { Projects } from "./projects.js";
 import { createTools } from "./tools.js";
 
-export async function startMcp(options: { cwd: string; config?: string; port?: number }) {
-  const source = await readConfiguration(options.cwd, options.config);
-  const port = parse(serverPortSchema, options.port ?? source.value.mcp?.port ?? 3010, "порт MCP");
-  const projects = new Projects(source.path);
+export async function startMcp(options: {
+  cwd: string;
+  config?: string;
+  port?: number;
+  serverUrl?: string;
+}) {
+  const source = options.serverUrl
+    ? undefined
+    : await readConfiguration(options.cwd, options.config);
+  const port = parse(serverPortSchema, options.port ?? source?.value.mcp?.port ?? 3010, "порт MCP");
+  const projects = new Projects(options.serverUrl ?? serverAddress(source!));
+  await projects.source();
   const active = new Set<Promise<void>>();
   const http = createServer((request, reply) => {
     if (request.url !== "/mcp") {
@@ -70,7 +78,7 @@ export async function startMcp(options: { cwd: string; config?: string; port?: n
   let closing: Promise<void> | undefined;
   return {
     url: `http://127.0.0.1:${address.port}/mcp`,
-    configPath: source.path,
+    configPath: source?.path ?? null,
     close() {
       closing ??= (async () => {
         await new Promise<void>((resolve, reject) =>

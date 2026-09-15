@@ -31,7 +31,7 @@ test("Core и Contracts изолированы от приложений, сер
     ],
     [
       "apps/server/src",
-      /^(?:commander|picocolors|@tasks\/cli|@gromlab\/tasks-cli)|apps\/cli|cli\/(?:src|dist)/,
+      /^(?:picocolors|@tasks\/cli|@gromlab\/(?:tasks-cli|relay-cli))|apps\/cli|cli\/(?:src|dist)/,
     ],
     ["packages/project-runtime/src", /^(?:commander|picocolors|@tasks\/server-runtime)|apps\//],
     [

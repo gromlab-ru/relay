@@ -1,15 +1,15 @@
 {
-  "name": "@gromlab/tasks-cli",
+  "name": "@gromlab/relay-cli",
   "version": "0.4.0",
   "description": "Локальная JSON-база для оркестрации задач между AI-агентами на одном хосте: CLI, API и веб-доска",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gromlab-ru/tasks-cli.git",
+    "url": "git+https://github.com/gromlab-ru/relay.git",
     "directory": "apps/cli"
   },
-  "homepage": "https://github.com/gromlab-ru/tasks-cli#readme",
+  "homepage": "https://github.com/gromlab-ru/relay#readme",
   "bugs": {
-    "url": "https://github.com/gromlab-ru/tasks-cli/issues"
+    "url": "https://github.com/gromlab-ru/relay/issues"
   },
   "keywords": [
     "cli",
@@ -25,7 +25,7 @@
     "#manifest": "./package.json"
   },
   "bin": {
-    "tasks-cli": "dist/cli/main.js"
+    "relay-cli": "dist/cli/main.js"
   },
   "files": [
     "dist",
@@ -43,15 +43,14 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "node --import tsx --test test/*.test.ts",
     "docs:check": "node scripts/check-docs.mjs",
-    "package:check": "node scripts/release/check-package.mjs",
-    "release:check": "node scripts/release/check-tag.mjs",
-    "release:publish": "node scripts/release/publish.mjs",
+    "package:check": "node ../../scripts/package.mjs cli",
+    "release:check": "node ../../scripts/release/relay.mjs check cli",
+    "release:publish": "node ../../scripts/release/relay.mjs publish cli",
     "prepack": "node -e \"throw new Error('Выполните pnpm run package:check из корня репозитория; публикуйте только проверенный архив.')\""
   },
   "dependencies": {
     "@tasks/core": "workspace:*",
     "@tasks/project-runtime": "workspace:*",
-    "@tasks/server-runtime": "workspace:*",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1",
     "string-width": "^8.2.2",
@@ -59,6 +58,7 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
+    "@tasks/server-runtime": "workspace:*",
     "@tasks/contracts": "workspace:*",
     "@tasks/typescript-config": "workspace:*",
     "@types/mdast": "^4.0.4",

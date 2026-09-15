@@ -14,7 +14,13 @@ import type { ProjectEntry, Registry } from "./config.js";
 export async function initializeRegistry(cwd: string, explicit?: string) {
   const path = resolve(cwd, explicit ?? REGISTRY_NAME);
   invariant(!(await exists(path)), "ALREADY_INITIALIZED", "Конфигурация уже существует", 4);
-  const value: Registry = { version: 1, projects: {}, mcp: { port: 3010 } };
+  const value: Registry = {
+    version: 1,
+    mode: "workspace",
+    projects: {},
+    server: { port: 3000 },
+    mcp: { port: 3010 },
+  };
   const staging = await prepareRuntime(path);
   try {
     await atomicJson(path, value, staging, true);

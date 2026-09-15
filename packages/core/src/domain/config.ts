@@ -50,6 +50,8 @@ const statusSchema = z.strictObject({
 export const configSchema = z
   .strictObject({
     version: z.literal(1),
+    mode: z.literal("local").default("local"),
+    projectId: z.string().uuid().optional(),
     storageDir: z.string().trim().min(1),
     defaultStatus: z.string().min(1),
     readyStatuses: z.array(z.string()).min(1),
@@ -88,7 +90,8 @@ export type Config = z.infer<typeof configSchema>;
 
 export const defaultConfig: Config = {
   version: 1,
-  storageDir: ".tasks",
+  mode: "local",
+  storageDir: "tasks",
   defaultStatus: "todo",
   readyStatuses: ["todo"],
   statuses: {

@@ -200,7 +200,7 @@ test("обзор читает снимок один раз, не изменяе�
   const app = await fixture(t);
   await app.create("Корень");
   await app.create("Другая задача");
-  const path = join(app.root, ".tasks", "1.json");
+  const path = join(app.root, ".relay/tasks", "1.json");
   const before = await readFile(path, "utf8");
   const original = TaskRepository.prototype.snapshot;
   const snapshot = t.mock.method(
@@ -218,12 +218,15 @@ test("обзор читает снимок один раз, не изменяе�
   await assert.rejects(query.overview("wrong"), { code: "INVALID_ID" });
   const other = await app.tasks.repository.resolve(2);
   await writeFile(
-    join(app.root, ".tasks", "2.json"),
+    join(app.root, ".relay/tasks", "2.json"),
     JSON.stringify({ ...other, dependsOn: [999] }),
   );
   await assert.rejects(query.overview(1), { code: "MISSING_REFERENCE" });
   await writeFile(path, JSON.stringify({ ...JSON.parse(before), dependsOn: [2] }));
-  await writeFile(join(app.root, ".tasks", "2.json"), JSON.stringify({ ...other, dependsOn: [1] }));
+  await writeFile(
+    join(app.root, ".relay/tasks", "2.json"),
+    JSON.stringify({ ...other, dependsOn: [1] }),
+  );
   await assert.rejects(query.overview(1), { code: "DEPENDENCY_CYCLE" });
 });
 
