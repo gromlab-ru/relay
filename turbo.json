@@ -54,7 +54,8 @@
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/docs/**",
-        "$TURBO_ROOT$/skills/tasks-cli/**"
+        "$TURBO_ROOT$/skills/tasks-cli/**",
+        "$TURBO_ROOT$/scripts/release/**"
       ],
       "outputs": []
     },
@@ -65,9 +66,22 @@
         "$TURBO_ROOT$/apps/server/src/**",
         "$TURBO_ROOT$/apps/web/src/**",
         "$TURBO_ROOT$/packages/contracts/src/**",
-        "$TURBO_ROOT$/packages/server-runtime/src/**"
+        "$TURBO_ROOT$/packages/server-runtime/src/**",
+        "$TURBO_ROOT$/packages/project-runtime/src/**",
+        "$TURBO_ROOT$/apps/mcp/src/**"
       ],
       "outputs": []
+    },
+    "@gromlab/tasks-mcp#test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/release/**"],
+      "outputs": []
+    },
+    "@gromlab/tasks-mcp#start": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["TASKS_CONFIG", "TASKS_MCP_PORT"]
     },
     "@tasks/server#test": {
       "dependsOn": ["build"],

@@ -24,9 +24,11 @@ pnpm run package:check
 ## Ответственность
 
 - `src/commands` — определения Commander, аргументы и вызовы операций.
-- `src/backend` — единый контракт и адаптеры Core/HTTP через SDK.
+- `src/backend`, `src/configuration` — выбор транспорта и проекта из параметров CLI.
+- `@tasks/project-runtime` — общий с MCP реестр и адаптеры Core/HTTP через SDK.
 - `src/queries`, `src/presentation` — выборки для терминала, оформление и байтовая пагинация.
 - `scripts/release` — самодостаточный пакет, проверка установки и публикация.
+- `scripts/release` в корне репозитория — общие правила метаданных и публикации CLI/MCP.
 - `scripts/lib/documentation.mjs` — ссылки документации и подготовка README для npm.
 - `test` — поведение CLI, конкурентность, транспорт и поставка.
 

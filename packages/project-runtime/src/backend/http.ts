@@ -38,6 +38,7 @@ function decode<T>(schema: z.ZodType<T>, value: unknown): T {
   return result.data;
 }
 
+/** Единственный REST-адаптер CLI и MCP; все запросы выполняет существующий SDK. */
 export async function createHttpBackend(url: string): Promise<Backend> {
   const api = createApiClient(
     new HttpClient({ baseUrl: url, timeout: 15000, redirect: "error" }),

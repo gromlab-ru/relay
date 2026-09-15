@@ -10,7 +10,7 @@ const manifest = await readCliManifest();
 releaseMetadata(manifest);
 /** @type {import('./metadata.mjs').WorkspaceManifest[]} */
 const workspaces = await Promise.all(
-  ["core", "contracts", "server-runtime", "rest-sdk"].map(async (name) =>
+  ["core", "contracts", "server-runtime", "rest-sdk", "project-runtime"].map(async (name) =>
     JSON.parse(await readFile(join(repoRoot, "packages", name, "package.json"), "utf8")),
   ),
 );

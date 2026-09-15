@@ -1,14 +1,48 @@
-# Релизы @gromlab/tasks-cli
+# Релизы CLI и MCP
 
 [Документация](../README.md) → Разработка → Релизы
 
 Репозиторий: <https://github.com/gromlab-ru/tasks-cli>.
-Версия пакета задаётся только в `apps/cli/package.json`. CLI читает ту же версию
+Версия CLI задаётся в `apps/cli/package.json`, MCP — в `apps/mcp/package.json`. CLI читает ту же версию
 из своего манифеста через `#manifest`. `pnpm-lock.yaml` фиксирует зависимости,
 а их соответствие манифестам проверяется установкой с `--frozen-lockfile`.
 Корень монорепозитория приватный:
 `@gromlab/tasks-monorepo@0.0.0`; его версия не меняется при релизе CLI.
-Приватные `@tasks/core`, `@tasks/contracts`, `@tasks/server-runtime`, `@tasks/rest-sdk` имеют версию `0.0.0`.
+Приватные `@tasks/core`, `@tasks/contracts`, `@tasks/server-runtime`, `@tasks/rest-sdk`, `@tasks/project-runtime` имеют версию `0.0.0`.
+
+## Выпуски CLI 0.4.0 и MCP 0.1.0
+
+CLI 0.4.0 добавляет реестр проектов и выбор по имени; MCP 0.1.0 — отдельный
+HTTP-сервис со всеми операциями через REST SDK и автоматическими локальными API.
+Миграция документов задач не требуется.
+
+```bash
+pnpm run check
+pnpm run package:check
+pnpm run package:check:mcp
+pnpm run release:check v0.4.0
+pnpm run release:check:mcp mcp-v0.1.0
+```
+
+CLI сохраняет теги `v<version>`, MCP использует независимые `mcp-v<version>`.
+Общий workflow `release.yml` выбирает манифест, проверенный artifact и команду
+публикации по префиксу тега. CI проверяет оба пакета на Node.js 22/24 и сохраняет
+архивы отдельно: `npm-package` и `npm-mcp-package`. Описание выпуска берётся из
+CHANGELOG соответствующего приложения. RC-теги используют npm dist-tag `next`.
+
+Архив MCP: `apps/mcp/.artifacts/npm/gromlab-tasks-mcp-<version>.tgz`.
+Он содержит собранные приватные библиотеки, SDK и REST runtime, внешние production-зависимости,
+свой README и CHANGELOG. Установочная проверка запускает MCP в чистом проекте,
+подключает MCP-клиент, регистрирует второй проект и проверяет задачи через автоматически
+запущенные API. Исходный workspace не публикуется напрямую.
+
+Общие правила metadata/integrity и запуск pnpm находятся в `scripts/release`.
+MCP-команды: `release:check:mcp <тег>`, `release:publish:mcp <тег>`.
+Публикация использует существующий проверенный архив. Для первой публикации MCP требуется
+авторизация npm с правом создавать пакет `@gromlab/tasks-mcp`; после неё Trusted Publishing
+настраивается для того же репозитория и workflow `release.yml`, отдельно в настройках MCP-пакета.
+
+Ниже подробно описан процесс CLI и история предыдущих выпусков.
 
 ## Проверки и сборка
 

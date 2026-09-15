@@ -11,7 +11,8 @@
 ```text
 apps/
   cli/src/                 команды, аргументы, ввод, queries и терминальное presentation
-  cli/src/backend/         единый контракт операций, Core- и HTTP-адаптеры
+  cli/src/backend/         выбор транспорта из CLI-параметров
+  mcp/src/                 Streamable HTTP, инструменты, управление локальными API
   cli/test/                проверки CLI и пользовательского запуска сервера
   cli/scripts/release/     проверка тегов, упаковка, установка и публикация
   server/src/main.ts       самостоятельная точка входа сервера
@@ -20,6 +21,7 @@ apps/
   playground/              демонстрационный проект
 packages/
   core/src/                domain, application, storage, shared
+  project-runtime/src/     реестр проектов, разрешение конфигов, общие Backend-адаптеры
   core/test/               проверки ядра и архитектурных границ
   contracts/src/           переносимые REST/SSE DTO
   contracts/test/          совместимость типов с Core
@@ -42,22 +44,44 @@ packages/
 [API.md](reference/API.md).
 Swagger доступен по `/api/docs`, OpenAPI 3.1 — по `/api/openapi.json`.
 
-Локальный адаптер CLI импортирует операции через `@tasks/core/*`; CLI лениво загружает `@tasks/server-runtime`
+Локальный адаптер в `@tasks/project-runtime` импортирует операции через `@tasks/core/*`; CLI лениво загружает `@tasks/server-runtime`
 для команды `server`. Самостоятельный `@tasks/server` использует тот же runtime;
 Node-реализация не импортируется из другого приложения. Runtime зависит от Core
-и `@tasks/contracts`; web и HTTP-адаптер CLI используют сгенерированный `@tasks/rest-sdk`.
+и `@tasks/contracts`; web и общий HTTP-адаптер CLI/MCP используют сгенерированный `@tasks/rest-sdk`.
+
+## Конфигурация проектов и MCP
+
+`packages/project-runtime/src/config.ts` ищет проектный конфиг или реестр. В одном
+каталоге приоритет у `tasks.orchestrator.json`, затем `tasks.config.json`. Явный путь
+принимает оба типа. Именованный CLI ищет реестр и передаёт выбранный абсолютный путь
+адаптеру, сохраняя cwd для файлового ввода. `projects` изменяет реестр атомарно под
+отдельной межпроцессной блокировкой. Core по-прежнему открывает одну базу за операцию.
+
+`apps/mcp` — отдельный пакет `@gromlab/tasks-mcp`. HTTP endpoint `/mcp` использует
+stateless Streamable HTTP и отдельный transport на запрос. Список инструментов статичен;
+поле `project` проверяется по актуальному файлу на каждой операции. Для прямого конфига
+поле опускается. Состояния текущего проекта и автора между запросами нет.
+
+Все MCP-операции задач проходят через `project-runtime/backend/http` и `@tasks/rest-sdk`.
+При отсутствии URL `Projects` лениво запускает `@tasks/server-runtime` на порту 0,
+разделяет promise запуска между конкурентными запросами и освобождает ненужные API
+после текущих операций. Прямого доступа MCP к файловым сервисам задач нет.
+Пути реестра/проектов и URL перечитываются; адрес слушающего MCP применяется при запуске.
+MCP-представления, схемы инструментов и бюджет ответов принадлежат `apps/mcp`.
 
 ## Транспорт CLI и worktree
 
 `connectBackend` выбирает `--local`, затем URL из `--server-url`, `TASKS_SERVER_URL`
-или `server.url`. `readWorkspaceConfig` читает только настройки до создания адаптера.
+или `server.url`. В режиме реестра переменная URL игнорируется; используется URL записи
+реестра или конфига проекта. Общая загрузка читает настройки до создания адаптера.
 При HTTP локальный `openWorkspace` не вызывается; серверный контекст определяет
 правила и пути проекта. `server` всегда запускает локальный runtime, `migrate`
 при HTTP требует `--local`. Явный URL позволяет работать без локального конфига.
 
 ```text
 CLI агента → Backend → @tasks/rest-sdk → HTTP → Server Runtime → Core → .tasks оркестратора
-CLI --local → Backend → Core → .tasks выбранного --config
+CLI --local → Backend → Core → .tasks выбранного проекта
+MCP → Backend → @tasks/rest-sdk → HTTP → внешний или автоматически запущенный API → Core
 ```
 
 Core `ProjectQueries` строит общие read models списка, документа, связей, дерева

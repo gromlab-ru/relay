@@ -1,0 +1,57 @@
+{
+  "name": "@gromlab/tasks-mcp",
+  "version": "0.1.0",
+  "description": "Общий MCP-сервер задач для оркестратора и субагентов: один или несколько проектов, REST SDK и обновляемый реестр",
+  "type": "module",
+  "imports": {
+    "#manifest": "./package.json"
+  },
+  "bin": {
+    "tasks-mcp": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gromlab-ru/tasks-cli.git",
+    "directory": "apps/mcp"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "scripts": {
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
+    "dev": "tsx src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "test": "node --import tsx --test test/*.test.ts",
+    "package:check": "node scripts/check-package.mjs",
+    "release:check": "node ../../scripts/release/mcp.mjs check",
+    "release:publish": "node ../../scripts/release/mcp.mjs publish",
+    "prepack": "node -e \"throw new Error('Выполните pnpm run package:check:mcp из корня репозитория; публикуйте проверенный архив.')\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@tasks/core": "workspace:*",
+    "@tasks/project-runtime": "workspace:*",
+    "@tasks/rest-sdk": "workspace:*",
+    "@tasks/server-runtime": "workspace:*",
+    "commander": "^14.0.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tasks/typescript-config": "workspace:*",
+    "@types/node": "^22.18.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

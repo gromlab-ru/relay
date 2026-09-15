@@ -6,6 +6,7 @@ import { registerProject } from "./commands/project.js";
 import { registerTasks } from "./commands/tasks.js";
 import { registerServer } from "./commands/server.js";
 import { registerOverview } from "./commands/overview.js";
+import { registerProjects } from "./commands/projects.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -16,7 +17,11 @@ export function createProgram(runtime: Runtime): Command {
     .description("Локальный трекер задач для AI-оркестратора и субагентов")
     .version(packageVersion, "-V, --version", "Показать версию CLI")
     .helpOption("-h, --help", "Справка, параметры и примеры")
-    .option("--config <path>", "Явный путь к tasks.config.json; приоритет над TASKS_CONFIG")
+    .option(
+      "--config <path>",
+      "Путь к проектному конфигу или реестру проектов; приоритет над TASKS_CONFIG",
+    )
+    .option("--project <name>", "Имя проекта из реестра; также tasks-cli <проект> <команда>")
     .option("--server-url <url>", "Адрес сервера; приоритет над TASKS_SERVER_URL и server.url")
     .option("--local", "Работать напрямую с локальным Core, игнорируя HTTP-настройки")
     .option("--actor <id>", "Автор записи, например human; приоритет над TASKS_ACTOR")
@@ -37,6 +42,7 @@ export function createProgram(runtime: Runtime): Command {
     .exitOverride()
     .configureOutput({ writeOut: (text) => runtime.stdout.write(text), writeErr: () => {} });
   registerProject(program, runtime);
+  registerProjects(program, runtime);
   registerOverview(program, runtime);
   registerTasks(program, runtime);
   registerAssignments(program, runtime);

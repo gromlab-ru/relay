@@ -15,6 +15,7 @@ import { palette } from "./presentation/theme.js";
 
 export interface GlobalOptions {
   config?: string;
+  project?: string;
   serverUrl?: string;
   local?: boolean;
   actor?: string;
@@ -81,7 +82,9 @@ export function action(
       output,
       runtime,
     };
-    printResult(runtime.stdout, await handler(context), output);
+    const result = await handler(context);
+    if (globals.project) result.meta = { ...result.meta, project: globals.project };
+    printResult(runtime.stdout, result, output);
   });
 }
 

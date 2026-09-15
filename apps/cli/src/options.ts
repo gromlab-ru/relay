@@ -64,6 +64,9 @@ export function pageFrom(context: CommandContext, options: PagingOptions): PageO
   return {
     limit: options.limit ?? context.workspace.config.output.defaultLimit,
     ...context.output,
+    ...(context.globals.project
+      ? { project: context.globals.project, storage: context.workspace.root }
+      : {}),
     ...(options.cursor ? { cursor: options.cursor } : {}),
     ...(options.all ? { all: true } : {}),
   };

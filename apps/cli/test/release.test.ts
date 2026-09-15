@@ -52,6 +52,7 @@ test("дистрибутив содержит внешние зависимос�
     imports: { "#manifest": "./package.json" },
   };
   const workspaces = [
+    { name: "@tasks/project-runtime", version: "0.0.0", private: true, dependencies: {} },
     { name: "@tasks/contracts", version: "0.0.0", private: true, dependencies: {} },
     { name: "@tasks/rest-sdk", version: "0.0.0", private: true, dependencies: {} },
     {
@@ -97,6 +98,17 @@ test("дистрибутив содержит внешние зависимос�
   ]) {
     assert.throws(() => distributionManifest({ ...source, dependencies }, workspaces));
   }
+});
+
+test("MCP имеет собственные версию, точку входа, архив и пространство тегов", () => {
+  const source = {
+    ...manifest("0.1.0"),
+    name: "@gromlab/tasks-mcp",
+    bin: { "tasks-mcp": "dist/main.js" },
+  };
+  assert.equal(releaseMetadata(source, "mcp-v0.1.0").archiveName, "gromlab-tasks-mcp-0.1.0.tgz");
+  assert.throws(() => releaseMetadata(source, "v0.1.0"));
+  assert.throws(() => releaseMetadata(source, "mcp-v0.2.0"));
 });
 
 test("повторный релиз пропускается только при полном совпадении integrity архива", () => {

@@ -3,6 +3,10 @@
 [Документация](../README.md) → Справочники → CLI
 
 Все команды запускаются как `npx @gromlab/tasks-cli <команда>`.
+С реестром проектов: `npx @gromlab/tasks-cli <проект> <команда>` или
+`npx @gromlab/tasks-cli --project <проект> <команда>`. Имя требуется и для реестра
+с одной записью. `--config` принимает проектный конфиг либо реестр; правила поиска
+описаны в [конфигурации](CONFIGURATION.md).
 В синтаксисе `<id>` — числовой ID из ответа, квадратные скобки обозначают
 необязательную часть. Чтение не требует автора; запись требует `--actor` или `TASKS_ACTOR`.
 Примеры используют оркестратора для постановки и приёмки, субагента — для выполнения.
@@ -16,6 +20,7 @@
 | Область    | Команды                                                                                                                                   |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Проект     | [init](#init), [config get](#config-get), [group list](#group-list), [validate](#validate), [migrate](#migrate), [server](#server)        |
+| Реестр     | [projects init](#projects-init), [projects list](#projects-list), [projects add](#projects-add), [projects remove](#projects-remove)      |
 | Задачи     | [create](#create), [list](#list), [get](#get), [update](#update), [description](#description), [summary](#summary), [overview](#overview) |
 | Назначения | [status](#status), [assign](#assign), [claim](#claim), [release](#release)                                                                |
 | Связи      | [deps add](#deps-add), [deps remove](#deps-remove), [links](#links), [tree](#tree)                                                        |
@@ -30,6 +35,7 @@
 | Параметр              | Значение                                                         |
 | --------------------- | ---------------------------------------------------------------- |
 | `--config <path>`     | Явный конфиг; приоритет над `TASKS_CONFIG` и поиском вверх       |
+| `--project <name>`    | Имя проекта из реестра; альтернатива префиксу перед командой     |
 | `--server-url <url>`  | HTTP(S) origin без пути; приоритет над окружением и `server.url` |
 | `--local`             | Прямой Core с игнорированием HTTP-настроек                       |
 | `--actor <id>`        | Автор записи; приоритет над `TASKS_ACTOR`                        |
@@ -54,12 +60,39 @@ npx @gromlab/tasks-cli log add --help
 ### HTTP-режим и --local
 
 Выбор: `--local` → `--server-url` → `TASKS_SERVER_URL` → `server.url` → Core.
+В режиме реестра `TASKS_SERVER_URL` игнорируется, а `projects.<имя>.serverUrl`
+имеет приоритет над `server.url` проектного конфига.
 Рабочие команды используют оба транспорта. В HTTP настройки проекта определяет
 сервер; файлы ввода читает вызывающий агент. `server` всегда локален;
 `init` и `migrate` при настроенном HTTP требуют явного локального режима.
 Подробности: [конфигурация](CONFIGURATION.md), [оркестрация](../guides/ORCHESTRATION.md).
 
 ## Проект
+
+### projects init
+
+**Синтаксис:** `projects init`. Создаёт `tasks.orchestrator.json` с пустым реестром
+и `mcp.port: 3010`. `--config` или `TASKS_CONFIG` задаёт путь нового файла.
+Существующий файл не заменяется. Автор не требуется.
+
+### projects list
+
+**Синтаксис:** `projects list`. Возвращает `data.items` с именами, путями и URL,
+а также `meta.configPath` реестра. Читает настройки без открытия всех баз.
+
+### projects add
+
+**Синтаксис:** `projects add <name> [path] [--project-config <path>] [--server-url <url>] [--replace]`.
+`path` относительно реестра; `--project-config` относительно каталога проекта.
+Для remote-only достаточно `--server-url`. Повтор той же записи идемпотентен;
+замена требует `--replace`. Регистрация не создаёт базу; для новой базы вызовите
+`<проект> init`. Пример: `tasks-cli projects add backend ../backend`.
+
+### projects remove
+
+**Синтаксис:** `projects remove <name>`. Удаляет регистрацию, сохраняя файлы и задачи.
+Возвращает `{ project, removed }`; повтор даёт `removed: false`.
+Все команды `projects` выбирают реестр через `--config`, окружение или поиск вверх.
 
 ### init
 

@@ -1,6 +1,6 @@
 {
   "name": "@gromlab/tasks-cli",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Локальная JSON-база для оркестрации задач между AI-агентами на одном хосте: CLI, API и веб-доска",
   "repository": {
     "type": "git",
@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@tasks/core": "workspace:*",
-    "@tasks/rest-sdk": "workspace:*",
+    "@tasks/project-runtime": "workspace:*",
     "@tasks/server-runtime": "workspace:*",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1",
