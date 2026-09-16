@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { readConfiguration, serverAddress } from "@tasks/project-runtime/config";
-import { serverPortSchema } from "@tasks/core/domain/config";
+import { DEFAULT_MCP_PORT, serverPortSchema } from "@tasks/core/domain/config";
 import { parse } from "@tasks/core/domain/validation";
 import { Projects } from "./projects.js";
 import { createTools } from "./tools.js";
@@ -16,7 +16,11 @@ export async function startMcp(options: {
   const source = options.serverUrl
     ? undefined
     : await readConfiguration(options.cwd, options.config);
-  const port = parse(serverPortSchema, options.port ?? source?.value.mcp?.port ?? 3010, "порт MCP");
+  const port = parse(
+    serverPortSchema,
+    options.port ?? source?.value.mcp?.port ?? DEFAULT_MCP_PORT,
+    "порт MCP",
+  );
   const projects = new Projects(options.serverUrl ?? serverAddress(source!));
   await projects.source();
   const active = new Set<Promise<void>>();

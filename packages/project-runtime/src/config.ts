@@ -1,6 +1,11 @@
 import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
-import { configSchema, mcpConfigSchema, serverUrlSchema } from "@tasks/core/domain/config";
+import {
+  configSchema,
+  DEFAULT_SERVER_PORT,
+  mcpConfigSchema,
+  serverUrlSchema,
+} from "@tasks/core/domain/config";
 import { parse } from "@tasks/core/domain/validation";
 import { AppError, invariant } from "@tasks/core/shared/errors";
 import { exists, readJson } from "@tasks/core/storage/files";
@@ -23,10 +28,10 @@ export const registrySchema = z.strictObject({
   projects: z.record(projectNameSchema, projectEntrySchema),
   server: z
     .strictObject({
-      port: z.number().int().min(0).max(65535).default(3000),
+      port: z.number().int().min(0).max(65535).default(DEFAULT_SERVER_PORT),
       url: serverUrlSchema.optional(),
     })
-    .default({ port: 3000 }),
+    .default({ port: DEFAULT_SERVER_PORT }),
   mcp: mcpConfigSchema.optional(),
 });
 export type Registry = z.infer<typeof registrySchema>;

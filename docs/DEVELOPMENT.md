@@ -42,8 +42,8 @@ pnpm run skills:install
 ## Запуск
 
 - Vite: http://127.0.0.1:5173.
-- API: http://127.0.0.1:3000/api/v1/health.
-- Swagger: http://127.0.0.1:3000/api/docs.
+- API: http://127.0.0.1:4700/api/v1/health.
+- Swagger: http://127.0.0.1:4700/api/docs.
 
 `dev` запускает API и web через Turbo. По умолчанию backend открывает
 `apps/playground/local/.relay/config.json`; действия в UI изменяют демонстрационные данные.
@@ -72,12 +72,12 @@ SDK; его dev-скрипт сначала собирает `@tasks/rest-sdk`.
 MCP запускается отдельным процессом, например:
 
 ```bash
-pnpm run dev:mcp --server-url http://127.0.0.1:3000
+pnpm run dev:mcp --server-url http://127.0.0.1:4700
 ```
 
 `dev:mcp` сначала собирает зависимости, затем выполняет точку входа через tsx.
 MCP обращается к уже запущенному Relay Server через SDK.
-По умолчанию MCP слушает http://127.0.0.1:3010/mcp; `--config` принимает оба вида конфигов.
+По умолчанию MCP слушает http://127.0.0.1:4710/mcp; `--config` принимает оба вида конфигов.
 
 ## Структура
 

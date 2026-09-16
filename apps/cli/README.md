@@ -15,7 +15,7 @@ npx @gromlab/relay-cli list
 ```bash
 npx @gromlab/relay-cli a list
 npx @gromlab/relay-cli --project b get 1
-npx @gromlab/relay-cli --server-url http://127.0.0.1:3000 --project a get 1
+npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 --project a get 1
 ```
 
 `--config` переопределяет `RELAY_CONFIG` и поиск вверх. `--server-url` переопределяет

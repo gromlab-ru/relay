@@ -1,4 +1,5 @@
 import { dirname, resolve } from "node:path";
+import { DEFAULT_MCP_PORT, DEFAULT_SERVER_PORT } from "@tasks/core/domain/config";
 import { parse } from "@tasks/core/domain/validation";
 import { AppError, invariant, isErrno } from "@tasks/core/shared/errors";
 import { atomicJson, exists } from "@tasks/core/storage/files";
@@ -18,8 +19,8 @@ export async function initializeRegistry(cwd: string, explicit?: string) {
     version: 1,
     mode: "workspace",
     projects: {},
-    server: { port: 3000 },
-    mcp: { port: 3010 },
+    server: { port: DEFAULT_SERVER_PORT },
+    mcp: { port: DEFAULT_MCP_PORT },
   };
   const staging = await prepareRuntime(path);
   try {

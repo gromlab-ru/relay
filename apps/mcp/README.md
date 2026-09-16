@@ -4,10 +4,10 @@
 Требуется Node.js 22+.
 
 ```bash
-npx @gromlab/relay-mcp --server-url http://127.0.0.1:3000
+npx @gromlab/relay-mcp --server-url http://127.0.0.1:4700
 ```
 
-Адрес MCP по умолчанию — `http://127.0.0.1:3010/mcp`.
+Адрес MCP по умолчанию — `http://127.0.0.1:4710/mcp`.
 `--server-url` переопределяет `RELAY_SERVER_URL`. Без явного адреса настройки
 подключения читаются из ближайшего `.relay/config.json` или `relay.workspace.json`.
 Relay Server должен уже работать.
@@ -19,7 +19,7 @@ Relay Server должен уже работать.
 task_get({ project: "a", id: 1 })
 ```
 
-Порт MCP: `--port`, затем `RELAY_MCP_PORT`, конфиг и `3010`.
+Порт MCP: `--port`, затем `RELAY_MCP_PORT`, конфиг и `4710`.
 Проекты регистрируются на Relay Server. MCP использует общий REST SDK и получает
 изменения реестра без перезапуска. При недоступном сервере инструмент возвращает ошибку.
 

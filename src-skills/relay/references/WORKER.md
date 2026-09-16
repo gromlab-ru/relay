@@ -20,8 +20,8 @@
 В MCP вызови `task_briefing` и `task_get` для выданной задачи. В CLI:
 
 ```bash
-relay-cli --server-url http://127.0.0.1:3000 --project app project briefing 12 --format json
-relay-cli --server-url http://127.0.0.1:3000 --project app get 12 --format json
+relay-cli --server-url http://127.0.0.1:4700 --project app project briefing 12 --format json
+relay-cli --server-url http://127.0.0.1:4700 --project app get 12 --format json
 ```
 
 Подставь фактические URL, проект и ID. Если неясно, куда подключаться, сообщи оркестратору. Отдельный `init` внутри worktree создаст другую базу, а не восстановит общую.

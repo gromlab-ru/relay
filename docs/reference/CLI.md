@@ -136,7 +136,7 @@ npx @gromlab/relay-cli log add --help
 ### projects init
 
 **Синтаксис:** `projects init`. Создаёт `relay.workspace.json` с пустым реестром,
-`server.port: 3000` и `mcp.port: 3010`. `--config` или `RELAY_CONFIG` задаёт путь нового файла.
+`server.port: 4700` и `mcp.port: 4710`. `--config` или `RELAY_CONFIG` задаёт путь нового файла.
 Существующий файл не заменяется. Автор не требуется.
 
 ### projects list
@@ -238,7 +238,7 @@ npx @gromlab/relay-cli --local migrate --actor orchestrator
 Сервер поставляется отдельно: `relay-server [--port <number>] [--open]`.
 
 Запускает UI, REST, Swagger и SSE на `127.0.0.1`. `--port`: `0–65535`; приоритет
-над `RELAY_PORT`, `server.port`, затем `3000`. `0` выбирает свободный порт.
+над `RELAY_PORT`, `server.port`, затем `4700`. `0` выбирает свободный порт.
 `--open` открывает доску в браузере. Команда работает до `Ctrl+C`.
 С `--format json` первое сообщение содержит `{ url, pid }`.
 Автор сервера подписывает дополнения из UI; CLI-агенты передают собственных авторов.

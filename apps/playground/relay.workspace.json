@@ -1,7 +1,7 @@
 {
   "version": 1,
   "mode": "workspace",
-  "server": { "port": 3000, "url": "http://127.0.0.1:3000" },
+  "server": { "port": 4700, "url": "http://127.0.0.1:4700" },
   "projects": {
     "a": { "path": "./local" },
     "b": { "path": "./secondary" }

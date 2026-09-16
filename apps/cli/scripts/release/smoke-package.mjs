@@ -90,7 +90,7 @@ export async function smokePackage(archive, manifest) {
     assert.equal(initialization.ok, true);
     const configPath = join(directory, "tasks.config.json");
     const config = JSON.parse(await readFile(configPath, "utf8"));
-    assert.equal(config.server.port, 3000);
+    assert.equal(config.server.port, 4700);
     config.server.port = 0;
     await writeFile(configPath, JSON.stringify(config));
     const created = JSON.parse(

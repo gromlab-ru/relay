@@ -53,7 +53,7 @@ Relay хранит сведения в `.relay/tasks` и `.relay/project`. CLI, 
 **Если используешь CLI:** `relay-cli` ниже означает установленную команду или `npx @gromlab/relay-cli`. Работай с `--format json`, проверяй код процесса и `ok`. Из каталога без конфига можно обращаться так:
 
 ```bash
-relay-cli --server-url http://127.0.0.1:3000 --project app project context --format json
+relay-cli --server-url http://127.0.0.1:4700 --project app project context --format json
 ```
 
 `app` здесь — пример ключа из реестра; подставь выданный ключ или ID. В local CLI находит `.relay/config.json` и работает напрямую либо через `server.url`. В workspace рабочие команды идут через сервер; проект выбирается префиксом (`relay-cli app ...`) или `--project`. `--config` выбирает конкретный конфиг. Из worktree используй выданное подключение к общей базе.
@@ -64,10 +64,10 @@ relay-cli --server-url http://127.0.0.1:3000 --project app project context --for
 npx @gromlab/relay-cli init
 npx @gromlab/relay-server --open
 # В другом процессе, если требуется MCP:
-npx @gromlab/relay-mcp --server-url http://127.0.0.1:3000
+npx @gromlab/relay-mcp --server-url http://127.0.0.1:4700
 ```
 
-Web/API обычно доступны на `http://127.0.0.1:3000`, MCP — на `http://127.0.0.1:3010/mcp`. Перед запуском проверь уже работающие процессы. В существующем проекте сначала найди его конфиг или сервер; работник получает подключение от оркестратора. Подробная настройка — [STARTUP](references/STARTUP.md).
+Web/API обычно доступны на `http://127.0.0.1:4700`, MCP — на `http://127.0.0.1:4710/mcp`. Перед запуском проверь уже работающие процессы. В существующем проекте сначала найди его конфиг или сервер; работник получает подключение от оркестратора. Подробная настройка — [STARTUP](references/STARTUP.md).
 
 Для полного цикла нужны `project_context`, `project_record_save`, `task_briefing` или соответствующие команды `project` в CLI. Если их нет, проверь версию и подключение: скилл описывает актуальный контракт исходников, а установленный пакет может быть старее. Не подменяй отсутствующие операции выдуманными командами.
 

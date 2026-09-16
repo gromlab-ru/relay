@@ -31,7 +31,7 @@ npx @gromlab/tasks-cli init
 Оркестратор добавляет в секцию `server` созданного конфига URL и запускает сервер:
 
 ```json
-{ "server": { "port": 3000, "url": "http://127.0.0.1:3000" } }
+{ "server": { "port": 4700, "url": "http://127.0.0.1:4700" } }
 ```
 
 ```bash

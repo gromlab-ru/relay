@@ -14,13 +14,13 @@
     "apps/cli/src/program.ts": "5070a05e8fb8f900f7f7153c78e5bb3aeb25dd06a92a80b47453c8669adeb3ac",
     "apps/mcp/src/tools.ts": "da3abbef43b35698582af4e380ed84c243e1d0c1b6d28debcc5100e285d73539",
     "docs/guides/LIFECYCLE.md": "d8e12a01eec23af1a01c6bf0965d52abc60b2e1bc7cd363daf3cb1448da382ea",
-    "docs/reference/CONFIGURATION.md": "9764e0ff81b926dc34391e0b8aaf29bef22ce16f6cd7d3afcdafc5ce23746572",
-    "docs/reference/MCP.md": "179bec1b250b287c5975be6a61fbe6be06ce68361faed7827d56f7f6a4855f32",
+    "docs/reference/CONFIGURATION.md": "7e3bc4d7f3f9dddf3cd550cfbdefc02bad50fe94888d064309afd5eef04ce245",
+    "docs/reference/MCP.md": "a91975f9d69cebe11f74b00747573e68b85606f2956e077ff7fe91c36ae1d14a",
     "packages/core/src/application/project/queries.ts": "09cfaef2db1080bc6c08c5f579c0301044612df57a9172dbf0df395c4c9e87e2",
     "packages/core/src/application/project/relations.ts": "8c2cb47cd9ef6f7bf5d52805e445e8daba26ad1aeb01d26d9fcab4a520fe28ab",
     "packages/core/src/application/project/service.ts": "18716978d2fa5f66e5425bdf2af57eae67db6ef2110a72b4d8a370262ed8be1e",
     "packages/core/src/application/project/validation.ts": "9973a9fadce48202e73c52de9911fe8f8eb899bde91601db9f3669859d067ac5",
-    "packages/core/src/domain/config.ts": "86c252bbb1956da19ec9dad559024dbd27ca27ab216558b3fcd64830228bbade",
+    "packages/core/src/domain/config.ts": "884df29f31fe4b9d960854c38f0951269fe95fff16d86402632858bb47560362",
     "packages/core/src/domain/project.ts": "f163eca521263dc8e58363f42466dc77b765084d929bfbb8eae016f896b9b8aa",
     "scripts/skill-bundle/build.mjs": "aee8dc60a22601a92041453a79f7edef2a31812d924d50f3c075ab91c85be691",
     "scripts/skill-bundle/check.mjs": "8780f756d4a7fc235bd90becd7654d5d26a45dbac7e4e6878706fe8279f1a1d4",
@@ -31,8 +31,8 @@
     "src-skills/relay/references/EXAMPLES.md": "69fec5a75eed94e77984634a107c6b8dcb43602cf566fa060e2eb60f81ac8e7c",
     "src-skills/relay/references/ORCHESTRATOR.md": "28c59182f8179a25dfac660b67759ba0ba48a7dddcea8cec4fe0ef7ae6e47952",
     "src-skills/relay/references/RECOVERY.md": "71c8333e405d8e75c16a1ddd5afbd64c04ce92ca6cd09da22c6a995b010b4c40",
-    "src-skills/relay/references/STARTUP.md": "d4c3c32b3e82096a526156485c20b21a1de92b0983bcb50e62fc1f669dc24a6e",
-    "src-skills/relay/references/WORKER.md": "61bec1d63fea20a43c261e83963cd8d19cfd2583465b79f9f5a9d9de3eba1ef2",
-    "src-skills/relay/skill.md": "ea760cf33f093c6db311bdaf0bed11a841f3710a2beb10d079c218ad558885b8"
+    "src-skills/relay/references/STARTUP.md": "d815f3bb6719bdc371fab264f8a1ade999775382bc7dba1f955d055971bef941",
+    "src-skills/relay/references/WORKER.md": "f516a0edaf82cc12d8305f037d8efd4de19a3c8a559e141dd42ea3d7631def2d",
+    "src-skills/relay/skill.md": "7b47552c8221ea128d63c628a7caa84c90bbcb4c59e23d4172f513b06c68418c"
   }
 }
