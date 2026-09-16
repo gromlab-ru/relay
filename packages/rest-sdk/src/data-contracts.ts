@@ -2343,16 +2343,16 @@ export interface ContextResponse {
       /**
        * @min 0
        * @max 65535
-       * @default 3010
+       * @default 4710
        */
       port: number;
     };
-    /** @default {"port":3000} */
+    /** @default {"port":4700} */
     server: {
       /**
        * @min 0
        * @max 65535
-       * @default 3000
+       * @default 4700
        */
       port: number;
       /** @format uri */
@@ -3025,16 +3025,16 @@ export interface BoardResponse {
         /**
          * @min 0
          * @max 65535
-         * @default 3010
+         * @default 4710
          */
         port: number;
       };
-      /** @default {"port":3000} */
+      /** @default {"port":4700} */
       server: {
         /**
          * @min 0
          * @max 65535
-         * @default 3000
+         * @default 4700
          */
         port: number;
         /** @format uri */

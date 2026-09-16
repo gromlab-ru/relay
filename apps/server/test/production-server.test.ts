@@ -52,7 +52,7 @@ test(
         if (match?.[1]) resolve(match[1]);
       });
     });
-    assert.notEqual(Number(new URL(url).port), 3000);
+    assert.notEqual(Number(new URL(url).port), 4700);
     const index = await fetch(url);
     assert.equal(index.status, 200);
     assert.match(index.headers.get("content-type") ?? "", /text\/html/);

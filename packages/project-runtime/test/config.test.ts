@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
 import { defaultConfig } from "@tasks/core/domain/config";
-import { readConfiguration, resolveProject } from "../src/config.js";
+import { readConfiguration, resolveProject, serverAddress } from "../src/config.js";
 import { initializeRegistry, registerProject, unregisterProject } from "../src/registry.js";
 
 test("поиск выбирает ближайший конфиг, реестр имеет приоритет в одном каталоге; чтение без записи", async (t) => {
@@ -20,6 +20,9 @@ test("поиск выбирает ближайший конфиг, реестр 
   assert.equal((await readConfiguration(join(project, "src"))).kind, "project");
   const source = await readConfiguration(join(project, "src"), undefined, true);
   assert.equal(source.path, registry);
+  assert.equal(source.value.server.port, 4700);
+  assert.equal(source.value.mcp?.port, 4710);
+  assert.equal(serverAddress(source), "http://127.0.0.1:4700");
   assert.equal(
     (await resolveProject(source, "app")).configPath,
     join(project, ".relay/config.json"),

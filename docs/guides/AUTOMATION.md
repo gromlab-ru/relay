@@ -88,8 +88,8 @@ CLI читает актуальные данные; постраничный о�
 OpenAPI 3.1 — на `/api/openapi.json`. Например, при работающем локальном сервере:
 
 ```bash
-curl --fail-with-body http://127.0.0.1:3000/api/v1/context
-curl --fail-with-body 'http://127.0.0.1:3000/api/v1/board?ready=true&limit=20'
+curl --fail-with-body http://127.0.0.1:4700/api/v1/context
+curl --fail-with-body 'http://127.0.0.1:4700/api/v1/board?ready=true&limit=20'
 ```
 
 [Контракт API](../reference/API.md) описывает мутации, `actor`, `ifRevision`,

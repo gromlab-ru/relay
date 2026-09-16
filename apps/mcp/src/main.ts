@@ -2,6 +2,7 @@
 import { Command, CommanderError } from "commander";
 import manifest from "#manifest" with { type: "json" };
 import { startMcp } from "./server.js";
+import { DEFAULT_MCP_PORT } from "@tasks/core/domain/config";
 import { asAppError } from "@tasks/core/shared/errors";
 
 const command = new Command("relay-mcp")
@@ -13,7 +14,10 @@ const command = new Command("relay-mcp")
     "--config <path>",
     "Проектный конфиг или workspace; по умолчанию RELAY_CONFIG или поиск вверх",
   )
-  .option("--port <number>", "Порт MCP: RELAY_MCP_PORT, mcp.port или 3010; 0 выбирает свободный")
+  .option(
+    "--port <number>",
+    `Порт MCP: RELAY_MCP_PORT, mcp.port или ${DEFAULT_MCP_PORT}; 0 выбирает свободный`,
+  )
   .exitOverride();
 try {
   command.parse();

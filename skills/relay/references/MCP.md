@@ -9,9 +9,9 @@
 ## Запуск и конфигурация
 
 ```bash
-npx @gromlab/relay-mcp --server-url http://127.0.0.1:3000
+npx @gromlab/relay-mcp --server-url http://127.0.0.1:4700
 npx @gromlab/relay-mcp --config /work/app/.relay/config.json
-npx @gromlab/relay-mcp --config /work/relay.workspace.json --port 3010
+npx @gromlab/relay-mcp --config /work/relay.workspace.json --port 4710
 ```
 
 Это три независимых способа запуска. Конфиг: `--config` → `RELAY_CONFIG` → поиск вверх
@@ -27,13 +27,13 @@ npx @gromlab/relay-mcp --config /work/relay.workspace.json --port 3010
 проекты MCP получает с Relay Server. `--server-url` переопределяет `RELAY_SERVER_URL`
 и конфигурацию; при явном URL файлы проектов MCP не нужны.
 
-Порт: `--port` → `RELAY_MCP_PORT` → `mcp.port` → `3010`. Значение `0` выбирает свободный
+Порт: `--port` → `RELAY_MCP_PORT` → `mcp.port` → `4710`. Значение `0` выбирает свободный
 порт. Адрес и путь конфига выводятся в stderr. Порт применяется при запуске.
 Остановка: `Ctrl+C` или `SIGTERM`; завершаются текущие MCP-операции. Relay Server работает отдельным процессом.
 
 ## Подключение агентов
 
-В MCP-клиенте выберите HTTP-подключение с URL `http://127.0.0.1:3010/mcp`.
+В MCP-клиенте выберите HTTP-подключение с URL `http://127.0.0.1:4710/mcp`.
 Все агенты используют один адрес. Точный формат настройки зависит от MCP-клиента.
 Сервер слушает `127.0.0.1`, проверяет Host/Origin и использует stateless Streamable HTTP:
 POST обрабатывает стандартные initialize, tools/list и tools/call. GET/DELETE возвращают 405;

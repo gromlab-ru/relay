@@ -18,7 +18,7 @@ npx @gromlab/tasks-cli list
 npx @gromlab/tasks-cli server --actor human --open
 ```
 
-Последняя команда запускает NestJS на `http://127.0.0.1:3000`. Он предоставляет
+Последняя команда запускает NestJS на `http://127.0.0.1:4700`. Он предоставляет
 REST API, OpenAPI, Swagger и SSE. При наличии `dist/web/index.html` сервер также отдаёт
 собранное React-приложение. Общая сборка включает фронтенд; без статики API может работать самостоятельно.
 Доступны `--port`, `--config`, `--actor` / `TASKS_ACTOR`; `--open` открывает браузер.
@@ -211,7 +211,7 @@ pnpm run dev
 ```
 
 `dev` запускает API и web вместе через Turbo. Для раздельного запуска используются
-`pnpm run dev:server` и `pnpm run dev:web`. Nest — `127.0.0.1:3000`, Vite —
+`pnpm run dev:server` и `pnpm run dev:web`. Nest — `127.0.0.1:4700`, Vite —
 `127.0.0.1:5173` с проксированием `/api` в Nest, включая SSE.
 Dev-сервер по умолчанию использует `apps/playground/tasks.config.json` и автора `human`.
 `TASKS_CONFIG`, `TASKS_ACTOR`, `TASKS_PORT` позволяют выбрать другое окружение;

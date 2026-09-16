@@ -31,7 +31,7 @@
     "done": { "terminal": true, "satisfiesDependencies": true, "color": "green" },
     "cancelled": { "terminal": true, "satisfiesDependencies": false, "color": "gray" }
   },
-  "server": { "port": 3000 },
+  "server": { "port": 4700 },
   "output": { "format": "text", "defaultLimit": 20, "maxBytes": 16384 }
 }
 ```
@@ -47,12 +47,12 @@ UUID создаётся отдельно для каждого проекта. `
 {
   "version": 1,
   "mode": "workspace",
-  "server": { "port": 3000, "url": "http://127.0.0.1:3000" },
+  "server": { "port": 4700, "url": "http://127.0.0.1:4700" },
   "projects": {
     "a": { "path": "./A" },
     "b": { "path": "./B" }
   },
-  "mcp": { "port": 3010 }
+  "mcp": { "port": 4710 }
 }
 ```
 
@@ -107,13 +107,25 @@ MCP всегда использует Relay Server. Его адрес выбир
 ## Порт и URL
 
 `server.port` — порт запуска, `server.url` — адрес подключения клиентов.
-Порт сервера: `--port` → `RELAY_PORT` → `server.port` → `3000`.
+Порт сервера: `--port` → `RELAY_PORT` → `server.port` → `4700`.
 Значение `0` выбирает свободный порт, фактический адрес выводится при запуске.
 URL — HTTP(S) origin без пути `/api/v1`, credentials, query и hash.
 Сервер слушает loopback `127.0.0.1`.
 
-Порт MCP: `--port` → `RELAY_MCP_PORT` → `mcp.port` → `3010`.
+Порт MCP: `--port` → `RELAY_MCP_PORT` → `mcp.port` → `4710`.
 Изменение порта применяется при следующем запуске процесса.
+
+### Смена портов существующего проекта
+
+Значения по умолчанию используются при отсутствии явной настройки. Сохранённые
+`server.port`, `server.url` и `mcp.port` имеют приоритет, в том числе старые `3000` и `3010`.
+
+Чтобы перевести существующий проект или workspace на новую пару:
+
+1. В его конфиге задайте `server.port: 4700` и `mcp.port: 4710`.
+2. Если задан `server.url`, обновите его на `http://127.0.0.1:4700`.
+   Проверьте также флаги запуска и переменные окружения, переопределяющие эти значения.
+3. Перезапустите Relay Server и MCP. В MCP-клиенте укажите `http://127.0.0.1:4710/mcp`.
 
 ## Переменные окружения
 

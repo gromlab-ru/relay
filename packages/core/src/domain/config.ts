@@ -1,10 +1,16 @@
 import { z } from "zod";
 
+/** Стандартный порт Relay Server для Web и REST API. */
+export const DEFAULT_SERVER_PORT = 4700;
+
+/** Стандартный порт отдельного MCP-сервера Relay. */
+export const DEFAULT_MCP_PORT = 4710;
+
 /** Порт локального HTTP-сервера; 0 поручает ОС выбрать свободный порт. */
 export const serverPortSchema = z.number().int().min(0).max(65535);
 
 /** MCP запускается отдельно от REST API; 0 выбирает свободный порт. */
-export const mcpConfigSchema = z.strictObject({ port: serverPortSchema.default(3010) });
+export const mcpConfigSchema = z.strictObject({ port: serverPortSchema.default(DEFAULT_MCP_PORT) });
 
 /** Адрес API без префикса /api/v1; локальный режим выбирается отдельно. */
 export const serverUrlSchema = z.url().superRefine((value, context) => {
@@ -58,8 +64,11 @@ export const configSchema = z
     statuses: z.record(z.string().regex(/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u), statusSchema),
     mcp: mcpConfigSchema.optional(),
     server: z
-      .strictObject({ port: serverPortSchema.default(3000), url: serverUrlSchema.optional() })
-      .default({ port: 3000 }),
+      .strictObject({
+        port: serverPortSchema.default(DEFAULT_SERVER_PORT),
+        url: serverUrlSchema.optional(),
+      })
+      .default({ port: DEFAULT_SERVER_PORT }),
     output: z
       .strictObject({
         format: z.enum(["json", "text"]).default("text"),
@@ -101,6 +110,6 @@ export const defaultConfig: Config = {
     done: { terminal: true, satisfiesDependencies: true, color: "green" },
     cancelled: { terminal: true, satisfiesDependencies: false, color: "gray" },
   },
-  server: { port: 3000 },
+  server: { port: DEFAULT_SERVER_PORT },
   output: { format: "text", defaultLimit: 20, maxBytes: 16384 },
 };

@@ -16,7 +16,7 @@ npx @gromlab/relay-server --config ./relay.workspace.json --port 3001
 В ближайшем каталоге workspace имеет приоритет. Явный `--config` переопределяет
 `RELAY_CONFIG` и поиск. Все пути в конфиге относительны к этому файлу.
 
-Порт: `--port` → `RELAY_PORT` → `server.port` → `3000`.
+Порт: `--port` → `RELAY_PORT` → `server.port` → `4700`.
 Автор интерфейса: `--actor` → `RELAY_ACTOR` → `human`.
 `--format json` выводит адрес и PID процесса; `Ctrl+C` завершает сервер и подписки.
 

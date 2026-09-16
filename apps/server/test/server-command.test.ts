@@ -102,7 +102,7 @@ test("порт сервера: --port → RELAY_PORT → server.port из выб
         },
       );
       try {
-        assert.notEqual(Number(new URL(server.url).port), 3000);
+        assert.notEqual(Number(new URL(server.url).port), 4700);
         assert.notEqual(Number(new URL(server.url).port), address.port);
         const context = await (await fetch(`${server.url}/api/v1/context`)).json();
         assert.equal(context.data.configPath, config);

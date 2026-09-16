@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { Command, CommanderError } from "commander";
 import { startServer } from "@tasks/server-runtime";
+import { DEFAULT_SERVER_PORT } from "@tasks/core/domain/config";
 import { asAppError } from "@tasks/core/shared/errors";
 import manifest from "#manifest" with { type: "json" };
 
@@ -13,7 +14,7 @@ const command = new Command("relay-server")
     "--config <path>",
     ".relay/config.json или relay.workspace.json; по умолчанию поиск вверх",
   )
-  .option("--port <number>", "Порт HTTP; RELAY_PORT, server.port или 3000")
+  .option("--port <number>", `Порт HTTP; RELAY_PORT, server.port или ${DEFAULT_SERVER_PORT}`)
   .option("--actor <id>", "Автор изменений из веб-интерфейса; по умолчанию human")
   .option("--open", "Открыть браузер после запуска")
   .option("--format <format>", "Формат адреса запуска: text или json", "text")

@@ -19,11 +19,11 @@ npx @gromlab/relay-cli list
 npx @gromlab/relay-server --open
 ```
 
-Web доступен на `http://127.0.0.1:3000`, Swagger — на `/api/docs`.
+Web доступен на `http://127.0.0.1:4700`, Swagger — на `/api/docs`.
 Без URL CLI использует прямой Core; для HTTP:
 
 ```bash
-npx @gromlab/relay-cli --server-url http://127.0.0.1:3000 get 1
+npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 get 1
 ```
 
 Постоянное подключение задаётся `server.url` в `.relay/config.json`.
@@ -40,7 +40,7 @@ npx @gromlab/relay-cli --server-url http://127.0.0.1:3000 get 1
     "a": { "path": "./A" },
     "b": { "path": "./B" }
   },
-  "server": { "port": 3000, "url": "http://127.0.0.1:3000" }
+  "server": { "port": 4700, "url": "http://127.0.0.1:4700" }
 }
 ```
 
@@ -57,12 +57,14 @@ Workspace CLI использует только сервер. Запуск CLI �
 ## Агенты через MCP
 
 ```bash
-npx @gromlab/relay-mcp --server-url http://127.0.0.1:3000
+npx @gromlab/relay-mcp --server-url http://127.0.0.1:4700
 ```
 
-Подключите клиента к `http://127.0.0.1:3010/mcp`, вызовите `projects_list`.
+Подключите клиента к `http://127.0.0.1:4710/mcp`, вызовите `projects_list`.
 В workspace передавайте `project` вместе с ID задачи; в local проект можно опустить.
 Оркестратор назначает работу и принимает результат, субагент читает поручение и пишет отчёты.
+
+Для существующей установки см. [смену портов](reference/CONFIGURATION.md#смена-портов-существующего-проекта).
 
 Далее: [конфигурация](reference/CONFIGURATION.md), [CLI](reference/CLI.md),
 [MCP](reference/MCP.md), [архитектура](ARCHITECTURE.md).

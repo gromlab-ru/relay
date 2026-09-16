@@ -12,5 +12,5 @@
     "done": { "terminal": true, "satisfiesDependencies": true, "color": "green" },
     "cancelled": { "terminal": true, "satisfiesDependencies": false, "color": "gray" }
   },
-  "server": { "port": 3000 }
+  "server": { "port": 4700 }
 }
