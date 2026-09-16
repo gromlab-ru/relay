@@ -202,14 +202,10 @@ test("обзор читает снимок один раз, не изменяе�
   await app.create("Другая задача");
   const path = join(app.root, ".relay/tasks", "1.json");
   const before = await readFile(path, "utf8");
-  const original = TaskRepository.prototype.snapshot;
-  const snapshot = t.mock.method(
-    TaskRepository.prototype,
-    "snapshot",
-    function (this: TaskRepository) {
-      return original.call(this);
-    },
-  );
+  const original = TaskRepository.prototype.all;
+  const snapshot = t.mock.method(TaskRepository.prototype, "all", function (this: TaskRepository) {
+    return original.call(this);
+  });
   const query = new TaskQueries(app.workspace);
   await query.overview(1);
   assert.equal(snapshot.mock.callCount(), 1);

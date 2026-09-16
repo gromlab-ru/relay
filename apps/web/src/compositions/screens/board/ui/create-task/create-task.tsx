@@ -42,8 +42,12 @@ import styles from "./styles/create-task.module.css";
  *  - восстановления незавершённого ввода
  */
 export const CreateTask = (props: CreateTaskProps) => {
-  const { project, status, group, parentId, onClose, onCreated } = props;
-  const key = getDraftKey(project.id, `new:${status}:${group ?? ""}:${parentId ?? ""}`);
+  const { project, status, group, parentId, onClose, onCreated, contextLabel, contextId } = props;
+  const contextSuffix = contextId === undefined || contextId === "" ? "" : `:stage:${contextId}`;
+  const key = getDraftKey(
+    project.id,
+    `new:${status}:${group ?? ""}:${parentId ?? ""}${contextSuffix}`,
+  );
   const [draft, setDraft] = useState(() => readTaskDraft(key));
   const [base] = useState(() => emptyTaskInput(status, group, parentId));
   const [isExpanded, setExpanded] = useState(false);
@@ -102,7 +106,7 @@ export const CreateTask = (props: CreateTaskProps) => {
       onClose={handleClose}
       title={title}
       size="lg"
-      closeButtonProps={{ disabled: form.submitting }}
+      closeButtonProps={{ disabled: form.submitting, "aria-label": "Закрыть создание задачи" }}
       closeOnClickOutside={!form.submitting}
       closeOnEscape={!form.submitting}
     >
@@ -112,6 +116,11 @@ export const CreateTask = (props: CreateTaskProps) => {
       >
         <fieldset className={styles.fields} disabled={form.submitting}>
           <Stack gap="lg">
+            {isDefined(contextLabel) && (
+              <Alert color="indigo" variant="light" title="Задача для этапа">
+                {contextLabel}
+              </Alert>
+            )}
             {isDefined(draft) && (
               <Alert variant="light" color="indigo" title="Черновик восстановлен">
                 <Button

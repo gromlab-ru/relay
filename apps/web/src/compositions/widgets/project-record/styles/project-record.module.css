@@ -1,0 +1,30 @@
+.root {
+  min-width: 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--tasks-border);
+  border-radius: 0.8rem;
+  background: var(--tasks-surface);
+  box-shadow: var(--tasks-card-shadow);
+  scroll-margin-top: 7rem;
+}
+
+.identity {
+  min-width: 0;
+}
+.title {
+  margin: 0.3rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.summary {
+  margin-top: 0.65rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.details {
+  border-top: 1px solid var(--tasks-border);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}

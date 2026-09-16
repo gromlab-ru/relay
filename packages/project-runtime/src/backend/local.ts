@@ -7,15 +7,25 @@ import { LogService } from "@tasks/core/application/logs/service";
 import { validateWorkspace } from "@tasks/core/application/validate";
 import { openWorkspace } from "@tasks/core/storage/workspace";
 import type { Backend } from "./types.js";
+import { LifecycleQueries } from "@tasks/core/application/project/queries";
+import { ProjectService } from "@tasks/core/application/project/service";
 
 export async function createLocalBackend(cwd: string, config?: string): Promise<Backend> {
   const workspace = await openWorkspace(cwd, config);
   const service = new TaskService(workspace);
   const queries = new ProjectQueries(workspace);
+  const lifecycle = new LifecycleQueries(workspace);
   return {
     kind: "local",
     workspace,
     localWorkspace: workspace,
+    lifecycle: {
+      state: () => lifecycle.state(),
+      context: () => lifecycle.context(),
+      briefing: (id) => lifecycle.briefing(id),
+      changes: (id) => lifecycle.changes(id),
+      save: (input, actor) => new ProjectService(workspace).save(input, actor),
+    },
     tasks: {
       workspace,
       list: (input) => queries.list(input),

@@ -16,6 +16,8 @@ import { createTaskForProject } from "./operations/create-task-for-project.js";
 import { createTask } from "./operations/create-task.js";
 import { getBoardForProject } from "./operations/get-board-for-project.js";
 import { getBoard } from "./operations/get-board.js";
+import { getCheckpointChangesForProject } from "./operations/get-checkpoint-changes-for-project.js";
+import { getCheckpointChanges } from "./operations/get-checkpoint-changes.js";
 import { getCommentForProject } from "./operations/get-comment-for-project.js";
 import { getComment } from "./operations/get-comment.js";
 import { getContextForProject } from "./operations/get-context-for-project.js";
@@ -27,8 +29,14 @@ import { getLogForProject } from "./operations/get-log-for-project.js";
 import { getLog } from "./operations/get-log.js";
 import { getOverviewForProject } from "./operations/get-overview-for-project.js";
 import { getOverview } from "./operations/get-overview.js";
+import { getProjectContextForProject } from "./operations/get-project-context-for-project.js";
+import { getProjectContext } from "./operations/get-project-context.js";
+import { getProjectStateForProject } from "./operations/get-project-state-for-project.js";
+import { getProjectState } from "./operations/get-project-state.js";
 import { getProjects } from "./operations/get-projects.js";
 import { getServerContext } from "./operations/get-server-context.js";
+import { getTaskBriefingForProject } from "./operations/get-task-briefing-for-project.js";
+import { getTaskBriefing } from "./operations/get-task-briefing.js";
 import { getTaskDocumentForProject } from "./operations/get-task-document-for-project.js";
 import { getTaskDocument } from "./operations/get-task-document.js";
 import { getTaskForProject } from "./operations/get-task-for-project.js";
@@ -52,6 +60,8 @@ import { moveTask } from "./operations/move-task.js";
 import { registerProject } from "./operations/register-project.js";
 import { releaseTaskForProject } from "./operations/release-task-for-project.js";
 import { releaseTask } from "./operations/release-task.js";
+import { saveProjectRecordForProject } from "./operations/save-project-record-for-project.js";
+import { saveProjectRecord } from "./operations/save-project-record.js";
 import { unregisterProject } from "./operations/unregister-project.js";
 import { updateTaskForProject } from "./operations/update-task-for-project.js";
 import { updateTask } from "./operations/update-task.js";
@@ -115,6 +125,18 @@ export const operationsTree = {
     getOverviewForProject: getOverviewForProject,
     validateProjectForProject: validateProjectForProject,
     changeDependencyForProject: changeDependencyForProject,
+  },
+  lifecycle: {
+    getProjectState: getProjectState,
+    getProjectContext: getProjectContext,
+    getTaskBriefing: getTaskBriefing,
+    getCheckpointChanges: getCheckpointChanges,
+    saveProjectRecord: saveProjectRecord,
+    getProjectStateForProject: getProjectStateForProject,
+    getProjectContextForProject: getProjectContextForProject,
+    getTaskBriefingForProject: getTaskBriefingForProject,
+    getCheckpointChangesForProject: getCheckpointChangesForProject,
+    saveProjectRecordForProject: saveProjectRecordForProject,
   },
   comments: {
     listComments: listComments,

@@ -142,17 +142,19 @@ test("справочник включает все зарегистрирова�
   check(program, []);
 });
 
-test("скилл relay-cli сохраняет все локальные ссылки после установки без монорепозитория", async (t) => {
+test("скилл relay сохраняет все локальные ссылки после установки без монорепозитория", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "tasks-skill-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const installed = join(directory, ".agents/skills/relay-cli");
-  await cp(join(repoRoot, "skills/relay-cli"), installed, { recursive: true });
+  const installed = join(directory, ".agents/skills/relay");
+  await cp(join(repoRoot, "skills/relay"), installed, { recursive: true });
   const paths = (await filesBelow(installed)).filter((path) => path.endsWith(".md"));
   assert(paths.includes("SKILL.md"));
-  assert(paths.includes("reference/ORCHESTRATOR.md"));
-  assert(paths.includes("reference/SUBAGENT.md"));
+  assert(paths.includes("references/ORCHESTRATOR.md"));
+  assert(paths.includes("references/WORKER.md"));
+  assert(paths.includes("references/RECORDS.md"));
+  assert(paths.includes("references/CLI-COMMANDS.md"));
   await checkDocumentation(installed, paths);
   const markdown = await readFile(join(installed, "SKILL.md"), "utf8");
-  assert.match(markdown, /^---\nname: relay-cli\ndescription: >-/);
+  assert.match(markdown, /^---\nname: relay\ndescription: >-/);
   assert(markdown.split("\n").length <= 220, "Основной файл скилла перестал быть компактным");
 });

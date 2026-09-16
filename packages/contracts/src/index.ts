@@ -132,6 +132,9 @@ export interface BoardResponse {
   version: string;
 }
 export interface BoardQuery {
+  planId?: string;
+  stageId?: string;
+  type?: "task" | "feature" | "bug" | "research" | "debt";
   search?: string;
   status?: string;
   group?: string;
@@ -235,6 +238,9 @@ export type TaskBrief = Pick<
   | "updatedAt"
 >;
 export interface TaskListQuery {
+  planId?: string;
+  stageId?: string;
+  type?: "task" | "feature" | "bug" | "research" | "debt";
   status?: string;
   group?: string;
   assignee?: string;

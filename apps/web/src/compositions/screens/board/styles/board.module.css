@@ -1,7 +1,7 @@
 .root {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  min-height: calc(100dvh - 4rem);
   min-width: 0;
   background: var(--tasks-canvas);
   color: var(--tasks-ink);

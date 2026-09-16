@@ -1,7 +1,7 @@
 {
   "name": "@gromlab/relay-server",
-  "version": "0.1.0",
-  "description": "Relay Server: локальный проект или workspace, REST API и веб-интерфейс",
+  "version": "0.2.0",
+  "description": "Relay Server: проектный контекст, планы, задачи, REST API и веб-приложение для людей и AI-агентов",
   "bin": {
     "relay-server": "dist/main.js"
   },

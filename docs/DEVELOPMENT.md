@@ -35,7 +35,8 @@ pnpm run skills:install
 
 Команда использует закреплённый `npx skills@1.5.26` (Node.js 22.20+, рекомендуется 24).
 Весь каталог проектных копий `.agents/skills` исключён из Git без исключений.
-Исходники продуктового скилла принадлежат версионируемому `skills/relay-cli`.
+Исходники продуктового скилла находятся в `src-skills/relay`, готовый пакет — в `skills/relay`.
+Сборка: `pnpm run skills:build`; проверка актуальности: `pnpm run skills:check`.
 Подробности — [устройство и установка скиллов](development/SKILLS.md).
 
 ## Запуск
@@ -122,6 +123,7 @@ TypeScript project references и корневых алиасов исходни�
 | `pnpm test`                                                          | Все автоматизированные тесты с необходимыми сборками            |
 | `pnpm run test:cli` / `test:server` / `test:core` / `test:contracts` | Выборочные тесты                                                |
 | `pnpm run docs:check`                                                | Ссылки, файлы и якоря документации                              |
+| `pnpm run skills:build` / `skills:check` / `skills:test`             | Сборка, проверка актуальности и тесты пакета скилла Relay       |
 | `pnpm run format` / `format:check`                                   | Форматирование и его проверка                                   |
 | `pnpm run check`                                                     | Документация, форматирование, lint, типы, сборки и тесты        |
 | `pnpm run package:check`                                             | Три независимые npm-установки, local/workspace, API, Web и MCP  |

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "name": "relay",
+  "files": {
+    "skill.md": "SKILL.md",
+    "references/STARTUP.md": "references/STARTUP.md",
+    "references/ORCHESTRATOR.md": "references/ORCHESTRATOR.md",
+    "references/WORKER.md": "references/WORKER.md",
+    "references/DATA-MODEL.md": "references/DATA-MODEL.md",
+    "references/EXAMPLES.md": "references/EXAMPLES.md",
+    "references/RECOVERY.md": "references/RECOVERY.md"
+  },
+  "documents": {
+    "docs/reference/CONFIGURATION.md": "references/CONFIGURATION.md",
+    "docs/reference/MCP.md": "references/MCP.md",
+    "docs/guides/LIFECYCLE.md": "references/LIFECYCLE.md"
+  },
+  "generated": {
+    "references/CLI-COMMANDS.md": "cli",
+    "references/RECORDS.md": "records"
+  },
+  "aliases": {
+    "docs/README.md": "SKILL.md",
+    "docs/reference/ERRORS.md": "references/RECOVERY.md"
+  },
+  "watch": [
+    "scripts/skill-bundle/build.mjs",
+    "scripts/skill-bundle/check.mjs",
+    "scripts/skill-bundle/lib.mjs",
+    "scripts/skill-bundle/generate.mjs",
+    "apps/cli/scripts/lib/documentation.mjs",
+    "apps/cli/src/commands",
+    "apps/cli/src/program.ts",
+    "apps/mcp/src/tools.ts",
+    "packages/core/src/domain/project.ts",
+    "packages/core/src/domain/config.ts",
+    "packages/core/src/application/project"
+  ]
+}

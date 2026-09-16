@@ -61,7 +61,7 @@
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/docs/**",
-        "$TURBO_ROOT$/skills/relay-cli/**",
+        "$TURBO_ROOT$/skills/relay/**",
         "$TURBO_ROOT$/scripts/release/**"
       ],
       "outputs": []

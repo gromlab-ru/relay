@@ -10,6 +10,8 @@ export type CreateTaskProps = {
   group: string | null;
   /** Родитель создаваемой подзадачи. */
   parentId: number | null;
+  /** Видимый контекст выбранного плана и этапа. */ contextLabel?: string | undefined;
+  /** Стабильный этап для изоляции черновиков создания. */ contextId?: string | undefined;
   /** Закрытие с сохранением черновика. */
   onClose: () => void;
   /** Открытие созданной карточки. */

@@ -7,6 +7,7 @@ import { basename, dirname } from "node:path";
 import { Observable, Subject } from "rxjs";
 import type { ServerEvent } from "@tasks/contracts";
 import { TaskQueries } from "@tasks/core/application/queries/tasks";
+import { ProjectRepository } from "@tasks/core/storage/project";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
@@ -21,6 +22,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private version: string | undefined;
   private lastError: { code: string; message: string } | undefined;
   private storageRoot: string | undefined;
+  private projectRoot: string | undefined;
   private debounce: NodeJS.Timeout | undefined;
   private poll: NodeJS.Timeout | undefined;
   private heartbeat: NodeJS.Timeout | undefined;
@@ -49,9 +51,12 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  apiChanged(taskId: number): void {
+  apiChanged(taskId?: number): void {
     if (this.stopped) return;
-    this.events.next({ type: "changed", data: { source: "api", taskIds: [taskId] } });
+    this.events.next({
+      type: "changed",
+      data: { source: "api", ...(taskId === undefined ? {} : { taskIds: [taskId] }) },
+    });
     this.schedule();
   }
 
@@ -87,6 +92,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       const workspace = await this.workspace.open();
       if (this.stopped) return;
       this.storageRoot = workspace.root;
+      this.projectRoot = new ProjectRepository(workspace).root;
       this.rebind();
       const { tasks, version } = await new TaskQueries(workspace).snapshot();
       if (this.stopped) return;
@@ -126,6 +132,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     const configParent = dirname(this.workspace.options.configPath);
     const desired = new Set([
       configParent,
+      ...(this.projectRoot ? [this.projectRoot] : []),
       ...(this.storageRoot ? [this.storageRoot, dirname(this.storageRoot)] : []),
     ]);
     for (const [path, watcher] of this.watchers) {
@@ -141,6 +148,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
           const name = filename?.toString();
           if (
             name === undefined ||
+            path === this.projectRoot ||
+            (path === configParent && name === "project") ||
             (path === configParent && name === basename(this.workspace.options.configPath)) ||
             (path === this.storageRoot && (name.endsWith(".json") || name === basename(path))) ||
             (this.storageRoot &&
@@ -242,7 +251,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     return (await this.acquire(await workspace.resolve())).stream();
   }
 
-  async apiChanged(project: string | undefined, id: number) {
+  async apiChanged(project: string | undefined, id?: number) {
     if (!this.stopped) (await this.acquire(await this.catalog.select(project))).apiChanged(id);
   }
 

@@ -79,6 +79,9 @@ export function registerTasks(program: Command, runtime: Runtime): void {
           "Точный статус из config get; переопределяет фильтр незавершённых",
         )
         .option("--group <name>", "Точное имя группы")
+        .option("--plan-id <id>", "Задачи плана, включая унаследованные связи")
+        .option("--stage-id <id>", "Задачи этапа плана")
+        .option("--type <kind>", "Вид работы: task, feature, bug, research, debt")
         .option("--assignee <actor>", "Точный идентификатор исполнителя")
         .option("--parent <id>", "Только непосредственные подзадачи указанного ID")
         .option("--tag <tag>", "Задачи с указанным тегом")
@@ -93,12 +96,37 @@ export function registerTasks(program: Command, runtime: Runtime): void {
         .option("--search <text>", "Поиск в названии, описании и результате без учёта регистра")
         .option("--ready", "Свободные задачи с выполненными зависимостями"),
     run(context, { options }) {
-      const { status, group, assignee, parent, tag, search, ready, all, sort, limit, cursor } =
-        options;
+      const {
+        status,
+        group,
+        assignee,
+        parent,
+        tag,
+        search,
+        ready,
+        all,
+        sort,
+        limit,
+        cursor,
+        planId,
+        stageId,
+        type,
+      } = options;
       const filters = Object.fromEntries(
-        Object.entries({ status, group, assignee, parent, tag, search, ready, all, sort }).filter(
-          ([, value]) => value !== undefined,
-        ),
+        Object.entries({
+          status,
+          group,
+          assignee,
+          parent,
+          tag,
+          search,
+          ready,
+          all,
+          sort,
+          planId,
+          stageId,
+          type,
+        }).filter(([, value]) => value !== undefined),
       );
       return listTasks(context.tasks, filters, {
         ...context.output,

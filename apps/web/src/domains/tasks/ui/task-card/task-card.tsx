@@ -1,7 +1,8 @@
 import clsx from "clsx";
-import { Avatar, Tooltip } from "@mantine/core";
+import { Avatar, Badge, Tooltip } from "@mantine/core";
 import { CircleAlert, GitBranch, MessageSquare, NotebookPen } from "lucide-react";
 import { isDefined, isNonEmptyArray } from "shared/value-predicates";
+import { isRecordOf, statusLabel, useLifecycle } from "domains/lifecycle";
 import type { TaskCardProps } from "./types/task-card-props.type";
 import styles from "./styles/task-card.module.css";
 
@@ -13,6 +14,30 @@ import styles from "./styles/task-card.module.css";
  */
 export const TaskCard = (props: TaskCardProps) => {
   const { task, onOpen, dragHandle, isSelected, className, ...rootAttrs } = props;
+  const lifecycle = useLifecycle();
+  const context = lifecycle.data?.records.find(
+    (record) => isRecordOf(record, "task") && record.fields.taskId === task.id,
+  );
+  const signal = lifecycle.data?.attention.find((item) => item.taskId === task.id);
+  const currentRun = lifecycle.data?.records
+    .filter((record) => isRecordOf(record, "run") && record.fields.taskId === task.id)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+  const hasSignal = signal !== undefined;
+  const isRunning =
+    currentRun !== undefined &&
+    isRecordOf(currentRun, "run") &&
+    currentRun.fields.status === "running" &&
+    !hasSignal;
+  const hasType =
+    context !== undefined && isRecordOf(context, "task") && context.fields.type !== "task";
+  const typeLabel =
+    context !== undefined && isRecordOf(context, "task") ? statusLabel(context.fields.type) : "";
+  const signalLabel =
+    signal?.kind === "question"
+      ? "Ждёт ответа"
+      : signal?.kind === "stale_run"
+        ? "Нет свежих данных"
+        : "Проверка: ошибка";
   const isBlocked = isNonEmptyArray(task.blockedBy);
   const hasChildren = task.childrenCount > 0;
   const hasComments = task.commentCount > 0;
@@ -37,6 +62,21 @@ export const TaskCard = (props: TaskCardProps) => {
       <button type="button" className={styles.title} onClick={() => onOpen(task.id)}>
         {task.title}
       </button>
+      {hasType && (
+        <Badge size="xs" variant="light" color="gray">
+          {typeLabel}
+        </Badge>
+      )}
+      {hasSignal && (
+        <Badge size="xs" variant="light" color="orange" title={signal.title}>
+          {signalLabel}
+        </Badge>
+      )}
+      {isRunning && (
+        <Badge size="xs" variant="light" color="indigo">
+          Агент работает
+        </Badge>
+      )}
       {isBlocked && (
         <span className={styles.blocked} title={blockedLabel}>
           <CircleAlert size={12} />

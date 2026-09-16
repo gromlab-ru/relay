@@ -1,0 +1,40 @@
+.root {
+  width: 100%;
+  max-width: 88rem;
+  margin: 0 auto;
+  padding: 1.5rem var(--tasks-page-gutter) 3rem;
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.eyebrow {
+  color: var(--tasks-soft);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.title {
+  overflow-wrap: anywhere;
+  margin: 0.35rem 0;
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+  letter-spacing: -0.04em;
+  font-weight: 650;
+}
+
+.description {
+  overflow-wrap: anywhere;
+  margin: 0;
+  max-width: 42rem;
+  color: var(--tasks-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}

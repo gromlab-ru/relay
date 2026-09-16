@@ -22,6 +22,11 @@ import type { Backend } from "@tasks/project-runtime/backend/types";
 import type { Projects } from "./projects.js";
 import { checked, page, paging, response } from "./output.js";
 import type { Result } from "./output.js";
+import {
+  projectFieldsSchema,
+  projectRecordIdSchema,
+  saveProjectRecordSchema,
+} from "@tasks/core/domain/project";
 
 /** Ответ записи не зависит от размера уже сохранённого документа. */
 async function changed(operation: Promise<{ id: number; revision: number }>): Promise<Result> {
@@ -210,6 +215,81 @@ export function createTools(projects: Projects): Server {
     selector,
     true,
     async (backend) => ({ data: { ...backend.workspace, storagePath: backend.workspace.root } }),
+  );
+  projectTool(
+    "project_context",
+    "Цель, паспорт, активные этапы, внимание и следующий шаг оркестратора",
+    selector,
+    true,
+    async (backend) => ({ data: await backend.lifecycle.context() }),
+  );
+  projectTool(
+    "project_records",
+    "Документы проекта: планы, этапы, требования, знания, исполнения, проверки, релизы и точки продолжения",
+    {
+      ...selector,
+      ...paging,
+      kind: z.enum(projectFieldsSchema.options.map((schema) => schema.shape.kind.value)).optional(),
+    },
+    true,
+    async (backend, input, scope, budget, meta) =>
+      page(
+        (await backend.lifecycle.state()).records
+          .filter((record) => !input.kind || record.fields.kind === input.kind)
+          .map(({ id, revision, fields, updatedAt }) => ({
+            id,
+            revision,
+            kind: fields.kind,
+            title: fields.title,
+            updatedAt,
+          })),
+        input,
+        scope,
+        budget,
+        meta,
+      ),
+  );
+  projectTool(
+    "project_record_get",
+    "Прочитать документ проекта с ревизией и историей",
+    { ...selector, recordId: projectRecordIdSchema },
+    true,
+    async (backend, input) => {
+      const record = (await backend.lifecycle.state()).records.find(
+        (item) => item.id === input.recordId,
+      );
+      invariant(record, "PROJECT_RECORD_NOT_FOUND", "Документ не найден", 3);
+      return { data: record };
+    },
+  );
+  projectTool(
+    "project_record_save",
+    "Создать или заменить поля документа. Обновление требует ifRevision; для создания используйте стабильный requestId. Контрольные точки неизменяемы. source в исполнении обозначает источник наблюдения",
+    {
+      ...selector,
+      ...saveProjectRecordSchema.shape,
+      actor: actorSchema,
+    },
+    false,
+    async (backend, input) => {
+      const { project: _project, maxBytes: _bytes, ...command } = input;
+      const saved = await backend.lifecycle.save(command, input.actor);
+      return { data: { id: saved.id, revision: saved.revision } };
+    },
+  );
+  projectTool(
+    "task_briefing",
+    "Готовое ограниченное поручение работнику: задача, цель, этап, требования, знания и критерии",
+    { ...selector, ...task },
+    true,
+    async (backend, input) => ({ data: await backend.lifecycle.briefing(input.id) }),
+  );
+  projectTool(
+    "checkpoint_changes",
+    "Изменения задач и проектных документов после контрольной точки",
+    { ...selector, recordId: projectRecordIdSchema },
+    true,
+    async (backend, input) => ({ data: await backend.lifecycle.changes(input.recordId) }),
   );
   projectTool(
     "project_validate",

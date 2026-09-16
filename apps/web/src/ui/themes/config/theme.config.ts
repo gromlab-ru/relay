@@ -9,6 +9,22 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
+import type { CSSVariablesResolver } from "@mantine/core";
+
+/**
+ * Обеспечивает читаемый контраст второстепенного текста и светлых акцентных элементов.
+ */
+export const themeVariables: CSSVariablesResolver = () => ({
+  variables: { "--mantine-color-dimmed": "var(--tasks-muted)" },
+  light: {
+    "--mantine-color-indigo-text": "var(--mantine-color-indigo-8)",
+    "--mantine-color-indigo-light-color": "var(--mantine-color-indigo-8)",
+  },
+  dark: {
+    "--mantine-color-indigo-text": "var(--mantine-color-indigo-3)",
+    "--mantine-color-indigo-light-color": "var(--mantine-color-indigo-3)",
+  },
+});
 
 /** Спокойная, компактная тема для длительной работы с текстом. */
 export const theme = createTheme({

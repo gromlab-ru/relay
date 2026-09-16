@@ -4,6 +4,8 @@ import { asAppError, invariant } from "../shared/errors.js";
 import { jsonFiles } from "../storage/files.js";
 import { TaskRepository } from "../storage/tasks.js";
 import type { Workspace } from "../storage/workspace.js";
+import { ProjectRepository } from "../storage/project.js";
+import { validateProjectRecords } from "./project/validation.js";
 
 interface Issue {
   path?: string;
@@ -28,6 +30,12 @@ export async function validateWorkspace(workspace: Workspace) {
       }
     }
     issues.push(...inspectGraph(tasks, workspace.config));
+    try {
+      validateProjectRecords(await new ProjectRepository(workspace).all(), tasks);
+    } catch (error) {
+      const failure = asAppError(error);
+      issues.push({ code: failure.code, message: failure.message });
+    }
     invariant(
       issues.length === 0,
       "VALIDATION_FAILED",

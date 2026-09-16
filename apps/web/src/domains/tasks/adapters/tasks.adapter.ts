@@ -63,6 +63,9 @@ export const getBoard = async (
 ): Promise<BoardPage> => {
   try {
     const query: BoardQuery = {
+      planId: filters.planId || undefined,
+      stageId: filters.stageId || undefined,
+      type: filters.type || undefined,
       search: filters.search || undefined,
       group: filters.group || undefined,
       assignee: filters.assignee || undefined,

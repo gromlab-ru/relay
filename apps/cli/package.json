@@ -1,7 +1,7 @@
 {
   "name": "@gromlab/relay-cli",
-  "version": "0.4.0",
-  "description": "Локальная JSON-база для оркестрации задач между AI-агентами на одном хосте: CLI, API и веб-доска",
+  "version": "0.5.0",
+  "description": "Relay CLI: контекст, планы, задачи и жизненный цикл проектов для людей и AI-агентов",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gromlab-ru/relay.git",

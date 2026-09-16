@@ -14,6 +14,13 @@ import {
 } from "@tasks/core/application/queries/project";
 import { overviewDataSchema } from "@tasks/core/application/queries/overview";
 import type { Backend, WorkspaceInfo } from "./types.js";
+import {
+  projectStateSchema,
+  contextSchema as lifecycleContextSchema,
+  briefingSchema,
+  changesSchema,
+} from "@tasks/core/application/project/queries";
+import { projectRecordSchema, saveProjectRecordSchema } from "@tasks/core/domain/project";
 
 const failureSchema = z.object({
   ok: z.literal(false),
@@ -134,6 +141,30 @@ export async function createHttpBackend(url: string, project?: string): Promise<
   return {
     kind: "http",
     workspace,
+    lifecycle: {
+      state: async () =>
+        decode(projectStateSchema, await call(() => api.lifecycle.getProjectState())),
+      context: async () =>
+        decode(lifecycleContextSchema, await call(() => api.lifecycle.getProjectContext())),
+      briefing: async (id) =>
+        decode(briefingSchema, await call(() => api.lifecycle.getTaskBriefing({ id }))),
+      changes: async (recordId) =>
+        decode(changesSchema, await call(() => api.lifecycle.getCheckpointChanges({ recordId }))),
+      save: async (input, actor) => {
+        const command = saveProjectRecordSchema.parse({ ...input, actor: input.actor ?? actor });
+        return decode(
+          projectRecordSchema,
+          await call(
+            () =>
+              api.lifecycle.saveProjectRecord({
+                ...defined(command),
+                fields: defined(command.fields),
+              }),
+            "write",
+          ),
+        );
+      },
+    },
     tasks: {
       workspace,
       list: (filters) => call(() => api.project.getTaskList(defined(filters ?? {}))),

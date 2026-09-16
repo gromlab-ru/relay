@@ -39,6 +39,7 @@ import { isDefined, isNonEmptyArray } from "shared/value-predicates";
 import { TaskEditor } from "compositions/screens/board/ui/task-panel/ui/task-editor";
 import { TaskRelations } from "compositions/screens/board/ui/task-panel/ui/task-relations";
 import { TaskHistory } from "compositions/screens/board/ui/task-panel/ui/task-history";
+import { TaskLifecycle } from "compositions/widgets/task-lifecycle";
 import type { TaskPanelProps } from "./types/task-panel-props.type";
 import styles from "./styles/task-panel.module.css";
 
@@ -320,6 +321,9 @@ export const TaskPanel = (props: TaskPanelProps) => {
         <Tabs defaultValue="details" keepMounted={false}>
           <Tabs.List className={styles.tabs}>
             <Tabs.Tab value="details">Задача</Tabs.Tab>
+            <Tabs.Tab value="project" disabled={isEditing}>
+              Проект и результат
+            </Tabs.Tab>
             <Tabs.Tab value="relations" leftSection={<GitBranch size={13} />} disabled={isEditing}>
               Связи
             </Tabs.Tab>
@@ -341,6 +345,9 @@ export const TaskPanel = (props: TaskPanelProps) => {
               onEditingChange={setEditing}
               onPersistenceChange={setCanPersist}
             />
+          </Tabs.Panel>
+          <Tabs.Panel value="project">
+            <TaskLifecycle taskId={task.id} />
           </Tabs.Panel>
           <Tabs.Panel value="relations">
             <TaskRelations

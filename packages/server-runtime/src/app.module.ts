@@ -12,6 +12,7 @@ import { WorkspaceModule } from "./modules/workspace/workspace.module.js";
 import type { WorkspaceOptions } from "./modules/workspace/workspace.module.js";
 import { ProjectModule } from "./modules/project/project.module.js";
 import { ServerModule } from "./modules/workspace/server.module.js";
+import { LifecycleModule } from "./modules/lifecycle/lifecycle.module.js";
 
 @Module({})
 export class AppModule {
@@ -34,6 +35,7 @@ export class AppModule {
         BoardModule,
         TasksModule,
         ProjectModule,
+        LifecycleModule,
         CommentsModule,
         LogsModule,
         EventsModule,

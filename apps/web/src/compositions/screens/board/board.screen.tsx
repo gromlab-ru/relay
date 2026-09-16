@@ -1,10 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, Drawer, Group, Kbd, Modal, Stack, Text } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useDebouncedValue } from "@mantine/hooks";
-import { Layers3, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useGetProject, useProjectId } from "domains/project";
 import { BOARD_FILTERS_SCHEMA, useGetBoard, useTaskConnection } from "domains/tasks";
+import { PROJECT_INPUT_SCHEMAS, saveProjectRecord, useLifecycle } from "domains/lifecycle";
 import type { BoardFilters } from "domains/tasks";
 import { readStored, writeStored } from "infra/browser-storage";
 import { StatePanel } from "ui/state-panel";
@@ -13,7 +15,6 @@ import { isDefined } from "shared/value-predicates";
 import { BoardToolbar } from "compositions/screens/board/ui/board-toolbar";
 import { GroupNavigation } from "compositions/screens/board/ui/group-navigation";
 import { Kanban } from "compositions/screens/board/ui/kanban";
-import { WorkspaceHeader } from "compositions/screens/board/ui/workspace-header";
 import {
   readBoardFilters,
   readBoardOrigin,
@@ -45,7 +46,9 @@ const CreateTask = lazy(() =>
 export const BoardScreen = () => {
   const scopeId = useProjectId();
   const projectPath = `/projects/${encodeURIComponent(scopeId)}/`;
+  const boardPath = `${projectPath}board`;
   const project = useGetProject();
+  const lifecycle = useLifecycle();
   const connection = useTaskConnection();
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,13 +66,21 @@ export const BoardScreen = () => {
   const projectId = project.data?.id;
   const projectDefault = project.data?.defaultStatus;
   const search = location.search;
-  const isUnknownRoute = location.pathname !== projectPath && selectedId === null;
+  const isUnknownRoute = location.pathname !== boardPath && selectedId === null;
   const hasFilters = Object.values(filters).some(Boolean);
   const isEmptyProject = !board.isValidating && board.data?.total === 0 && !hasFilters;
   const hasNoResults = !board.isValidating && board.data?.total === 0 && hasFilters;
   const cameFromBoard = readBoardOrigin(location.state);
   const hasStorageError = connection.data?.state === "storage-error";
   const isDisconnected = connection.data?.state === "disconnected";
+  const shouldCreate = params.get("new") === "1";
+  const creationParent = lifecycle.data?.tasks.find((task) => task.id === creation?.parentId);
+  const creationStageId =
+    creation !== null && creation.parentId !== null
+      ? (creationParent?.stageId ?? "")
+      : filters.stageId;
+  const selectedStage = lifecycle.data?.records.find((record) => record.id === creationStageId);
+  const creationContextLabel = selectedStage?.fields.title;
 
   useEffect(() => {
     if (projectId === undefined) return;
@@ -94,6 +105,13 @@ export const BoardScreen = () => {
     },
     [projectDefault, filters.group],
   );
+  useEffect(() => {
+    if (!shouldCreate || projectDefault === undefined) return;
+    handleCreate();
+    const next = new URLSearchParams(search);
+    next.delete("new");
+    setParams(next, { replace: true });
+  }, [shouldCreate, projectDefault, handleCreate, search, setParams]);
 
   /**
    * Переходит к задаче, сохраняя фильтры и одну точку возврата к доске.
@@ -101,7 +119,7 @@ export const BoardScreen = () => {
   const handleOpen = (id: number): void => {
     navigate(`${projectPath}tasks/${id}${search}`, {
       replace: selectedId !== null,
-      state: { fromBoard: location.pathname === projectPath || cameFromBoard },
+      state: { fromBoard: location.pathname === boardPath || cameFromBoard },
     });
   };
 
@@ -113,7 +131,7 @@ export const BoardScreen = () => {
       navigate(-1);
       return;
     }
-    navigate(`${projectPath}${search}`, { replace: true });
+    navigate(`${boardPath}${search}`, { replace: true });
   };
 
   /**
@@ -174,7 +192,6 @@ export const BoardScreen = () => {
       : "Загружаем проект и ваши задачи.";
     return (
       <div className={styles.root}>
-        <WorkspaceHeader onCreate={() => handleCreate()} onHelp={() => setHelpOpen(true)} />
         <StatePanel
           title={title}
           description={description}
@@ -192,21 +209,22 @@ export const BoardScreen = () => {
   return (
     <MarkdownLinkProvider component={TaskLink}>
       <div className={styles.root}>
-        <WorkspaceHeader
-          project={project.data}
-          onCreate={() => handleCreate()}
-          onHelp={() => setHelpOpen(true)}
-        />
-        <main className={styles.main}>
+        <section className={styles.main}>
           <div className={styles.intro}>
             <div>
-              <span className={styles.eyebrow}>РАБОЧЕЕ ПРОСТРАНСТВО</span>
-              <h1 className={styles.title}>Доска проекта</h1>
-              <p className={styles.subtitle}>Меньше шума. Больше завершённых задач.</p>
+              <span className={styles.eyebrow}>ПРОЕКТ / ИСПОЛНЕНИЕ</span>
+              <h1 className={styles.title}>Доска задач</h1>
+              <p className={styles.subtitle}>
+                От плана к результату — работа человека и агентов в одном потоке.
+              </p>
             </div>
-            <span className={styles.local}>
-              <Layers3 size={14} /> На вашем устройстве
-            </span>
+            <Button
+              visibleFrom="sm"
+              leftSection={<Plus size={14} />}
+              onClick={() => handleCreate()}
+            >
+              Создать задачу
+            </Button>
           </div>
           <GroupNavigation
             groups={board.data?.groupCounts}
@@ -276,7 +294,7 @@ export const BoardScreen = () => {
             onOpen={handleOpen}
             onCreate={handleCreate}
           />
-        </main>
+        </section>
         <footer className={styles.footer}>
           <span>Локальные данные · человек и агенты в одном потоке</span>
           <button type="button" onClick={() => setHelpOpen(true)}>
@@ -325,11 +343,36 @@ export const BoardScreen = () => {
           >
             <CreateTask
               project={project.data}
+              contextLabel={creationContextLabel}
+              contextId={creationStageId}
               {...creation}
               onClose={() => setCreation(null)}
               onCreated={(id) => {
                 setCreation(null);
                 handleOpen(id);
+                if (
+                  creation?.parentId === null &&
+                  (filters.stageId !== "" || filters.type !== "")
+                ) {
+                  const fields = PROJECT_INPUT_SCHEMAS.task.parse({
+                    kind: "task",
+                    taskId: id,
+                    stageId: filters.stageId || null,
+                    type: filters.type || "task",
+                  });
+                  void saveProjectRecord(scopeId, fields, undefined, crypto.randomUUID())
+                    .then(() => lifecycle.mutate())
+                    .catch((error: unknown) =>
+                      notifications.show({
+                        color: "orange",
+                        title: `Задача #${id} создана`,
+                        message:
+                          error instanceof Error
+                            ? `Связь с планом не сохранена: ${error.message}`
+                            : "Откройте вкладку «Проект» и свяжите задачу с этапом.",
+                      }),
+                    );
+                }
               }}
             />
           </Suspense>

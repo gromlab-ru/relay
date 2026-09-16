@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useLocation, useMatch, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 import { Badge, Button, Group, Select, Text } from "@mantine/core";
 import { useWorkspace } from "domains/workspace";
 import { ProjectScope } from "domains/project";
 import { TasksSync } from "domains/tasks";
-import { BoardScreen } from "compositions/screens/board";
+import { LifecycleSync } from "domains/lifecycle";
 import { StatePanel } from "ui/state-panel";
 import styles from "./styles/relay.module.css";
 
@@ -71,7 +71,7 @@ export const RelayScreen = () => {
     "Проекты добавляются в relay.workspace.json или через relay-cli projects add.";
   return (
     <div className={styles.root}>
-      {isWorkspace && (
+      {isWorkspace && !canOpenProject && (
         <Group
           component="nav"
           aria-label="Проекты Relay"
@@ -98,7 +98,8 @@ export const RelayScreen = () => {
       {canOpenProject && (
         <ProjectScope key={projectData.id} projectId={projectData.id}>
           <TasksSync />
-          <BoardScreen />
+          <LifecycleSync />
+          <Outlet />
         </ProjectScope>
       )}
       {!canOpenProject && (

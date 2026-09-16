@@ -75,6 +75,9 @@ export type TaskDetail = {
 
 /** Фильтры рабочей выборки. */
 export const BOARD_FILTERS_SCHEMA = z.object({
+  planId: z.string().default(""),
+  stageId: z.string().default(""),
+  type: z.enum(["", "task", "feature", "bug", "research", "debt"]).default(""),
   search: z.string().default(""),
   group: z.string().default(""),
   assignee: z.string().default(""),

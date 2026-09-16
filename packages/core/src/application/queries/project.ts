@@ -7,8 +7,13 @@ import { TaskRepository, resolveTask } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
 import type { TaskReference } from "../../shared/ids.js";
 import { selectTasks } from "./tasks.js";
+import { ProjectRepository } from "../../storage/project.js";
+import { matchesProjectFilter } from "../project/relations.js";
 
 export const taskListQuerySchema = z.strictObject({
+  planId: z.string().optional(),
+  stageId: z.string().optional(),
+  type: z.enum(["task", "feature", "bug", "research", "debt"]).optional(),
   status: z.string().optional(),
   group: z.string().optional(),
   assignee: z.string().optional(),
@@ -86,7 +91,11 @@ export class ProjectQueries {
 
   async list(input: TaskListQuery = {}): Promise<TaskListData> {
     const filters = parse(taskListQuerySchema, input, "фильтры списка");
-    const tasks = await this.snapshot();
+    const { tasks, records } = await this.workspace.locked(async () => ({
+      tasks: await this.repository.all(),
+      records: await new ProjectRepository(this.workspace).all(),
+    }));
+    assertGraph(tasks, this.workspace.config);
     const config = this.workspace.config;
     const selected = selectTasks(
       tasks,
@@ -99,7 +108,7 @@ export class ProjectQueries {
         ready: filters.ready || undefined,
       },
       { openOnly: filters.status === undefined && !filters.all, searchId: false },
-    );
+    ).filter((task) => matchesProjectFilter(task, records, tasks, filters));
     const columns = Object.keys(config.statuses);
     selected.sort(
       filters.sort === "board"

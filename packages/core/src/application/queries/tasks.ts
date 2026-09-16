@@ -13,8 +13,13 @@ import { TaskRepository, resolveTask } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { buildOverview, overviewQuerySchema } from "./overview.js";
 import type { OverviewData, OverviewQueryInput } from "./overview.js";
+import { ProjectRepository } from "../../storage/project.js";
+import { matchesProjectFilter } from "../project/relations.js";
 
 export const boardQuerySchema = z.strictObject({
+  planId: z.string().optional(),
+  stageId: z.string().optional(),
+  type: z.enum(["task", "feature", "bug", "research", "debt"]).optional(),
   search: z.string().max(4096).optional(),
   status: z.string().min(1).optional(),
   group: z.string().optional(),
@@ -96,13 +101,17 @@ export class TaskQueries {
   }
 
   async snapshot() {
-    const tasks = await this.repository.snapshot();
+    const { tasks, records } = await this.workspace.locked(async () => ({
+      tasks: await this.repository.all(),
+      records: await new ProjectRepository(this.workspace).all(),
+    }));
     assertGraph(tasks, this.workspace.config);
     // Учитываем содержимое, а не только revision: файлы могут редактироваться извне.
     const hash = createHash("sha256").update(JSON.stringify(this.workspace.config));
+    hash.update(JSON.stringify(records));
     for (const task of [...tasks.values()].sort((a, b) => a.id - b.id))
       hash.update(JSON.stringify(task));
-    return { tasks, version: hash.digest("hex") };
+    return { tasks, records, version: hash.digest("hex") };
   }
 
   async overview(reference?: TaskReference, input: OverviewQueryInput = {}): Promise<OverviewData> {
@@ -113,7 +122,7 @@ export class TaskQueries {
 
   async board(input: BoardQueryInput = {}) {
     const { limit, cursor, ...filters } = parse(boardQuerySchema, input, "параметры доски");
-    const { tasks, version } = await this.snapshot();
+    const { tasks, records, version } = await this.snapshot();
     const config = this.workspace.config;
     const scope = { type: "board", configPath: this.workspace.configPath, filters };
     let offset = 0;
@@ -135,7 +144,9 @@ export class TaskQueries {
       offset = position.offset;
     }
     const view = this.view(tasks);
-    const matching = selectTasks(tasks, config, filters);
+    const matching = selectTasks(tasks, config, filters).filter((task) =>
+      matchesProjectFilter(task, records, tasks, filters),
+    );
     const columns = Object.keys(config.statuses);
     matching.sort(
       (a, b) => columns.indexOf(a.status) - columns.indexOf(b.status) || compareTasks(a, b),

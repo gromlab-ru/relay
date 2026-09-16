@@ -1,6 +1,6 @@
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
-import { theme } from "../../config/theme.config";
+import { theme, themeVariables } from "../../config/theme.config";
 import type { ThemeProviderProps } from "./types/theme-provider-props.type";
 import "../../styles/index.css";
 
@@ -12,7 +12,7 @@ import "../../styles/index.css";
  */
 export const ThemeProvider = (props: ThemeProviderProps) => {
   return (
-    <MantineProvider theme={theme} defaultColorScheme="auto">
+    <MantineProvider theme={theme} cssVariablesResolver={themeVariables} defaultColorScheme="auto">
       <Notifications position="bottom-right" limit={3} />
       {props.children}
     </MantineProvider>

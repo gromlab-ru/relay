@@ -8,6 +8,8 @@ import type { CommentService } from "@tasks/core/application/comments";
 import type { LogService } from "@tasks/core/application/logs/service";
 import type { validateWorkspace } from "@tasks/core/application/validate";
 import type { Workspace } from "@tasks/core/storage/workspace";
+import type { LifecycleQueries } from "@tasks/core/application/project/queries";
+import type { ProjectService } from "@tasks/core/application/project/service";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -39,6 +41,8 @@ export interface TasksBackend {
 }
 
 export interface Backend {
+  lifecycle: Pick<LifecycleQueries, "state" | "context" | "briefing" | "changes"> &
+    Pick<ProjectService, "save">;
   kind: "local" | "http";
   workspace: WorkspaceInfo;
   tasks: TasksBackend;

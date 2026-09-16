@@ -7,6 +7,9 @@ pnpm-lock.yaml
 .artifacts/
 .tasks-runtime/
 **/.relay/runtime/
+# Канонические документы приложения сериализует и проверяет Core.
+**/.relay/tasks/
+**/.relay/project/
 .agents/
 .npmrc
 apps/playground/.tasks/
@@ -16,3 +19,5 @@ apps/server/reference/
 apps/web/.templates/
 apps/web/.cache/
 packages/rest-sdk/src/
+# Готовый скилл форматируется сборщиком из источников.
+skills/relay/

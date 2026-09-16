@@ -10,6 +10,9 @@ import { linksText } from "../../presentation/relations.js";
 import type { TextOptions } from "../../presentation/theme.js";
 
 export interface TaskFilters {
+  planId?: string;
+  stageId?: string;
+  type?: "task" | "feature" | "bug" | "research" | "debt";
   status?: string;
   group?: string;
   assignee?: string;

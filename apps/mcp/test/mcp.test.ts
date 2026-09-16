@@ -66,6 +66,66 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   return { ...body, isError: result.isError };
 }
 
+test("агентский контекст, поручения и проектные записи изолированы между проектами", async (t) => {
+  const app = await setup(t);
+  const { configPath } = await initializeRegistry(app.root);
+  await registerProject(configPath, "a", { path: "a" });
+  await registerProject(configPath, "b", { path: "b" });
+  const server = await app.start();
+  const client = await app.connect(server.url);
+  await call(client, "task_create", { project: "a", title: "API", actor: "orchestrator" });
+  const plan = await call(client, "project_record_save", {
+    project: "a",
+    actor: "orchestrator",
+    requestId: "plan-1",
+    fields: { kind: "plan", title: "MVP", goal: "Работающий продукт" },
+  });
+  assert.equal(plan.ok, true);
+  const stage = await call(client, "project_record_save", {
+    project: "a",
+    actor: "orchestrator",
+    fields: { kind: "stage", title: "API готов", planId: plan.data?.id },
+  });
+  await call(client, "project_record_save", {
+    project: "a",
+    actor: "orchestrator",
+    fields: { kind: "task", taskId: 1, stageId: stage.data?.id },
+  });
+  await call(client, "project_record_save", {
+    project: "a",
+    actor: "orchestrator",
+    fields: { kind: "passport", title: "A", focusPlanId: plan.data?.id },
+  });
+  assert.match(
+    String((await call(client, "task_briefing", { project: "a", id: 1 })).data?.markdown),
+    /Работающий продукт/,
+  );
+  assert.equal((await call(client, "project_context", { project: "a" })).ok, true);
+  assert.deepEqual((await call(client, "project_records", { project: "b" })).data?.items, []);
+  assert.equal(
+    (await call(client, "project_record_get", { project: "b", recordId: plan.data?.id })).error
+      ?.code,
+    "PROJECT_RECORD_NOT_FOUND",
+  );
+  const repeated = await call(client, "project_record_save", {
+    project: "a",
+    actor: "orchestrator",
+    requestId: "plan-1",
+    fields: { kind: "plan", title: "MVP", goal: "Работающий продукт" },
+  });
+  assert.equal(repeated.data?.id, plan.data?.id);
+  const checkpoint = await call(client, "project_record_save", {
+    project: "a",
+    actor: "orchestrator",
+    fields: { kind: "checkpoint", title: "Передача" },
+  });
+  const changes = await call(client, "checkpoint_changes", {
+    project: "a",
+    recordId: checkpoint.data?.id,
+  });
+  assert.deepEqual(changes.data?.tasks, []);
+});
+
 test("несколько MCP-клиентов, общий Relay Server, горячий реестр и изоляция задач/авторов", async (t) => {
   const app = await setup(t);
   const { configPath } = await initializeRegistry(app.root);

@@ -1,0 +1,31 @@
+.root {
+  display: block;
+  min-width: 0;
+}
+.context {
+  border: 1px solid var(--tasks-border);
+  border-radius: 0.7rem;
+  padding: 1rem;
+  background: var(--tasks-surface);
+}
+.planLink {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  background: var(--mantine-color-indigo-light);
+  color: var(--mantine-color-indigo-text);
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-size: 0.85rem;
+  & small {
+    display: block;
+    margin-top: 0.35rem;
+  }
+}
+.bug {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--mantine-color-orange-light-color);
+  border-radius: 0.7rem;
+}

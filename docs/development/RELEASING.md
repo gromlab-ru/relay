@@ -53,9 +53,9 @@ dist-tag `next`, обычная версия — `latest`.
 Проверить конкретные теги можно до публикации:
 
 ```bash
-pnpm run release:check cli-v0.4.0
-pnpm run release:check:server server-v0.1.0
-pnpm run release:check:mcp mcp-v0.1.1
+pnpm run release:check cli-v0.5.0
+pnpm run release:check:server server-v0.2.0
+pnpm run release:check:mcp mcp-v0.2.0
 ```
 
 Команды выпуска не пересобирают архив. Если версия уже опубликована, сравнивается
@@ -82,6 +82,11 @@ SHA-512 integrity: совпадающая публикация пропуска�
 1. Измените версию в его манифесте и CHANGELOG; обновите lockfile.
 2. Выполните проверки и сохраните изменения в Git.
 3. Создайте и отправьте тег `cli-v…`, `server-v…` или `mcp-v…`.
+
+При выпуске всех компонентов отправляйте теги последовательно, дожидаясь завершения
+предыдущего workflow. Группа `npm-publication` общая: у GitHub concurrency может быть
+только один ожидающий запуск, поэтому одновременная отправка нескольких тегов способна
+вытеснить ещё не начавшийся релиз.
 
 `release.yml` проверяет соответствие тега манифесту, вызывает CI на Node.js 22/24,
 получает проверенный архив по artifact ID и публикует через OIDC с provenance.

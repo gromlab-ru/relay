@@ -7,6 +7,9 @@ import type { BoardFilters } from "domains/tasks";
  */
 export const readBoardFilters = (params: URLSearchParams): BoardFilters =>
   BOARD_FILTERS_SCHEMA.parse({
+    planId: params.get("planId") ?? "",
+    stageId: params.get("stageId") ?? "",
+    type: params.get("type") ?? "",
     search: params.get("q") ?? "",
     group: params.get("group") ?? "",
     assignee: params.get("assignee") ?? "",
@@ -21,6 +24,9 @@ export const readBoardFilters = (params: URLSearchParams): BoardFilters =>
  */
 export const writeBoardFilters = (filters: BoardFilters): URLSearchParams => {
   const params = new URLSearchParams();
+  if (filters.planId !== "") params.set("planId", filters.planId);
+  if (filters.stageId !== "") params.set("stageId", filters.stageId);
+  if (filters.type !== "") params.set("type", filters.type);
   if (filters.search !== "") params.set("q", filters.search);
   if (filters.group !== "") params.set("group", filters.group);
   if (filters.assignee !== "") params.set("assignee", filters.assignee);

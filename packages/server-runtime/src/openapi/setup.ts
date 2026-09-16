@@ -43,7 +43,10 @@ export function setupOpenApi(app: INestApplication): void {
   }
   document.components ??= {};
   document.components.schemas = Object.fromEntries(
-    Object.entries(schemas).map(([name, schema]) => [name, jsonSchema(schema)]),
+    Object.entries(schemas).map(([name, schema]) => [
+      name,
+      jsonSchema(schema, name === "SaveProjectRecord" ? "input" : "output"),
+    ]),
   );
   SwaggerModule.setup(API_DOCS_PATH, app, document, {
     jsonDocumentUrl: OPENAPI_PATH,

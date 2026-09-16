@@ -17,6 +17,13 @@ import { overviewQuerySchema, overviewDataSchema } from "@tasks/core/application
 import { boardQuerySchema } from "@tasks/core/application/queries/tasks";
 import { commentQuerySchema, logQuerySchema } from "@tasks/core/application/queries/records";
 import { API_CONTRACT_VERSION } from "@tasks/contracts";
+import { projectRecordSchema, saveProjectRecordSchema } from "@tasks/core/domain/project";
+import {
+  projectStateSchema,
+  contextSchema as projectContextSchema,
+  briefingSchema,
+  changesSchema,
+} from "@tasks/core/application/project/queries";
 
 const fields = taskFieldsSchema.omit({ rank: true });
 const writableFields = fields.extend({
@@ -189,6 +196,12 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  ProjectRecord: projectRecordSchema,
+  SaveProjectRecord: saveProjectRecordSchema,
+  ProjectState: projectStateSchema,
+  ProjectContext: projectContextSchema,
+  TaskBriefing: briefingSchema,
+  CheckpointChanges: changesSchema,
   ServerContextResponse: z.strictObject({
     mode: z.enum(["local", "workspace"]),
     configPath: z.string(),

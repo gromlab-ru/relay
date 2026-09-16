@@ -7,6 +7,7 @@ import { fixture } from "./helpers/server.js";
 import { initialize } from "@tasks/core/storage/workspace";
 import { initializeRegistry, registerProject } from "@tasks/project-runtime/registry";
 import { startServer } from "@tasks/server-runtime";
+import { ProjectService } from "@tasks/core/application/project/service";
 
 async function connect(url: string, project?: string) {
   const controller = new AbortController();
@@ -108,6 +109,28 @@ test(
     if (storage.type === "changed") assert(storage.data.taskIds?.includes(external.id));
   },
 );
+
+test("SSE замечает проектные документы API и локального CLI", async (t) => {
+  const { app, workspace } = await fixture(t);
+  await app.listen(0, "127.0.0.1");
+  const stream = await connect(await app.getUrl());
+  t.after(() => stream.close());
+  await stream.next();
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/v1/project/records",
+    payload: { fields: { kind: "passport", title: "Проект" } },
+  });
+  assert.equal(response.statusCode, 200);
+  const event = await stream.next((item) => item.type === "changed" && item.data.source === "api");
+  assert.equal(event.type, "changed");
+  await new ProjectService(workspace).save(
+    { fields: { kind: "plan", title: "Локальное изменение" } },
+    "cli",
+  );
+  const version = (await app.inject("/api/v1/board")).json().data.version;
+  await stream.next((item) => item.type === "changed" && item.data.version === version);
+});
 
 test(
   "workspace изолирует SSE проектов и освобождает удалённую регистрацию",

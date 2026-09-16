@@ -6,6 +6,7 @@ import { registerProject } from "./commands/project.js";
 import { registerTasks } from "./commands/tasks.js";
 import { registerOverview } from "./commands/overview.js";
 import { registerProjects } from "./commands/projects.js";
+import { registerLifecycle } from "./commands/lifecycle.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -13,7 +14,7 @@ import { addCommandHelp, commandPath, groupHelpAction } from "./command.js";
 
 export function createProgram(runtime: Runtime): Command {
   const program = new Command("relay-cli")
-    .description("Relay: задачи одного проекта или workspace")
+    .description("Relay: контекст, планы и задачи одного проекта или workspace")
     .version(packageVersion, "-V, --version", "Показать версию CLI")
     .helpOption("-h, --help", "Справка, параметры и примеры")
     .option(
@@ -42,6 +43,7 @@ export function createProgram(runtime: Runtime): Command {
     .configureOutput({ writeOut: (text) => runtime.stdout.write(text), writeErr: () => {} });
   registerProject(program, runtime);
   registerProjects(program, runtime);
+  registerLifecycle(program, runtime);
   registerOverview(program, runtime);
   registerTasks(program, runtime);
   registerAssignments(program, runtime);

@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 55);
+    assert.equal(operations.size, 65);
     for (const [name, schema] of Object.entries(document.components!.schemas!)) {
       ajv.compile({ ...schema, components: document.components });
       if (!("$ref" in schema) && Array.isArray(schema.examples))
@@ -144,6 +144,22 @@ for (const scoped of [false, true])
       `/api/v1/overview?rootId=${created.data.id}&reviewStatuses=review`,
     );
     await request("GET", "/api/v1/validation");
+    await request("GET", "/api/v1/project/state");
+    await request("GET", "/api/v1/project/context");
+    await request(
+      "GET",
+      "/api/v1/project/tasks/{id}/briefing",
+      `/api/v1/project/tasks/${created.data.id}/briefing`,
+    );
+    const checkpoint = await request("POST", "/api/v1/project/records", undefined, {
+      fields: { kind: "checkpoint", title: "Контрольная точка" },
+      actor: "orchestrator",
+    });
+    await request(
+      "GET",
+      "/api/v1/project/checkpoints/{recordId}/changes",
+      `/api/v1/project/checkpoints/${checkpoint.data.id}/changes`,
+    );
     const dependency = await request(
       "POST",
       "/api/v1/tasks",
@@ -164,7 +180,7 @@ for (const scoped of [false, true])
       { patch: { title: "Conflict" }, ifRevision: 1 },
       409,
     );
-    assert.equal(visited.size, 29);
+    assert.equal(visited.size, 34);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;

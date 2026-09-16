@@ -174,6 +174,20 @@ function destinationRange(markdown, node) {
 /** @param {string} path */
 const encodePath = (path) => path.split("/").map(encodeURIComponent).join("/");
 
+/** Переписывает адреса Markdown-ссылок, сохраняя подписи и не затрагивая примеры кода.
+ * @param {string} markdown
+ * @param {(url: string, node: Destination) => string} rewrite
+ */
+export function rewriteMarkdownLinks(markdown, rewrite) {
+  const changes = inspectMarkdown(markdown).destinations.flatMap((node) => {
+    const url = rewrite(node.url, node);
+    return url === node.url ? [] : [{ ...destinationRange(markdown, node), url }];
+  });
+  for (const change of changes.sort((left, right) => right.start - left.start))
+    markdown = markdown.slice(0, change.start) + change.url + markdown.slice(change.end);
+  return markdown;
+}
+
 /** README npm использует абсолютные адреса; включённые документы сохраняют локальную навигацию.
  * @param {{root: string, source: string, markdown: string, version: string,
  *   files: ReadonlyMap<string, string>, absolute?: boolean}} options

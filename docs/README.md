@@ -16,8 +16,8 @@ CLI, MCP, веб-доска и API используют одни бизнес-п
 3. [Пройти жизненный цикл](guides/WORKFLOW.md) — постановка, выполнение, проверка и передача.
 4. [Подключить агентов](guides/ORCHESTRATION.md) или [открыть веб-доску](guides/WEB.md).
 
-Для агента есть [готовый скилл relay-cli](../skills/relay-cli/SKILL.md):
-`npx skills add gromlab-ru/relay --skill relay-cli`.
+Для агента есть [готовый скилл Relay](../skills/relay/SKILL.md):
+`npx skills add gromlab-ru/relay --skill relay`.
 [Установка и требования](development/SKILLS.md#скилл-продукта).
 
 ## Найти ответ

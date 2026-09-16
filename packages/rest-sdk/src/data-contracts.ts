@@ -4,6 +4,1821 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface ProjectRecord {
+  version: 1;
+  /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+  id: string;
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /**
+   * @format date-time
+   * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+   */
+  createdAt: string;
+  /**
+   * @format date-time
+   * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+   */
+  updatedAt: string;
+  /** @maxLength 128 */
+  createdBy: string;
+  /** @maxLength 128 */
+  updatedBy: string;
+  fields:
+    | {
+        kind: "passport";
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        title: string;
+        /** @default "" */
+        purpose: string;
+        /** @default "" */
+        audience: string;
+        /** @default "" */
+        scope: string;
+        /** @default "" */
+        constraints: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        owner: string;
+        /** @default "discovery" */
+        productStage: ProjectRecordProductStageEnum;
+        /** @default "active" */
+        mode: ProjectRecordModeEnum;
+        /** @default "" */
+        summary: string;
+        /** @default "" */
+        nextStep: string;
+        /** @default null */
+        focusPlanId: string | null;
+      }
+    | {
+        kind: "plan";
+        /** @minLength 1 */
+        title: string;
+        /** @default "" */
+        goal: string;
+        /** @default "" */
+        scope: string;
+        /** @default "" */
+        summary: string;
+        /** @default "" */
+        nextStep: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        owner: string;
+        /** @default "draft" */
+        status: ProjectRecordStatusEnum;
+      }
+    | {
+        kind: "stage";
+        /** @minLength 1 */
+        title: string;
+        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        planId: string;
+        /** @default "" */
+        outcome: string;
+        /** @default "" */
+        criteria: string;
+        /** @default "" */
+        acceptance: string;
+        /** @default "planned" */
+        status: ProjectRecordStatusEnum1;
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        dependsOn: string[];
+        /**
+         * @min 0
+         * @max 9007199254740991
+         * @default 0
+         */
+        order: number;
+      }
+    | {
+        kind: "requirement";
+        /** @minLength 1 */
+        title: string;
+        /** @default "" */
+        description: string;
+        /** @default "" */
+        criteria: string;
+        /** @default "proposed" */
+        status: ProjectRecordStatusEnum2;
+      }
+    | {
+        kind: "knowledge";
+        /** @minLength 1 */
+        title: string;
+        /** @default "decision" */
+        category: ProjectRecordCategoryEnum;
+        /** @default "" */
+        body: string;
+        /** @default "" */
+        rationale: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        url: string;
+        /** @default "active" */
+        status: ProjectRecordStatusEnum3;
+        /** @default null */
+        supersededById: string | null;
+      }
+    | {
+        kind: "task";
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        title: string;
+        /**
+         * @exclusiveMin 0
+         * @max 9007199254740991
+         */
+        taskId: number;
+        /** @default "task" */
+        type: ProjectRecordTypeEnum;
+        /** @default null */
+        stageId: string | null;
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        requirementIds: string[];
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        knowledgeIds: string[];
+        /** @default "" */
+        boundaries: string;
+        /** @default "" */
+        acceptanceCriteria: string;
+        /** @default "" */
+        expectedBehavior: string;
+        /** @default "" */
+        actualBehavior: string;
+        /** @default "" */
+        reproduction: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        affectedVersion: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        environment: string;
+        /** @default "medium" */
+        severity: ProjectRecordSeverityEnum;
+        /** @default "" */
+        workaround: string;
+      }
+    | {
+        kind: "run";
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        title: string;
+        /**
+         * @exclusiveMin 0
+         * @max 9007199254740991
+         */
+        taskId: number;
+        /** @minLength 1 */
+        agent: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        sessionId: string;
+        /** @default null */
+        parentRunId: string | null;
+        /** @default "running" */
+        status: ProjectRecordStatusEnum4;
+        /** @default "agent" */
+        source: ProjectRecordSourceEnum;
+        /**
+         * @format date-time
+         * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+         */
+        startedAt?: string;
+        /** @default null */
+        finishedAt: string | null;
+        /**
+         * @format date-time
+         * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+         */
+        observedAt?: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        branch: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        worktree: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        baseCommit: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        resultCommit: string;
+        /** @default "" */
+        result: string;
+        /** @default "" */
+        limitations: string;
+        /** @default "" */
+        reason: string;
+        /** @default false */
+        integrated: boolean;
+      }
+    | {
+        kind: "check";
+        /** @minLength 1 */
+        title: string;
+        /** @default null */
+        taskId: number | null;
+        /** @default null */
+        stageId: string | null;
+        /** @default null */
+        runId: string | null;
+        /** @default null */
+        releaseId: string | null;
+        /** @default null */
+        requirementId: string | null;
+        /** @default "pending" */
+        status: ProjectRecordStatusEnum5;
+        /** @default "manual" */
+        source: ProjectRecordSourceEnum1;
+        /** @default "" */
+        command: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        commit: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        environment: string;
+        /** @default "" */
+        details: string;
+        /** @default "" */
+        evidence: string;
+      }
+    | {
+        kind: "review";
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        title: string;
+        /**
+         * @exclusiveMin 0
+         * @max 9007199254740991
+         */
+        taskId: number;
+        /** @default null */
+        runId: string | null;
+        status: ProjectRecordStatusEnum6;
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        checkIds: string[];
+        /** @default "" */
+        conclusion: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        commit: string;
+      }
+    | {
+        kind: "question";
+        /** @minLength 1 */
+        title: string;
+        /** @default null */
+        taskId: number | null;
+        /** @default null */
+        planId: string | null;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        assignee: string;
+        /** @default "" */
+        body: string;
+        /** @default "" */
+        answer: string;
+        /** @default "open" */
+        status: ProjectRecordStatusEnum7;
+      }
+    | {
+        kind: "release";
+        /** @minLength 1 */
+        title: string;
+        /** @minLength 1 */
+        versionName: string;
+        /** @default "planned" */
+        status: ProjectRecordStatusEnum8;
+        /**
+         * @maxItems 10000
+         * @default []
+         */
+        taskIds: number[];
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        commit: string;
+        /** @default "" */
+        notes: string;
+        /** @default "" */
+        limitations: string;
+        /** @default "" */
+        rollback: string;
+      }
+    | {
+        kind: "deployment";
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        title: string;
+        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        releaseId: string;
+        /** @minLength 1 */
+        environment: string;
+        /** @default "installed" */
+        status: ProjectRecordStatusEnum9;
+        /** @default "" */
+        details: string;
+        /** @default "" */
+        evidence: string;
+        /**
+         * @format date-time
+         * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+         */
+        installedAt?: string;
+      }
+    | {
+        kind: "checkpoint";
+        /** @minLength 1 */
+        title: string;
+        /** @default "" */
+        summary: string;
+        /** @default "" */
+        remaining: string;
+        /** @default "" */
+        nextStep: string;
+        /** @default null */
+        planId: string | null;
+        /**
+         * @maxItems 10000
+         * @default []
+         */
+        taskIds: number[];
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        evidenceIds: string[];
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        branch: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        commit: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        worktree: string;
+        /**
+         * @minLength 0
+         * @default ""
+         */
+        environment: string;
+      };
+  events: {
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** @maxLength 128 */
+    actor: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    at: string;
+    fields: string[];
+  }[];
+  snapshot?: {
+    records: Partial<Record<string, number>>;
+    tasks: Partial<Record<string, number>>;
+  };
+  requestHash?: string;
+}
+
+export interface SaveProjectRecord {
+  /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+  id?: string;
+  fields:
+    | {
+        kind: "passport";
+        /** @default "" */
+        title?: string;
+        /** @default "" */
+        purpose?: string;
+        /** @default "" */
+        audience?: string;
+        /** @default "" */
+        scope?: string;
+        /** @default "" */
+        constraints?: string;
+        /** @default "" */
+        owner?: string;
+        /** @default "discovery" */
+        productStage?: SaveProjectRecordProductStageEnum;
+        /** @default "active" */
+        mode?: SaveProjectRecordModeEnum;
+        /** @default "" */
+        summary?: string;
+        /** @default "" */
+        nextStep?: string;
+        /** @default null */
+        focusPlanId?: string | null;
+      }
+    | {
+        kind: "plan";
+        title: string;
+        /** @default "" */
+        goal?: string;
+        /** @default "" */
+        scope?: string;
+        /** @default "" */
+        summary?: string;
+        /** @default "" */
+        nextStep?: string;
+        /** @default "" */
+        owner?: string;
+        /** @default "draft" */
+        status?: SaveProjectRecordStatusEnum;
+      }
+    | {
+        kind: "stage";
+        title: string;
+        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        planId: string;
+        /** @default "" */
+        outcome?: string;
+        /** @default "" */
+        criteria?: string;
+        /** @default "" */
+        acceptance?: string;
+        /** @default "planned" */
+        status?: SaveProjectRecordStatusEnum1;
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        dependsOn?: string[];
+        /**
+         * @min 0
+         * @max 9007199254740991
+         * @default 0
+         */
+        order?: number;
+      }
+    | {
+        kind: "requirement";
+        title: string;
+        /** @default "" */
+        description?: string;
+        /** @default "" */
+        criteria?: string;
+        /** @default "proposed" */
+        status?: SaveProjectRecordStatusEnum2;
+      }
+    | {
+        kind: "knowledge";
+        title: string;
+        /** @default "decision" */
+        category?: SaveProjectRecordCategoryEnum;
+        /** @default "" */
+        body?: string;
+        /** @default "" */
+        rationale?: string;
+        /** @default "" */
+        url?: string;
+        /** @default "active" */
+        status?: SaveProjectRecordStatusEnum3;
+        /** @default null */
+        supersededById?: string | null;
+      }
+    | {
+        kind: "task";
+        /** @default "" */
+        title?: string;
+        /**
+         * @exclusiveMin 0
+         * @max 9007199254740991
+         */
+        taskId: number;
+        /** @default "task" */
+        type?: SaveProjectRecordTypeEnum;
+        /** @default null */
+        stageId?: string | null;
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        requirementIds?: string[];
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        knowledgeIds?: string[];
+        /** @default "" */
+        boundaries?: string;
+        /** @default "" */
+        acceptanceCriteria?: string;
+        /** @default "" */
+        expectedBehavior?: string;
+        /** @default "" */
+        actualBehavior?: string;
+        /** @default "" */
+        reproduction?: string;
+        /** @default "" */
+        affectedVersion?: string;
+        /** @default "" */
+        environment?: string;
+        /** @default "medium" */
+        severity?: SaveProjectRecordSeverityEnum;
+        /** @default "" */
+        workaround?: string;
+      }
+    | {
+        kind: "run";
+        /** @default "" */
+        title?: string;
+        /**
+         * @exclusiveMin 0
+         * @max 9007199254740991
+         */
+        taskId: number;
+        agent: string;
+        /** @default "" */
+        sessionId?: string;
+        /** @default null */
+        parentRunId?: string | null;
+        /** @default "running" */
+        status?: SaveProjectRecordStatusEnum4;
+        /** @default "agent" */
+        source?: SaveProjectRecordSourceEnum;
+        /**
+         * @format date-time
+         * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+         */
+        startedAt?: string;
+        /** @default null */
+        finishedAt?: string | null;
+        /**
+         * @format date-time
+         * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+         */
+        observedAt?: string;
+        /** @default "" */
+        branch?: string;
+        /** @default "" */
+        worktree?: string;
+        /** @default "" */
+        baseCommit?: string;
+        /** @default "" */
+        resultCommit?: string;
+        /** @default "" */
+        result?: string;
+        /** @default "" */
+        limitations?: string;
+        /** @default "" */
+        reason?: string;
+        /** @default false */
+        integrated?: boolean;
+      }
+    | {
+        kind: "check";
+        title: string;
+        /** @default null */
+        taskId?: number | null;
+        /** @default null */
+        stageId?: string | null;
+        /** @default null */
+        runId?: string | null;
+        /** @default null */
+        releaseId?: string | null;
+        /** @default null */
+        requirementId?: string | null;
+        /** @default "pending" */
+        status?: SaveProjectRecordStatusEnum5;
+        /** @default "manual" */
+        source?: SaveProjectRecordSourceEnum1;
+        /** @default "" */
+        command?: string;
+        /** @default "" */
+        commit?: string;
+        /** @default "" */
+        environment?: string;
+        /** @default "" */
+        details?: string;
+        /** @default "" */
+        evidence?: string;
+      }
+    | {
+        kind: "review";
+        /** @default "" */
+        title?: string;
+        /**
+         * @exclusiveMin 0
+         * @max 9007199254740991
+         */
+        taskId: number;
+        /** @default null */
+        runId?: string | null;
+        status: SaveProjectRecordStatusEnum6;
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        checkIds?: string[];
+        /** @default "" */
+        conclusion?: string;
+        /** @default "" */
+        commit?: string;
+      }
+    | {
+        kind: "question";
+        title: string;
+        /** @default null */
+        taskId?: number | null;
+        /** @default null */
+        planId?: string | null;
+        /** @default "" */
+        assignee?: string;
+        /** @default "" */
+        body?: string;
+        /** @default "" */
+        answer?: string;
+        /** @default "open" */
+        status?: SaveProjectRecordStatusEnum7;
+      }
+    | {
+        kind: "release";
+        title: string;
+        versionName: string;
+        /** @default "planned" */
+        status?: SaveProjectRecordStatusEnum8;
+        /**
+         * @maxItems 10000
+         * @default []
+         */
+        taskIds?: number[];
+        /** @default "" */
+        commit?: string;
+        /** @default "" */
+        notes?: string;
+        /** @default "" */
+        limitations?: string;
+        /** @default "" */
+        rollback?: string;
+      }
+    | {
+        kind: "deployment";
+        /** @default "" */
+        title?: string;
+        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        releaseId: string;
+        environment: string;
+        /** @default "installed" */
+        status?: SaveProjectRecordStatusEnum9;
+        /** @default "" */
+        details?: string;
+        /** @default "" */
+        evidence?: string;
+        /**
+         * @format date-time
+         * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+         */
+        installedAt?: string;
+      }
+    | {
+        kind: "checkpoint";
+        title: string;
+        /** @default "" */
+        summary?: string;
+        /** @default "" */
+        remaining?: string;
+        /** @default "" */
+        nextStep?: string;
+        /** @default null */
+        planId?: string | null;
+        /**
+         * @maxItems 10000
+         * @default []
+         */
+        taskIds?: number[];
+        /**
+         * @maxItems 1000
+         * @default []
+         */
+        evidenceIds?: string[];
+        /** @default "" */
+        branch?: string;
+        /** @default "" */
+        commit?: string;
+        /** @default "" */
+        worktree?: string;
+        /** @default "" */
+        environment?: string;
+      };
+  actor?: string;
+  /**
+   * @min 0
+   * @max 9007199254740991
+   */
+  ifRevision?: number;
+  /** @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$ */
+  requestId?: string;
+}
+
+export interface ProjectState {
+  version: string;
+  records: {
+    version: 1;
+    /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+    id: string;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /** @maxLength 128 */
+    createdBy: string;
+    /** @maxLength 128 */
+    updatedBy: string;
+    fields:
+      | {
+          kind: "passport";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /** @default "" */
+          purpose: string;
+          /** @default "" */
+          audience: string;
+          /** @default "" */
+          scope: string;
+          /** @default "" */
+          constraints: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          owner: string;
+          /** @default "discovery" */
+          productStage: ProjectStateProductStageEnum;
+          /** @default "active" */
+          mode: ProjectStateModeEnum;
+          /** @default "" */
+          summary: string;
+          /** @default "" */
+          nextStep: string;
+          /** @default null */
+          focusPlanId: string | null;
+        }
+      | {
+          kind: "plan";
+          /** @minLength 1 */
+          title: string;
+          /** @default "" */
+          goal: string;
+          /** @default "" */
+          scope: string;
+          /** @default "" */
+          summary: string;
+          /** @default "" */
+          nextStep: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          owner: string;
+          /** @default "draft" */
+          status: ProjectStateStatusEnum;
+        }
+      | {
+          kind: "stage";
+          /** @minLength 1 */
+          title: string;
+          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          planId: string;
+          /** @default "" */
+          outcome: string;
+          /** @default "" */
+          criteria: string;
+          /** @default "" */
+          acceptance: string;
+          /** @default "planned" */
+          status: ProjectStateStatusEnum1;
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          dependsOn: string[];
+          /**
+           * @min 0
+           * @max 9007199254740991
+           * @default 0
+           */
+          order: number;
+        }
+      | {
+          kind: "requirement";
+          /** @minLength 1 */
+          title: string;
+          /** @default "" */
+          description: string;
+          /** @default "" */
+          criteria: string;
+          /** @default "proposed" */
+          status: ProjectStateStatusEnum2;
+        }
+      | {
+          kind: "knowledge";
+          /** @minLength 1 */
+          title: string;
+          /** @default "decision" */
+          category: ProjectStateCategoryEnum;
+          /** @default "" */
+          body: string;
+          /** @default "" */
+          rationale: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          url: string;
+          /** @default "active" */
+          status: ProjectStateStatusEnum3;
+          /** @default null */
+          supersededById: string | null;
+        }
+      | {
+          kind: "task";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @default "task" */
+          type: ProjectStateTypeEnum;
+          /** @default null */
+          stageId: string | null;
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          requirementIds: string[];
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          knowledgeIds: string[];
+          /** @default "" */
+          boundaries: string;
+          /** @default "" */
+          acceptanceCriteria: string;
+          /** @default "" */
+          expectedBehavior: string;
+          /** @default "" */
+          actualBehavior: string;
+          /** @default "" */
+          reproduction: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          affectedVersion: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          environment: string;
+          /** @default "medium" */
+          severity: ProjectStateSeverityEnum;
+          /** @default "" */
+          workaround: string;
+        }
+      | {
+          kind: "run";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @minLength 1 */
+          agent: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          sessionId: string;
+          /** @default null */
+          parentRunId: string | null;
+          /** @default "running" */
+          status: ProjectStateStatusEnum4;
+          /** @default "agent" */
+          source: ProjectStateSourceEnum;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          startedAt?: string;
+          /** @default null */
+          finishedAt: string | null;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          observedAt?: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          branch: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          worktree: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          baseCommit: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          resultCommit: string;
+          /** @default "" */
+          result: string;
+          /** @default "" */
+          limitations: string;
+          /** @default "" */
+          reason: string;
+          /** @default false */
+          integrated: boolean;
+        }
+      | {
+          kind: "check";
+          /** @minLength 1 */
+          title: string;
+          /** @default null */
+          taskId: number | null;
+          /** @default null */
+          stageId: string | null;
+          /** @default null */
+          runId: string | null;
+          /** @default null */
+          releaseId: string | null;
+          /** @default null */
+          requirementId: string | null;
+          /** @default "pending" */
+          status: ProjectStateStatusEnum5;
+          /** @default "manual" */
+          source: ProjectStateSourceEnum1;
+          /** @default "" */
+          command: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          environment: string;
+          /** @default "" */
+          details: string;
+          /** @default "" */
+          evidence: string;
+        }
+      | {
+          kind: "review";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @default null */
+          runId: string | null;
+          status: ProjectStateStatusEnum6;
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          checkIds: string[];
+          /** @default "" */
+          conclusion: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+        }
+      | {
+          kind: "question";
+          /** @minLength 1 */
+          title: string;
+          /** @default null */
+          taskId: number | null;
+          /** @default null */
+          planId: string | null;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          assignee: string;
+          /** @default "" */
+          body: string;
+          /** @default "" */
+          answer: string;
+          /** @default "open" */
+          status: ProjectStateStatusEnum7;
+        }
+      | {
+          kind: "release";
+          /** @minLength 1 */
+          title: string;
+          /** @minLength 1 */
+          versionName: string;
+          /** @default "planned" */
+          status: ProjectStateStatusEnum8;
+          /**
+           * @maxItems 10000
+           * @default []
+           */
+          taskIds: number[];
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+          /** @default "" */
+          notes: string;
+          /** @default "" */
+          limitations: string;
+          /** @default "" */
+          rollback: string;
+        }
+      | {
+          kind: "deployment";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          releaseId: string;
+          /** @minLength 1 */
+          environment: string;
+          /** @default "installed" */
+          status: ProjectStateStatusEnum9;
+          /** @default "" */
+          details: string;
+          /** @default "" */
+          evidence: string;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          installedAt?: string;
+        }
+      | {
+          kind: "checkpoint";
+          /** @minLength 1 */
+          title: string;
+          /** @default "" */
+          summary: string;
+          /** @default "" */
+          remaining: string;
+          /** @default "" */
+          nextStep: string;
+          /** @default null */
+          planId: string | null;
+          /**
+           * @maxItems 10000
+           * @default []
+           */
+          taskIds: number[];
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          evidenceIds: string[];
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          branch: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          worktree: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          environment: string;
+        };
+    events: {
+      /**
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      /** @maxLength 128 */
+      actor: string;
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      at: string;
+      fields: string[];
+    }[];
+    snapshot?: {
+      records: Partial<Record<string, number>>;
+      tasks: Partial<Record<string, number>>;
+    };
+    requestHash?: string;
+  }[];
+  tasks: {
+    id: number;
+    title: string;
+    status: string;
+    assignee: string | null;
+    parentId: number | null;
+    revision: number;
+    completed: boolean;
+    terminal: boolean;
+    blockedBy: number[];
+    stageId: string | null;
+    planId: string | null;
+    type: string;
+  }[];
+  progress: Partial<
+    Record<
+      string,
+      {
+        total: number;
+        completed: number;
+        cancelled: number;
+        open: number;
+      }
+    >
+  >;
+  attention: {
+    kind: string;
+    title: string;
+    recordId: string;
+    taskId: number | null;
+  }[];
+}
+
+export interface ProjectContext {
+  version: string;
+  passport: {
+    kind: "passport";
+    /**
+     * @minLength 0
+     * @default ""
+     */
+    title: string;
+    /** @default "" */
+    purpose: string;
+    /** @default "" */
+    audience: string;
+    /** @default "" */
+    scope: string;
+    /** @default "" */
+    constraints: string;
+    /**
+     * @minLength 0
+     * @default ""
+     */
+    owner: string;
+    /** @default "discovery" */
+    productStage: ProjectContextProductStageEnum;
+    /** @default "active" */
+    mode: ProjectContextModeEnum;
+    /** @default "" */
+    summary: string;
+    /** @default "" */
+    nextStep: string;
+    /** @default null */
+    focusPlanId: string | null;
+  };
+  focusPlan: {
+    id: string;
+    revision: number;
+    updatedAt: string;
+    updatedBy: string;
+    fields: {
+      kind: string;
+      title: string;
+      status: string;
+      summary: string;
+      nextStep: string;
+    };
+  } | null;
+  activeStages: {
+    id: string;
+    revision: number;
+    updatedAt: string;
+    updatedBy: string;
+    fields: {
+      kind: string;
+      title: string;
+      status: string;
+      summary: string;
+      nextStep: string;
+    };
+  }[];
+  activeStageCount: number;
+  counts: {
+    tasks: number;
+    open: number;
+    completed: number;
+    running: number;
+    failedChecks: number;
+  };
+  attention: {
+    kind: string;
+    title: string;
+    recordId: string;
+    taskId: number | null;
+  }[];
+  attentionCount: number;
+  latestCheckpoint: {
+    id: string;
+    revision: number;
+    updatedAt: string;
+    updatedBy: string;
+    fields: {
+      kind: string;
+      title: string;
+      status: string;
+      summary: string;
+      nextStep: string;
+    };
+  } | null;
+  nextStep: string;
+}
+
+export interface TaskBriefing {
+  taskId: number;
+  markdown: string;
+  version: string;
+}
+
+export interface CheckpointChanges {
+  checkpointId: string;
+  since: string;
+  records: {
+    version: 1;
+    /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+    id: string;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /** @maxLength 128 */
+    createdBy: string;
+    /** @maxLength 128 */
+    updatedBy: string;
+    fields:
+      | {
+          kind: "passport";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /** @default "" */
+          purpose: string;
+          /** @default "" */
+          audience: string;
+          /** @default "" */
+          scope: string;
+          /** @default "" */
+          constraints: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          owner: string;
+          /** @default "discovery" */
+          productStage: CheckpointChangesProductStageEnum;
+          /** @default "active" */
+          mode: CheckpointChangesModeEnum;
+          /** @default "" */
+          summary: string;
+          /** @default "" */
+          nextStep: string;
+          /** @default null */
+          focusPlanId: string | null;
+        }
+      | {
+          kind: "plan";
+          /** @minLength 1 */
+          title: string;
+          /** @default "" */
+          goal: string;
+          /** @default "" */
+          scope: string;
+          /** @default "" */
+          summary: string;
+          /** @default "" */
+          nextStep: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          owner: string;
+          /** @default "draft" */
+          status: CheckpointChangesStatusEnum;
+        }
+      | {
+          kind: "stage";
+          /** @minLength 1 */
+          title: string;
+          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          planId: string;
+          /** @default "" */
+          outcome: string;
+          /** @default "" */
+          criteria: string;
+          /** @default "" */
+          acceptance: string;
+          /** @default "planned" */
+          status: CheckpointChangesStatusEnum1;
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          dependsOn: string[];
+          /**
+           * @min 0
+           * @max 9007199254740991
+           * @default 0
+           */
+          order: number;
+        }
+      | {
+          kind: "requirement";
+          /** @minLength 1 */
+          title: string;
+          /** @default "" */
+          description: string;
+          /** @default "" */
+          criteria: string;
+          /** @default "proposed" */
+          status: CheckpointChangesStatusEnum2;
+        }
+      | {
+          kind: "knowledge";
+          /** @minLength 1 */
+          title: string;
+          /** @default "decision" */
+          category: CheckpointChangesCategoryEnum;
+          /** @default "" */
+          body: string;
+          /** @default "" */
+          rationale: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          url: string;
+          /** @default "active" */
+          status: CheckpointChangesStatusEnum3;
+          /** @default null */
+          supersededById: string | null;
+        }
+      | {
+          kind: "task";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @default "task" */
+          type: CheckpointChangesTypeEnum;
+          /** @default null */
+          stageId: string | null;
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          requirementIds: string[];
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          knowledgeIds: string[];
+          /** @default "" */
+          boundaries: string;
+          /** @default "" */
+          acceptanceCriteria: string;
+          /** @default "" */
+          expectedBehavior: string;
+          /** @default "" */
+          actualBehavior: string;
+          /** @default "" */
+          reproduction: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          affectedVersion: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          environment: string;
+          /** @default "medium" */
+          severity: CheckpointChangesSeverityEnum;
+          /** @default "" */
+          workaround: string;
+        }
+      | {
+          kind: "run";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @minLength 1 */
+          agent: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          sessionId: string;
+          /** @default null */
+          parentRunId: string | null;
+          /** @default "running" */
+          status: CheckpointChangesStatusEnum4;
+          /** @default "agent" */
+          source: CheckpointChangesSourceEnum;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          startedAt?: string;
+          /** @default null */
+          finishedAt: string | null;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          observedAt?: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          branch: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          worktree: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          baseCommit: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          resultCommit: string;
+          /** @default "" */
+          result: string;
+          /** @default "" */
+          limitations: string;
+          /** @default "" */
+          reason: string;
+          /** @default false */
+          integrated: boolean;
+        }
+      | {
+          kind: "check";
+          /** @minLength 1 */
+          title: string;
+          /** @default null */
+          taskId: number | null;
+          /** @default null */
+          stageId: string | null;
+          /** @default null */
+          runId: string | null;
+          /** @default null */
+          releaseId: string | null;
+          /** @default null */
+          requirementId: string | null;
+          /** @default "pending" */
+          status: CheckpointChangesStatusEnum5;
+          /** @default "manual" */
+          source: CheckpointChangesSourceEnum1;
+          /** @default "" */
+          command: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          environment: string;
+          /** @default "" */
+          details: string;
+          /** @default "" */
+          evidence: string;
+        }
+      | {
+          kind: "review";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /**
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          taskId: number;
+          /** @default null */
+          runId: string | null;
+          status: CheckpointChangesStatusEnum6;
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          checkIds: string[];
+          /** @default "" */
+          conclusion: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+        }
+      | {
+          kind: "question";
+          /** @minLength 1 */
+          title: string;
+          /** @default null */
+          taskId: number | null;
+          /** @default null */
+          planId: string | null;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          assignee: string;
+          /** @default "" */
+          body: string;
+          /** @default "" */
+          answer: string;
+          /** @default "open" */
+          status: CheckpointChangesStatusEnum7;
+        }
+      | {
+          kind: "release";
+          /** @minLength 1 */
+          title: string;
+          /** @minLength 1 */
+          versionName: string;
+          /** @default "planned" */
+          status: CheckpointChangesStatusEnum8;
+          /**
+           * @maxItems 10000
+           * @default []
+           */
+          taskIds: number[];
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+          /** @default "" */
+          notes: string;
+          /** @default "" */
+          limitations: string;
+          /** @default "" */
+          rollback: string;
+        }
+      | {
+          kind: "deployment";
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          title: string;
+          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          releaseId: string;
+          /** @minLength 1 */
+          environment: string;
+          /** @default "installed" */
+          status: CheckpointChangesStatusEnum9;
+          /** @default "" */
+          details: string;
+          /** @default "" */
+          evidence: string;
+          /**
+           * @format date-time
+           * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+           */
+          installedAt?: string;
+        }
+      | {
+          kind: "checkpoint";
+          /** @minLength 1 */
+          title: string;
+          /** @default "" */
+          summary: string;
+          /** @default "" */
+          remaining: string;
+          /** @default "" */
+          nextStep: string;
+          /** @default null */
+          planId: string | null;
+          /**
+           * @maxItems 10000
+           * @default []
+           */
+          taskIds: number[];
+          /**
+           * @maxItems 1000
+           * @default []
+           */
+          evidenceIds: string[];
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          branch: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          commit: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          worktree: string;
+          /**
+           * @minLength 0
+           * @default ""
+           */
+          environment: string;
+        };
+    events: {
+      /**
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      /** @maxLength 128 */
+      actor: string;
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      at: string;
+      fields: string[];
+    }[];
+    snapshot?: {
+      records: Partial<Record<string, number>>;
+      tasks: Partial<Record<string, number>>;
+    };
+    requestHash?: string;
+  }[];
+  tasks: {
+    id: number;
+    title: string;
+    status: string;
+    assignee: string | null;
+    parentId: number | null;
+    revision: number;
+    completed: boolean;
+    terminal: boolean;
+    blockedBy: number[];
+    stageId: string | null;
+    planId: string | null;
+    type: string;
+  }[];
+  removedRecords: string[];
+  removedTasks: string[];
+}
+
 export interface ServerContextResponse {
   mode: ServerContextResponseModeEnum;
   configPath: string;
@@ -25,6 +1840,9 @@ export interface RegisterProjectRequest {
 }
 
 export interface TaskListQuery {
+  planId?: string;
+  stageId?: string;
+  type?: TaskListQueryTypeEnum;
   status?: string;
   group?: string;
   assignee?: string;
@@ -712,6 +2530,9 @@ export interface AddLogRequest {
 }
 
 export interface BoardQuery {
+  planId?: string;
+  stageId?: string;
+  type?: BoardQueryTypeEnum;
   /** @maxLength 4096 */
   search?: string;
   /** @minLength 1 */
@@ -1426,7 +3247,401 @@ export interface ApiFailure {
   };
 }
 
+/** @default "discovery" */
+export type ProjectRecordProductStageEnum =
+  | "discovery"
+  | "prototype"
+  | "mvp"
+  | "production"
+  | "retirement";
+
+/** @default "active" */
+export type ProjectRecordModeEnum =
+  | "active"
+  | "maintenance"
+  | "paused"
+  | "archived";
+
+/** @default "draft" */
+export type ProjectRecordStatusEnum =
+  | "draft"
+  | "planned"
+  | "active"
+  | "paused"
+  | "completed"
+  | "cancelled";
+
+/** @default "planned" */
+export type ProjectRecordStatusEnum1 = "planned" | "active" | "accepted";
+
+/** @default "proposed" */
+export type ProjectRecordStatusEnum2 =
+  | "proposed"
+  | "accepted"
+  | "implemented"
+  | "retired";
+
+/** @default "decision" */
+export type ProjectRecordCategoryEnum =
+  | "decision"
+  | "architecture"
+  | "runbook"
+  | "constraint";
+
+/** @default "active" */
+export type ProjectRecordStatusEnum3 = "active" | "superseded";
+
+/** @default "task" */
+export type ProjectRecordTypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
+
+/** @default "medium" */
+export type ProjectRecordSeverityEnum = "low" | "medium" | "high" | "critical";
+
+/** @default "running" */
+export type ProjectRecordStatusEnum4 =
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "unknown";
+
+/** @default "agent" */
+export type ProjectRecordSourceEnum = "manual" | "agent" | "runtime";
+
+/** @default "pending" */
+export type ProjectRecordStatusEnum5 = "pending" | "passed" | "failed";
+
+/** @default "manual" */
+export type ProjectRecordSourceEnum1 = "manual" | "agent" | "ci";
+
+export type ProjectRecordStatusEnum6 = "accepted" | "changes_requested";
+
+/** @default "open" */
+export type ProjectRecordStatusEnum7 = "open" | "answered" | "closed";
+
+/** @default "planned" */
+export type ProjectRecordStatusEnum8 =
+  | "planned"
+  | "ready"
+  | "released"
+  | "rolled_back";
+
+/** @default "installed" */
+export type ProjectRecordStatusEnum9 =
+  | "installed"
+  | "verified"
+  | "failed"
+  | "rolled_back";
+
+/** @default "discovery" */
+export type SaveProjectRecordProductStageEnum =
+  | "discovery"
+  | "prototype"
+  | "mvp"
+  | "production"
+  | "retirement";
+
+/** @default "active" */
+export type SaveProjectRecordModeEnum =
+  | "active"
+  | "maintenance"
+  | "paused"
+  | "archived";
+
+/** @default "draft" */
+export type SaveProjectRecordStatusEnum =
+  | "draft"
+  | "planned"
+  | "active"
+  | "paused"
+  | "completed"
+  | "cancelled";
+
+/** @default "planned" */
+export type SaveProjectRecordStatusEnum1 = "planned" | "active" | "accepted";
+
+/** @default "proposed" */
+export type SaveProjectRecordStatusEnum2 =
+  | "proposed"
+  | "accepted"
+  | "implemented"
+  | "retired";
+
+/** @default "decision" */
+export type SaveProjectRecordCategoryEnum =
+  | "decision"
+  | "architecture"
+  | "runbook"
+  | "constraint";
+
+/** @default "active" */
+export type SaveProjectRecordStatusEnum3 = "active" | "superseded";
+
+/** @default "task" */
+export type SaveProjectRecordTypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
+
+/** @default "medium" */
+export type SaveProjectRecordSeverityEnum =
+  | "low"
+  | "medium"
+  | "high"
+  | "critical";
+
+/** @default "running" */
+export type SaveProjectRecordStatusEnum4 =
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "unknown";
+
+/** @default "agent" */
+export type SaveProjectRecordSourceEnum = "manual" | "agent" | "runtime";
+
+/** @default "pending" */
+export type SaveProjectRecordStatusEnum5 = "pending" | "passed" | "failed";
+
+/** @default "manual" */
+export type SaveProjectRecordSourceEnum1 = "manual" | "agent" | "ci";
+
+export type SaveProjectRecordStatusEnum6 = "accepted" | "changes_requested";
+
+/** @default "open" */
+export type SaveProjectRecordStatusEnum7 = "open" | "answered" | "closed";
+
+/** @default "planned" */
+export type SaveProjectRecordStatusEnum8 =
+  | "planned"
+  | "ready"
+  | "released"
+  | "rolled_back";
+
+/** @default "installed" */
+export type SaveProjectRecordStatusEnum9 =
+  | "installed"
+  | "verified"
+  | "failed"
+  | "rolled_back";
+
+/** @default "discovery" */
+export type ProjectStateProductStageEnum =
+  | "discovery"
+  | "prototype"
+  | "mvp"
+  | "production"
+  | "retirement";
+
+/** @default "active" */
+export type ProjectStateModeEnum =
+  | "active"
+  | "maintenance"
+  | "paused"
+  | "archived";
+
+/** @default "draft" */
+export type ProjectStateStatusEnum =
+  | "draft"
+  | "planned"
+  | "active"
+  | "paused"
+  | "completed"
+  | "cancelled";
+
+/** @default "planned" */
+export type ProjectStateStatusEnum1 = "planned" | "active" | "accepted";
+
+/** @default "proposed" */
+export type ProjectStateStatusEnum2 =
+  | "proposed"
+  | "accepted"
+  | "implemented"
+  | "retired";
+
+/** @default "decision" */
+export type ProjectStateCategoryEnum =
+  | "decision"
+  | "architecture"
+  | "runbook"
+  | "constraint";
+
+/** @default "active" */
+export type ProjectStateStatusEnum3 = "active" | "superseded";
+
+/** @default "task" */
+export type ProjectStateTypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
+
+/** @default "medium" */
+export type ProjectStateSeverityEnum = "low" | "medium" | "high" | "critical";
+
+/** @default "running" */
+export type ProjectStateStatusEnum4 =
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "unknown";
+
+/** @default "agent" */
+export type ProjectStateSourceEnum = "manual" | "agent" | "runtime";
+
+/** @default "pending" */
+export type ProjectStateStatusEnum5 = "pending" | "passed" | "failed";
+
+/** @default "manual" */
+export type ProjectStateSourceEnum1 = "manual" | "agent" | "ci";
+
+export type ProjectStateStatusEnum6 = "accepted" | "changes_requested";
+
+/** @default "open" */
+export type ProjectStateStatusEnum7 = "open" | "answered" | "closed";
+
+/** @default "planned" */
+export type ProjectStateStatusEnum8 =
+  | "planned"
+  | "ready"
+  | "released"
+  | "rolled_back";
+
+/** @default "installed" */
+export type ProjectStateStatusEnum9 =
+  | "installed"
+  | "verified"
+  | "failed"
+  | "rolled_back";
+
+/** @default "discovery" */
+export type ProjectContextProductStageEnum =
+  | "discovery"
+  | "prototype"
+  | "mvp"
+  | "production"
+  | "retirement";
+
+/** @default "active" */
+export type ProjectContextModeEnum =
+  | "active"
+  | "maintenance"
+  | "paused"
+  | "archived";
+
+/** @default "discovery" */
+export type CheckpointChangesProductStageEnum =
+  | "discovery"
+  | "prototype"
+  | "mvp"
+  | "production"
+  | "retirement";
+
+/** @default "active" */
+export type CheckpointChangesModeEnum =
+  | "active"
+  | "maintenance"
+  | "paused"
+  | "archived";
+
+/** @default "draft" */
+export type CheckpointChangesStatusEnum =
+  | "draft"
+  | "planned"
+  | "active"
+  | "paused"
+  | "completed"
+  | "cancelled";
+
+/** @default "planned" */
+export type CheckpointChangesStatusEnum1 = "planned" | "active" | "accepted";
+
+/** @default "proposed" */
+export type CheckpointChangesStatusEnum2 =
+  | "proposed"
+  | "accepted"
+  | "implemented"
+  | "retired";
+
+/** @default "decision" */
+export type CheckpointChangesCategoryEnum =
+  | "decision"
+  | "architecture"
+  | "runbook"
+  | "constraint";
+
+/** @default "active" */
+export type CheckpointChangesStatusEnum3 = "active" | "superseded";
+
+/** @default "task" */
+export type CheckpointChangesTypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
+
+/** @default "medium" */
+export type CheckpointChangesSeverityEnum =
+  | "low"
+  | "medium"
+  | "high"
+  | "critical";
+
+/** @default "running" */
+export type CheckpointChangesStatusEnum4 =
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "unknown";
+
+/** @default "agent" */
+export type CheckpointChangesSourceEnum = "manual" | "agent" | "runtime";
+
+/** @default "pending" */
+export type CheckpointChangesStatusEnum5 = "pending" | "passed" | "failed";
+
+/** @default "manual" */
+export type CheckpointChangesSourceEnum1 = "manual" | "agent" | "ci";
+
+export type CheckpointChangesStatusEnum6 = "accepted" | "changes_requested";
+
+/** @default "open" */
+export type CheckpointChangesStatusEnum7 = "open" | "answered" | "closed";
+
+/** @default "planned" */
+export type CheckpointChangesStatusEnum8 =
+  | "planned"
+  | "ready"
+  | "released"
+  | "rolled_back";
+
+/** @default "installed" */
+export type CheckpointChangesStatusEnum9 =
+  | "installed"
+  | "verified"
+  | "failed"
+  | "rolled_back";
+
 export type ServerContextResponseModeEnum = "local" | "workspace";
+
+export type TaskListQueryTypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type TaskListQuerySortEnum = "id" | "board";
 
@@ -1467,6 +3682,13 @@ export type AddLogRequestKindEnum =
   | "execution"
   | "error"
   | "summary";
+
+export type BoardQueryTypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type LogQueryKindEnum =
   | "progress"
@@ -1527,6 +3749,9 @@ export type GetContextOkEnum = true;
 export type GetBoardOkEnum = true;
 
 export interface GetBoardParams {
+  planId?: string;
+  stageId?: string;
+  type?: TypeEnum;
   /** @maxLength 4096 */
   search?: string;
   /** @minLength 1 */
@@ -1550,10 +3775,22 @@ export interface GetBoardParams {
    */
   cursor?: string;
 }
+
+export type TypeEnum = "task" | "feature" | "bug" | "research" | "debt";
+
+export type GetBoardParams1TypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type ListTasksOkEnum = true;
 
 export interface ListTasksParams {
+  planId?: string;
+  stageId?: string;
+  type?: TypeEnum1;
   /** @maxLength 4096 */
   search?: string;
   /** @minLength 1 */
@@ -1577,6 +3814,15 @@ export interface ListTasksParams {
    */
   cursor?: string;
 }
+
+export type TypeEnum1 = "task" | "feature" | "bug" | "research" | "debt";
+
+export type ListTasksParams1TypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type CreateTaskOkEnum = true;
 
@@ -1638,6 +3884,9 @@ export interface ReleaseTaskParams {
 export type GetTaskListOkEnum = true;
 
 export interface GetTaskListParams {
+  planId?: string;
+  stageId?: string;
+  type?: TypeEnum2;
   status?: string;
   group?: string;
   assignee?: string;
@@ -1650,7 +3899,16 @@ export interface GetTaskListParams {
   sort?: SortEnum;
 }
 
+export type TypeEnum2 = "task" | "feature" | "bug" | "research" | "debt";
+
 export type SortEnum = "id" | "board";
+
+export type GetTaskListParams1TypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type GetTaskListParams1SortEnum = "id" | "board";
 
@@ -1744,6 +4002,29 @@ export interface ChangeDependencyParams {
    */
   id: number;
 }
+
+export type GetProjectStateOkEnum = true;
+
+export type GetProjectContextOkEnum = true;
+
+export type GetTaskBriefingOkEnum = true;
+
+export interface GetTaskBriefingParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+}
+
+export type GetCheckpointChangesOkEnum = true;
+
+export interface GetCheckpointChangesParams {
+  recordId: string;
+}
+
+export type SaveProjectRecordOkEnum = true;
 
 export type ListCommentsOkEnum = true;
 
@@ -1868,6 +4149,9 @@ export interface GetContextForProjectParams {
 export type GetBoardForProjectOkEnum = true;
 
 export interface GetBoardForProjectParams {
+  planId?: string;
+  stageId?: string;
+  type?: TypeEnum3;
   /** @maxLength 4096 */
   search?: string;
   /** @minLength 1 */
@@ -1893,10 +4177,22 @@ export interface GetBoardForProjectParams {
   /** Имя из реестра или идентификатор проекта */
   project: string;
 }
+
+export type TypeEnum3 = "task" | "feature" | "bug" | "research" | "debt";
+
+export type GetBoardForProjectParams1TypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type ListTasksForProjectOkEnum = true;
 
 export interface ListTasksForProjectParams {
+  planId?: string;
+  stageId?: string;
+  type?: TypeEnum4;
   /** @maxLength 4096 */
   search?: string;
   /** @minLength 1 */
@@ -1922,6 +4218,15 @@ export interface ListTasksForProjectParams {
   /** Имя из реестра или идентификатор проекта */
   project: string;
 }
+
+export type TypeEnum4 = "task" | "feature" | "bug" | "research" | "debt";
+
+export type ListTasksForProjectParams1TypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type CreateTaskForProjectOkEnum = true;
 
@@ -1998,6 +4303,9 @@ export interface ReleaseTaskForProjectParams {
 export type GetTaskListForProjectOkEnum = true;
 
 export interface GetTaskListForProjectParams {
+  planId?: string;
+  stageId?: string;
+  type?: TypeEnum5;
   status?: string;
   group?: string;
   assignee?: string;
@@ -2012,7 +4320,16 @@ export interface GetTaskListForProjectParams {
   project: string;
 }
 
+export type TypeEnum5 = "task" | "feature" | "bug" | "research" | "debt";
+
 export type SortEnum1 = "id" | "board";
+
+export type GetTaskListForProjectParams1TypeEnum =
+  | "task"
+  | "feature"
+  | "bug"
+  | "research"
+  | "debt";
 
 export type GetTaskListForProjectParams1SortEnum = "id" | "board";
 
@@ -2127,6 +4444,48 @@ export interface ChangeDependencyForProjectParams {
    * @max 9007199254740991
    */
   id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetProjectStateForProjectOkEnum = true;
+
+export interface GetProjectStateForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetProjectContextForProjectOkEnum = true;
+
+export interface GetProjectContextForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskBriefingForProjectOkEnum = true;
+
+export interface GetTaskBriefingForProjectParams {
+  /**
+   * Положительный безопасный целочисленный ID задачи
+   * @min 1
+   * @max 9007199254740991
+   */
+  id: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetCheckpointChangesForProjectOkEnum = true;
+
+export interface GetCheckpointChangesForProjectParams {
+  recordId: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type SaveProjectRecordForProjectOkEnum = true;
+
+export interface SaveProjectRecordForProjectParams {
   /** Имя из реестра или идентификатор проекта */
   project: string;
 }

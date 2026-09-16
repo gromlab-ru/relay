@@ -29,6 +29,8 @@ export class MutationEventsInterceptor implements NestInterceptor {
         const taskId = "taskId" in data ? data.taskId : "id" in data ? data.id : undefined;
         if (typeof taskId === "number")
           void this.events.apiChanged(project, taskId).catch(() => {});
+        else if ("fields" in data && "revision" in data)
+          void this.events.apiChanged(project).catch(() => {});
       }),
     );
   }

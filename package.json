@@ -46,7 +46,10 @@
     "format:check": "prettier --check .",
     "docs:check": "pnpm --filter @gromlab/relay-cli run docs:check",
     "skills:install": "npx --yes skills@1.5.26 experimental_install",
-    "check": "pnpm run format:check && pnpm run docs:check && turbo run lint typecheck test",
+    "skills:build": "node --conditions=tasks-source --import tsx scripts/skill-bundle/build.mjs",
+    "skills:check": "node --conditions=tasks-source --import tsx scripts/skill-bundle/check.mjs",
+    "skills:test": "tsx --tsconfig packages/server-runtime/tsconfig.json --conditions=tasks-source --test scripts/skill-bundle/*.test.mjs",
+    "check": "pnpm run format:check && pnpm run skills:check && pnpm run skills:test && pnpm run docs:check && turbo run lint typecheck test",
     "clean": "turbo run clean",
     "package:check": "turbo run package:check --filter=@gromlab/relay-cli --filter=@gromlab/relay-server --filter=@gromlab/relay-mcp && node scripts/smoke-relay.mjs",
     "package:check:cli": "turbo run package:check --filter=@gromlab/relay-cli",
@@ -60,11 +63,13 @@
     "release:publish:mcp": "node scripts/release/relay.mjs publish mcp"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
     "agent-browser": "0.37.1",
     "esbuild": "^0.28.2",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
-    "turbo": "2.10.12"
+    "turbo": "2.10.12",
+    "zod": "^4.1.0"
   },
   "prettier": {
     "trailingComma": "all",

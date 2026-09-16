@@ -1,5 +1,35 @@
 # Журнал создания TSX
 
+## Жизненный цикл проекта
+
+Из `apps/web` выполнены команды закреплённого генератора:
+
+```bash
+pnpm run create ui-unit project src/compositions/layouts
+pnpm run create ui-unit overview src/compositions/screens
+pnpm run create ui-unit passport src/compositions/screens
+pnpm run create ui-unit plans src/compositions/screens
+pnpm run create ui-unit knowledge src/compositions/screens
+pnpm run create ui-unit activity src/compositions/screens
+pnpm run create ui-unit releases src/compositions/screens
+pnpm run create ui-unit history src/compositions/screens
+pnpm run create ui-unit project-editor src/compositions/widgets
+pnpm run create ui-unit project-record src/compositions/widgets
+pnpm run create ui-unit task-lifecycle src/compositions/widgets
+pnpm run create ui-component lifecycle-sync src/domains/lifecycle/providers
+pnpm run create ui-component record-field src/compositions/widgets/project-editor/ui
+pnpm run create ui-component stage-detail src/compositions/screens/plans/ui
+pnpm run create ui-unit project-page src/compositions/widgets
+pnpm run create ui-unit project-tasks src/compositions/widgets
+```
+
+Каркас переименован в `project.layout.tsx`, экраны — в `*.screen.tsx`. Общие сценарии
+имеют подтверждённых потребителей в нескольких разделах. `record-field` и `stage-detail`
+остались внутренними компонентами ближайших владельцев; провайдер синхронизации
+принадлежит `domains/lifecycle`. Неиспользуемые заготовки типов и стилей удалены.
+Разделы кроме начального обзора подключаются через `lazy.ts`: доска и её DnD,
+история, планы и сопровождение загружаются при открытии соответствующего маршрута.
+
 ## Режимы Relay
 
 Из `apps/web` выполнены команды:
