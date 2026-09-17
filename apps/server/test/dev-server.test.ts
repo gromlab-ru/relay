@@ -196,9 +196,11 @@ for (const configuration of ["default", "relative"] as const)
       const context = (await json(`${url}/api/v1/context`)).data;
       assert.equal(context.actor, "dev-human");
       assert.equal(context.configPath, join(root, workspace, ".relay/config.json"));
+      // Первая компиляция может завершиться позже HTTP-запуска на загруженном CI-runner.
       await waitFor(
         () => output.includes("Found 0 errors"),
         "Проверка типов не завершилась успешно",
+        30000,
       );
       const outputs = workspaces
         .filter((path) => path !== "packages/typescript-config")
