@@ -1,7 +1,7 @@
 import type { PipeTransform } from "@nestjs/common";
 import type { z } from "zod";
-import { parse } from "@tasks/core/domain/validation";
-import { parseTaskId } from "@tasks/core/shared/ids";
+import { parse } from "@relay/core/domain/validation";
+import { parseTaskId } from "@relay/core/shared/ids";
 
 /** HTTP-преобразования выполняются до проверки общих схем, без truthy-coercion. */
 export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {

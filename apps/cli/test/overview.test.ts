@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import { test } from "node:test";
 import stringWidth from "string-width";
-import type { OverviewData } from "@tasks/core/application/queries/overview";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import type { OverviewData } from "@relay/core/application/queries/overview";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { openWorkspace } from "@relay/core/storage/workspace";
 import { failed, fixture, invokeRaw, successful } from "./helpers/cli.js";
 
 test("overview доступен без автора, поддерживает дерево и сохраняет файлы задач", async (t) => {

@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { Task } from "@tasks/core/domain/task";
-import { TaskService } from "@tasks/core/application/tasks/service";
+import type { Task } from "@relay/core/domain/task";
+import { TaskService } from "@relay/core/application/tasks/service";
 import { getTask } from "../src/queries/tasks/queries.js";
-import { createLocalBackend } from "@tasks/project-runtime/backend/local";
-import { TaskRepository } from "@tasks/core/storage/tasks";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import { createLocalBackend } from "@relay/project-runtime/backend/local";
+import { TaskRepository } from "@relay/core/storage/tasks";
+import { openWorkspace } from "@relay/core/storage/workspace";
 import { failed, fixture, successful } from "./helpers/cli.js";
 
 test("единственный ID — число от 1 во всех ответах, файлах и ссылках", async (t) => {

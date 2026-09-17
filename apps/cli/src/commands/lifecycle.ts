@@ -1,8 +1,8 @@
 import type { Command } from "commander";
-import { saveProjectRecordSchema } from "@tasks/core/domain/project";
-import { parseTaskId } from "@tasks/core/shared/ids";
-import { AppError, invariant } from "@tasks/core/shared/errors";
-import { parse } from "@tasks/core/domain/validation";
+import { saveProjectRecordSchema } from "@relay/core/domain/project";
+import { parseTaskId } from "@relay/core/shared/ids";
+import { AppError, invariant } from "@relay/core/shared/errors";
+import { parse } from "@relay/core/domain/validation";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
 import { commandGroup, registerCommand } from "../command.js";

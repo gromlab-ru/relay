@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "stage_bb13c65b2e5de8304aa51d5fa6f1a8a4",
+  "revision": 1,
+  "createdAt": "2026-09-16T15:02:06.089Z",
+  "updatedAt": "2026-09-16T15:02:06.089Z",
+  "createdBy": "human",
+  "updatedBy": "human",
+  "fields": {
+    "kind": "stage",
+    "title": "test2",
+    "planId": "plan_861cc41984dbce917ad28ec25c08641a",
+    "outcome": "asd",
+    "criteria": "das",
+    "acceptance": "asd",
+    "status": "planned",
+    "dependsOn": [],
+    "order": 1
+  },
+  "events": [
+    {
+      "revision": 1,
+      "actor": "human",
+      "at": "2026-09-16T15:02:06.089Z",
+      "fields": [
+        "kind",
+        "title",
+        "planId",
+        "outcome",
+        "criteria",
+        "acceptance",
+        "status",
+        "dependsOn",
+        "order"
+      ]
+    }
+  ],
+  "requestHash": "da5d069d82a57afdb9f3b5ef9b12686490afa1a1ec95397b86c25ad053f7e1ef"
+}

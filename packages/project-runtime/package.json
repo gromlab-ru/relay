@@ -1,5 +1,5 @@
 {
-  "name": "@tasks/project-runtime",
+  "name": "@relay/project-runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,12 +17,12 @@
     "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@tasks/core": "workspace:*",
-    "@tasks/rest-sdk": "workspace:*",
+    "@relay/core": "workspace:*",
+    "@relay/rest-sdk": "workspace:*",
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"

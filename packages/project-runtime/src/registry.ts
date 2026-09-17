@@ -1,9 +1,9 @@
 import { dirname, resolve } from "node:path";
-import { DEFAULT_MCP_PORT, DEFAULT_SERVER_PORT } from "@tasks/core/domain/config";
-import { parse } from "@tasks/core/domain/validation";
-import { AppError, invariant, isErrno } from "@tasks/core/shared/errors";
-import { atomicJson, exists } from "@tasks/core/storage/files";
-import { prepareRuntime, withStorageLock } from "@tasks/core/storage/lock";
+import { DEFAULT_MCP_PORT, DEFAULT_SERVER_PORT } from "@relay/core/domain/config";
+import { parse } from "@relay/core/domain/validation";
+import { AppError, invariant, isErrno } from "@relay/core/shared/errors";
+import { atomicJson, exists } from "@relay/core/storage/files";
+import { prepareRuntime, withStorageLock } from "@relay/core/storage/lock";
 import {
   REGISTRY_NAME,
   readConfiguration,

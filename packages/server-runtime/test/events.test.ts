@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { ServerEvent } from "@tasks/contracts";
+import type { ServerEvent } from "@relay/contracts";
 import { fixture } from "./helpers/server.js";
-import { initialize } from "@tasks/core/storage/workspace";
-import { initializeRegistry, registerProject } from "@tasks/project-runtime/registry";
-import { startServer } from "@tasks/server-runtime";
-import { ProjectService } from "@tasks/core/application/project/service";
+import { initialize } from "@relay/core/storage/workspace";
+import { initializeRegistry, registerProject } from "@relay/project-runtime/registry";
+import { startServer } from "@relay/server-runtime";
+import { ProjectService } from "@relay/core/application/project/service";
 
 async function connect(url: string, project?: string) {
   const controller = new AbortController();

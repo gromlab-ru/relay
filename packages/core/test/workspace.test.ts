@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
-import { defaultConfig } from "@tasks/core/domain/config";
-import { openWorkspace, MIGRATION_STATE } from "@tasks/core/storage/workspace";
-import { prepareRuntime } from "@tasks/core/storage/lock";
+import { defaultConfig } from "@relay/core/domain/config";
+import { openWorkspace, MIGRATION_STATE } from "@relay/core/storage/workspace";
+import { prepareRuntime } from "@relay/core/storage/lock";
 
 async function fixture(t: TestContext) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), "tasks-workspace-")));

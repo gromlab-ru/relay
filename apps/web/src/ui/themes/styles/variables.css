@@ -1,14 +1,19 @@
 :root {
-  --tasks-canvas: light-dark(#f8f9fb, #14161d);
-  --tasks-surface: light-dark(#fff, #1c1f28);
-  --tasks-raised: light-dark(#fff, #222632);
-  --tasks-border: light-dark(#e7e9ef, #303442);
-  --tasks-subtle: light-dark(#f1f3f7, #222630);
-  --tasks-ink: light-dark(#252938, #ebedf5);
-  --tasks-muted: light-dark(#626b7e, #b1b7c7);
-  --tasks-soft: light-dark(#6b7280, #979fb2);
-  --tasks-card-shadow: 0 1px 2px light-dark(#18223b06, #00000016);
-  --tasks-card-hover: 0 4px 14px light-dark(#18223b0c, #00000032);
+  --tasks-canvas: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-9));
+  --tasks-chrome: light-dark(#fff, var(--mantine-color-dark-8));
+  --tasks-surface: light-dark(#fff, var(--mantine-color-dark-7));
+  --tasks-raised: light-dark(#fff, var(--mantine-color-dark-6));
+  --tasks-border: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+  --tasks-subtle: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  --tasks-selected: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+  --tasks-selected-border: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-3));
+  --tasks-focus-ring: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-3));
+  --tasks-ink: light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-1));
+  --tasks-muted: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2));
+  --tasks-soft: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-5));
+  --tasks-scrollbar: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  --tasks-card-shadow: 0 1px 2px light-dark(#00000006, #00000016);
+  --tasks-card-hover: 0 4px 14px light-dark(#0000000c, #00000032);
   --tasks-page-gutter: 1rem;
   --tasks-panel-width: 44rem;
 

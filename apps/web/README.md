@@ -4,7 +4,7 @@
 Отдельные экраны: обзор, паспорт, планы, требования и знания, работа и проверки,
 релизы, история и передача контекста. [Сценарии](../../docs/guides/LIFECYCLE.md).
 Компоненты — Mantine,
-серверный кеш — SWR, перенос — dnd-kit. Приватный pnpm workspace `@tasks/web`
+серверный кеш — SWR, перенос — dnd-kit. Приватный pnpm workspace `@relay/web`
 собирается в `apps/web/dist`; его содержимое входит в серверный дистрибутив
 `@gromlab/relay-server`. Сам workspace отдельно не публикуется.
 
@@ -32,7 +32,7 @@ pnpm run dev
 
 ```bash
 pnpm run dev:server
-pnpm --filter @tasks/web run dev
+pnpm --filter @relay/web run dev
 ```
 
 Vite: `http://127.0.0.1:5173`. `/api`, включая SSE, проксируется на
@@ -42,7 +42,7 @@ Vite: `http://127.0.0.1:5173`. `/api`, включая SSE, проксирует�
 При отдельном запуске web сервер API должен уже работать: иначе прокси
 сообщит `ECONNREFUSED`. Vite автоматически определяет корень pnpm workspaces
 и разрешает общие зависимости без ручного списка `server.fs.allow`.
-Скрипт `dev` перед запуском Vite собирает workspace `@tasks/rest-sdk`.
+Скрипт `dev` перед запуском Vite собирает workspace `@relay/rest-sdk`.
 Его публичные импорты ведут в compiled `dist`, как и при production-сборке.
 
 ## Сценарии
@@ -94,7 +94,7 @@ Vite: `http://127.0.0.1:5173`. `/api`, включая SSE, проксирует�
 React Reference, указанного в `AGENTS.md`: фасеты `index.ts` и `lazy.ts`,
 алиасы слоёв без префикса `@`, вложенные юниты доступны своему родителю.
 Единственный список алиасов слоёв находится в `tsconfig.json`; Vite 8 читает
-его через `resolve.tsconfigPaths`. Межпакетный импорт `@tasks/contracts`
+его через `resolve.tsconfigPaths`. Межпакетный импорт `@relay/contracts`
 использует публичный `exports` пакета, а не алиас его исходников.
 
 Браузерные tsconfig остаются самостоятельными: `module: ESNext`,
@@ -113,7 +113,7 @@ React Reference, указанного в `AGENTS.md`: фасеты `index.ts` и
 | `board/ui/group-navigation`       | Выбор группы и отображение полных счётчиков                |
 | `domains/project`                 | Контекст, автор и семантика статусов                       |
 | `domains/tasks`                   | Задачи, адаптеры, кеш, операции, черновики и синхронизация |
-| `infra/tasks-api`                 | Браузерный экземпляр клиента из `@tasks/rest-sdk`          |
+| `infra/tasks-api`                 | Браузерный экземпляр клиента из `@relay/rest-sdk`          |
 | `infra/workspace-events`          | Жизненный цикл EventSource                                 |
 | `infra/browser-storage`           | Доступ к браузерному хранению                              |
 | `ui/themes`                       | Типографика, токены и три цветовые схемы                   |
@@ -123,8 +123,8 @@ React Reference, указанного в `AGENTS.md`: фасеты `index.ts` и
 Его обновление из работающего актуального сервера:
 
 ```bash
-pnpm --filter @tasks/rest-sdk run generate
-pnpm --filter @tasks/rest-sdk run build
+pnpm --filter @relay/rest-sdk run generate
+pnpm --filter @relay/rest-sdk run build
 ```
 
 `packages/rest-sdk/src` полностью принадлежит `@gromlab/rest-api-codegen@5.2.4`.
@@ -147,23 +147,23 @@ pnpm run package:check
 ```
 
 Корневые команды через Turbo сначала собирают зависимости, включая SDK.
-`pnpm --filter @tasks/web run lint`, `pnpm --filter @tasks/web run typecheck` и
-`pnpm --filter @tasks/web run build` запускают только локальные инструменты, без Turbo;
-для двух последних команд `@tasks/rest-sdk` должен быть уже собран.
+`pnpm --filter @relay/web run lint`, `pnpm --filter @relay/web run typecheck` и
+`pnpm --filter @relay/web run build` запускают только локальные инструменты, без Turbo;
+для двух последних команд `@relay/rest-sdk` должен быть уже собран.
 
 `package:check` проверяет установленный npm-архив в отдельном каталоге.
 Общая сборка включает локальный `apps/web/dist` в серверный дистрибутив вместе с Node-частью.
 Turbo сохраняет `dist/**` каждого workspace отдельно: JavaScript и декларации SDK
-принадлежат пакету, а сборка браузера — приложению. `pnpm --filter @tasks/web run clean`
+принадлежат пакету, а сборка браузера — приложению. `pnpm --filter @relay/web run clean`
 удаляет локальные `dist` и оставшийся от предыдущей структуры `.cache`.
 
 Для визуальной проверки устанавливается отдельный Chrome для agent-browser:
 
 ```bash
-pnpm --filter @tasks/web run browser:install
-pnpm --filter @tasks/web run browser --session tasks-web-review open http://127.0.0.1:5173
-pnpm --filter @tasks/web run browser --session tasks-web-review snapshot -i
-pnpm --filter @tasks/web run browser --session tasks-web-review close
+pnpm --filter @relay/web run browser:install
+pnpm --filter @relay/web run browser --session tasks-web-review open http://127.0.0.1:5173
+pnpm --filter @relay/web run browser --session tasks-web-review snapshot -i
+pnpm --filter @relay/web run browser --session tasks-web-review close
 ```
 
 Версия agent-browser закреплена в корневом `package.json`; команды workspace

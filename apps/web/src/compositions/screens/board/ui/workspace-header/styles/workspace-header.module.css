@@ -90,5 +90,5 @@
 }
 
 .create {
-  box-shadow: 0 2px 3px #5544b220;
+  box-shadow: var(--tasks-card-shadow);
 }

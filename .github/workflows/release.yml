@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["cli-v*", "server-v*", "mcp-v*"]
+    tags: ["v*"]
 
 permissions:
   contents: read
@@ -14,11 +14,9 @@ concurrency:
 
 jobs:
   metadata:
-    name: Проверить релизный тег
+    name: Проверить общий тег, версии и описания пакетов
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    outputs:
-      component: ${{ steps.component.outputs.name }}
     steps:
       - name: Получить исходники тега
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
@@ -29,17 +27,11 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - name: Подготовить pnpm из packageManager
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # Версия 4
-        with:
-          run_install: false
-      - name: Сверить тег и версию манифеста пакета
-        id: component
+      - name: Сверить тег со всеми манифестами и проверить описания выпуска
         shell: bash
         run: |
-          component="${RELEASE_TAG%%-v*}"
-          node scripts/release/relay.mjs check "$component"
-          echo "name=$component" >> "$GITHUB_OUTPUT"
+          node scripts/release/relay.mjs check
+          node scripts/release/relay.mjs notes > "$RUNNER_TEMP/relay-release-notes.md"
         env:
           RELEASE_TAG: ${{ github.ref_name }}
 
@@ -49,10 +41,10 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   publish:
-    name: Опубликовать проверенный архив в npm
-    needs: [metadata, ci]
+    name: Опубликовать все пакеты в npm
+    needs: ci
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
@@ -73,27 +65,21 @@ jobs:
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # Версия 4
         with:
           run_install: false
-      - name: Получить архив из проверок этого запуска
+      - name: Получить все архивы из проверок этого запуска
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # Версия 8.0.1
         with:
-          artifact-ids: ${{ needs.metadata.outputs.component == 'mcp' && needs.ci.outputs.mcp_artifact_id || needs.metadata.outputs.component == 'server' && needs.ci.outputs.server_artifact_id || needs.ci.outputs.artifact_id }}
-          path: apps/${{ needs.metadata.outputs.component }}/.artifacts/npm
+          artifact-ids: ${{ needs.ci.outputs.artifact_id }}
+          path: apps
           merge-multiple: true
           digest-mismatch: error
-      - name: Опубликовать новую версию или подтвердить совпадение существующей
-        run: |
-          case "$RELAY_COMPONENT" in
-            cli) pnpm run release:publish ;;
-            server) pnpm run release:publish:server ;;
-            mcp) pnpm run release:publish:mcp ;;
-          esac
+      - name: Опубликовать общую версию CLI, Server и MCP
+        run: pnpm run release:publish
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-          RELAY_COMPONENT: ${{ needs.metadata.outputs.component }}
 
   github-release:
     name: Создать GitHub Release
-    needs: [metadata, publish]
+    needs: publish
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -114,12 +100,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
-          RELAY_COMPONENT: ${{ needs.metadata.outputs.component }}
         run: |
-          node scripts/release/relay.mjs notes "$RELAY_COMPONENT" > "$RUNNER_TEMP/relay-release-notes.md"
+          node scripts/release/relay.mjs notes > "$RUNNER_TEMP/relay-release-notes.md"
           if ! gh release view "$RELEASE_TAG" --json url; then
             flags=(--latest)
-            version="${RELEASE_TAG#*-v}"
+            version="${RELEASE_TAG#v}"
             if [[ "$version" == *-* ]]; then
               flags=(--prerelease)
             fi

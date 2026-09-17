@@ -1,6 +1,6 @@
 {
   "name": "@gromlab/relay-mcp",
-  "version": "0.2.0",
+  "version": "0.6.0",
   "description": "Relay MCP: проектный контекст, планы, поручения, исполнения и проверки для AI-агентов",
   "type": "module",
   "imports": {
@@ -34,21 +34,19 @@
     "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "node --import tsx --test test/*.test.ts",
     "package:check": "node ../../scripts/package.mjs mcp",
-    "release:check": "node ../../scripts/release/relay.mjs check mcp",
-    "release:publish": "node ../../scripts/release/relay.mjs publish mcp",
     "prepack": "node -e \"throw new Error('Выполните pnpm run package:check:mcp из корня репозитория; публикуйте проверенный архив.')\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
-    "@tasks/core": "workspace:*",
-    "@tasks/project-runtime": "workspace:*",
-    "@tasks/rest-sdk": "workspace:*",
+    "@relay/core": "workspace:*",
+    "@relay/project-runtime": "workspace:*",
+    "@relay/rest-sdk": "workspace:*",
     "commander": "^14.0.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/server-runtime": "workspace:*",
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/server-runtime": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.20.5",

@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, Module } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
-import type { ApiSuccess, ContextResponse } from "@tasks/contracts";
+import { success } from "@relay/contracts";
+import type { ApiSuccess, ContextResponse } from "@relay/contracts";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 

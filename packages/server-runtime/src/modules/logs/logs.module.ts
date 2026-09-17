@@ -1,15 +1,15 @@
 import { Body, Controller, Get, Inject, Module, Param, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
+import { success } from "@relay/contracts";
 import type {
   AddLogRequest,
   ApiSuccess,
   LogRecord,
   RecordsPage,
   RecordsQuery,
-} from "@tasks/contracts";
-import { LogService } from "@tasks/core/application/logs/service";
-import { toLines } from "@tasks/core/domain/markdown";
+} from "@relay/contracts";
+import { LogService } from "@relay/core/application/logs/service";
+import { toLines } from "@relay/core/domain/markdown";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { addLogSchema, logQuerySchema } from "../../openapi/schemas.js";

@@ -1,8 +1,8 @@
 import { Controller, Get, Inject, Injectable, Module, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
-import type { ApiSuccess, BoardQuery, BoardResponse } from "@tasks/contracts";
-import { TaskQueries } from "@tasks/core/application/queries/tasks";
+import { success } from "@relay/contracts";
+import type { ApiSuccess, BoardQuery, BoardResponse } from "@relay/contracts";
+import { TaskQueries } from "@relay/core/application/queries/tasks";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { boardQuerySchema } from "../../openapi/schemas.js";

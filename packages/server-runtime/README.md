@@ -1,6 +1,6 @@
 # Общая серверная реализация Tasks
 
-Приватный pnpm workspace `@tasks/server-runtime` содержит общую реализацию API на NestJS/Fastify,
+Приватный pnpm workspace `@relay/server-runtime` содержит общую реализацию API на NestJS/Fastify,
 OpenAPI, Swagger, SSE и опциональную раздачу статических файлов. Его публичные экспорты используют
 [CLI](../../apps/cli/README.md), [самостоятельный сервер](../../apps/server/README.md)
 и [MCP](../../apps/mcp/README.md).
@@ -10,7 +10,7 @@ OpenAPI, Swagger, SSE и опциональную раздачу статиче�
 
 - `src/bootstrap.ts` экспортирует `createServer(options)` и `startServer(options)`.
 - `src/modules`, `src/common` и `src/openapi` содержат реализацию HTTP-слоя.
-- Бизнес-операции импортируются из `@tasks/core/*`, DTO — из `@tasks/contracts`.
+- Бизнес-операции импортируются из `@relay/core/*`, DTO — из `@relay/contracts`.
 - `test` содержит проверки HTTP/OpenAPI, SSE, статических ресурсов и интеграции с Core.
 - Вызывающее приложение передаёт параметры рабочего пространства и управляет остановкой сервера.
   Раздача статических файлов включается через `webRoot`; если параметр не указан или равен `false`,
@@ -32,7 +32,7 @@ OpenAPI, Swagger, SSE и опциональную раздачу статиче�
 
 ```bash
 pnpm run build:server
-pnpm --filter @tasks/server-runtime run typecheck
+pnpm --filter @relay/server-runtime run typecheck
 pnpm run test:server
 ```
 

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { defaultConfig } from "@tasks/core/domain/config";
+import { defaultConfig } from "@relay/core/domain/config";
 import { runNpm } from "../../../scripts/release/npm.mjs";
 
 /** Проверка установленного пакета, его SDK и автоматически запущенных API.
@@ -39,7 +39,7 @@ export async function smokePackage(archive, manifest) {
     assert.equal(installed.version, manifest.version);
     assert.equal(installed.scripts, undefined);
     assert.equal(installed.devDependencies, undefined);
-    assert(Object.keys(installed.dependencies).every((name) => !name.startsWith("@tasks/")));
+    assert(Object.keys(installed.dependencies).every((name) => !name.startsWith("@relay/")));
     for (const name of ["a", "b"]) {
       await mkdir(join(directory, name));
       await writeFile(join(directory, name, "tasks.config.json"), JSON.stringify(defaultConfig));

@@ -2,9 +2,9 @@
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { Command, CommanderError } from "commander";
-import { startServer } from "@tasks/server-runtime";
-import { DEFAULT_SERVER_PORT } from "@tasks/core/domain/config";
-import { asAppError } from "@tasks/core/shared/errors";
+import { startServer } from "@relay/server-runtime";
+import { DEFAULT_SERVER_PORT } from "@relay/core/domain/config";
+import { asAppError } from "@relay/core/shared/errors";
 import manifest from "#manifest" with { type: "json" };
 
 const command = new Command("relay-server")

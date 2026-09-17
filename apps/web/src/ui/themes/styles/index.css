@@ -35,7 +35,7 @@ textarea,
 select,
 [tabindex] {
   &:focus-visible {
-    outline: 2px solid var(--mantine-color-indigo-5);
+    outline: 2px solid var(--tasks-focus-ring);
     outline-offset: 3px;
   }
 }
@@ -46,7 +46,8 @@ a {
 }
 
 ::selection {
-  background: var(--mantine-color-indigo-light);
+  background: var(--tasks-selected);
+  color: var(--tasks-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {

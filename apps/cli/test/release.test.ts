@@ -15,17 +15,18 @@ function manifest(version = "0.2.0") {
   };
 }
 
-test("релиз сверяет тег с манифестом CLI и определяет канал предварительной версии", () => {
+test("релиз сверяет общий тег с манифестом CLI и определяет канал предварительной версии", () => {
   for (const [version, channel] of [
     ["0.2.0", "latest"],
     ["0.2.0-rc.1", "next"],
   ]) {
-    const metadata = releaseMetadata(manifest(version), `cli-v${version}`);
+    const metadata = releaseMetadata(manifest(version), `v${version}`);
     assert.equal(metadata.distTag, channel);
     assert.equal(metadata.archiveName, `gromlab-relay-cli-${version}.tgz`);
   }
   const candidate = manifest();
-  assert.throws(() => releaseMetadata(candidate, "cli-v0.2.1"));
+  assert.throws(() => releaseMetadata(candidate, "v0.2.1"));
+  assert.throws(() => releaseMetadata(candidate, "cli-v0.2.0"));
   assert.throws(() => releaseMetadata({ ...candidate, private: true }));
   assert.throws(() => releaseMetadata({ ...candidate, name: "@gromlab/tasks-monorepo" }));
   assert.throws(() => releaseMetadata({ ...candidate, bin: { "relay-cli": "dist/main.js" } }));
@@ -42,32 +43,32 @@ test("дистрибутив содержит внешние зависимос�
   const source = {
     ...manifest(),
     dependencies: {
-      "@tasks/core": "workspace:*",
-      "@tasks/rest-sdk": "workspace:*",
-      "@tasks/server-runtime": "workspace:*",
+      "@relay/core": "workspace:*",
+      "@relay/rest-sdk": "workspace:*",
+      "@relay/server-runtime": "workspace:*",
       commander: "^14.0.0",
     },
-    devDependencies: { esbuild: "^0.28.2", "@tasks/typescript-config": "workspace:*" },
+    devDependencies: { esbuild: "^0.28.2", "@relay/typescript-config": "workspace:*" },
     scripts: { prepack: "node scripts/release/assemble-package.mjs" },
     imports: { "#manifest": "./package.json" },
   };
   const workspaces = [
-    { name: "@tasks/project-runtime", version: "0.0.0", private: true, dependencies: {} },
-    { name: "@tasks/contracts", version: "0.0.0", private: true, dependencies: {} },
-    { name: "@tasks/rest-sdk", version: "0.0.0", private: true, dependencies: {} },
+    { name: "@relay/project-runtime", version: "0.0.0", private: true, dependencies: {} },
+    { name: "@relay/contracts", version: "0.0.0", private: true, dependencies: {} },
+    { name: "@relay/rest-sdk", version: "0.0.0", private: true, dependencies: {} },
     {
-      name: "@tasks/core",
+      name: "@relay/core",
       version: "0.0.0",
       private: true,
       dependencies: { zod: "^4.1.0", "proper-lockfile": "^4.1.2" },
     },
     {
-      name: "@tasks/server-runtime",
+      name: "@relay/server-runtime",
       version: "0.0.0",
       private: true,
       dependencies: {
-        "@tasks/core": "workspace:*",
-        "@tasks/contracts": "workspace:*",
+        "@relay/core": "workspace:*",
+        "@relay/contracts": "workspace:*",
         "@nestjs/core": "^12.0.1",
         zod: "^4.1.0",
       },
@@ -90,8 +91,8 @@ test("дистрибутив содержит внешние зависимос�
   assert(source.scripts.prepack, "Исходный манифест не должен изменяться");
   assert.throws(() => distributionManifest(source, workspaces.slice(1)));
   for (const dependencies of [
-    { "@tasks/missing": "workspace:*" },
-    { "@tasks/core": "*" },
+    { "@relay/missing": "workspace:*" },
+    { "@relay/core": "*" },
     { zod: "^3.0.0" },
     { external: "file:../external" },
     { external: "workspace:*" },
@@ -100,28 +101,25 @@ test("дистрибутив содержит внешние зависимос�
   }
 });
 
-test("MCP имеет собственные версию, точку входа, архив и пространство тегов", () => {
+test("MCP использует общий тег и собственный архив", () => {
   const source = {
     ...manifest("0.1.0"),
     name: "@gromlab/relay-mcp",
     bin: { "relay-mcp": "dist/main.js" },
   };
-  assert.equal(releaseMetadata(source, "mcp-v0.1.0").archiveName, "gromlab-relay-mcp-0.1.0.tgz");
-  assert.throws(() => releaseMetadata(source, "v0.1.0"));
-  assert.throws(() => releaseMetadata(source, "mcp-v0.2.0"));
+  assert.equal(releaseMetadata(source, "v0.1.0").archiveName, "gromlab-relay-mcp-0.1.0.tgz");
+  assert.throws(() => releaseMetadata(source, "mcp-v0.1.0"));
+  assert.throws(() => releaseMetadata(source, "v0.2.0"));
 });
 
-test("Relay Server имеет самостоятельные имя, архив и префикс тега", () => {
+test("Relay Server использует общий тег и собственный архив", () => {
   const source = {
     ...manifest("0.1.0"),
     name: "@gromlab/relay-server",
     bin: { "relay-server": "dist/main.js" },
   };
-  assert.equal(
-    releaseMetadata(source, "server-v0.1.0").archiveName,
-    "gromlab-relay-server-0.1.0.tgz",
-  );
-  assert.throws(() => releaseMetadata(source, "cli-v0.1.0"));
+  assert.equal(releaseMetadata(source, "v0.1.0").archiveName, "gromlab-relay-server-0.1.0.tgz");
+  assert.throws(() => releaseMetadata(source, "server-v0.1.0"));
 });
 
 test("повторный релиз пропускается только при полном совпадении integrity архива", () => {

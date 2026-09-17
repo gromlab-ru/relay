@@ -135,7 +135,12 @@ export const ProjectLayout = () => {
           >
             <ThemeIcon size={17} />
           </ActionIcon>
-          <Button size="xs" leftSection={<Plus size={14} />} onClick={handleCreate}>
+          <Button
+            size="xs"
+            variant="default"
+            leftSection={<Plus size={14} />}
+            onClick={handleCreate}
+          >
             Задача
           </Button>
         </Group>

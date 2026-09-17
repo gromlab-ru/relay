@@ -1,5 +1,5 @@
 {
-  "name": "@tasks/contracts",
+  "name": "@relay/contracts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
     "test": "tsc -p tsconfig.test.json"
   },
   "devDependencies": {
-    "@tasks/core": "workspace:*",
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/core": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "typescript": "^5.9.2"
   }
 }

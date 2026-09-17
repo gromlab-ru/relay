@@ -1,18 +1,18 @@
 {
-  "name": "@tasks/web",
+  "name": "@relay/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "create": "pnpm dlx @gromlab/create@0.2.0 --skip-update",
     "clean": "node --input-type=module -e \"import { rmSync } from 'node:fs'; for (const path of ['dist', '.cache']) rmSync(path, { recursive: true, force: true });\"",
-    "dev": "pnpm --filter @tasks/rest-sdk run build && vite --host 127.0.0.1",
+    "dev": "pnpm --filter @relay/rest-sdk run build && vite --host 127.0.0.1",
     "build": "pnpm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src vite.config.ts",
     "browser": "agent-browser --config ./agent-browser.json",
     "browser:install": "agent-browser install",
-    "generate:api": "pnpm --filter @tasks/rest-sdk run generate"
+    "generate:api": "pnpm --filter @relay/rest-sdk run generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -23,7 +23,7 @@
     "@mantine/form": "^9.6.1",
     "@mantine/hooks": "^9.6.1",
     "@mantine/notifications": "^9.6.1",
-    "@tasks/rest-sdk": "workspace:*",
+    "@relay/rest-sdk": "workspace:*",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.23",
     "lucide-react": "^1.45.0",

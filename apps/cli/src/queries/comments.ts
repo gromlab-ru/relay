@@ -1,6 +1,6 @@
 import type { Backend } from "../backend/types.js";
-import { toText } from "@tasks/core/domain/markdown";
-import type { TaskReference } from "@tasks/core/shared/ids";
+import { toText } from "@relay/core/domain/markdown";
+import type { TaskReference } from "@relay/core/shared/ids";
 import { commentsText } from "../presentation/records.js";
 import { previewText } from "../presentation/text.js";
 import { creationKey, paginate } from "./pagination.js";

@@ -2,7 +2,7 @@ import { Global, Inject, Injectable, Module, Scope } from "@nestjs/common";
 import type { DynamicModule } from "@nestjs/common";
 import { REQUEST } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
-import type { Workspace } from "@tasks/core/storage/workspace";
+import type { Workspace } from "@relay/core/storage/workspace";
 import { ProjectCatalog } from "./catalog.js";
 import type { ProjectContext, WorkspaceOptions } from "./catalog.js";
 import { PROJECT_SELECTOR } from "./routing.js";

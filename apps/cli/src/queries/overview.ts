@@ -1,7 +1,7 @@
-import type { OverviewData, OverviewQueryInput } from "@tasks/core/application/queries/overview";
+import type { OverviewData, OverviewQueryInput } from "@relay/core/application/queries/overview";
 import type { TasksBackend } from "../backend/types.js";
-import { AppError } from "@tasks/core/shared/errors";
-import type { TaskReference } from "@tasks/core/shared/ids";
+import { AppError } from "@relay/core/shared/errors";
+import type { TaskReference } from "@relay/core/shared/ids";
 import type { OutputOptions } from "../output.js";
 import { overviewText } from "../presentation/overview.js";
 import { resultBytes } from "./result.js";

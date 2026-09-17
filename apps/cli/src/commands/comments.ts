@@ -7,7 +7,7 @@ import { pageFrom, pageOptions, recordOptions, requestId } from "../options.js";
 import type { PagingOptions, RequestOptions } from "../options.js";
 import { textInputOptions, readTextInput } from "../text-input.js";
 import type { TextInputOptions } from "../text-input.js";
-import { MAX_COMMENT_BYTES } from "@tasks/core/domain/comment";
+import { MAX_COMMENT_BYTES } from "@relay/core/domain/comment";
 import { commentText } from "../presentation/records.js";
 import { palette } from "../presentation/theme.js";
 

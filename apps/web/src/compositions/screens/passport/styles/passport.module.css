@@ -9,11 +9,11 @@
 }
 .cover {
   padding: 2rem;
-  background: linear-gradient(125deg, var(--mantine-color-indigo-light), transparent);
+  background: var(--tasks-subtle);
   border-bottom: 1px solid var(--tasks-border);
 }
 .emblem {
-  color: var(--mantine-color-indigo-text);
+  color: var(--tasks-muted);
   margin-bottom: 1.5rem;
 }
 .name {

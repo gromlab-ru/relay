@@ -67,7 +67,7 @@ export async function smokePackage(archive, manifest) {
     assert.equal(installed.scripts, undefined, "Release archives must not run build scripts");
     assert.equal(installed.devDependencies, undefined);
     assert(
-      Object.keys(installed.dependencies ?? {}).every((name) => !name.startsWith("@tasks/")),
+      Object.keys(installed.dependencies ?? {}).every((name) => !name.startsWith("@relay/")),
       "Release archives must not depend on private workspaces",
     );
 

@@ -1,7 +1,7 @@
 import { Controller, Get, Module } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { API_CONTRACT_VERSION, success } from "@tasks/contracts";
-import type { ApiSuccess, HealthResponse } from "@tasks/contracts";
+import { API_CONTRACT_VERSION, success } from "@relay/contracts";
+import type { ApiSuccess, HealthResponse } from "@relay/contracts";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 
 @ApiTags("health")

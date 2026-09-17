@@ -13,8 +13,8 @@
   align-items: flex-start;
   gap: 0.6rem;
   padding: 0.8rem;
-  background: var(--mantine-color-indigo-light);
-  color: var(--mantine-color-indigo-text);
+  background: var(--tasks-subtle);
+  color: var(--tasks-ink);
   border-radius: 0.5rem;
   text-decoration: none;
   font-size: 0.85rem;

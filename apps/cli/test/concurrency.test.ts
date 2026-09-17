@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Task } from "@tasks/core/domain/task";
+import type { Task } from "@relay/core/domain/task";
 import { failed, fixture, successful } from "./helpers/cli.js";
 
 test("из нескольких процессов только один захватывает задачу", async (t) => {

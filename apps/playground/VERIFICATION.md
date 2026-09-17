@@ -7,9 +7,9 @@
 
 Пройдены:
 
-- `pnpm --filter @tasks/playground run demo:reset` — материализация и проверка
+- `pnpm --filter @relay/playground run demo:reset` — материализация и проверка
   подготовленного набора штатным CLI до замены `.tasks`.
-- `pnpm --filter @tasks/playground run demo:check` — совпадение с эталоном,
+- `pnpm --filter @relay/playground run demo:check` — совпадение с эталоном,
   корректность всех документов, статусов, ссылок и графа.
 - 190 карточек, из них 170 рабочих; 55 комментариев и 106 отчётов.
 - У рабочих задач уникальные названия, три предметных критерия, результат,

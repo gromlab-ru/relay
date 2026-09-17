@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import type { Result } from "./queries/result.js";
-import { invariant } from "@tasks/core/shared/errors";
+import { invariant } from "@relay/core/shared/errors";
 import { action } from "./context.js";
 import type { CommandContext, Runtime } from "./context.js";
 

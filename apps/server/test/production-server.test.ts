@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { initialize } from "@tasks/core/storage/workspace";
+import { initialize } from "@relay/core/storage/workspace";
 
 test(
   "собранный standalone-сервер отдаёт web на главной и читает порт из конфига",

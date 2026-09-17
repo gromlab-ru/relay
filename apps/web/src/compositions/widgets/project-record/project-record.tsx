@@ -40,14 +40,14 @@ export const ProjectRecord = (props: ProjectRecordProps) => {
   const sourceLabel = "source" in fields ? `Источник: ${statusLabel(fields.source)}` : "";
   return (
     <article {...rootAttrs} className={clsx(styles.root, className)} id={record.id}>
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
+      <Group justify="space-between" align="flex-start">
         <div className={styles.identity}>
           <Text size="xs" c="dimmed" fw={600}>
             {category}
           </Text>
           <h3 className={styles.title}>{recordTitle}</h3>
         </div>
-        <Group gap="xs" wrap="nowrap">
+        <Group gap="xs" wrap="nowrap" className={styles.controls}>
           <Badge color={color} variant="light">
             {label}
           </Badge>

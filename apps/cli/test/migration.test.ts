@@ -4,8 +4,8 @@ import { once } from "node:events";
 import { mkdir, readFile, readdir, rename, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { Task } from "@tasks/core/domain/task";
-import type { LegacyTask } from "@tasks/core/domain/legacy";
+import type { Task } from "@relay/core/domain/task";
+import type { LegacyTask } from "@relay/core/domain/legacy";
 import { failed, fixture, successful } from "./helpers/cli.js";
 
 const oldId = (n: number) => `tsk_${String(n).padStart(32, "0")}`;
@@ -147,8 +147,8 @@ test("миграция восстанавливается после остан�
       const second = legacy(2, 2);
       second.dependsOn = [first.id];
       await seed(app.root, [first, second]);
-      const moduleUrl = import.meta.resolve("@tasks/core/application/tasks/migrate");
-      const workspaceUrl = import.meta.resolve("@tasks/core/storage/workspace");
+      const moduleUrl = import.meta.resolve("@relay/core/application/tasks/migrate");
+      const workspaceUrl = import.meta.resolve("@relay/core/storage/workspace");
       const child = spawn(
         process.execPath,
         [

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { writeFile } from "node:fs/promises";
-import { createServer } from "@tasks/server-runtime";
+import { createServer } from "@relay/server-runtime";
 import { fixture } from "./helpers/server.js";
 
 test("доска включает все статусы, компактные карточки и общие фильтры", async (t) => {

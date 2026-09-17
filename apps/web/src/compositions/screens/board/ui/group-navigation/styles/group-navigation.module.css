@@ -37,8 +37,8 @@
   }
 
   &._active {
-    border-color: var(--mantine-color-indigo-outline);
-    background: var(--mantine-color-indigo-light);
+    border-color: var(--tasks-selected-border);
+    background: var(--tasks-selected);
     color: var(--tasks-ink);
   }
 }

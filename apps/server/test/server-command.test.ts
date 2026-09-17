@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { fixture } from "../../cli/test/helpers/cli.js";
 import { checkServerSurface, startServerProcess } from "../../cli/test/helpers/server-process.mjs";
-import type { ApiSuccess, ContextResponse } from "@tasks/contracts";
-import { startServer } from "@tasks/server-runtime";
-import { defaultConfig } from "@tasks/core/domain/config";
+import type { ApiSuccess, ContextResponse } from "@relay/contracts";
+import { startServer } from "@relay/server-runtime";
+import { defaultConfig } from "@relay/core/domain/config";
 
 const binary = fileURLToPath(new URL("../dist/main.js", import.meta.url));
 

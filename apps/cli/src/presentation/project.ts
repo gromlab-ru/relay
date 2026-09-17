@@ -1,4 +1,4 @@
-import type { Config } from "@tasks/core/domain/config";
+import type { Config } from "@relay/core/domain/config";
 import { palette, statusText } from "./theme.js";
 import type { TextOptions } from "./theme.js";
 import { safeText } from "./safe.js";

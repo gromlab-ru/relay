@@ -17,6 +17,16 @@ const versionPattern = new RegExp(
   `^${number}\\.${number}\\.${number}(?:-(?<prerelease>${identifier}(?:\\.${identifier})*))?$`,
 );
 
+/** @param {string} version */
+export function versionMetadata(version) {
+  const parsed = versionPattern.exec(version);
+  assert(
+    parsed && parsed[0] === version,
+    "Ожидается SemVer без build metadata: 0.1.0 или 0.2.0-rc.1",
+  );
+  return { version, distTag: parsed.groups?.prerelease ? "next" : "latest" };
+}
+
 /**
  * Версия и канал вычисляются до установки зависимостей и любых обращений на запись к npm.
  * @param {PackageManifest} manifest Манифест публикуемого пакета.
@@ -28,7 +38,7 @@ export function releaseMetadata(manifest, tag) {
   assert(!manifest.private, "Приватный манифест нельзя публиковать");
   assert.equal(manifest.publishConfig.access, "public", "Ожидается публичный пакет");
   assert.equal(manifest.publishConfig.registry, "https://registry.npmjs.org");
-  assert.equal(manifest.engines.node, ">=22", "CLI требует Node.js 22+");
+  assert.equal(manifest.engines.node, ">=22", "Пакеты Relay требуют Node.js 22+");
   assert.equal(
     manifest.bin[`relay-${component}`],
     component === "cli" ? "dist/cli/main.js" : "dist/main.js",
@@ -39,21 +49,16 @@ export function releaseMetadata(manifest, tag) {
     "git+https://github.com/gromlab-ru/relay.git",
     "Неверный repository.url для npm provenance",
   );
-  const parsed = versionPattern.exec(manifest.version);
-  assert(
-    parsed && parsed[0] === manifest.version,
-    "Ожидается SemVer без build metadata: 0.1.0 или 0.2.0-rc.1",
-  );
+  const version = versionMetadata(manifest.version);
   if (tag !== undefined)
     assert.equal(
       tag,
-      `${component}-v${manifest.version}`,
-      "Тег должен совпадать с версией: cli-v<version>, server-v<version> или mcp-v<version>",
+      `v${manifest.version}`,
+      "Единый тег должен совпадать с версией всех пакетов: v<version>",
     );
   return {
     name: manifest.name,
-    version: manifest.version,
-    distTag: parsed.groups?.prerelease ? "next" : "latest",
+    ...version,
     archiveName: `gromlab-relay-${component}-${manifest.version}.tgz`,
   };
 }
@@ -68,11 +73,11 @@ export function distributionManifest(manifest, workspaces) {
   assert.deepEqual(
     [...internal].sort(),
     [
-      "@tasks/contracts",
-      "@tasks/core",
-      "@tasks/project-runtime",
-      "@tasks/rest-sdk",
-      "@tasks/server-runtime",
+      "@relay/contracts",
+      "@relay/core",
+      "@relay/project-runtime",
+      "@relay/rest-sdk",
+      "@relay/server-runtime",
     ],
     "Expected all private runtime workspaces",
   );
@@ -88,7 +93,7 @@ export function distributionManifest(manifest, workspaces) {
         assert.equal(version, "workspace:*", `${name} должен использовать зависимость workspace:*`);
         continue;
       }
-      assert(!name.startsWith("@tasks/"), `Unbundled private dependency: ${name}`);
+      assert(!name.startsWith("@relay/"), `Unbundled private dependency: ${name}`);
       assert(!/^(?:workspace:|file:|link:)/.test(version), `Non-registry dependency: ${name}`);
       assert(
         dependencies[name] === undefined || dependencies[name] === version,

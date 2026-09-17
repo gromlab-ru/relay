@@ -1,10 +1,10 @@
 import type { Command } from "commander";
-import type { TaskPatch } from "@tasks/core/domain/task";
-import { invariant } from "@tasks/core/shared/errors";
+import type { TaskPatch } from "@relay/core/domain/task";
+import { invariant } from "@relay/core/shared/errors";
 import type { InputReader } from "./input.js";
 import { csv } from "./options.js";
-import { toLines } from "@tasks/core/domain/markdown";
-import { parseTaskId } from "@tasks/core/shared/ids";
+import { toLines } from "@relay/core/domain/markdown";
+import { parseTaskId } from "@relay/core/shared/ids";
 
 export interface FieldOptions {
   title?: string;

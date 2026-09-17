@@ -1,15 +1,15 @@
-import type { Config } from "@tasks/core/domain/config";
-import type { Task, TaskFields, TaskPatch } from "@tasks/core/domain/task";
-import type { TaskReference } from "@tasks/core/shared/ids";
-import type { MutationOptions } from "@tasks/core/application/tasks/service";
-import type { ProjectQueries } from "@tasks/core/application/queries/project";
-import type { TaskQueries } from "@tasks/core/application/queries/tasks";
-import type { CommentService } from "@tasks/core/application/comments";
-import type { LogService } from "@tasks/core/application/logs/service";
-import type { validateWorkspace } from "@tasks/core/application/validate";
-import type { Workspace } from "@tasks/core/storage/workspace";
-import type { LifecycleQueries } from "@tasks/core/application/project/queries";
-import type { ProjectService } from "@tasks/core/application/project/service";
+import type { Config } from "@relay/core/domain/config";
+import type { Task, TaskFields, TaskPatch } from "@relay/core/domain/task";
+import type { TaskReference } from "@relay/core/shared/ids";
+import type { MutationOptions } from "@relay/core/application/tasks/service";
+import type { ProjectQueries } from "@relay/core/application/queries/project";
+import type { TaskQueries } from "@relay/core/application/queries/tasks";
+import type { CommentService } from "@relay/core/application/comments";
+import type { LogService } from "@relay/core/application/logs/service";
+import type { validateWorkspace } from "@relay/core/application/validate";
+import type { Workspace } from "@relay/core/storage/workspace";
+import type { LifecycleQueries } from "@relay/core/application/project/queries";
+import type { ProjectService } from "@relay/core/application/project/service";
 
 export interface WorkspaceInfo {
   config: Config;

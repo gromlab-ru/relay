@@ -1,26 +1,26 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
-import { HttpClient, ApiError } from "@tasks/rest-sdk/http-client";
-import { createApiClient } from "@tasks/rest-sdk/create-api-client";
-import { operationsTree } from "@tasks/rest-sdk/operations-tree";
-import { configSchema } from "@tasks/core/domain/config";
-import { parse } from "@tasks/core/domain/validation";
-import { toText } from "@tasks/core/domain/markdown";
-import { parseTaskId } from "@tasks/core/shared/ids";
-import { AppError } from "@tasks/core/shared/errors";
+import { HttpClient, ApiError } from "@relay/rest-sdk/http-client";
+import { createApiClient } from "@relay/rest-sdk/create-api-client";
+import { operationsTree } from "@relay/rest-sdk/operations-tree";
+import { configSchema } from "@relay/core/domain/config";
+import { parse } from "@relay/core/domain/validation";
+import { toText } from "@relay/core/domain/markdown";
+import { parseTaskId } from "@relay/core/shared/ids";
+import { AppError } from "@relay/core/shared/errors";
 import {
   taskDocumentDataSchema,
   taskTreeDataSchema,
-} from "@tasks/core/application/queries/project";
-import { overviewDataSchema } from "@tasks/core/application/queries/overview";
+} from "@relay/core/application/queries/project";
+import { overviewDataSchema } from "@relay/core/application/queries/overview";
 import type { Backend, WorkspaceInfo } from "./types.js";
 import {
   projectStateSchema,
   contextSchema as lifecycleContextSchema,
   briefingSchema,
   changesSchema,
-} from "@tasks/core/application/project/queries";
-import { projectRecordSchema, saveProjectRecordSchema } from "@tasks/core/domain/project";
+} from "@relay/core/application/project/queries";
+import { projectRecordSchema, saveProjectRecordSchema } from "@relay/core/domain/project";
 
 const failureSchema = z.object({
   ok: z.literal(false),

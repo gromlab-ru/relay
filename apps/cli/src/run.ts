@@ -1,5 +1,5 @@
 import { CommanderError } from "commander";
-import { AppError, asAppError } from "@tasks/core/shared/errors";
+import { AppError, asAppError } from "@relay/core/shared/errors";
 import type { GlobalOptions, Runtime } from "./context.js";
 import { outputOptions } from "./context.js";
 import { printError } from "./output.js";

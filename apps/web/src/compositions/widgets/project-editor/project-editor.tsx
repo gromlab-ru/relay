@@ -165,7 +165,7 @@ export const ProjectEditor = (props: ProjectEditorProps) => {
           Сначала главное. Связи и технические детали можно дополнить по мере работы.
         </Text>
         {hasStoredDraft && (
-          <Alert color="blue" mb="md">
+          <Alert color="gray" mb="md">
             Восстановлен ваш несохранённый черновик.
           </Alert>
         )}

@@ -1,6 +1,6 @@
 {
   "name": "@gromlab/relay-server",
-  "version": "0.2.0",
+  "version": "0.6.0",
   "description": "Relay Server: проектный контекст, планы, задачи, REST API и веб-приложение для людей и AI-агентов",
   "bin": {
     "relay-server": "dist/main.js"
@@ -36,14 +36,14 @@
     "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@tasks/server-runtime": "workspace:*",
-    "@tasks/core": "workspace:*",
+    "@relay/server-runtime": "workspace:*",
+    "@relay/core": "workspace:*",
     "commander": "^14.0.0"
   },
   "devDependencies": {
     "@gromlab/relay-cli": "workspace:*",
-    "@tasks/contracts": "workspace:*",
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/contracts": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "concurrently": "^10.0.5",
     "tsx": "^4.20.5",

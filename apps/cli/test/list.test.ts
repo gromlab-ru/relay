@@ -3,10 +3,10 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { stripVTControlCharacters } from "node:util";
-import type { Config } from "@tasks/core/domain/config";
-import type { Task } from "@tasks/core/domain/task";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import type { Config } from "@relay/core/domain/config";
+import type { Task } from "@relay/core/domain/task";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { openWorkspace } from "@relay/core/storage/workspace";
 import { failed, fixture, invokeRaw, successful } from "./helpers/cli.js";
 
 test("list показывает всю незавершённую работу; all и явный status выбирают историю", async (t) => {

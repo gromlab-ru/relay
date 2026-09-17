@@ -1,7 +1,7 @@
 export { tasksApi, getProjectApi } from "./tasks-api";
-export { ApiError } from "@tasks/rest-sdk/http-client";
+export { ApiError } from "@relay/rest-sdk/http-client";
 export type {
   GetBoardParams as BoardQuery,
   CreateTaskRequest,
   UpdateTaskRequest,
-} from "@tasks/rest-sdk/data-contracts";
+} from "@relay/rest-sdk/data-contracts";

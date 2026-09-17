@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { invariant } from "@tasks/core/shared/errors";
+import { invariant } from "@relay/core/shared/errors";
 import type { InputReader } from "./input.js";
 
 export interface TextInputOptions {

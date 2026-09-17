@@ -6,7 +6,7 @@
   border: 1px dashed var(--tasks-border);
   border-radius: 1rem;
   background: var(--tasks-surface);
-  color: var(--mantine-color-indigo-text);
+  color: var(--tasks-muted);
   & h2 {
     color: var(--tasks-ink);
     font-size: 1.15rem;

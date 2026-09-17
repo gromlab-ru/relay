@@ -93,8 +93,8 @@
   border-radius: var(--mantine-radius-md);
 
   &._target {
-    border-color: var(--mantine-color-indigo-4);
-    background: var(--mantine-color-indigo-light);
+    border-color: var(--tasks-selected-border);
+    background: var(--tasks-selected);
   }
 
   &._empty {
@@ -133,7 +133,7 @@
 .dropHint {
   display: block;
   text-align: center;
-  color: var(--mantine-color-indigo-text);
+  color: var(--tasks-ink);
   font-size: 0.6875rem;
 }
 

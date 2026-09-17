@@ -10,13 +10,13 @@
     border-color 140ms ease;
 
   &:hover {
-    border-color: light-dark(#cbd0df, #4b5066);
+    border-color: var(--tasks-selected-border);
     box-shadow: var(--tasks-card-hover);
   }
 
   &._selected {
-    border-color: var(--mantine-color-indigo-5);
-    box-shadow: 0 0 0 1px var(--mantine-color-indigo-5);
+    border-color: var(--tasks-selected-border);
+    box-shadow: 0 0 0 1px var(--tasks-selected-border);
   }
 }
 

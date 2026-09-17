@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Inject, Module, Param, Put } from "@nestjs/common";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
+import { success } from "@relay/contracts";
 import { z } from "zod";
-import { parse } from "@tasks/core/domain/validation";
-import { projectEntrySchema, projectNameSchema } from "@tasks/project-runtime/config";
+import { parse } from "@relay/core/domain/validation";
+import { projectEntrySchema, projectNameSchema } from "@relay/project-runtime/config";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { ProjectCatalog } from "./catalog.js";
 

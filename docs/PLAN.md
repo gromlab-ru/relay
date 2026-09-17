@@ -77,10 +77,10 @@ MCP ──── REST ────────┘       │
 
 Границы импортов:
 
-- CLI использует адаптеры Core и `@tasks/rest-sdk`; команда `server` лениво загружает `@tasks/server-runtime`.
-- Самостоятельный `@tasks/server` использует тот же `@tasks/server-runtime`, а не код CLI.
-- NestJS в Server Runtime использует `@tasks/core/*` и `@tasks/contracts`.
-- React использует `@tasks/rest-sdk`: сгенерированные из OpenAPI типы, операции и HTTP-клиент.
+- CLI использует адаптеры Core и `@relay/rest-sdk`; серверный runtime находится в `@relay/server-runtime`.
+- Самостоятельный `@gromlab/relay-server` использует `@relay/server-runtime`, а не код CLI.
+- NestJS в Server Runtime использует `@relay/core/*` и `@relay/contracts`.
+- React использует `@relay/rest-sdk`: сгенерированные из OpenAPI типы, операции и HTTP-клиент.
 - Core содержит бизнес-правила и файловые операции. Представления CLI находятся в `apps/cli`.
 - Contracts пригоден для браузера и содержит только переносимые типы и константы.
 
@@ -132,7 +132,7 @@ Swagger и SSE. HTTP и локальный адаптер CLI вызывают �
 - [x] Реализовать Nest-модули `tasks`, `board`, `comments`, `logs`, `events`.
 - [x] Добавить все маршруты из `docs/reference/API.md`, включая чтение и изменение карточек.
 - [x] Использовать схемы Core через Zod validation pipe и единый exception filter.
-- [x] Возвращать типы из `@tasks/contracts`; описать запросы, ответы и ошибки в OpenAPI.
+- [x] Возвращать типы из `@relay/contracts`; описать запросы, ответы и ошибки в OpenAPI.
 - [x] Реализовать поиск, фильтры и курсорную пагинацию без скрытого ограничения всей доски.
 - [x] Выдавать компактные карточки; комментарии и отчёты читать отдельными страницами.
 - [x] Проверять `ifRevision` при изменении полей, перемещении и назначениях.
@@ -247,13 +247,13 @@ pnpm run test:contracts
 самостоятельного dev-запуска — в `apps/server/test`, бизнес-правил — в `packages/core/test`.
 Contracts проверяется компиляцией совместимости DTO с реальными типами ядра.
 Фронтенд проверяется командами `lint:web`, `typecheck:web`, `build:web` и через agent-browser.
-Turbo собирает web до сборки CLI; каждый workspace очищает только собственные результаты.
-`pnpm run package:check` собирает продукт, подготавливает stage и проверяет установленный
-архив вне репозитория. Корневой `pnpm pack` и упаковка рабочего CLI workspace не заменяют
+Turbo собирает web до сборки Server; каждый workspace очищает только собственные результаты.
+`pnpm run package:check` собирает продукт, подготавливает stage и проверяет три установленных
+архива в независимых каталогах. Корневой `pnpm pack` и упаковка рабочего CLI workspace не заменяют
 этот процесс; `prepack` CLI запрещает прямую упаковку и указывает на `package:check`.
 
 Релиз выполняется [процессом публикации по тегу](development/RELEASING.md) после приёмки.
-Корневые `release:check` и `release:publish` делегируют pnpm workspace-скриптам
-без Turbo и установки зависимостей репозитория; публикуется тот же проверенный архив.
-При проверке каркаса используется локально собранный архив: опубликованная версия
-пакета может ещё не содержать команду `server`.
+Корневая `release:version` одновременно обновляет версии CLI, Server и MCP.
+`release:check` и `release:publish` используют общий сценарий `scripts/release/relay.mjs`
+без Turbo и установки зависимостей репозитория. По единому тегу `v<version>` публикуются
+все три проверенных архива; одинаковая npm-версия обозначает совместимый комплект.

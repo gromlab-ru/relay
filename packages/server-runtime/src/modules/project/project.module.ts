@@ -10,15 +10,15 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
-import type { ChangeDependencyRequest } from "@tasks/contracts";
-import { ProjectQueries, taskListQuerySchema } from "@tasks/core/application/queries/project";
-import type { TaskListQuery } from "@tasks/core/application/queries/project";
-import { TaskQueries, taskCard } from "@tasks/core/application/queries/tasks";
-import type { OverviewQueryInput } from "@tasks/core/application/queries/overview";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { changeDependency } from "@tasks/core/application/tasks/assignment";
-import { validateWorkspace } from "@tasks/core/application/validate";
+import { success } from "@relay/contracts";
+import type { ChangeDependencyRequest } from "@relay/contracts";
+import { ProjectQueries, taskListQuerySchema } from "@relay/core/application/queries/project";
+import type { TaskListQuery } from "@relay/core/application/queries/project";
+import { TaskQueries, taskCard } from "@relay/core/application/queries/tasks";
+import type { OverviewQueryInput } from "@relay/core/application/queries/overview";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { changeDependency } from "@relay/core/application/tasks/assignment";
+import { validateWorkspace } from "@relay/core/application/validate";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import {

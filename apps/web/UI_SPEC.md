@@ -19,8 +19,8 @@ NestJS отдаёт собранный UI, REST API и SSE с одного ло�
 - Основная зона реализации: `apps/web/src`.
 - Стек: React, TypeScript, Vite, Mantine, SWR, dnd-kit,
   react-markdown, remark-gfm, lucide-react. Направление дизайна — сдержанный рабочий интерфейс.
-- Серверный контракт описан в `@tasks/contracts` и OpenAPI; браузер использует
-  сгенерированный `@tasks/rest-sdk`. Описание API: [API.md](../../packages/contracts/docs/API.md).
+- Серверный контракт описан в `@relay/contracts` и OpenAPI; браузер использует
+  сгенерированный `@relay/rest-sdk`. Описание API: [API.md](../../packages/contracts/docs/API.md).
 - Сервер предоставляет продуктовые маршруты и SSE; интерфейс использует реальный API.
 - REST SDK находится в `packages/rest-sdk`, настроенный браузерный экземпляр — в `apps/web/src/infra/tasks-api`.
 - Автотесты фронтенда не добавляются по решению пользователя. Браузерные сценарии
@@ -159,14 +159,14 @@ NestJS отдаёт собранный UI, REST API и SSE с одного ло�
 ## 8. Интеграция и проверка
 
 Команды выполняются из корня репозитория. Разработка: `pnpm run dev` либо
-`pnpm run dev:server` и `pnpm --filter @tasks/web run dev` в отдельных терминалах.
+`pnpm run dev:server` и `pnpm --filter @relay/web run dev` в отдельных терминалах.
 Vite проксирует `/api` в Nest. Фронтенд можно разрабатывать на типизированных
 HTTP-моках по Contracts; финальная приёмка требует реального сервера.
 
 Обязательные проверки приложения: `pnpm run lint:web`, `pnpm run typecheck:web`,
 `pnpm run build:web`. Корневые команды через Turbo собирают необходимые зависимости.
 Локальная сборка находится в `apps/web/dist` и включается в дистрибутив CLI.
-Визуальная приёмка использует `pnpm --filter @tasks/web run browser ...`; правила изоляции
+Визуальная приёмка использует `pnpm --filter @relay/web run browser ...`; правила изоляции
 и headless-режима закреплены в [AGENTS.md](AGENTS.md).
 
 Браузерные сценарии приёмки:

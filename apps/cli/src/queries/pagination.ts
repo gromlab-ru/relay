@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { decodeCursor, encodeCursor } from "@tasks/core/shared/cursor";
-import { AppError } from "@tasks/core/shared/errors";
+import { decodeCursor, encodeCursor } from "@relay/core/shared/cursor";
+import { AppError } from "@relay/core/shared/errors";
 import { resultBytes } from "./result.js";
 import type { OutputFormat, Result } from "./result.js";
 import type { TextOptions } from "../presentation/theme.js";

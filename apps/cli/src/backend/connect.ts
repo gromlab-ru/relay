@@ -1,7 +1,7 @@
-import { serverUrlSchema } from "@tasks/core/domain/config";
-import { parse } from "@tasks/core/domain/validation";
-import { AppError, invariant } from "@tasks/core/shared/errors";
-import { selectProject, serverAddress } from "@tasks/project-runtime/config";
+import { serverUrlSchema } from "@relay/core/domain/config";
+import { parse } from "@relay/core/domain/validation";
+import { AppError, invariant } from "@relay/core/shared/errors";
+import { selectProject, serverAddress } from "@relay/project-runtime/config";
 import { cliConfiguration } from "../configuration.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import type { Backend } from "./types.js";
@@ -42,7 +42,7 @@ export async function connectBackend(
       "Эта команда управляет локальным хранилищем. Укажите --local и конфиг нужной рабочей копии.",
     );
     const url = new URL(parse(serverUrlSchema, configuredUrl, "адрес сервера")).origin;
-    const { createHttpBackend } = await import("@tasks/project-runtime/backend/http");
+    const { createHttpBackend } = await import("@relay/project-runtime/backend/http");
     return createHttpBackend(
       url,
       globals.project ?? (source?.kind === "project" ? source.value.projectId : undefined),
@@ -53,6 +53,6 @@ export async function connectBackend(
     "LOCAL_CONFIG_REQUIRED",
     "Для локальной операции нужен path или config проекта",
   );
-  const { createLocalBackend } = await import("@tasks/project-runtime/backend/local");
+  const { createLocalBackend } = await import("@relay/project-runtime/backend/local");
   return createLocalBackend(runtime.cwd, target.configPath);
 }

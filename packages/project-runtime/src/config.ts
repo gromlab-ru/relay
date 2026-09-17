@@ -5,11 +5,11 @@ import {
   DEFAULT_SERVER_PORT,
   mcpConfigSchema,
   serverUrlSchema,
-} from "@tasks/core/domain/config";
-import { parse } from "@tasks/core/domain/validation";
-import { AppError, invariant } from "@tasks/core/shared/errors";
-import { exists, readJson } from "@tasks/core/storage/files";
-import { CONFIG_NAME } from "@tasks/core/storage/workspace";
+} from "@relay/core/domain/config";
+import { parse } from "@relay/core/domain/validation";
+import { AppError, invariant } from "@relay/core/shared/errors";
+import { exists, readJson } from "@relay/core/storage/files";
+import { CONFIG_NAME } from "@relay/core/storage/workspace";
 
 export const REGISTRY_NAME = "relay.workspace.json";
 export const projectNameSchema = z.string().regex(/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u);

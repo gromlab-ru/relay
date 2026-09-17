@@ -1,5 +1,5 @@
 {
-  "name": "@tasks/server-runtime",
+  "name": "@relay/server-runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -23,16 +23,16 @@
     "@nestjs/platform-fastify": "^12.0.1",
     "@nestjs/serve-static": "^12.0.0",
     "@nestjs/swagger": "^12.0.1",
-    "@tasks/contracts": "workspace:*",
-    "@tasks/core": "workspace:*",
-    "@tasks/project-runtime": "workspace:*",
+    "@relay/contracts": "workspace:*",
+    "@relay/core": "workspace:*",
+    "@relay/project-runtime": "workspace:*",
     "fastify": "^5.12.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",

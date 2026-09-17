@@ -1,5 +1,5 @@
 import type { Writable } from "node:stream";
-import { AppError } from "@tasks/core/shared/errors";
+import { AppError } from "@relay/core/shared/errors";
 import type { Result, OutputFormat } from "./queries/result.js";
 import { serializeResult } from "./queries/result.js";
 import { defaultTextOptions, palette } from "./presentation/theme.js";

@@ -8,7 +8,7 @@
   padding: 0 var(--tasks-page-gutter) 1rem;
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: light-dark(#c5cada, #41485b) transparent;
+  scrollbar-color: var(--tasks-scrollbar) transparent;
   overscroll-behavior-x: contain;
   scroll-padding-inline: var(--tasks-page-gutter);
 }
@@ -16,7 +16,7 @@
 .overlay {
   cursor: grabbing;
   transform: rotate(2deg);
-  box-shadow: 0 12px 32px #11162722;
+  box-shadow: 0 12px 32px #00000022;
 }
 
 .saving {

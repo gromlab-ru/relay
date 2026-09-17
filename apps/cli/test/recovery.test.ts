@@ -11,7 +11,7 @@ test("прерывание перед публикацией JSON оставля
   const id = await app.create("Исходная карточка");
   const target = join(app.root, ".relay/tasks", `${id}.json`);
   const before = await readFile(target, "utf8");
-  const moduleUrl = import.meta.resolve("@tasks/core/storage/files");
+  const moduleUrl = import.meta.resolve("@relay/core/storage/files");
   // Останавливаем настоящий процесс после fsync временного файла, до rename.
   const child = spawn(
     process.execPath,
@@ -69,7 +69,7 @@ test("ожидание stdin отчёта не блокирует задачи �
 
 test("устаревшая блокировка погибшего процесса освобождается при следующей записи", async (t) => {
   const app = await fixture(t);
-  const moduleUrl = import.meta.resolve("@tasks/core/storage/lock");
+  const moduleUrl = import.meta.resolve("@relay/core/storage/lock");
   const child = spawn(
     process.execPath,
     [

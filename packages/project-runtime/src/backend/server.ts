@@ -1,10 +1,10 @@
-import { HttpClient, ApiError } from "@tasks/rest-sdk/http-client";
-import { createApiClient } from "@tasks/rest-sdk/create-api-client";
-import { operationsTree } from "@tasks/rest-sdk/operations-tree";
-import { AppError } from "@tasks/core/shared/errors";
+import { HttpClient, ApiError } from "@relay/rest-sdk/http-client";
+import { createApiClient } from "@relay/rest-sdk/create-api-client";
+import { operationsTree } from "@relay/rest-sdk/operations-tree";
+import { AppError } from "@relay/core/shared/errors";
 import { z } from "zod";
-import { serverUrlSchema } from "@tasks/core/domain/config";
-import { parse } from "@tasks/core/domain/validation";
+import { serverUrlSchema } from "@relay/core/domain/config";
+import { parse } from "@relay/core/domain/validation";
 
 const failure = z.object({
   error: z.object({ code: z.string(), message: z.string(), exitCode: z.number().optional() }),

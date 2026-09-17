@@ -1,5 +1,5 @@
 import type { GlobalOptions, Runtime } from "./context.js";
-import { readConfiguration } from "@tasks/project-runtime/config";
+import { readConfiguration } from "@relay/project-runtime/config";
 
 export async function cliConfiguration(
   runtime: Runtime,

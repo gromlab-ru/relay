@@ -3,4 +3,4 @@ export type {
   TasksBackend,
   WorkspaceInfo,
   SavedTask,
-} from "@tasks/project-runtime/backend/types";
+} from "@relay/project-runtime/backend/types";

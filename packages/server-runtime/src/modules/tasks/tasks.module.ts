@@ -11,7 +11,7 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
+import { success } from "@relay/contracts";
 import type {
   ApiSuccess,
   BoardQuery,
@@ -22,11 +22,11 @@ import type {
   TaskCard,
   TaskDetailResponse,
   UpdateTaskRequest,
-} from "@tasks/contracts";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { TaskQueries, taskCard } from "@tasks/core/application/queries/tasks";
-import { claimTask, releaseTask } from "@tasks/core/application/tasks/assignment";
-import { moveTask } from "@tasks/core/application/tasks/move";
+} from "@relay/contracts";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { TaskQueries, taskCard } from "@relay/core/application/queries/tasks";
+import { claimTask, releaseTask } from "@relay/core/application/tasks/assignment";
+import { moveTask } from "@relay/core/application/tasks/move";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { BoardModule, BoardService } from "../board/board.module.js";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
