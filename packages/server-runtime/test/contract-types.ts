@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type * as Contract from "@tasks/contracts";
+import type * as Contract from "@relay/contracts";
 import type { schemas } from "../src/openapi/schemas.js";
 
 type Assert<T extends true> = T;

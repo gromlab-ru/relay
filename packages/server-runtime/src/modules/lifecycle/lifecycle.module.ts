@@ -1,11 +1,11 @@
 import { Body, Controller, Get, HttpCode, Inject, Module, Param, Post } from "@nestjs/common";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
-import { LifecycleQueries } from "@tasks/core/application/project/queries";
-import { ProjectService } from "@tasks/core/application/project/service";
-import { projectRecordIdSchema, saveProjectRecordSchema } from "@tasks/core/domain/project";
-import type { SaveProjectRecord } from "@tasks/core/domain/project";
-import { parse } from "@tasks/core/domain/validation";
+import { success } from "@relay/contracts";
+import { LifecycleQueries } from "@relay/core/application/project/queries";
+import { ProjectService } from "@relay/core/application/project/service";
+import { projectRecordIdSchema, saveProjectRecordSchema } from "@relay/core/domain/project";
+import type { SaveProjectRecord } from "@relay/core/domain/project";
+import { parse } from "@relay/core/domain/validation";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { TaskIdPipe, ZodValidationPipe } from "../../common/validation.js";
 import { WorkspaceService } from "../workspace/workspace.module.js";

@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { buildOverview } from "@tasks/core/application/queries/overview";
-import { TaskQueries } from "@tasks/core/application/queries/tasks";
-import { assertGraph } from "@tasks/core/domain/graph";
-import type { Task } from "@tasks/core/domain/task";
-import { TaskRepository } from "@tasks/core/storage/tasks";
+import { buildOverview } from "@relay/core/application/queries/overview";
+import { TaskQueries } from "@relay/core/application/queries/tasks";
+import { assertGraph } from "@relay/core/domain/graph";
+import type { Task } from "@relay/core/domain/task";
+import { TaskRepository } from "@relay/core/storage/tasks";
 import { fixture } from "./helpers/workspace.js";
 
 test("пустой обзор содержит полные нулевые счётчики и не требует корневой задачи", async (t) => {

@@ -32,10 +32,10 @@ importers:
 
   apps/cli:
     dependencies:
-      '@tasks/core':
+      '@relay/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tasks/project-runtime':
+      '@relay/project-runtime':
         specifier: workspace:*
         version: link:../../packages/project-runtime
       commander:
@@ -54,13 +54,13 @@ importers:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
-      '@tasks/contracts':
+      '@relay/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tasks/server-runtime':
+      '@relay/server-runtime':
         specifier: workspace:*
         version: link:../../packages/server-runtime
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@types/mdast':
@@ -90,13 +90,13 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(supports-color@10.2.2)(zod@4.6.2)
-      '@tasks/core':
+      '@relay/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tasks/project-runtime':
+      '@relay/project-runtime':
         specifier: workspace:*
         version: link:../../packages/project-runtime
-      '@tasks/rest-sdk':
+      '@relay/rest-sdk':
         specifier: workspace:*
         version: link:../../packages/rest-sdk
       commander:
@@ -106,10 +106,10 @@ importers:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
-      '@tasks/server-runtime':
+      '@relay/server-runtime':
         specifier: workspace:*
         version: link:../../packages/server-runtime
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@types/node':
@@ -136,10 +136,10 @@ importers:
 
   apps/server:
     dependencies:
-      '@tasks/core':
+      '@relay/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tasks/server-runtime':
+      '@relay/server-runtime':
         specifier: workspace:*
         version: link:../../packages/server-runtime
       commander:
@@ -149,10 +149,10 @@ importers:
       '@gromlab/relay-cli':
         specifier: workspace:*
         version: link:../cli
-      '@tasks/contracts':
+      '@relay/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@types/node':
@@ -194,7 +194,7 @@ importers:
       '@mantine/notifications':
         specifier: ^9.6.1
         version: 9.6.1(@mantine/core@9.6.1(@mantine/hooks@9.6.1(react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@mantine/hooks@9.6.1(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@tasks/rest-sdk':
+      '@relay/rest-sdk':
         specifier: workspace:*
         version: link:../../packages/rest-sdk
       clsx:
@@ -279,10 +279,10 @@ importers:
 
   packages/contracts:
     devDependencies:
-      '@tasks/core':
+      '@relay/core':
         specifier: workspace:*
         version: link:../core
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       typescript:
@@ -298,7 +298,7 @@ importers:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -316,17 +316,17 @@ importers:
 
   packages/project-runtime:
     dependencies:
-      '@tasks/core':
+      '@relay/core':
         specifier: workspace:*
         version: link:../core
-      '@tasks/rest-sdk':
+      '@relay/rest-sdk':
         specifier: workspace:*
         version: link:../rest-sdk
       zod:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -365,13 +365,13 @@ importers:
       '@nestjs/swagger':
         specifier: ^12.0.1
         version: 12.0.1(@fastify/static@10.1.3)(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.0.1(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)
-      '@tasks/contracts':
+      '@relay/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tasks/core':
+      '@relay/core':
         specifier: workspace:*
         version: link:../core
-      '@tasks/project-runtime':
+      '@relay/project-runtime':
         specifier: workspace:*
         version: link:../project-runtime
       fastify:
@@ -387,7 +387,7 @@ importers:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
-      '@tasks/typescript-config':
+      '@relay/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':

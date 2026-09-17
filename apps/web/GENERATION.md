@@ -48,7 +48,7 @@ pnpm run create ui-unit relay src/compositions/screens
 Общие формы находятся в `.templates`. После генерации типы, разметка, стили и
 фасеты адаптированы к ответственности компонентов.
 
-Текущий запуск из корня репозитория: `pnpm --filter @tasks/web run create ...`
+Текущий запуск из корня репозитория: `pnpm --filter @relay/web run create ...`
 (`pnpm dlx @gromlab/create@0.2.0 --skip-update`).
 Исторические команды ниже приведены без изменений; их пути относятся к `apps/web`.
 

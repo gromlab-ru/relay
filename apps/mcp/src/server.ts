@@ -1,9 +1,9 @@
 import { createServer } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { readConfiguration, serverAddress } from "@tasks/project-runtime/config";
-import { DEFAULT_MCP_PORT, serverPortSchema } from "@tasks/core/domain/config";
-import { parse } from "@tasks/core/domain/validation";
+import { readConfiguration, serverAddress } from "@relay/project-runtime/config";
+import { DEFAULT_MCP_PORT, serverPortSchema } from "@relay/core/domain/config";
+import { parse } from "@relay/core/domain/validation";
 import { Projects } from "./projects.js";
 import { createTools } from "./tools.js";
 

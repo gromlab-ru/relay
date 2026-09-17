@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ProjectService } from "@tasks/core/application/project/service";
-import { LifecycleQueries } from "@tasks/core/application/project/queries";
-import { TaskQueries } from "@tasks/core/application/queries/tasks";
-import { isProjectRecord } from "@tasks/core/domain/project";
+import { ProjectService } from "@relay/core/application/project/service";
+import { LifecycleQueries } from "@relay/core/application/project/queries";
+import { TaskQueries } from "@relay/core/application/queries/tasks";
+import { isProjectRecord } from "@relay/core/domain/project";
 import { fixture } from "./helpers/workspace.js";
 
 test("план, наследование этапа, приёмка, выпуск и продолжение образуют единый сценарий", async (t) => {

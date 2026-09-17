@@ -131,7 +131,7 @@ export const PlansScreen = () => {
                     component={Link}
                     to={`${base}/plans/${record.id}`}
                     size="xs"
-                    variant="light"
+                    variant="subtle"
                   >
                     Открыть план →
                   </Button>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { startServer } from "@tasks/server-runtime";
+import { startServer } from "@relay/server-runtime";
 import { fixture, successful, failed, invoke } from "./helpers/cli.js";
 
 test("CLI создаёт план, связывает задачу и читает тот же контекст через HTTP", async (t) => {

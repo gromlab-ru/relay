@@ -1,10 +1,10 @@
 import type { Command } from "commander";
-import { AppError, invariant } from "@tasks/core/shared/errors";
-import { selectProject } from "@tasks/project-runtime/config";
+import { AppError, invariant } from "@relay/core/shared/errors";
+import { selectProject } from "@relay/project-runtime/config";
 import { cliConfiguration } from "../configuration.js";
 import { listGroups } from "../queries/groups.js";
-import { migrateTasks } from "@tasks/core/application/tasks/migrate";
-import { initialize } from "@tasks/core/storage/workspace";
+import { migrateTasks } from "@relay/core/application/tasks/migrate";
+import { initialize } from "@relay/core/storage/workspace";
 import { author, outputOptions } from "../context.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { printResult } from "../output.js";

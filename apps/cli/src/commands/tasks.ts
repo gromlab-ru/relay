@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import { getTask, listTasks, taskLinks, taskMarkdown } from "../queries/tasks/queries.js";
 import type { TaskFilters } from "../queries/tasks/queries.js";
 import { taskTree } from "../queries/tasks/tree.js";
-import { invariant } from "@tasks/core/shared/errors";
+import { invariant } from "@relay/core/shared/errors";
 import { author, changed, mutation } from "../context.js";
 import type { Runtime } from "../context.js";
 import { registerCommand } from "../command.js";

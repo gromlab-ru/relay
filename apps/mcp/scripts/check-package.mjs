@@ -54,7 +54,7 @@ await writeFile(
   join(stage, "README.md"),
   (await readFile(join(app, "README.md"), "utf8")).replaceAll(
     "/blob/main/",
-    `/blob/mcp-v${manifest.version}/`,
+    `/blob/v${manifest.version}/`,
   ),
 );
 await cp(join(app, "CHANGELOG.md"), join(stage, "CHANGELOG.md"));

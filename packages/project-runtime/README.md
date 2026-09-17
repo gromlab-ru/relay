@@ -1,4 +1,4 @@
-# @tasks/project-runtime
+# @relay/project-runtime
 
 Общие настройки и подключения CLI и MCP. Приватный Node.js workspace.
 
@@ -6,7 +6,7 @@
 - `registry`: создание и атомарное редактирование реестра под межпроцессной блокировкой.
 - `backend/types`: контракт операций задач, комментариев и отчётов.
 - `backend/local`: прямые операции Core для CLI.
-- `backend/http`: единый клиент `@tasks/rest-sdk`, проверка ошибок и ограниченные повторы.
+- `backend/http`: единый клиент `@relay/rest-sdk`, проверка ошибок и ограниченные повторы.
 
 Пакет принимает явные настройки; окружение, командную строку и MCP-протокол разбирают
 соответствующие приложения. Управление автоматически запущенными API принадлежит `apps/mcp`.
@@ -14,8 +14,8 @@
 непосредственно или через REST runtime согласно выбранному интерфейсу.
 
 ```bash
-pnpm --filter @tasks/project-runtime build
-pnpm --filter @tasks/project-runtime test
+pnpm --filter @relay/project-runtime build
+pnpm --filter @relay/project-runtime test
 ```
 
 [Архитектура](../../docs/ARCHITECTURE.md) · [Конфигурация](../../docs/reference/CONFIGURATION.md)

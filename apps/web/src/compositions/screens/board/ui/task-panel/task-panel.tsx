@@ -91,7 +91,7 @@ export const TaskPanel = (props: TaskPanelProps) => {
       notifications.show({
         message: "Черновик сохранён. Продолжите при следующем открытии задачи.",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
-        color: "indigo",
+        color: "gray",
       });
     onClose();
   };

@@ -1,6 +1,6 @@
 # Tasks REST SDK
 
-Приватный workspace `@tasks/rest-sdk` предоставляет технический клиент Tasks API
+Приватный workspace `@relay/rest-sdk` предоставляет технический клиент Relay API
 для браузера и Node.js. `src/` полностью принадлежит
 `@gromlab/rest-api-codegen@5.2.4`; источник контракта — OpenAPI сервера.
 
@@ -14,8 +14,8 @@ SDK экспортирует собранный ESM и декларации из
 Из корня репозитория, при работающем актуальном сервере на порту 4700:
 
 ```bash
-pnpm --filter @tasks/rest-sdk run generate
-pnpm --filter @tasks/rest-sdk run build
+pnpm --filter @relay/rest-sdk run generate
+pnpm --filter @relay/rest-sdk run build
 ```
 
 Для другого адреса выполните из `packages/rest-sdk`:
@@ -34,9 +34,9 @@ pnpm dlx @gromlab/rest-api-codegen@5.2.4 --input http://127.0.0.1:3011/api/opena
 Настроенный экземпляр, адрес и политика запросов принадлежат приложению:
 
 ```ts
-import { createApiClient } from "@tasks/rest-sdk/create-api-client";
-import { HttpClient } from "@tasks/rest-sdk/http-client";
-import { operationsTree } from "@tasks/rest-sdk/operations-tree";
+import { createApiClient } from "@relay/rest-sdk/create-api-client";
+import { HttpClient } from "@relay/rest-sdk/http-client";
+import { operationsTree } from "@relay/rest-sdk/operations-tree";
 
 const httpClient = new HttpClient({ baseUrl: "", timeout: 15_000 });
 export const tasksApi = createApiClient(httpClient, operationsTree);

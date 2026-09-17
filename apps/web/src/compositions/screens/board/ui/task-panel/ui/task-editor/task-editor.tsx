@@ -201,7 +201,7 @@ export const TaskEditor = (props: TaskEditorProps) => {
     return (
       <div {...rootAttrs} className={clsx(styles.root, className)}>
         {isDefined(draft) && (
-          <Alert mb="lg" color="indigo" title="Есть несохранённый черновик">
+          <Alert mb="lg" color="gray" title="Есть несохранённый черновик">
             <Group gap="xs" mt="xs">
               <Button size="xs" onClick={() => handleEdit(true)}>
                 Восстановить черновик

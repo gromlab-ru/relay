@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
-import { defaultConfig } from "@tasks/core/domain/config";
+import { defaultConfig } from "@relay/core/domain/config";
 import { readConfiguration, resolveProject, serverAddress } from "../src/config.js";
 import { initializeRegistry, registerProject, unregisterProject } from "../src/registry.js";
 

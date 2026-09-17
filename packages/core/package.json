@@ -1,5 +1,5 @@
 {
-  "name": "@tasks/core",
+  "name": "@relay/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -21,7 +21,7 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "@types/node": "^22.18.0",
     "@types/proper-lockfile": "^4.1.4",
     "tsx": "^4.20.5",

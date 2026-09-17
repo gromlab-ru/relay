@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { Task } from "@tasks/core/domain/task";
+import type { Task } from "@relay/core/domain/task";
 import { failed, fixture, invoke, successful } from "./helpers/cli.js";
 import { paginate } from "../src/queries/pagination.js";
 import { resultBytes } from "../src/queries/result.js";

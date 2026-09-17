@@ -9,10 +9,10 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { initialize } from "@tasks/core/storage/workspace";
-import { defaultConfig } from "@tasks/core/domain/config";
-import { startServer } from "@tasks/server-runtime";
-import { initializeRegistry, registerProject } from "@tasks/project-runtime/registry";
+import { initialize } from "@relay/core/storage/workspace";
+import { defaultConfig } from "@relay/core/domain/config";
+import { startServer } from "@relay/server-runtime";
+import { initializeRegistry, registerProject } from "@relay/project-runtime/registry";
 import { startMcp } from "../dist/server.js";
 
 async function setup(t: TestContext) {

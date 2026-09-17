@@ -1,6 +1,6 @@
 import type { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { API_DOCS_PATH, OPENAPI_PATH } from "@tasks/contracts";
+import { API_DOCS_PATH, OPENAPI_PATH } from "@relay/contracts";
 import { schemas } from "./schemas.js";
 import { jsonSchema } from "./endpoint.js";
 

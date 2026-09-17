@@ -1,14 +1,14 @@
 import { Body, Controller, Get, Inject, Module, Param, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { success } from "@tasks/contracts";
+import { success } from "@relay/contracts";
 import type {
   AddCommentRequest,
   ApiSuccess,
   CommentRecord,
   RecordsPage,
   RecordsQuery,
-} from "@tasks/contracts";
-import { CommentService } from "@tasks/core/application/comments";
+} from "@relay/contracts";
+import { CommentService } from "@relay/core/application/comments";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { addCommentSchema, commentQuerySchema } from "../../openapi/schemas.js";

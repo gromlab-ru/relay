@@ -14,7 +14,7 @@
     z-index: 2;
     height: 2px;
     border-radius: 2px;
-    background: var(--mantine-color-indigo-5);
+    background: var(--tasks-selected-border);
     content: "";
   }
 

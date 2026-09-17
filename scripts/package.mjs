@@ -4,14 +4,16 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { runNpm } from "./release/npm.mjs";
-import { releaseMetadata } from "./release/metadata.mjs";
+import { components, readManifests, workspaceRelease } from "./release/workspace.mjs";
 
 const component = process.argv[2];
-assert(["cli", "server", "mcp"].includes(component), "Укажите cli, server или mcp");
+assert(components.includes(component), "Укажите cli, server или mcp");
 const root = fileURLToPath(new URL("../", import.meta.url));
 const app = join(root, "apps", component);
 const manifest = JSON.parse(await readFile(join(app, "package.json"), "utf8"));
-const metadata = releaseMetadata(manifest);
+const metadata = workspaceRelease(await readManifests(root), process.env.RELEASE_TAG).packages.find(
+  (entry) => entry.component === component,
+);
 const dependencies = {};
 const visited = new Set();
 async function collect(current) {
@@ -31,6 +33,7 @@ await collect(manifest);
 const stage = join(app, ".artifacts/package");
 const artifacts = join(app, ".artifacts/npm");
 await rm(stage, { recursive: true, force: true });
+await rm(artifacts, { recursive: true, force: true });
 await mkdir(stage, { recursive: true });
 await mkdir(artifacts, { recursive: true });
 const entry = component === "cli" ? "cli/main" : "main";

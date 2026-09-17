@@ -2,49 +2,38 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { releaseMetadata } from "./metadata.mjs";
-import { publishedIntegrity, shouldPublish } from "./registry.mjs";
-import { runNpm } from "./npm.mjs";
+import { publishPackages } from "./publish.mjs";
+import { readManifests, setWorkspaceVersion, workspaceRelease } from "./workspace.mjs";
 
-const [action, component, explicitTag] = process.argv.slice(2);
-assert(["cli", "server", "mcp"].includes(component), "Укажите компонент cli, server или mcp");
-assert(["check", "publish", "notes"].includes(action), "Укажите check, publish или notes");
+const [action, argument, ...extra] = process.argv.slice(2);
+assert(
+  ["version", "check", "publish", "notes"].includes(action),
+  "Укажите version, check, publish или notes",
+);
+assert.equal(extra.length, 0, "Релиз общий для всех пакетов: укажите только версию или тег");
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const app = join(root, "apps", component);
-const manifest = JSON.parse(await readFile(join(app, "package.json"), "utf8"));
-const tag = explicitTag ?? process.env.RELEASE_TAG ?? `${component}-v${manifest.version}`;
-const metadata = releaseMetadata(manifest, tag);
+const release =
+  action === "version"
+    ? await setWorkspaceVersion(root, argument)
+    : workspaceRelease(await readManifests(root), argument ?? process.env.RELEASE_TAG);
 
-if (action === "check") {
-  console.log(`${metadata.name}@${metadata.version}: ${tag}, npm dist-tag ${metadata.distTag}`);
+if (action === "version" || action === "check") {
+  console.log(`Relay ${release.version}: ${release.tag}, npm dist-tag ${release.distTag}`);
+  for (const metadata of release.packages) console.log(`${metadata.name}@${metadata.version}`);
 } else if (action === "notes") {
-  const changes = await readFile(join(app, "CHANGELOG.md"), "utf8").catch(() => "");
-  const section = changes.split(/^## /m).find((text) => text.startsWith(`${metadata.version}\n`));
-  console.log(
-    `# Relay ${component} ${metadata.version}\n\n${section?.slice(metadata.version.length).trim() || manifest.description}`,
+  const notes = [`# Relay ${release.version}`, "Все пакеты выпущены с общей версией."];
+  for (const metadata of release.packages) {
+    const changes = await readFile(join(root, "apps", metadata.component, "CHANGELOG.md"), "utf8");
+    const section = changes.split(/^## /m).find((text) => text.startsWith(`${release.version}\n`));
+    assert(section, `Нет описания ${metadata.name}@${release.version} в CHANGELOG.md`);
+    const body = section.slice(release.version.length).trim();
+    assert(body, `Пустое описание ${metadata.name}@${release.version}`);
+    notes.push(`## ${metadata.name}\n\n${body}`);
+  }
+  notes.push(
+    `## Установка\n\n\`\`\`bash\n${release.packages.map(({ name, version }) => `npx ${name}@${version} --help`).join("\n")}\n\`\`\``,
   );
+  console.log(notes.join("\n\n"));
 } else {
-  // Первая локальная публикация использует npm login. CI публикует тот же проверенный архив через OIDC.
-  const archive = join(app, ".artifacts/npm", metadata.archiveName);
-  const content = await readFile(archive);
-  const current = await publishedIntegrity(metadata.name, metadata.version);
-  if (shouldPublish(content, current)) {
-    const result = await runNpm(
-      [
-        "publish",
-        archive,
-        "--ignore-scripts",
-        "--access",
-        "public",
-        "--registry",
-        "https://registry.npmjs.org",
-        "--tag",
-        metadata.distTag,
-        ...(process.env.GITHUB_ACTIONS === "true" ? ["--provenance"] : []),
-      ],
-      root,
-    );
-    process.stdout.write(result.stdout);
-    process.stderr.write(result.stderr);
-  } else console.log(`${metadata.name}@${metadata.version}: опубликованный архив совпадает`);
+  await publishPackages(root, release.packages);
 }

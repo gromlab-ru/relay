@@ -1,6 +1,6 @@
 {
   "name": "@gromlab/relay-cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Relay CLI: контекст, планы, задачи и жизненный цикл проектов для людей и AI-агентов",
   "repository": {
     "type": "git",
@@ -44,13 +44,11 @@
     "test": "node --import tsx --test test/*.test.ts",
     "docs:check": "node scripts/check-docs.mjs",
     "package:check": "node ../../scripts/package.mjs cli",
-    "release:check": "node ../../scripts/release/relay.mjs check cli",
-    "release:publish": "node ../../scripts/release/relay.mjs publish cli",
     "prepack": "node -e \"throw new Error('Выполните pnpm run package:check из корня репозитория; публикуйте только проверенный архив.')\""
   },
   "dependencies": {
-    "@tasks/core": "workspace:*",
-    "@tasks/project-runtime": "workspace:*",
+    "@relay/core": "workspace:*",
+    "@relay/project-runtime": "workspace:*",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1",
     "string-width": "^8.2.2",
@@ -58,9 +56,9 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@tasks/server-runtime": "workspace:*",
-    "@tasks/contracts": "workspace:*",
-    "@tasks/typescript-config": "workspace:*",
+    "@relay/server-runtime": "workspace:*",
+    "@relay/contracts": "workspace:*",
+    "@relay/typescript-config": "workspace:*",
     "@types/mdast": "^4.0.4",
     "@types/node": "^22.18.0",
     "esbuild": "^0.28.2",

@@ -67,7 +67,7 @@ pnpm --silent run playground a list --format json
 
 `dev:cli` сохраняет рабочий каталог вызова. Условие `tasks-source` позволяет
 CLI и backend использовать исходники библиотек через tsx. Web использует compiled
-SDK; его dev-скрипт сначала собирает `@tasks/rest-sdk`.
+SDK; его dev-скрипт сначала собирает `@relay/rest-sdk`.
 
 MCP запускается отдельным процессом, например:
 

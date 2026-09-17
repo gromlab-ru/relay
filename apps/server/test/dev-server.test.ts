@@ -20,7 +20,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { test } from "node:test";
-import { initialize } from "@tasks/core/storage/workspace";
+import { initialize } from "@relay/core/storage/workspace";
 
 const execute = promisify(execFile);
 
@@ -93,7 +93,7 @@ for (const configuration of ["default", "relative"] as const)
           "--conditions=tasks-source",
           "--input-type=module",
           "-e",
-          "console.log(JSON.stringify(['@tasks/core/storage/workspace', '@tasks/contracts', '@tasks/server-runtime'].map((name) => import.meta.resolve(name))))",
+          "console.log(JSON.stringify(['@relay/core/storage/workspace', '@relay/contracts', '@relay/server-runtime'].map((name) => import.meta.resolve(name))))",
         ],
         { cwd: join(root, "apps/cli") },
       );

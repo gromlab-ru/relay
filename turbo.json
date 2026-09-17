@@ -6,7 +6,7 @@
       "outputs": ["dist/**"]
     },
     "@gromlab/relay-server#build": {
-      "dependsOn": ["^build", "@tasks/web#build"],
+      "dependsOn": ["^build", "@relay/web#build"],
       "outputs": ["dist/**"]
     },
     "@gromlab/relay-cli#build": {
@@ -37,7 +37,7 @@
       ]
     },
     "start": {
-      "dependsOn": ["build", "@tasks/web#build"],
+      "dependsOn": ["build", "@relay/web#build"],
       "cache": false,
       "persistent": true,
       "passThroughEnv": ["RELAY_CONFIG", "RELAY_ACTOR", "RELAY_PORT", "RELAY_WEB_PORT"]
@@ -66,7 +66,7 @@
       ],
       "outputs": []
     },
-    "@tasks/core#test": {
+    "@relay/core#test": {
       "dependsOn": ["build"],
       "inputs": [
         "$TURBO_DEFAULT$",

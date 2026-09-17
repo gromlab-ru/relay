@@ -1,7 +1,7 @@
 import type { TasksBackend } from "../../backend/types.js";
 import { treeText } from "../../presentation/relations.js";
 import type { TextOptions } from "../../presentation/theme.js";
-import type { TaskReference } from "@tasks/core/shared/ids";
+import type { TaskReference } from "@relay/core/shared/ids";
 
 export async function taskTree(service: TasksBackend, reference: TaskReference, depth: number) {
   const { items, truncated, blockedCounts } = await service.tree(reference, depth);

@@ -84,18 +84,18 @@ test("README npm получает версионные ссылки и raw-из�
   const urls = inspectMarkdown(result).destinations.map((node) => node.url);
   assert(
     urls.includes(
-      "https://github.com/gromlab-ru/relay/blob/cli-v0.4.0-rc.1/docs/guide.md#режим---local",
+      "https://github.com/gromlab-ru/relay/blob/v0.4.0-rc.1/docs/guide.md#режим---local",
     ),
   );
   assert.equal(
     urls.filter(
       (url) =>
         url ===
-        "https://raw.githubusercontent.com/gromlab-ru/relay/cli-v0.4.0-rc.1/docs/assets/board%20(dark).png",
+        "https://raw.githubusercontent.com/gromlab-ru/relay/v0.4.0-rc.1/docs/assets/board%20(dark).png",
     ).length,
     2,
   );
-  assert(urls.includes("https://github.com/gromlab-ru/relay/tree/cli-v0.4.0-rc.1/apps/cli/"));
+  assert(urls.includes("https://github.com/gromlab-ru/relay/tree/v0.4.0-rc.1/apps/cli/"));
   assert(urls.includes("#tasks"));
   assert(urls.includes("https://www.npmjs.com/package/@gromlab/tasks-cli"));
   assert(result.includes('"Текст ]( внутри title"'));
@@ -114,7 +114,7 @@ test("документы архива сохраняют локальные пе
     [
       "../README.md",
       "../CHANGELOG.md",
-      "https://github.com/gromlab-ru/relay/tree/cli-v0.4.0-rc.1/apps/cli/",
+      "https://github.com/gromlab-ru/relay/tree/v0.4.0-rc.1/apps/cli/",
     ],
   );
 });

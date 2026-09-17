@@ -1,4 +1,4 @@
-import { toText } from "@tasks/core/domain/markdown";
+import { toText } from "@relay/core/domain/markdown";
 import { safeText } from "./safe.js";
 import { defaultTextOptions, palette } from "./theme.js";
 import type { TextOptions } from "./theme.js";

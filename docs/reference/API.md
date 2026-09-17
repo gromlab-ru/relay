@@ -2,7 +2,7 @@
 
 [Документация](../README.md) → Справочники → REST API
 
-Типы запросов, ответов и событий: [`@tasks/contracts`](../../packages/contracts/src/index.ts).
+Типы запросов, ответов и событий: [`@relay/contracts`](../../packages/contracts/src/index.ts).
 API поддерживает поток задач оркестратора и субагентов на одном хосте.
 
 ## Содержание

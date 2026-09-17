@@ -1,0 +1,206 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { publishPackages } from "./publish.mjs";
+import { readManifests, setWorkspaceVersion, workspaceRelease } from "./workspace.mjs";
+
+async function fixture(t, version = "0.6.0") {
+  const root = await mkdtemp(join(tmpdir(), "relay-release-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const manifests = [
+    {
+      path: "package.json",
+      manifest: { name: "@gromlab/relay-monorepo", version: "0.0.0", private: true },
+    },
+    {
+      path: "apps/web/package.json",
+      manifest: { name: "@relay/web", version: "0.0.0", private: true },
+    },
+    {
+      path: "packages/core/package.json",
+      manifest: { name: "@relay/core", version: "0.0.0", private: true },
+    },
+    ...["cli", "server", "mcp"].map((component) => ({
+      path: `apps/${component}/package.json`,
+      manifest: {
+        name: `@gromlab/relay-${component}`,
+        version,
+        bin: { [`relay-${component}`]: component === "cli" ? "dist/cli/main.js" : "dist/main.js" },
+        publishConfig: { access: "public", registry: "https://registry.npmjs.org" },
+        repository: { type: "git", url: "git+https://github.com/gromlab-ru/relay.git" },
+        engines: { node: ">=22" },
+        dependencies: { "@relay/core": "workspace:*" },
+      },
+    })),
+  ];
+  for (const { path, manifest } of manifests) {
+    await mkdir(dirname(join(root, path)), { recursive: true });
+    await writeFile(join(root, path), JSON.stringify(manifest, null, 2) + "\n");
+  }
+  const release = workspaceRelease(manifests);
+  const archives = new Map();
+  for (const metadata of release.packages) {
+    const path = join(root, "apps", metadata.component, ".artifacts/npm", metadata.archiveName);
+    const content = Buffer.from(`Проверенный архив ${metadata.name}@${version}`);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, content);
+    archives.set(metadata.name, {
+      path,
+      integrity: `sha512-${createHash("sha512").update(content).digest("base64")}`,
+    });
+  }
+  return { root, manifests, release, archives };
+}
+
+test("общая версия обновляет все npm-пакеты и сохраняет приватные манифесты и зависимости", async (t) => {
+  const { root, manifests } = await fixture(t);
+  // Переход с прежних независимых версий выполняется одной командой.
+  const server = manifests.find(({ path }) => path === "apps/server/package.json");
+  await writeFile(
+    join(root, server.path),
+    JSON.stringify({ ...server.manifest, version: "0.2.0" }),
+  );
+  const release = await setWorkspaceVersion(root, "0.7.0-rc.1");
+  assert.equal(release.tag, "v0.7.0-rc.1");
+  assert.equal(release.distTag, "next");
+  const updated = await readManifests(root);
+  for (const before of manifests) {
+    const after = updated.find(({ path }) => path === before.path);
+    assert.deepEqual(
+      after.manifest,
+      before.manifest.private ? before.manifest : { ...before.manifest, version: "0.7.0-rc.1" },
+    );
+  }
+  const snapshot = await Promise.all(
+    manifests.map(({ path }) => readFile(join(root, path), "utf8")),
+  );
+  await assert.rejects(() => setWorkspaceVersion(root, "0.7.0-01"));
+  assert.deepEqual(
+    await Promise.all(manifests.map(({ path }) => readFile(join(root, path), "utf8"))),
+    snapshot,
+  );
+});
+
+test("проверка отклоняет рассинхронизацию версий, неполный состав и компонентные теги", async (t) => {
+  const { manifests } = await fixture(t);
+  for (const component of ["cli", "server", "mcp"]) {
+    const path = `apps/${component}/package.json`;
+    assert.throws(
+      () => workspaceRelease(manifests.filter((entry) => entry.path !== path)),
+      /отсутствует/,
+    );
+    assert.throws(
+      () =>
+        workspaceRelease(
+          manifests.map((entry) =>
+            entry.path === path
+              ? { ...entry, manifest: { ...entry.manifest, version: "0.6.1" } }
+              : entry,
+          ),
+        ),
+      /версия отличается/,
+    );
+    assert.throws(() => workspaceRelease(manifests, `${component}-v0.6.0`), /Единый тег/);
+  }
+  assert.throws(() => workspaceRelease(manifests, "v0.6.1"), /Единый тег/);
+  assert.throws(
+    () =>
+      workspaceRelease([
+        ...manifests,
+        { path: "packages/new/package.json", manifest: { name: "@gromlab/new", version: "0.6.0" } },
+      ]),
+    /не включён/,
+  );
+});
+
+test("каждый выпуск публикует все три архива после общей предварительной проверки", async (t) => {
+  const { root, release, archives } = await fixture(t, "0.7.0-rc.1");
+  const events = [];
+  await publishPackages(root, release.packages, {
+    getIntegrity: async (name, version) => {
+      assert.equal(version, release.version);
+      events.push(`check ${name}`);
+      return null;
+    },
+    executeNpm: async (args, cwd) => {
+      assert.equal(cwd, root);
+      const metadata = release.packages.find(({ name }) => archives.get(name).path === args[1]);
+      assert(metadata);
+      assert.deepEqual(args.slice(0, 9), [
+        "publish",
+        archives.get(metadata.name).path,
+        "--ignore-scripts",
+        "--access",
+        "public",
+        "--registry",
+        "https://registry.npmjs.org",
+        "--tag",
+        "next",
+      ]);
+      events.push(`publish ${metadata.name}`);
+      return { stdout: "", stderr: "" };
+    },
+  });
+  assert.deepEqual(events, [
+    ...release.packages.map(({ name }) => `check ${name}`),
+    ...release.packages.map(({ name }) => `publish ${name}`),
+  ]);
+});
+
+test("повтор после сбоя допубликовывает комплект, сверяя уже выпущенные архивы", async (t) => {
+  const { root, release, archives } = await fixture(t);
+  const published = new Map();
+  const attempts = [];
+  let fail = true;
+  const options = {
+    getIntegrity: async (name) => published.get(name) ?? null,
+    executeNpm: async (args) => {
+      const { name } = release.packages.find(({ name }) => archives.get(name).path === args[1]);
+      attempts.push(name);
+      if (name === "@gromlab/relay-server" && fail) {
+        fail = false;
+        throw new Error("Сбой registry");
+      }
+      published.set(name, archives.get(name).integrity);
+      return { stdout: "", stderr: "" };
+    },
+  };
+  await assert.rejects(() => publishPackages(root, release.packages, options), /Сбой registry/);
+  assert.equal(published.size, 1);
+  await publishPackages(root, release.packages, options);
+  await publishPackages(root, release.packages, options);
+  assert.deepEqual(attempts, [
+    "@gromlab/relay-cli",
+    "@gromlab/relay-server",
+    "@gromlab/relay-server",
+    "@gromlab/relay-mcp",
+  ]);
+  assert.equal(published.size, 3);
+});
+
+test("ошибка любого архива или registry останавливает весь выпуск до первой записи", async (t) => {
+  for (const failure of ["missing", "integrity", "registry"]) {
+    await t.test(failure, async (t) => {
+      const { root, release, archives } = await fixture(t);
+      if (failure === "missing") await rm(archives.get("@gromlab/relay-mcp").path);
+      let publications = 0;
+      await assert.rejects(() =>
+        publishPackages(root, release.packages, {
+          getIntegrity: async (name) => {
+            if (name !== "@gromlab/relay-mcp") return null;
+            if (failure === "registry") throw new Error("Ошибка доступа к npm");
+            return "sha512-другой-архив";
+          },
+          executeNpm: async () => {
+            publications++;
+            return { stdout: "", stderr: "" };
+          },
+        }),
+      );
+      assert.equal(publications, 0);
+    });
+  }
+});

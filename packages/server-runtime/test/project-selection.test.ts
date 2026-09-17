@@ -3,16 +3,16 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { initialize } from "@tasks/core/storage/workspace";
-import { TaskService } from "@tasks/core/application/tasks/service";
+import { initialize } from "@relay/core/storage/workspace";
+import { TaskService } from "@relay/core/application/tasks/service";
 import {
   initializeRegistry,
   registerProject,
   unregisterProject,
-} from "@tasks/project-runtime/registry";
-import { createHttpBackend } from "@tasks/project-runtime/backend/http";
-import { createServerApi } from "@tasks/project-runtime/backend/server";
-import { startServer } from "@tasks/server-runtime";
+} from "@relay/project-runtime/registry";
+import { createHttpBackend } from "@relay/project-runtime/backend/http";
+import { createServerApi } from "@relay/project-runtime/backend/server";
+import { startServer } from "@relay/server-runtime";
 
 test("подключённый клиент закрепляет базу при перенаправлении имени и не пишет в другой проект", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "relay-selection-"));

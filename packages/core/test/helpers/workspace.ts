@@ -2,9 +2,9 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TestContext } from "node:test";
-import { initialize } from "@tasks/core/storage/workspace";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import type { TaskFields } from "@tasks/core/domain/task";
+import { initialize } from "@relay/core/storage/workspace";
+import { TaskService } from "@relay/core/application/tasks/service";
+import type { TaskFields } from "@relay/core/domain/task";
 
 export async function fixture(t: TestContext) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "tasks-core-")));

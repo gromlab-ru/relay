@@ -91,6 +91,5 @@ export const statusColor = (status: string): string => {
     return "teal";
   if (["failed", "critical", "changes_requested"].includes(status)) return "red";
   if (["unknown", "open", "paused", "high"].includes(status)) return "orange";
-  if (["active", "running", "ready"].includes(status)) return "indigo";
   return "gray";
 };

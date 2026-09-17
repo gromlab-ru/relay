@@ -1,8 +1,8 @@
-import { createHttpBackend } from "@tasks/project-runtime/backend/http";
-import { createServerApi } from "@tasks/project-runtime/backend/server";
-import type { Backend } from "@tasks/project-runtime/backend/types";
-import type { ProjectTarget } from "@tasks/project-runtime/config";
-import { invariant } from "@tasks/core/shared/errors";
+import { createHttpBackend } from "@relay/project-runtime/backend/http";
+import { createServerApi } from "@relay/project-runtime/backend/server";
+import type { Backend } from "@relay/project-runtime/backend/types";
+import type { ProjectTarget } from "@relay/project-runtime/config";
+import { invariant } from "@relay/core/shared/errors";
 
 /** MCP знает только URL Relay Server; реестр и файлы принадлежат серверу. */
 export class Projects {

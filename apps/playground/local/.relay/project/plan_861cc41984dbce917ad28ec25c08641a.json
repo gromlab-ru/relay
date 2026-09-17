@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "plan_861cc41984dbce917ad28ec25c08641a",
+  "revision": 1,
+  "createdAt": "2026-09-16T15:01:19.969Z",
+  "updatedAt": "2026-09-16T15:01:19.969Z",
+  "createdBy": "human",
+  "updatedBy": "human",
+  "fields": {
+    "kind": "plan",
+    "title": "test",
+    "goal": "sdf",
+    "scope": "",
+    "summary": "",
+    "nextStep": "",
+    "owner": "sdf",
+    "status": "draft"
+  },
+  "events": [
+    {
+      "revision": 1,
+      "actor": "human",
+      "at": "2026-09-16T15:01:19.969Z",
+      "fields": ["kind", "title", "goal", "scope", "summary", "nextStep", "owner", "status"]
+    }
+  ],
+  "requestHash": "5e6db582cda06cdd17ca5b64da76f375bdc374618802c8867d7b88e7ae288df2"
+}

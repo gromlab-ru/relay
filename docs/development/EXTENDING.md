@@ -49,12 +49,12 @@ registerCommand<{ titleOnly?: boolean }>(program, runtime, {
 Это пример расширения, а не встроенная команда. CLI-адаптеру принадлежат
 параметры и преобразование ввода. Если операция содержит бизнес-правила,
 вынесите её в `packages/core/src/application/` и вызывайте из `run` через
-экспорты `@tasks/core/application/*`. Не используйте алиасы корневого tsconfig
+экспорты `@relay/core/application/*`. Не используйте алиасы корневого tsconfig
 или относительные импорты исходников другого workspace.
 
 Команды обращаются к `context.tasks` и `context.backend.comments/logs/validate`.
 Контракт `packages/project-runtime/src/backend/types.ts` реализован локальным Core и HTTP через
-`@tasks/rest-sdk`. Новая рабочая операция должна поддерживать оба адаптера;
+`@relay/rest-sdk`. Новая рабочая операция должна поддерживать оба адаптера;
 файловый `Workspace` доступен только локальной служебной операции через `localWorkspace`.
 Расширение API сопровождается OpenAPI и регенерацией SDK. Терминальное представление
 и байтовая пагинация остаются в CLI; общие read models находятся в Core.

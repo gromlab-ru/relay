@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
-import { startServer } from "@tasks/server-runtime";
+import { startServer } from "@relay/server-runtime";
 import { successful, failed, invoke } from "./helpers/cli.js";
 
 test("local/workspace: автоматический контекст, единый сервер, ввод, курсоры и независимые базы", async (t) => {

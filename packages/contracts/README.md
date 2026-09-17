@@ -1,6 +1,6 @@
 # Общий контракт REST и SSE
 
-Импорт: `import type { BoardResponse } from "@tasks/contracts"`.
+Импорт: `import type { BoardResponse } from "@relay/contracts"`.
 Типы и переносимые константы находятся в `src/index.ts`; здесь нет зависимостей
 от Core, NestJS, Node.js или React.
 

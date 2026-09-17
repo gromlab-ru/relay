@@ -1,11 +1,11 @@
-import type { Config } from "@tasks/core/domain/config";
+import type { Config } from "@relay/core/domain/config";
 import type {
   OverviewCounts,
   OverviewData,
   OverviewImpact,
   OverviewSection,
   OverviewTask,
-} from "@tasks/core/application/queries/overview";
+} from "@relay/core/application/queries/overview";
 import { section, wrap } from "./layout.js";
 import { safeText } from "./safe.js";
 import { palette, statusText } from "./theme.js";

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { MAX_OVERVIEW_LIMIT } from "@tasks/core/application/queries/overview";
+import { MAX_OVERVIEW_LIMIT } from "@relay/core/application/queries/overview";
 import { registerCommand } from "../command.js";
 import type { Runtime } from "../context.js";
 import { csv, integer } from "../options.js";

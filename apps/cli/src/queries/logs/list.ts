@@ -1,10 +1,10 @@
-import type { Log } from "@tasks/core/domain/log";
-import { logBrief } from "@tasks/core/domain/log";
+import type { Log } from "@relay/core/domain/log";
+import { logBrief } from "@relay/core/domain/log";
 import { logsText } from "../../presentation/records.js";
 import { z } from "zod";
 import type { PageOptions } from "../pagination.js";
 import { creationKey, paginate } from "../pagination.js";
-import { invariant } from "@tasks/core/shared/errors";
+import { invariant } from "@relay/core/shared/errors";
 
 export interface LogFilters {
   actor?: string;

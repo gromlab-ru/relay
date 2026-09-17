@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { AppError } from "@tasks/core/shared/errors";
-import { decodeCursor, encodeCursor } from "@tasks/core/shared/cursor";
+import { AppError } from "@relay/core/shared/errors";
+import { decodeCursor, encodeCursor } from "@relay/core/shared/cursor";
 
 export interface Result {
   data: unknown;

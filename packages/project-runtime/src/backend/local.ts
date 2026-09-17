@@ -1,14 +1,14 @@
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { claimTask, releaseTask, changeDependency } from "@tasks/core/application/tasks/assignment";
-import { ProjectQueries } from "@tasks/core/application/queries/project";
-import { TaskQueries } from "@tasks/core/application/queries/tasks";
-import { CommentService } from "@tasks/core/application/comments";
-import { LogService } from "@tasks/core/application/logs/service";
-import { validateWorkspace } from "@tasks/core/application/validate";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { claimTask, releaseTask, changeDependency } from "@relay/core/application/tasks/assignment";
+import { ProjectQueries } from "@relay/core/application/queries/project";
+import { TaskQueries } from "@relay/core/application/queries/tasks";
+import { CommentService } from "@relay/core/application/comments";
+import { LogService } from "@relay/core/application/logs/service";
+import { validateWorkspace } from "@relay/core/application/validate";
+import { openWorkspace } from "@relay/core/storage/workspace";
 import type { Backend } from "./types.js";
-import { LifecycleQueries } from "@tasks/core/application/project/queries";
-import { ProjectService } from "@tasks/core/application/project/service";
+import { LifecycleQueries } from "@relay/core/application/project/queries";
+import { ProjectService } from "@relay/core/application/project/service";
 
 export async function createLocalBackend(cwd: string, config?: string): Promise<Backend> {
   const workspace = await openWorkspace(cwd, config);

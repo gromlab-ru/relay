@@ -1,6 +1,6 @@
 import pc from "picocolors";
-import { defaultConfig } from "@tasks/core/domain/config";
-import type { Config } from "@tasks/core/domain/config";
+import { defaultConfig } from "@relay/core/domain/config";
+import type { Config } from "@relay/core/domain/config";
 import { safeText } from "./safe.js";
 
 export interface TextOptions {

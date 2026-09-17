@@ -6,7 +6,7 @@
   padding: 1.5rem;
   border: 1px solid var(--tasks-border);
   border-radius: 1rem;
-  background: linear-gradient(120deg, var(--tasks-surface), var(--mantine-color-indigo-light));
+  background: var(--tasks-surface);
 }
 .heroIcon {
   display: grid;
@@ -15,7 +15,7 @@
   height: 3rem;
   border-radius: 0.8rem;
   background: var(--tasks-surface);
-  color: var(--mantine-color-indigo-text);
+  color: var(--tasks-muted);
   border: 1px solid var(--tasks-border);
 }
 .heroBody {
@@ -51,7 +51,7 @@
     color: var(--tasks-soft);
   }
   &:hover {
-    border-color: var(--mantine-color-indigo-outline);
+    border-color: var(--tasks-selected-border);
   }
 }
 .grid {
@@ -95,9 +95,9 @@
   gap: 0.7rem;
   margin-top: 1rem;
   padding: 1rem;
-  background: var(--mantine-color-indigo-light);
+  background: var(--tasks-subtle);
   border-radius: 0.6rem;
-  color: var(--mantine-color-indigo-text);
+  color: var(--tasks-ink);
 }
 .quiet {
   display: flex;

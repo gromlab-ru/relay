@@ -91,9 +91,9 @@ pnpm --silent run playground group list
 Из корня репозитория:
 
 ```bash
-pnpm --filter @tasks/playground run demo:stats
-pnpm --filter @tasks/playground run demo:check
-pnpm --filter @tasks/playground run demo:reset
+pnpm --filter @relay/playground run demo:stats
+pnpm --filter @relay/playground run demo:check
+pnpm --filter @relay/playground run demo:reset
 ```
 
 - `demo:stats` показывает параметры **эталонного** снимка без записи файлов.

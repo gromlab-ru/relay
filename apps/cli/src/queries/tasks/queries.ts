@@ -1,9 +1,9 @@
-import { invariant } from "@tasks/core/shared/errors";
+import { invariant } from "@relay/core/shared/errors";
 import { paginate } from "../pagination.js";
-import type { TaskReference } from "@tasks/core/shared/ids";
+import type { TaskReference } from "@relay/core/shared/ids";
 import type { PageOptions } from "../pagination.js";
 import type { TasksBackend } from "../../backend/types.js";
-import { parseTaskId } from "@tasks/core/shared/ids";
+import { parseTaskId } from "@relay/core/shared/ids";
 import { taskText, tasksText } from "../../presentation/tasks.js";
 import { fieldsText, markdownText } from "../../presentation/text.js";
 import { linksText } from "../../presentation/relations.js";

@@ -7,14 +7,8 @@ on:
   workflow_call:
     outputs:
       artifact_id:
-        description: Идентификатор проверенного npm-архива
+        description: Идентификатор проверенных npm-архивов CLI, Server и MCP
         value: ${{ jobs.package.outputs.artifact_id }}
-      mcp_artifact_id:
-        description: Идентификатор проверенного MCP npm-архива
-        value: ${{ jobs.package.outputs.mcp_artifact_id }}
-      server_artifact_id:
-        description: Идентификатор проверенного серверного npm-архива
-        value: ${{ jobs.package.outputs.server_artifact_id }}
 
 permissions:
   contents: read
@@ -48,6 +42,8 @@ jobs:
           run_install: false
       - name: Установить зависимости из lockfile
         run: pnpm install --frozen-lockfile
+      - name: Проверить общую версию и собрать все пакеты
+        run: pnpm run build
       - name: Проверить форматирование, типы, сборку и тесты
         shell: bash
         run: pnpm run check 2>&1 | tee "$RUNNER_TEMP/tasks-check.log"
@@ -72,14 +68,12 @@ jobs:
           NODE
 
   package:
-    name: Проверенный npm-архив
+    name: Проверенные npm-архивы всех пакетов
     needs: check
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
-      mcp_artifact_id: ${{ steps.upload-mcp.outputs.artifact-id }}
-      server_artifact_id: ${{ steps.upload-server.outputs.artifact-id }}
     steps:
       - name: Получить исходники
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Версия 7.0.1
@@ -100,34 +94,15 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Проверить независимые установки CLI, Server и MCP в local/workspace
         run: pnpm run package:check
-      - name: Сохранить проверенный архив
+      - name: Сохранить все проверенные архивы одним артефактом
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
         with:
-          name: npm-package
-          path: apps/cli/.artifacts/npm/*.tgz
-          include-hidden-files: true
-          if-no-files-found: error
-          overwrite: true
-          compression-level: 0
-          retention-days: 14
-      - name: Сохранить проверенный серверный архив
-        id: upload-server
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
-        with:
-          name: npm-server-package
-          path: apps/server/.artifacts/npm/*.tgz
-          include-hidden-files: true
-          if-no-files-found: error
-          overwrite: true
-          compression-level: 0
-          retention-days: 14
-      - name: Сохранить проверенный MCP-архив
-        id: upload-mcp
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # Версия 7.0.1
-        with:
-          name: npm-mcp-package
-          path: apps/mcp/.artifacts/npm/*.tgz
+          name: npm-packages
+          path: |
+            apps/cli/.artifacts/npm/*.tgz
+            apps/server/.artifacts/npm/*.tgz
+            apps/mcp/.artifacts/npm/*.tgz
           include-hidden-files: true
           if-no-files-found: error
           overwrite: true

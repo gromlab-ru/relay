@@ -8,11 +8,11 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
-import { startServer } from "@tasks/server-runtime";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { CommentService } from "@tasks/core/application/comments";
-import { LogService } from "@tasks/core/application/logs/service";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import { startServer } from "@relay/server-runtime";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { CommentService } from "@relay/core/application/comments";
+import { LogService } from "@relay/core/application/logs/service";
+import { openWorkspace } from "@relay/core/storage/workspace";
 import { invoke, invokeRaw, failed, successful } from "./helpers/cli.js";
 
 const exec = promisify(execFile);

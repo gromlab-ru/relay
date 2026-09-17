@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { configSchema, defaultConfig, mcpConfigSchema } from "@tasks/core/domain/config";
+import { configSchema, defaultConfig, mcpConfigSchema } from "@relay/core/domain/config";
 
 test("отсутствующие порты и пустые секции используют Server 4700 и MCP 4710", () => {
   const { server, ...legacy } = defaultConfig;

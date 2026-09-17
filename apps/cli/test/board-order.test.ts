@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { TaskService } from "@tasks/core/application/tasks/service";
-import { moveTask } from "@tasks/core/application/tasks/move";
-import { openWorkspace } from "@tasks/core/storage/workspace";
+import { TaskService } from "@relay/core/application/tasks/service";
+import { moveTask } from "@relay/core/application/tasks/move";
+import { openWorkspace } from "@relay/core/storage/workspace";
 import { fixture, invokeRaw, successful } from "./helpers/cli.js";
 
 test("CLI выводит сохранённый порядок доски в JSON и текстовом режиме", async (t) => {

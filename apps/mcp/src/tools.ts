@@ -9,16 +9,16 @@ import {
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import manifest from "#manifest" with { type: "json" };
-import { asAppError, invariant } from "@tasks/core/shared/errors";
-import { actorSchema, parse, taskIdSchema } from "@tasks/core/domain/validation";
-import { taskFieldsSchema } from "@tasks/core/domain/task";
-import { logKindSchema, logBrief } from "@tasks/core/domain/log";
-import { toLines, toText } from "@tasks/core/domain/markdown";
-import { taskListQuerySchema } from "@tasks/core/application/queries/project";
-import { overviewQuerySchema } from "@tasks/core/application/queries/overview";
-import { requestIdSchema } from "@tasks/core/application/record-request";
-import { projectEntrySchema, projectNameSchema } from "@tasks/project-runtime/config";
-import type { Backend } from "@tasks/project-runtime/backend/types";
+import { asAppError, invariant } from "@relay/core/shared/errors";
+import { actorSchema, parse, taskIdSchema } from "@relay/core/domain/validation";
+import { taskFieldsSchema } from "@relay/core/domain/task";
+import { logKindSchema, logBrief } from "@relay/core/domain/log";
+import { toLines, toText } from "@relay/core/domain/markdown";
+import { taskListQuerySchema } from "@relay/core/application/queries/project";
+import { overviewQuerySchema } from "@relay/core/application/queries/overview";
+import { requestIdSchema } from "@relay/core/application/record-request";
+import { projectEntrySchema, projectNameSchema } from "@relay/project-runtime/config";
+import type { Backend } from "@relay/project-runtime/backend/types";
 import type { Projects } from "./projects.js";
 import { checked, page, paging, response } from "./output.js";
 import type { Result } from "./output.js";
@@ -26,7 +26,7 @@ import {
   projectFieldsSchema,
   projectRecordIdSchema,
   saveProjectRecordSchema,
-} from "@tasks/core/domain/project";
+} from "@relay/core/domain/project";
 
 /** Ответ записи не зависит от размера уже сохранённого документа. */
 async function changed(operation: Promise<{ id: number; revision: number }>): Promise<Result> {

@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
 import { basename, dirname, resolve } from "node:path";
 import { realpath } from "node:fs/promises";
-import type { ContextResponse, RelayProject, ServerContextResponse } from "@tasks/contracts";
-import { actorSchema, parse } from "@tasks/core/domain/validation";
-import { AppError, invariant } from "@tasks/core/shared/errors";
-import { openWorkspace, readWorkspaceConfig } from "@tasks/core/storage/workspace";
-import type { Workspace } from "@tasks/core/storage/workspace";
-import { configurationMode, entryTarget, readConfiguration } from "@tasks/project-runtime/config";
-import { registerProject, unregisterProject } from "@tasks/project-runtime/registry";
-import type { ProjectEntry } from "@tasks/project-runtime/config";
+import type { ContextResponse, RelayProject, ServerContextResponse } from "@relay/contracts";
+import { actorSchema, parse } from "@relay/core/domain/validation";
+import { AppError, invariant } from "@relay/core/shared/errors";
+import { openWorkspace, readWorkspaceConfig } from "@relay/core/storage/workspace";
+import type { Workspace } from "@relay/core/storage/workspace";
+import { configurationMode, entryTarget, readConfiguration } from "@relay/project-runtime/config";
+import { registerProject, unregisterProject } from "@relay/project-runtime/registry";
+import type { ProjectEntry } from "@relay/project-runtime/config";
 
 export interface WorkspaceOptions {
   cwd: string;

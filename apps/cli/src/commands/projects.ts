@@ -1,8 +1,8 @@
 import type { Command } from "commander";
-import { serverAddress } from "@tasks/project-runtime/config";
-import { initializeRegistry } from "@tasks/project-runtime/registry";
-import { createServerApi } from "@tasks/project-runtime/backend/server";
-import { invariant } from "@tasks/core/shared/errors";
+import { serverAddress } from "@relay/project-runtime/config";
+import { initializeRegistry } from "@relay/project-runtime/registry";
+import { createServerApi } from "@relay/project-runtime/backend/server";
+import { invariant } from "@relay/core/shared/errors";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { outputOptions } from "../context.js";
 import { cliConfiguration } from "../configuration.js";

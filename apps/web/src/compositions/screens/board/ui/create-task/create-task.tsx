@@ -117,12 +117,12 @@ export const CreateTask = (props: CreateTaskProps) => {
         <fieldset className={styles.fields} disabled={form.submitting}>
           <Stack gap="lg">
             {isDefined(contextLabel) && (
-              <Alert color="indigo" variant="light" title="Задача для этапа">
+              <Alert color="gray" variant="light" title="Задача для этапа">
                 {contextLabel}
               </Alert>
             )}
             {isDefined(draft) && (
-              <Alert variant="light" color="indigo" title="Черновик восстановлен">
+              <Alert variant="light" color="gray" title="Черновик восстановлен">
                 <Button
                   variant="subtle"
                   size="xs"

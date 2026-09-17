@@ -1,8 +1,8 @@
 import { Catch, HttpException, Logger } from "@nestjs/common";
 import type { ArgumentsHost, ExceptionFilter } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
-import type { ApiFailure } from "@tasks/contracts";
-import { AppError, asAppError } from "@tasks/core/shared/errors";
+import type { ApiFailure } from "@relay/contracts";
+import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
   "REVISION_CONFLICT",

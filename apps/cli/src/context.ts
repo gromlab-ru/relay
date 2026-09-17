@@ -1,9 +1,9 @@
 import type { Command } from "commander";
 import type { Readable, Writable } from "node:stream";
-import type { MutationOptions } from "@tasks/core/application/tasks/service";
+import type { MutationOptions } from "@relay/core/application/tasks/service";
 import type { Result, OutputFormat } from "./queries/result.js";
-import { actorSchema, parse } from "@tasks/core/domain/validation";
-import { invariant } from "@tasks/core/shared/errors";
+import { actorSchema, parse } from "@relay/core/domain/validation";
+import { invariant } from "@relay/core/shared/errors";
 import { connectBackend } from "./backend/connect.js";
 import type { Backend, TasksBackend, WorkspaceInfo } from "./backend/types.js";
 import { InputReader } from "./input.js";

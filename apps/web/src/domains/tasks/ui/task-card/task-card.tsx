@@ -73,7 +73,7 @@ export const TaskCard = (props: TaskCardProps) => {
         </Badge>
       )}
       {isRunning && (
-        <Badge size="xs" variant="light" color="indigo">
+        <Badge size="xs" variant="light" color="gray">
           Агент работает
         </Badge>
       )}
@@ -121,7 +121,7 @@ export const TaskCard = (props: TaskCardProps) => {
           <Tooltip label={task.assignee}>
             <Avatar
               size={22}
-              color="indigo"
+              color="gray"
               radius="xl"
               role="img"
               aria-label={`Исполнитель: ${task.assignee}`}

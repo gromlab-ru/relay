@@ -2,8 +2,8 @@
 import { Command, CommanderError } from "commander";
 import manifest from "#manifest" with { type: "json" };
 import { startMcp } from "./server.js";
-import { DEFAULT_MCP_PORT } from "@tasks/core/domain/config";
-import { asAppError } from "@tasks/core/shared/errors";
+import { DEFAULT_MCP_PORT } from "@relay/core/domain/config";
+import { asAppError } from "@relay/core/shared/errors";
 
 const command = new Command("relay-mcp")
   .description("Общий HTTP MCP-сервер задач для одного проекта или реестра проектов")

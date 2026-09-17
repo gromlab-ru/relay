@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { configSchema } from "@tasks/core/domain/config";
-import { taskFieldsSchema, taskSchema } from "@tasks/core/domain/task";
-import { commentSchema, MAX_COMMENT_BYTES } from "@tasks/core/domain/comment";
-import { logSchema, MAX_REPORT_BYTES } from "@tasks/core/domain/log";
-import { actorSchema, taskIdSchema, text } from "@tasks/core/domain/validation";
-import { requestIdSchema } from "@tasks/core/application/record-request";
+import { configSchema } from "@relay/core/domain/config";
+import { taskFieldsSchema, taskSchema } from "@relay/core/domain/task";
+import { commentSchema, MAX_COMMENT_BYTES } from "@relay/core/domain/comment";
+import { logSchema, MAX_REPORT_BYTES } from "@relay/core/domain/log";
+import { actorSchema, taskIdSchema, text } from "@relay/core/domain/validation";
+import { requestIdSchema } from "@relay/core/application/record-request";
 import {
   taskListQuerySchema,
   taskListDataSchema,
@@ -12,18 +12,18 @@ import {
   taskLinksDataSchema,
   taskTreeDataSchema,
   groupDataSchema,
-} from "@tasks/core/application/queries/project";
-import { overviewQuerySchema, overviewDataSchema } from "@tasks/core/application/queries/overview";
-import { boardQuerySchema } from "@tasks/core/application/queries/tasks";
-import { commentQuerySchema, logQuerySchema } from "@tasks/core/application/queries/records";
-import { API_CONTRACT_VERSION } from "@tasks/contracts";
-import { projectRecordSchema, saveProjectRecordSchema } from "@tasks/core/domain/project";
+} from "@relay/core/application/queries/project";
+import { overviewQuerySchema, overviewDataSchema } from "@relay/core/application/queries/overview";
+import { boardQuerySchema } from "@relay/core/application/queries/tasks";
+import { commentQuerySchema, logQuerySchema } from "@relay/core/application/queries/records";
+import { API_CONTRACT_VERSION } from "@relay/contracts";
+import { projectRecordSchema, saveProjectRecordSchema } from "@relay/core/domain/project";
 import {
   projectStateSchema,
   contextSchema as projectContextSchema,
   briefingSchema,
   changesSchema,
-} from "@tasks/core/application/project/queries";
+} from "@relay/core/application/project/queries";
 
 const fields = taskFieldsSchema.omit({ rank: true });
 const writableFields = fields.extend({

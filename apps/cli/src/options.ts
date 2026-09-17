@@ -3,8 +3,8 @@ import type { Command } from "commander";
 import type { PageOptions } from "./queries/pagination.js";
 import type { CommandContext } from "./context.js";
 import { randomUUID } from "node:crypto";
-import { requestIdSchema } from "@tasks/core/application/record-request";
-import { parse } from "@tasks/core/domain/validation";
+import { requestIdSchema } from "@relay/core/application/record-request";
+import { parse } from "@relay/core/domain/validation";
 
 export interface RequestOptions {
   requestId?: string;

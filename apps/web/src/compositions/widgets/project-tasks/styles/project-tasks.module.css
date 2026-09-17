@@ -16,7 +16,7 @@
   font-size: 0.8125rem;
 
   &:hover {
-    color: var(--mantine-color-indigo-text);
+    background: var(--tasks-subtle);
   }
 }
 
