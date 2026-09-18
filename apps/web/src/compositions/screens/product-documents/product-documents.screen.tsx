@@ -18,7 +18,7 @@ import styles from "./styles/product-documents.module.css";
  *  - создания и открытия документа с сохранением фильтров каталога
  */
 export const ProductDocumentsScreen = () => {
-  const { snapshot } = useProductDemo();
+  const { snapshot, scopes } = useProductDemo();
   const base = useProductPath();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
@@ -31,7 +31,7 @@ export const ProductDocumentsScreen = () => {
     ? requestedScope
     : "all";
   const sort = searchParams.get("sort") === "name" ? "name" : "updated";
-  const documentItems = filterDocuments(snapshot.documentation, query, kind, scope).sort(
+  const documentItems = filterDocuments(snapshot.documentation, query, kind, scope, scopes).sort(
     (left, right) =>
       sort === "name"
         ? left.name.localeCompare(right.name, "ru")
@@ -39,8 +39,9 @@ export const ProductDocumentsScreen = () => {
   );
   const filterItems = DOCUMENT_FILTERS.map((entry) => ({
     ...entry,
-    count: snapshot.documentation.filter((document) => matchesDocumentScope(document, entry.value))
-      .length,
+    count: snapshot.documentation.filter((document) =>
+      matchesDocumentScope(document, entry.value, scopes),
+    ).length,
     isActive: scope === entry.value,
     variant: scope === entry.value ? "default" : "subtle",
   }));
@@ -177,7 +178,7 @@ export const ProductDocumentsScreen = () => {
         </ul>
         <p className={styles.note}>
           <Library size={15} aria-hidden="true" />
-          Документы хранятся в этой вкладке. Метки областей показывают макет будущих связей.
+          Продуктовые документы связаны с общими требованиями и реализациями приложений.
         </p>
       </div>
     </ProductPage>

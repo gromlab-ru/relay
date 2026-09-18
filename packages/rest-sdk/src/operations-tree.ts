@@ -29,6 +29,14 @@ import { getLogForProject } from "./operations/get-log-for-project.js";
 import { getLog } from "./operations/get-log.js";
 import { getOverviewForProject } from "./operations/get-overview-for-project.js";
 import { getOverview } from "./operations/get-overview.js";
+import { getProductContextForProject } from "./operations/get-product-context-for-project.js";
+import { getProductContext } from "./operations/get-product-context.js";
+import { getProductOverviewForProject } from "./operations/get-product-overview-for-project.js";
+import { getProductOverview } from "./operations/get-product-overview.js";
+import { getProductRecordsForProject } from "./operations/get-product-records-for-project.js";
+import { getProductRecords } from "./operations/get-product-records.js";
+import { getProductStateForProject } from "./operations/get-product-state-for-project.js";
+import { getProductState } from "./operations/get-product-state.js";
 import { getProjectContextForProject } from "./operations/get-project-context-for-project.js";
 import { getProjectContext } from "./operations/get-project-context.js";
 import { getProjectStateForProject } from "./operations/get-project-state-for-project.js";
@@ -57,6 +65,8 @@ import { listTasksForProject } from "./operations/list-tasks-for-project.js";
 import { listTasks } from "./operations/list-tasks.js";
 import { moveTaskForProject } from "./operations/move-task-for-project.js";
 import { moveTask } from "./operations/move-task.js";
+import { mutateProductForProject } from "./operations/mutate-product-for-project.js";
+import { mutateProduct } from "./operations/mutate-product.js";
 import { registerProject } from "./operations/register-project.js";
 import { releaseTaskForProject } from "./operations/release-task-for-project.js";
 import { releaseTask } from "./operations/release-task.js";
@@ -137,6 +147,18 @@ export const operationsTree = {
     getTaskBriefingForProject: getTaskBriefingForProject,
     getCheckpointChangesForProject: getCheckpointChangesForProject,
     saveProjectRecordForProject: saveProjectRecordForProject,
+  },
+  product: {
+    getProductState: getProductState,
+    getProductOverview: getProductOverview,
+    getProductRecords: getProductRecords,
+    mutateProduct: mutateProduct,
+    getProductContext: getProductContext,
+    getProductStateForProject: getProductStateForProject,
+    getProductOverviewForProject: getProductOverviewForProject,
+    getProductRecordsForProject: getProductRecordsForProject,
+    mutateProductForProject: mutateProductForProject,
+    getProductContextForProject: getProductContextForProject,
   },
   comments: {
     listComments: listComments,

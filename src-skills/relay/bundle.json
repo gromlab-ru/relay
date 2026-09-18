@@ -13,6 +13,7 @@
   "documents": {
     "docs/reference/CONFIGURATION.md": "references/CONFIGURATION.md",
     "docs/reference/MCP.md": "references/MCP.md",
+    "docs/reference/PRODUCT.md": "references/PRODUCT.md",
     "docs/guides/LIFECYCLE.md": "references/LIFECYCLE.md"
   },
   "generated": {
@@ -33,6 +34,8 @@
     "apps/cli/src/program.ts",
     "apps/mcp/src/tools.ts",
     "packages/core/src/domain/project.ts",
+    "packages/core/src/domain/product.ts",
+    "packages/core/src/application/product",
     "packages/core/src/domain/config.ts",
     "packages/core/src/application/project"
   ]

@@ -1,7 +1,7 @@
-import { Badge, Button, Text } from "@mantine/core";
-import { ArrowRight, Pencil, Plus, Flag } from "lucide-react";
+import { Anchor, Button, Text } from "@mantine/core";
+import { ArrowRight, Pencil, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getFeatureStatus, useProductDemo } from "domains/product-demo";
+import { getFeatureStatus, getRelatedDocuments, useProductDemo } from "domains/product-demo";
 import { ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
@@ -27,10 +27,7 @@ export const ProductPassportScreen = () => {
   const noneCount = snapshot.features.filter(
     (feature) => getFeatureStatus(feature) === "none",
   ).length;
-  const currentPlan = snapshot.work.find(
-    (work) => work.kind === "plan" && work.status === "active",
-  );
-  const hasCurrentPlan = currentPlan !== undefined;
+  const relatedDocuments = getRelatedDocuments(snapshot, [JSON.stringify({ kind: "product" })]);
   if (isEmpty)
     return (
       <ProductPage
@@ -114,27 +111,24 @@ export const ProductPassportScreen = () => {
               <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </section>
-          {hasCurrentPlan && (
-            <section className={styles.panel}>
-              <Badge color="gray" variant="light" size="sm">
-                Текущий цикл
-              </Badge>
-              <h2 className={styles.planTitle}>
-                <Flag size={16} aria-hidden="true" />
-                {currentPlan.name}
-              </h2>
-              <Text size="sm" c="dimmed">
-                {currentPlan.summary}
-              </Text>
-              <Link to={`${base}/work/${currentPlan.id}`} className={styles.appLink}>
-                Открыть план
-                <ArrowRight size={14} aria-hidden="true" />
-              </Link>
-            </section>
-          )}
+          <section className={styles.panel} aria-label="Документы продукта">
+            <h2 className={styles.panelTitle}>Документы продукта</h2>
+            <ul>
+              {relatedDocuments.map((document) => (
+                <li key={document.id}>
+                  <Anchor
+                    component={Link}
+                    c="var(--mantine-color-text)"
+                    to={`${base}/documents/${document.id}`}
+                  >
+                    {document.name}
+                  </Anchor>
+                </li>
+              ))}
+            </ul>
+          </section>
           <Text size="xs" c="dimmed" lh={1.7}>
-            Фича готова, когда готовы все её сценарии. Текущие доработки и результаты задач видны
-            отдельно.
+            Фича готова, когда готовы все её сценарии и общие контракты участвующих приложений.
           </Text>
         </aside>
       </div>

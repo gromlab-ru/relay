@@ -1,4 +1,13 @@
 /** Публичные переносимые DTO. Здесь нет импортов Core, NestJS, Node.js или React. */
+export type {
+  ProductStatus,
+  ProductReference,
+  ProductContract,
+  ProductFields,
+  ProductRecord,
+  ProductReadiness,
+  ProductState,
+} from "./product.js";
 export const API_PREFIX = "/api/v1";
 export const API_CONTRACT_VERSION = 1 as const;
 export const API_DOCS_PATH = "/api/docs";

@@ -1,9 +1,8 @@
-import { Accordion, Badge, Button, Group, Text } from "@mantine/core";
+import { Accordion, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { useProductDemo } from "domains/product-demo";
+import { getRelatedDocuments, useProductDemo } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
-import { ProductWorkList } from "compositions/widgets/product-work-list";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { ApplicationFeatures } from "./ui/application-features";
@@ -18,8 +17,12 @@ import styles from "./styles/product-application.module.css";
 export const ProductApplicationScreen = () => {
   const { applicationId } = useParams();
   const location = useLocation();
-  const { snapshot } = useProductDemo();
+  const { snapshot, scopes } = useProductDemo();
   const base = useProductPath();
+  const relatedScopeIds = scopes
+    .filter((scope) => scope.applicationId === applicationId)
+    .map((scope) => scope.id);
+  const relatedDocuments = getRelatedDocuments(snapshot, relatedScopeIds);
   const applicationData = snapshot.applications.find(
     (application) => application.id === applicationId,
   );
@@ -84,7 +87,25 @@ export const ProductApplicationScreen = () => {
         </Accordion>
         <ApplicationFeatures applicationId={applicationData.id} />
       </div>
-      <ProductWorkList applicationId={applicationData.id} />
+      <section aria-label="Документы приложения">
+        <Text component="h2" size="lg" fw={600} mt="xl" mb="sm">
+          Документы приложения и его реализаций
+        </Text>
+        <ul>
+          {relatedDocuments.map((document) => (
+            <li key={document.id}>
+              <Anchor
+                component={Link}
+                c="var(--mantine-color-text)"
+                to={`${base}/documents/${document.id}`}
+                state={{ returnTo: location.pathname }}
+              >
+                {document.name}
+              </Anchor>
+            </li>
+          ))}
+        </ul>
+      </section>
     </ProductPage>
   );
 };

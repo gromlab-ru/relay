@@ -10,6 +10,7 @@ import type { validateWorkspace } from "@relay/core/application/validate";
 import type { Workspace } from "@relay/core/storage/workspace";
 import type { LifecycleQueries } from "@relay/core/application/project/queries";
 import type { ProjectService } from "@relay/core/application/project/service";
+import type { ProductQueries } from "@relay/core/application/product/queries";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -41,6 +42,7 @@ export interface TasksBackend {
 }
 
 export interface Backend {
+  product: Pick<ProductQueries, "state" | "mutate" | "overview" | "list" | "context">;
   lifecycle: Pick<LifecycleQueries, "state" | "context" | "briefing" | "changes"> &
     Pick<ProjectService, "save">;
   kind: "local" | "http";

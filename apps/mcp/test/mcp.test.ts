@@ -66,6 +66,37 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   return { ...body, isError: result.isError };
 }
 
+test("продукт доступен агенту через API и изолирован между областями", async (t) => {
+  const app = await setup(t);
+  const { configPath } = await initializeRegistry(app.root);
+  await registerProject(configPath, "a", { path: "a" });
+  await registerProject(configPath, "b", { path: "b" });
+  const server = await app.start();
+  const client = await app.connect(server.url);
+  const args = {
+    project: "a",
+    actor: "agent",
+    command: {
+      action: "create",
+      requestId: "passport",
+      fields: {
+        kind: "passport",
+        name: "Продукт",
+        summary: "Назначение",
+        description: "## Цель\n\nПрямой Markdown",
+      },
+    },
+  };
+  const saved = await call(client, "product_save", args);
+  assert.equal(saved.ok, true);
+  assert.deepEqual((await call(client, "product_save", args)).data, saved.data);
+  const list = await call(client, "product_list", { project: "a", kind: "passport" });
+  assert.equal(list.ok, true);
+  assert.equal(list.data?.total, 1);
+  assert.equal((await call(client, "product_list", { project: "b" })).data?.total, 0);
+  assert.equal((await call(client, "product_context", { project: "a" })).ok, true);
+});
+
 test("агентский контекст, поручения и проектные записи изолированы между проектами", async (t) => {
   const app = await setup(t);
   const { configPath } = await initializeRegistry(app.root);

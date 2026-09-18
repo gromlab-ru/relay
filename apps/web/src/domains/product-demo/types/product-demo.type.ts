@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { ProductDocumentationInput } from "./documentation.type";
+import type { DocumentationScope } from "./documentation.type";
 import type {
   DEMO_MODE_SCHEMA,
   PRODUCT_DOCUMENT_SCHEMA,
@@ -59,6 +60,8 @@ export type ProductSaveResult =
   | { /** Отказ с сохранением ввода. */ isSaved: false; /** Объяснение. */ message: string };
 /** Контракт области продуктового прототипа. */
 export type ProductDemoContextValue = {
+  /** Реальные цели связей текущего продукта. */
+  scopes: DocumentationScope[];
   /** Актуальный снимок. */
   snapshot: ProductSnapshot;
   /** Сценарий интерфейса. */

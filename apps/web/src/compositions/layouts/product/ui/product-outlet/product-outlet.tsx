@@ -1,4 +1,4 @@
-import { Button } from "@mantine/core";
+import { Alert, Button } from "@mantine/core";
 import { Outlet } from "react-router-dom";
 import { useProductDemo } from "domains/product-demo";
 import { StatePanel } from "ui/state-panel";
@@ -10,27 +10,32 @@ import { StatePanel } from "ui/state-panel";
  *  - проверки загрузки, ошибки чтения и восстановления данных
  */
 export const ProductOutlet = () => {
-  const { mode, setMode } = useProductDemo();
+  const { mode, notice, setMode } = useProductDemo();
+  const hasNotice = notice !== "";
   if (mode === "loading")
     return (
       <StatePanel
         isLoading
         title="Загружаем продукт"
         description="Собираем паспорт, фичи и приложения."
-        action={
-          <Button variant="default" onClick={() => setMode("filled")}>
-            Завершить загрузку
-          </Button>
-        }
       />
     );
   if (mode === "read-error")
     return (
       <StatePanel
         title="Не удалось прочитать продукт"
-        description="Проверочная ошибка чтения. Локальные изменения сохранены."
+        description="Проверьте соединение с сервером. Несохранённый ввод остаётся в черновике."
         action={<Button onClick={() => setMode("filled")}>Повторить загрузку</Button>}
       />
     );
-  return <Outlet />;
+  return (
+    <>
+      {hasNotice && (
+        <Alert color="orange" title="Проверьте актуальность реализации" m="lg">
+          {notice}
+        </Alert>
+      )}
+      <Outlet />
+    </>
+  );
 };

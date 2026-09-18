@@ -1,190 +1,188 @@
-import { useEffect, useRef, useState } from "react";
-import { readDemoSession, refreshDemoSession, writeDemoSession } from "../../adapters/demo-session";
-import { createSnapshot } from "../../helpers/create-snapshot";
-import { updateDocument } from "../../helpers/update-document";
-import { updateApplicationScope } from "../../helpers/update-application-scope";
-import { validateApplicationScope } from "../../helpers/validate-application-scope";
-import { DOCUMENTATION_INPUT_SCHEMA } from "../../config/documentation.schema";
-import type { ProductDocumentationInput } from "../../types/documentation.type";
+import { useRef } from "react";
+import { productError, saveProduct, useProduct, PRODUCT_LINK_SCHEMA } from "domains/product";
+import type { ProductCommand, ProductInput, ProductLink } from "domains/product";
+import { createProductView } from "../../helpers/create-product-view";
 import { ProductDemoContext } from "./product-demo-context";
-import type { DemoSession } from "../../adapters/demo-session";
+import type { ProductDocumentationInput } from "../../types/documentation.type";
 import type {
   DemoMode,
   ProductDocumentInput,
   ProductContributionInput,
-  ProductSnapshot,
   ProductSaveResult,
 } from "../../types/product-demo.type";
 import type { ProductDemoProviderProps } from "./types/product-demo-provider-props.type";
 
+/** Типы приложений постоянного контракта. */
+const APPLICATION_TYPES = {
+  Фронтенд: "frontend",
+  Бэкенд: "backend",
+  "Внутренний инструмент": "internal",
+} as const;
+
 /**
- * Подключает единую моковую модель продукта в рамках текущего проекта.
+ * Подключает постоянный продукт к существующим экранам.
  *
  * Используется для:
- *  - согласованного чтения паспорта, фич, приложений и работы
- *  - сохранения локальных правок между переходами и обновлениями страницы
+ *  - проекции общих серверных данных и реальных связей
+ *  - сохранения редакторов с исходной версией и безопасным повтором
  */
 export const ProductDemoProvider = (props: ProductDemoProviderProps) => {
   const { scopeId, children } = props;
-  const [initialData] = useState(() => readDemoSession(scopeId));
-  const [session, setSession] = useState(initialData.session);
-  const [notice, setNotice] = useState(initialData.notice);
-  const sessionRef = useRef(session);
-  useEffect(() => {
-    const refreshed = refreshDemoSession(sessionRef.current);
-    if (refreshed !== sessionRef.current) {
-      sessionRef.current = refreshed;
-      setSession(refreshed);
-      setNotice(
-        "Стандартные примеры вкладов дополнены Markdown-описаниями реализации и проверок. Ваши правки сохранены.",
-      );
-    }
-    if (!writeDemoSession(scopeId, refreshed))
-      setNotice("Хранилище вкладки недоступно. Изменения живут до обновления страницы.");
-  }, [scopeId]);
+  const query = useProduct(scopeId);
+  const requestsRef = useRef(new Map<string, string>());
+  const state = query.data;
+  const view = createProductView(
+    state ?? { productId: scopeId, version: "0", records: [], readiness: [] },
+  );
+  const mode: DemoMode = query.error ? "read-error" : state === undefined ? "loading" : "filled";
+  const hasStaleImplementations = state?.readiness.some((entry) => entry.stale > 0) ?? false;
+  const notice = hasStaleImplementations
+    ? "Требования изменились. Ранее выполненные реализации требуют переподтверждения в составе приложений."
+    : "";
+
   /**
-   * Публикует снимок для последовательных локальных действий.
+   * Проверяет версию формы до отправки и сохраняет requestId при сетевом отказе.
    */
-  const publishSession = (nextSession: DemoSession): void => {
-    sessionRef.current = nextSession;
-    setSession(nextSession);
-  };
-  /**
-   * Переключает сценарий, сохраняя независимые наборы данных.
-   */
-  const setMode = (mode: DemoMode): void => {
-    const currentSession = sessionRef.current;
-    const bucket = mode === "filled" || mode === "empty" ? mode : currentSession.bucket;
-    const nextSession = { ...currentSession, mode, bucket };
-    if (!writeDemoSession(scopeId, nextSession))
-      setNotice("Хранилище вкладки недоступно. Изменения живут до обновления страницы.");
-    publishSession(nextSession);
-  };
-  /**
-   * Возвращает общий отказ сохранения, сохраняя ввод у владельца формы.
-   */
-  const getSaveError = (revision: number): string => {
-    const currentSession = sessionRef.current;
-    if (currentSession.mode === "save-error") {
-      setMode(currentSession.bucket);
-      return "Проверочная ошибка сохранения. Ввод остался в черновике. Повторите сохранение.";
-    }
-    if (revision !== currentSession[currentSession.bucket].revision)
-      return "Данные изменились. Выберите, с какой версией продолжить; ваш ввод сохранён.";
-    return "";
-  };
-  /**
-   * Публикует полностью подготовленное изменение только после локальной записи.
-   */
-  const persistSnapshot = (snapshot: ProductSnapshot, id: string): ProductSaveResult => {
-    const currentSession = sessionRef.current;
-    const nextSession = { ...currentSession, [currentSession.bucket]: snapshot };
-    if (!writeDemoSession(scopeId, nextSession))
+  const persist = async (
+    fields: ProductInput,
+    id: string,
+    revision: number,
+  ): Promise<ProductSaveResult> => {
+    if (state === undefined || revision !== view.snapshot.revision)
       return {
         isSaved: false,
-        message:
-          "Браузер не разрешил локальное сохранение. Ввод остаётся в форме; повторите попытку.",
+        message: "Продукт изменился после чтения. Сохраните ввод и загрузите актуальную версию.",
       };
-    publishSession(nextSession);
-    setNotice("");
-    return { isSaved: true, id };
+    const previous = state.records.find((record) => record.id === id);
+    if (id !== "" && previous === undefined)
+      return { isSaved: false, message: "Редактируемая запись больше не существует." };
+    const operation = {
+      action: previous === undefined ? ("create" as const) : ("update" as const),
+      ...(previous === undefined ? {} : { id: previous.id, ifRevision: previous.revision }),
+      fields,
+      ifVersion: state.version,
+    };
+    const fingerprint = JSON.stringify(operation);
+    const requestId = requestsRef.current.get(fingerprint) ?? crypto.randomUUID();
+    requestsRef.current.set(fingerprint, requestId);
+    const command: ProductCommand = { ...operation, requestId };
+    try {
+      const saved = await saveProduct(scopeId, command);
+      await query.mutate().catch(() => undefined);
+      requestsRef.current.delete(fingerprint);
+      return { isSaved: true, id: saved.id };
+    } catch (error) {
+      return { isSaved: false, message: productError(error) };
+    }
   };
+
   /**
-   * Сохраняет описание документа, не меняя состав реализации приложений.
+   * Сохраняет содержание без ручного статуса общего сценария.
    */
   const saveDocument = async (
     input: ProductDocumentInput,
     revision: number,
   ): Promise<ProductSaveResult> => {
-    const error = getSaveError(revision);
-    if (error !== "") return { isSaved: false, message: error };
-    const currentSession = sessionRef.current;
-    const currentSnapshot = currentSession[currentSession.bucket];
-    if (
-      input.kind === "scenarios" &&
-      !currentSnapshot.features.some((feature) => feature.id === input.featureId)
-    )
-      return { isSaved: false, message: "Родительская фича больше не существует. Ввод сохранён." };
-    const id = input.id || crypto.randomUUID();
-    return persistSnapshot(updateDocument(currentSnapshot, { ...input, id }), id);
+    const common = { name: input.name, summary: input.summary, description: input.description };
+    if (input.kind === "passport")
+      return persist({ kind: "passport", ...common }, input.id, revision);
+    if (input.kind === "features")
+      return persist({ kind: "feature", ...common }, input.id, revision);
+    if (input.kind === "scenarios")
+      return persist(
+        {
+          kind: "scenario",
+          featureId: input.featureId,
+          name: input.name,
+          description: input.description,
+        },
+        input.id,
+        revision,
+      );
+    const type =
+      Object.entries(APPLICATION_TYPES).find(([label]) => label === input.type)?.[1] ?? "frontend";
+    return persist({ kind: "application", ...common, type }, input.id, revision);
   };
+
   /**
-   * Сохраняет материал библиотеки; моковые области не создают связей с другими сущностями.
+   * Сохраняет документ и независимые типизированные ссылки одной операцией.
    */
   const saveDocumentation = async (
     input: ProductDocumentationInput,
     revision: number,
   ): Promise<ProductSaveResult> => {
-    const error = getSaveError(revision);
-    if (error !== "") return { isSaved: false, message: error };
-    const parsed = DOCUMENTATION_INPUT_SCHEMA.safeParse(input);
-    if (!parsed.success || input.name.trim() === "" || input.body.trim() === "")
-      return { isSaved: false, message: "Укажите название и текст документа." };
-    const current = sessionRef.current[sessionRef.current.bucket];
-    if (input.id !== "" && !current.documentation.some((entry) => entry.id === input.id))
-      return { isSaved: false, message: "Документ больше не существует. Ваш ввод сохранён." };
-    const id = input.id || crypto.randomUUID();
-    const document = {
-      ...parsed.data,
-      id,
-      name: input.name.trim(),
-      summary: input.summary.trim(),
-      updatedAt: new Date().toISOString(),
-    };
-    const documentation =
-      input.id === ""
-        ? [document, ...current.documentation]
-        : current.documentation.map((entry) => (entry.id === id ? document : entry));
-    return persistSnapshot({ ...current, documentation, revision: current.revision + 1 }, id);
+    let links: ProductLink[];
+    try {
+      links = input.scopeIds.map((id) => PRODUCT_LINK_SCHEMA.parse(JSON.parse(id)));
+    } catch {
+      return {
+        isSaved: false,
+        message: "Связи черновика устарели. Выберите области из текущего продукта.",
+      };
+    }
+    return persist(
+      {
+        kind: "document",
+        name: input.name,
+        summary: input.summary,
+        body: input.body,
+        documentKind: input.kind,
+        links,
+      },
+      input.id,
+      revision,
+    );
   };
+
   /**
-   * Атомарно сохраняет выбранные фичи, сценарии и описания вклада одного приложения.
+   * Атомарно заменяет состав одного приложения; ядро сохраняет идентичность контрактов.
    */
   const saveApplicationScope = async (
     applicationId: string,
     contributions: ProductContributionInput[],
     revision: number,
   ): Promise<ProductSaveResult> => {
-    const error = getSaveError(revision);
-    if (error !== "") return { isSaved: false, message: error };
-    const currentSession = sessionRef.current;
-    const currentSnapshot = currentSession[currentSession.bucket];
-    const validationError = validateApplicationScope(currentSnapshot, applicationId, contributions);
-    if (validationError !== "") return { isSaved: false, message: validationError };
-    return persistSnapshot(
-      updateApplicationScope(currentSnapshot, applicationId, contributions),
-      applicationId,
+    const scope = state?.records.find(
+      (record) => record.fields.kind === "scope" && record.fields.applicationId === applicationId,
     );
+    const contracts = contributions.flatMap((entry) => [
+      {
+        featureId: entry.featureId,
+        scenarioId: null,
+        title: entry.title,
+        description: entry.description,
+        status: entry.status,
+      },
+      ...entry.scenarios.map((scenario) => ({
+        featureId: entry.featureId,
+        scenarioId: scenario.scenarioId,
+        title: scenario.title,
+        description: scenario.description,
+        status: scenario.status,
+      })),
+    ]);
+    return persist({ kind: "scope", applicationId, contracts }, scope?.id ?? "", revision);
   };
+
   /**
-   * Восстанавливает исходный продукт и инвалидирует предыдущие черновики.
+   * Повторяет реальное чтение после отказа.
    */
-  const reset = (): void => {
-    const nextSession: DemoSession = {
-      filled: createSnapshot(),
-      empty: createSnapshot(true),
-      bucket: "filled",
-      mode: "filled",
-    };
-    const isStored = writeDemoSession(scopeId, nextSession);
-    setNotice(
-      isStored
-        ? "Исходные данные восстановлены."
-        : "Исходные данные восстановлены. Хранилище вкладки недоступно.",
-    );
-    publishSession(nextSession);
+  const retry = (): void => {
+    void query.mutate();
   };
+
   return (
     <ProductDemoContext
       value={{
-        snapshot: session[session.bucket],
-        mode: session.mode,
+        snapshot: view.snapshot,
+        scopes: view.scopes,
+        mode,
         notice,
-        setMode,
+        setMode: retry,
+        reset: retry,
         saveDocument,
         saveDocumentation,
         saveApplicationScope,
-        reset,
       }}
     >
       {children}

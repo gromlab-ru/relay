@@ -14,6 +14,7 @@ export type {
   DocumentationScope,
 } from "./types/documentation.type";
 export { getFeatureStatus } from "./helpers/get-feature-status";
+export { getRelatedDocuments } from "./helpers/get-related-documents";
 export { getContributionTitle } from "./helpers/get-contribution-title";
 export {
   PRODUCT_STATUS_OPTIONS,

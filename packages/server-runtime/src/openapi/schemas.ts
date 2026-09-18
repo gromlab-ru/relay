@@ -1,4 +1,14 @@
 import { z } from "zod";
+import {
+  productStateSchema,
+  productMutationSchema,
+  productSavedSchema,
+  productContextSchema,
+  productContextQuerySchema,
+  productOverviewSchema,
+  productListSchema,
+  productListQuerySchema,
+} from "@relay/core/domain/product";
 import { configSchema } from "@relay/core/domain/config";
 import { taskFieldsSchema, taskSchema } from "@relay/core/domain/task";
 import { commentSchema, MAX_COMMENT_BYTES } from "@relay/core/domain/comment";
@@ -223,6 +233,14 @@ export const schemas = {
     replace: z.boolean().optional(),
   }),
   TaskListQuery: taskListQuerySchema,
+  ProductState: productStateSchema,
+  ProductMutation: productMutationSchema,
+  ProductSaved: productSavedSchema,
+  ProductContext: productContextSchema,
+  ProductContextQuery: productContextQuerySchema,
+  ProductOverview: productOverviewSchema,
+  ProductList: productListSchema,
+  ProductListQuery: productListQuerySchema,
   TaskListData: taskListDataSchema,
   TaskDocumentData: taskDocumentDataSchema,
   TaskMarkdownQuery: markdownQuerySchema,

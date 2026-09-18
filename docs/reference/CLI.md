@@ -623,3 +623,90 @@ npx @gromlab/relay-cli log search 1 --query "Контракт" --kind progress
 ```
 
 Далее: [вывод](OUTPUT.md), [ошибки](ERRORS.md), [сценарии оркестрации](../guides/ORCHESTRATION.md).
+
+## Продуктовые команды
+
+Новый домен описан в [справочнике продукта](PRODUCT.md). Markdown передаётся напрямую:
+`--description <markdown>` и `--body <markdown>` принимают многострочные строки, не пути.
+Для JSON-операции используется `--json`. Параметры `--name`, `--summary`, `--type`,
+`--feature`, `--links`, `--document-kind` задают содержание. `--if-revision` защищает запись,
+`--if-version` — прочитанный граф, `--request-id` — безопасный повтор.
+
+### product state
+
+Полный снимок, реальные ссылки и вычисленная готовность.
+
+### product overview
+
+Компактная карта без полных Markdown.
+
+### product list
+
+Поиск записей: `--kind`, `--q`, `--offset`, `--limit`. Ответ содержит `nextOffset`.
+
+### product get
+
+`product get <id>` читает одну запись и её ревизию.
+
+### product context
+
+`--id` выбирает фичу/сценарий, `--application` ограничивает реализацию приложением.
+
+### product validate
+
+Проверяет схемы и целостность продуктовых связей.
+
+### product save
+
+`--json` содержит операцию. `--description`/`--body` могут передать текст отдельно напрямую.
+
+### product passport create
+
+Создать паспорт: `--name`, `--summary`, `--description`.
+
+### product passport update
+
+Изменить паспорт: `passport` как ID, полное содержание и `--if-revision`.
+
+### product feature create
+
+Создать фичу: `--name`, `--summary`, `--description`.
+
+### product feature update
+
+Изменить фичу по ID и ревизии; изменение требований требует переподтверждения реализации.
+
+### product scenario create
+
+Создать сценарий: `--feature`, `--name`, `--description`. Ручного статуса нет.
+
+### product scenario update
+
+Изменить сценарий по ID и ревизии, сохранив его родительскую фичу.
+
+### product application create
+
+Создать приложение: название, описание и `--type frontend|backend|internal`.
+
+### product application update
+
+Изменить общие сведения приложения; состав реализации остаётся отдельной операцией.
+
+### product document create
+
+Создать документ: `--name`, `--body`, `--document-kind`, необязательные `--summary`, `--links`.
+
+### product document update
+
+Изменить документ и полный набор ссылок одной записью с проверкой ревизии.
+
+### product scope replace
+
+`<applicationId> --json '<массив контрактов>' --if-revision N --if-version VERSION`.
+Для нового состава ревизия 0, для существующего — прочитанная ревизия.
+
+### product contract update
+
+`<contractId> --application <id> --status none|partial|done --if-revision N --if-version VERSION`.
+Необязательные `--title` и `--description` меняют собственное описание контракта.
+Отметка `done` подтверждает актуальные требования только этого контракта.

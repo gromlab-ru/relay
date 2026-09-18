@@ -1,7 +1,6 @@
 import { ScrollRestoration } from "react-router-dom";
 import { useProjectId } from "domains/project";
 import { ProductDemoProvider } from "domains/product-demo";
-import { ProductControls } from "./ui/product-controls";
 import { ProductOutlet } from "./ui/product-outlet";
 
 /**
@@ -14,7 +13,6 @@ export const ProductLayout = () => {
   const projectId = useProjectId();
   return (
     <ProductDemoProvider key={projectId} scopeId={projectId}>
-      <ProductControls />
       <ProductOutlet />
       <ScrollRestoration
         getKey={(location) => location.pathname + location.search}

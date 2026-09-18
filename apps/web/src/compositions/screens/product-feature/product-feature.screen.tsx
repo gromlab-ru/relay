@@ -1,10 +1,14 @@
-import { Button, Group, Text } from "@mantine/core";
+import { Anchor, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { getFeatureStatus, ProductReadiness, useProductDemo } from "domains/product-demo";
+import {
+  getFeatureStatus,
+  getRelatedDocuments,
+  ProductReadiness,
+  useProductDemo,
+} from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductContributions } from "compositions/widgets/product-contributions";
-import { ProductWorkList } from "compositions/widgets/product-work-list";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { isEmptyArray } from "shared/value-predicates";
@@ -23,13 +27,12 @@ export const ProductFeatureScreen = () => {
   const { snapshot } = useProductDemo();
   const base = useProductPath();
   const featureData = snapshot.features.find((feature) => feature.id === featureId);
-  const currentWorkItems = snapshot.work.filter(
-    (work) =>
-      work.kind === "task" && work.status !== "done" && work.featureIds.includes(featureId ?? ""),
-  );
-  const workLabel = isEmptyArray(currentWorkItems)
-    ? "Текущих задач нет"
-    : `Текущая работа · ${currentWorkItems.length}`;
+  const relatedDocuments = getRelatedDocuments(snapshot, [
+    JSON.stringify({ kind: "feature", id: featureId }),
+    ...(featureData?.scenarios ?? []).map((scenario) =>
+      JSON.stringify({ kind: "scenario", id: scenario.id }),
+    ),
+  ]);
   const backTo = getProductReturn(location.state, `${base}/features${location.search}`, base);
   const backLabel = backTo.startsWith(`${base}/applications/`)
     ? "Назад к приложению"
@@ -70,11 +73,8 @@ export const ProductFeatureScreen = () => {
         <Group gap="md">
           <ProductReadiness status={getFeatureStatus(featureData)} label={readinessLabel} />
           <Text size="xs" c="dimmed">
-            Готовность по всем сценариям
+            Готовность по всем сценариям и контрактам приложений
           </Text>
-          <a href="#feature-work" className={styles.workLink}>
-            {workLabel}
-          </a>
         </Group>
       }
     >
@@ -90,7 +90,25 @@ export const ProductFeatureScreen = () => {
         </div>
         <ProductContributions featureId={featureData.id} />
       </div>
-      <ProductWorkList id="feature-work" featureId={featureData.id} />
+      <section aria-label="Документы фичи">
+        <Text component="h2" size="lg" fw={600} mt="xl" mb="sm">
+          Документы фичи и сценариев
+        </Text>
+        <ul>
+          {relatedDocuments.map((document) => (
+            <li key={document.id}>
+              <Anchor
+                component={Link}
+                c="var(--mantine-color-text)"
+                to={`${base}/documents/${document.id}`}
+                state={{ returnTo: location.pathname }}
+              >
+                {document.name}
+              </Anchor>
+            </li>
+          ))}
+        </ul>
+      </section>
     </ProductPage>
   );
 };

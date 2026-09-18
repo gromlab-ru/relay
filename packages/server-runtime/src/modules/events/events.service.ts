@@ -8,6 +8,8 @@ import { Observable, Subject } from "rxjs";
 import type { ServerEvent } from "@relay/contracts";
 import { TaskQueries } from "@relay/core/application/queries/tasks";
 import { ProjectRepository } from "@relay/core/storage/project";
+import { ProductRepository } from "@relay/core/storage/product";
+import { ProductService } from "@relay/core/application/product/service";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
@@ -23,6 +25,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private lastError: { code: string; message: string } | undefined;
   private storageRoot: string | undefined;
   private projectRoot: string | undefined;
+  private productRoot: string | undefined;
+  private productVersion: string | undefined;
   private debounce: NodeJS.Timeout | undefined;
   private poll: NodeJS.Timeout | undefined;
   private heartbeat: NodeJS.Timeout | undefined;
@@ -93,8 +97,13 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       if (this.stopped) return;
       this.storageRoot = workspace.root;
       this.projectRoot = new ProjectRepository(workspace).root;
+      this.productRoot = new ProductRepository(workspace).root;
       this.rebind();
       const { tasks, version } = await new TaskQueries(workspace).snapshot();
+      const product = await new ProductService(workspace).state();
+      if (this.productVersion !== undefined && this.productVersion !== product.version)
+        this.events.next({ type: "changed", data: { source: "storage" } });
+      this.productVersion = product.version;
       if (this.stopped) return;
       const fingerprints = new Map(
         [...tasks].map(([id, task]) => [
@@ -133,6 +142,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     const desired = new Set([
       configParent,
       ...(this.projectRoot ? [this.projectRoot] : []),
+      ...(this.productRoot ? [this.productRoot] : []),
       ...(this.storageRoot ? [this.storageRoot, dirname(this.storageRoot)] : []),
     ]);
     for (const [path, watcher] of this.watchers) {
@@ -149,6 +159,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
           if (
             name === undefined ||
             path === this.projectRoot ||
+            path === this.productRoot ||
+            (path === configParent && name === "product") ||
             (path === configParent && name === "project") ||
             (path === configParent && name === basename(this.workspace.options.configPath)) ||
             (path === this.storageRoot && (name.endsWith(".json") || name === basename(path))) ||

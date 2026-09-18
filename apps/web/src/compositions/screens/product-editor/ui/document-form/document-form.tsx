@@ -15,7 +15,7 @@ import { useForm } from "@mantine/form";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useBeforeUnload, useBlocker, useLocation, useNavigate } from "react-router-dom";
-import { APPLICATION_TYPES, PRODUCT_STATUS_OPTIONS, useProductDemo } from "domains/product-demo";
+import { APPLICATION_TYPES, useProductDemo } from "domains/product-demo";
 import { useProductPath } from "compositions/widgets/product-page";
 import { readSessionStored, writeSessionStored, removeSessionStored } from "infra/browser-storage";
 import { MarkdownField } from "ui/markdown-field";
@@ -120,10 +120,10 @@ export const DocumentForm = (props: DocumentFormProps) => {
       notifications.show({
         position: "top-center",
         autoClose: 2500,
-        title: "Сохранено в прототипе",
+        title: "Сохранено",
         message: isScenario
           ? "Сценарий сохранён. Готовность фичи пересчитана."
-          : "Описание обновлено в этой вкладке.",
+          : "Описание продукта обновлено.",
         color: "teal",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
       });
@@ -228,18 +228,15 @@ export const DocumentForm = (props: DocumentFormProps) => {
           )}
           {isFeature && (
             <Text size="sm" c="dimmed">
-              Готовность вычисляется автоматически по всем сценариям. Сценарии добавляются и
-              редактируются на странице фичи.
+              Готовность вычисляется по контрактам всех приложений и сценариям. Сценарии добавляются
+              и редактируются на странице фичи.
             </Text>
           )}
           {isScenario && (
-            <NativeSelect
-              key={form.key("status")}
-              label="Готовность сценария"
-              description="В моках статус задаётся вручную. Фича готова, когда готовы все её сценарии."
-              data={PRODUCT_STATUS_OPTIONS}
-              {...form.getInputProps("status")}
-            />
+            <Text size="sm" c="dimmed">
+              Сценарий готов, когда все участвующие приложения подтвердили реализацию его актуальных
+              требований.
+            </Text>
           )}
           {isApplication && (
             <NativeSelect

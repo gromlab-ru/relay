@@ -8,6 +8,7 @@ import { initialize } from "@relay/core/storage/workspace";
 import { initializeRegistry, registerProject } from "@relay/project-runtime/registry";
 import { startServer } from "@relay/server-runtime";
 import { ProjectService } from "@relay/core/application/project/service";
+import { ProductService } from "@relay/core/application/product/service";
 
 async function connect(url: string, project?: string) {
   const controller = new AbortController();
@@ -109,6 +110,35 @@ test(
     if (storage.type === "changed") assert(storage.data.taskIds?.includes(external.id));
   },
 );
+
+test("SSE замечает продуктовые записи, созданные через local Core", async (t) => {
+  const { app, workspace } = await fixture(t);
+  await app.listen(0, "127.0.0.1");
+  const stream = await connect(await app.getUrl());
+  t.after(() => stream.close());
+  await stream.next((event) => event.type === "connected");
+  await new ProductService(workspace).mutate(
+    {
+      action: "create",
+      requestId: "passport",
+      fields: {
+        kind: "passport",
+        name: "Новый продукт",
+        summary: "Назначение",
+        description: "Описание",
+      },
+    },
+    "cli",
+  );
+  const changed = await stream.next(
+    (event) => event.type === "changed" && event.data.source === "storage",
+  );
+  assert.equal(changed.type, "changed");
+  assert.equal(
+    (await app.inject("/api/v1/product/records?id=passport")).json().data.items[0].fields.name,
+    "Новый продукт",
+  );
+});
 
 test("SSE замечает проектные документы API и локального CLI", async (t) => {
   const { app, workspace } = await fixture(t);

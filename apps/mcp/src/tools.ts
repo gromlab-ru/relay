@@ -17,6 +17,11 @@ import { toLines, toText } from "@relay/core/domain/markdown";
 import { taskListQuerySchema } from "@relay/core/application/queries/project";
 import { overviewQuerySchema } from "@relay/core/application/queries/overview";
 import { requestIdSchema } from "@relay/core/application/record-request";
+import {
+  productMutationSchema,
+  productContextQuerySchema,
+  productListQuerySchema,
+} from "@relay/core/domain/product";
 import { projectEntrySchema, projectNameSchema } from "@relay/project-runtime/config";
 import type { Backend } from "@relay/project-runtime/backend/types";
 import type { Projects } from "./projects.js";
@@ -144,6 +149,45 @@ export function createTools(projects: Projects): Server {
       });
     });
   }
+
+  projectTool(
+    "product_overview",
+    "Компактная карта продукта и вычисленная готовность",
+    { ...selector },
+    true,
+    async (backend) => ({ data: await backend.product.overview() }),
+  );
+  projectTool(
+    "product_list",
+    "Записи продукта с поиском по Markdown и пагинацией",
+    { ...selector, ...productListQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.product.list(
+        productListQuerySchema.parse(
+          Object.fromEntries(
+            Object.entries(input).filter(([key]) => key !== "project" && key !== "maxBytes"),
+          ),
+        ),
+      ),
+    }),
+  );
+  projectTool(
+    "product_context",
+    "Паспорт, требования, реализации и документы выбранной области с причинами включения",
+    { ...selector, ...productContextQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.product.context({ id: input.id, applicationId: input.applicationId }),
+    }),
+  );
+  projectTool(
+    "product_save",
+    "Создать или изменить продуктовую запись. Markdown передаётся строкой; update требует revision, scope также ifVersion. Общих ручных статусов нет. Повторяйте тот же requestId после потери ответа.",
+    { ...selector, command: productMutationSchema, actor: actorSchema },
+    false,
+    async (backend, input) => ({ data: await backend.product.mutate(input.command, input.actor) }),
+  );
 
   define(
     "projects_list",

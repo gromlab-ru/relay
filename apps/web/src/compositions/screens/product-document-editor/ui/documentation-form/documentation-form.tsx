@@ -115,7 +115,7 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
         position: "top-center",
         autoClose: 2500,
         title: "Документ сохранён",
-        message: "Изменения доступны в этой вкладке прототипа.",
+        message: "Документ и его связи сохранены в продукте.",
         color: "gray",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
       });

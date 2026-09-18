@@ -45,5 +45,6 @@ class EventsController {
 @Module({
   controllers: [EventsController],
   providers: [EventsService, { provide: APP_INTERCEPTOR, useClass: MutationEventsInterceptor }],
+  exports: [EventsService],
 })
 export class EventsModule {}

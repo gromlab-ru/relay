@@ -9,6 +9,7 @@ import { openWorkspace } from "@relay/core/storage/workspace";
 import type { Backend } from "./types.js";
 import { LifecycleQueries } from "@relay/core/application/project/queries";
 import { ProjectService } from "@relay/core/application/project/service";
+import { ProductQueries } from "@relay/core/application/product/queries";
 
 export async function createLocalBackend(cwd: string, config?: string): Promise<Backend> {
   const workspace = await openWorkspace(cwd, config);
@@ -17,6 +18,7 @@ export async function createLocalBackend(cwd: string, config?: string): Promise<
   const lifecycle = new LifecycleQueries(workspace);
   return {
     kind: "local",
+    product: new ProductQueries(workspace),
     workspace,
     localWorkspace: workspace,
     lifecycle: {

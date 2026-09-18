@@ -21,6 +21,14 @@ import {
   changesSchema,
 } from "@relay/core/application/project/queries";
 import { projectRecordSchema, saveProjectRecordSchema } from "@relay/core/domain/project";
+import {
+  productStateSchema,
+  productSavedSchema,
+  productOverviewSchema,
+  productListSchema,
+  productListQuerySchema,
+  productContextSchema,
+} from "@relay/core/domain/product";
 
 const failureSchema = z.object({
   ok: z.literal(false),
@@ -140,6 +148,38 @@ export async function createHttpBackend(url: string, project?: string): Promise<
     );
   return {
     kind: "http",
+    product: {
+      state: async () =>
+        decode(productStateSchema, await call(() => api.product.getProductState())),
+      overview: async () =>
+        decode(productOverviewSchema, await call(() => api.product.getProductOverview())),
+      list: async (input = {}) =>
+        decode(
+          productListSchema,
+          await call(() =>
+            api.product.getProductRecords(defined(productListQuerySchema.parse(input))),
+          ),
+        ),
+      context: async (input = {}) =>
+        decode(
+          productContextSchema,
+          await call(() => api.product.getProductContext(defined(input))),
+        ),
+      mutate: async (input, actor) =>
+        decode(
+          productSavedSchema,
+          await call(
+            () =>
+              api.product.mutateProduct({
+                ...defined(input),
+                fields: defined(input.fields),
+                actor: input.actor ?? actor,
+              }),
+            "write",
+            input.requestId,
+          ),
+        ),
+    },
     workspace,
     lifecycle: {
       state: async () =>

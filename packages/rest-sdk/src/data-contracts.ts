@@ -1855,6 +1855,584 @@ export interface TaskListQuery {
   sort?: TaskListQuerySortEnum;
 }
 
+export interface ProductState {
+  productId: string;
+  version: string;
+  records: {
+    version: 1;
+    /** @minLength 1 */
+    productId: string;
+    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    fields:
+      | {
+          kind: "passport";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          description: string;
+        }
+      | {
+          kind: "feature";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          description: string;
+        }
+      | {
+          kind: "scenario";
+          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          featureId: string;
+          /** @minLength 1 */
+          name: string;
+          description: string;
+        }
+      | {
+          kind: "application";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          description: string;
+          type: ProductStateTypeEnum;
+        }
+      | {
+          kind: "scope";
+          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          applicationId: string;
+          /** @maxItems 10000 */
+          contracts: {
+            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            featureId: string;
+            scenarioId: string | null;
+            /** @minLength 1 */
+            title: string;
+            description: string;
+            status: ProductStateStatusEnum;
+            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            id: string;
+            active: boolean;
+            basis: string;
+          }[];
+        }
+      | {
+          kind: "document";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          body: string;
+          documentKind: ProductStateDocumentKindEnum;
+          /** @maxItems 1000 */
+          links: (
+            | {
+                kind: "product";
+              }
+            | {
+                kind: "feature";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+            | {
+                kind: "scenario";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+            | {
+                kind: "application";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+            | {
+                kind: "implementation";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                applicationId: string;
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+          )[];
+        };
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /** @maxLength 128 */
+    createdBy: string;
+    /** @maxLength 128 */
+    updatedBy: string;
+  }[];
+  readiness: {
+    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    status: ProductStateStatusEnum1;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    participants: number;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    stale: number;
+  }[];
+}
+
+export interface ProductMutation {
+  action: ProductMutationActionEnum;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  fields:
+    | {
+        kind: "passport";
+        /** @minLength 1 */
+        name: string;
+        summary: string;
+        description: string;
+      }
+    | {
+        kind: "feature";
+        /** @minLength 1 */
+        name: string;
+        summary: string;
+        description: string;
+      }
+    | {
+        kind: "scenario";
+        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        featureId: string;
+        /** @minLength 1 */
+        name: string;
+        description: string;
+      }
+    | {
+        kind: "application";
+        /** @minLength 1 */
+        name: string;
+        summary: string;
+        description: string;
+        type: ProductMutationTypeEnum;
+      }
+    | {
+        kind: "document";
+        /** @minLength 1 */
+        name: string;
+        summary: string;
+        body: string;
+        documentKind: ProductMutationDocumentKindEnum;
+        /** @maxItems 1000 */
+        links: (
+          | {
+              kind: "product";
+            }
+          | {
+              kind: "feature";
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              id: string;
+            }
+          | {
+              kind: "scenario";
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              id: string;
+            }
+          | {
+              kind: "application";
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              id: string;
+            }
+          | {
+              kind: "implementation";
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              applicationId: string;
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              id: string;
+            }
+        )[];
+      }
+    | {
+        kind: "scope";
+        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        applicationId: string;
+        /** @maxItems 10000 */
+        contracts: {
+          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          featureId: string;
+          scenarioId: string | null;
+          /** @minLength 1 */
+          title: string;
+          description: string;
+          status: ProductMutationStatusEnum;
+        }[];
+      }
+    | {
+        kind: "contract";
+        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        applicationId: string;
+        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        contractId: string;
+        status: ProductMutationStatusEnum1;
+        /** @minLength 1 */
+        title?: string;
+        description?: string;
+      };
+  /**
+   * @min 0
+   * @max 9007199254740991
+   */
+  ifRevision?: number;
+  ifVersion?: string;
+  /**
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** @maxLength 128 */
+  actor?: string;
+}
+
+export interface ProductSaved {
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id: string;
+  /**
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+}
+
+export interface ProductContext {
+  productId: string;
+  version: string;
+  records: {
+    record: {
+      version: 1;
+      /** @minLength 1 */
+      productId: string;
+      /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+      id: string;
+      /**
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      fields:
+        | {
+            kind: "passport";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            description: string;
+          }
+        | {
+            kind: "feature";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            description: string;
+          }
+        | {
+            kind: "scenario";
+            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            featureId: string;
+            /** @minLength 1 */
+            name: string;
+            description: string;
+          }
+        | {
+            kind: "application";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            description: string;
+            type: ProductContextTypeEnum;
+          }
+        | {
+            kind: "scope";
+            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            applicationId: string;
+            /** @maxItems 10000 */
+            contracts: {
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              featureId: string;
+              scenarioId: string | null;
+              /** @minLength 1 */
+              title: string;
+              description: string;
+              status: ProductContextStatusEnum;
+              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              id: string;
+              active: boolean;
+              basis: string;
+            }[];
+          }
+        | {
+            kind: "document";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            body: string;
+            documentKind: ProductContextDocumentKindEnum;
+            /** @maxItems 1000 */
+            links: (
+              | {
+                  kind: "product";
+                }
+              | {
+                  kind: "feature";
+                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+              | {
+                  kind: "scenario";
+                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+              | {
+                  kind: "application";
+                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+              | {
+                  kind: "implementation";
+                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  applicationId: string;
+                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+            )[];
+          };
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      createdAt: string;
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /** @maxLength 128 */
+      createdBy: string;
+      /** @maxLength 128 */
+      updatedBy: string;
+    };
+    reasons: string[];
+  }[];
+  readiness: {
+    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    status: ProductContextStatusEnum1;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    participants: number;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    stale: number;
+  }[];
+}
+
+export interface ProductContextQuery {
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  applicationId?: string;
+}
+
+export interface ProductOverview {
+  productId: string;
+  version: string;
+  items: {
+    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    revision: number;
+    kind: string;
+    name: string;
+    summary: string;
+  }[];
+  readiness: {
+    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    status: ProductOverviewStatusEnum;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    participants: number;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+    /**
+     * @min 0
+     * @max 9007199254740991
+     */
+    stale: number;
+  }[];
+}
+
+export interface ProductList {
+  version: string;
+  total: number;
+  items: {
+    version: 1;
+    /** @minLength 1 */
+    productId: string;
+    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    fields:
+      | {
+          kind: "passport";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          description: string;
+        }
+      | {
+          kind: "feature";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          description: string;
+        }
+      | {
+          kind: "scenario";
+          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          featureId: string;
+          /** @minLength 1 */
+          name: string;
+          description: string;
+        }
+      | {
+          kind: "application";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          description: string;
+          type: ProductListTypeEnum;
+        }
+      | {
+          kind: "scope";
+          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          applicationId: string;
+          /** @maxItems 10000 */
+          contracts: {
+            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            featureId: string;
+            scenarioId: string | null;
+            /** @minLength 1 */
+            title: string;
+            description: string;
+            status: ProductListStatusEnum;
+            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            id: string;
+            active: boolean;
+            basis: string;
+          }[];
+        }
+      | {
+          kind: "document";
+          /** @minLength 1 */
+          name: string;
+          summary: string;
+          body: string;
+          documentKind: ProductListDocumentKindEnum;
+          /** @maxItems 1000 */
+          links: (
+            | {
+                kind: "product";
+              }
+            | {
+                kind: "feature";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+            | {
+                kind: "scenario";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+            | {
+                kind: "application";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+            | {
+                kind: "implementation";
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                applicationId: string;
+                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                id: string;
+              }
+          )[];
+        };
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /** @maxLength 128 */
+    createdBy: string;
+    /** @maxLength 128 */
+    updatedBy: string;
+  }[];
+  nextOffset: number | null;
+}
+
+export interface ProductListQuery {
+  kind?: ProductListQueryKindEnum;
+  /** @maxLength 4096 */
+  q?: string;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  /**
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset: number;
+  /**
+   * @min 1
+   * @max 100
+   * @default 30
+   */
+  limit: number;
+}
+
 export interface TaskListData {
   items: {
     /**
@@ -3645,6 +4223,64 @@ export type TaskListQueryTypeEnum =
 
 export type TaskListQuerySortEnum = "id" | "board";
 
+export type ProductStateTypeEnum = "frontend" | "backend" | "internal";
+
+export type ProductStateStatusEnum = "none" | "partial" | "done";
+
+export type ProductStateDocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "decision";
+
+export type ProductStateStatusEnum1 = "none" | "partial" | "done";
+
+export type ProductMutationActionEnum = "create" | "update";
+
+export type ProductMutationTypeEnum = "frontend" | "backend" | "internal";
+
+export type ProductMutationDocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "decision";
+
+export type ProductMutationStatusEnum = "none" | "partial" | "done";
+
+export type ProductMutationStatusEnum1 = "none" | "partial" | "done";
+
+export type ProductContextTypeEnum = "frontend" | "backend" | "internal";
+
+export type ProductContextStatusEnum = "none" | "partial" | "done";
+
+export type ProductContextDocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "decision";
+
+export type ProductContextStatusEnum1 = "none" | "partial" | "done";
+
+export type ProductOverviewStatusEnum = "none" | "partial" | "done";
+
+export type ProductListTypeEnum = "frontend" | "backend" | "internal";
+
+export type ProductListStatusEnum = "none" | "partial" | "done";
+
+export type ProductListDocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "decision";
+
+export type ProductListQueryKindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "scope"
+  | "document";
+
 export type TaskDocumentDataKindEnum =
   | "progress"
   | "decision"
@@ -4026,6 +4662,59 @@ export interface GetCheckpointChangesParams {
 
 export type SaveProjectRecordOkEnum = true;
 
+export type GetProductStateOkEnum = true;
+
+export type GetProductOverviewOkEnum = true;
+
+export type GetProductRecordsOkEnum = true;
+
+export interface GetProductRecordsParams {
+  kind?: KindEnum;
+  /** @maxLength 4096 */
+  q?: string;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  /**
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * @min 1
+   * @max 100
+   * @default 30
+   */
+  limit?: number;
+}
+
+export type KindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "scope"
+  | "document";
+
+export type GetProductRecordsParams1KindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "scope"
+  | "document";
+
+export type MutateProductOkEnum = true;
+
+export type GetProductContextOkEnum = true;
+
+export interface GetProductContextParams {
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  applicationId?: string;
+}
+
 export type ListCommentsOkEnum = true;
 
 export interface ListCommentsParams {
@@ -4092,7 +4781,7 @@ export interface ListLogsParams {
    * @maxLength 4096
    */
   cursor?: string;
-  kind?: KindEnum;
+  kind?: KindEnum1;
   /**
    * Положительный безопасный целочисленный ID задачи
    * @min 1
@@ -4101,7 +4790,7 @@ export interface ListLogsParams {
   id: number;
 }
 
-export type KindEnum =
+export type KindEnum1 =
   | "progress"
   | "decision"
   | "execution"
@@ -4490,6 +5179,78 @@ export interface SaveProjectRecordForProjectParams {
   project: string;
 }
 
+export type GetProductStateForProjectOkEnum = true;
+
+export interface GetProductStateForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetProductOverviewForProjectOkEnum = true;
+
+export interface GetProductOverviewForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetProductRecordsForProjectOkEnum = true;
+
+export interface GetProductRecordsForProjectParams {
+  kind?: KindEnum2;
+  /** @maxLength 4096 */
+  q?: string;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  /**
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * @min 1
+   * @max 100
+   * @default 30
+   */
+  limit?: number;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type KindEnum2 =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "scope"
+  | "document";
+
+export type GetProductRecordsForProjectParams1KindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "scope"
+  | "document";
+
+export type MutateProductForProjectOkEnum = true;
+
+export interface MutateProductForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetProductContextForProjectOkEnum = true;
+
+export interface GetProductContextForProjectParams {
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  id?: string;
+  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  applicationId?: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
 export type ListCommentsForProjectOkEnum = true;
 
 export interface ListCommentsForProjectParams {
@@ -4562,7 +5323,7 @@ export interface ListLogsForProjectParams {
    * @maxLength 4096
    */
   cursor?: string;
-  kind?: KindEnum1;
+  kind?: KindEnum3;
   /**
    * Положительный безопасный целочисленный ID задачи
    * @min 1
@@ -4573,7 +5334,7 @@ export interface ListLogsForProjectParams {
   project: string;
 }
 
-export type KindEnum1 =
+export type KindEnum3 =
   | "progress"
   | "decision"
   | "execution"

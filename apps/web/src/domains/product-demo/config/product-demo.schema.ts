@@ -23,6 +23,7 @@ export const PRODUCT_SCENARIO_SCHEMA = z.object({
 });
 /** Готовность фичи выводится из сценариев, а не хранится вторым значением. */
 export const PRODUCT_FEATURE_SCHEMA = PRODUCT_DOCUMENT_SCHEMA.extend({
+  status: PRODUCT_STATUS_SCHEMA.optional(),
   scenarios: z.array(PRODUCT_SCENARIO_SCHEMA),
 });
 /** Приложение отвечает за часть продукта. */

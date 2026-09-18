@@ -257,7 +257,7 @@ export const ApplicationScopeForm = (props: ApplicationScopeFormProps) => {
         position: "top-center",
         autoClose: 2500,
         title: "Состав реализации сохранён",
-        message: "Выбранные фичи, сценарии и описания вкладов обновлены в этой вкладке.",
+        message: "Состав реализации сохранён. Общая готовность продукта пересчитана.",
         color: "teal",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
       });

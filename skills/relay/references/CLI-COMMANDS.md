@@ -150,6 +150,317 @@
 | `--json <json>` | Документ JSON               |
 | `--file <path>` | Файл JSON; - означает stdin |
 
+## product state
+
+**Синтаксис:** `relay-cli product state [options]`.
+
+Полный снимок продукта
+
+## product overview
+
+**Синтаксис:** `relay-cli product overview [options]`.
+
+Компактная карта продукта
+
+## product list
+
+**Синтаксис:** `relay-cli product list [options]`.
+
+Найти записи продукта
+
+| Параметр        | Назначение      |
+| --------------- | --------------- |
+| `--kind <kind>` | Вид записи      |
+| `--q <text>`    | Поиск           |
+| `--offset <n>`  | Смещение        |
+| `--limit <n>`   | Размер страницы |
+
+## product get
+
+**Синтаксис:** `relay-cli product get [options] <id>`.
+
+Прочитать одну запись
+
+| Аргумент | Назначение |
+| -------- | ---------- |
+| `id`     | ID записи  |
+
+## product context
+
+**Синтаксис:** `relay-cli product context [options]`.
+
+Собрать связанный контекст
+
+| Параметр             | Назначение        |
+| -------------------- | ----------------- |
+| `--id <id>`          | Цель контекста    |
+| `--application <id>` | Проект-реализатор |
+
+## product validate
+
+**Синтаксис:** `relay-cli product validate [options]`.
+
+Проверить целостность продукта
+
+## product save
+
+**Синтаксис:** `relay-cli product save [options]`.
+
+Создать или изменить запись через JSON
+
+| Параметр                   | Назначение                             |
+| -------------------------- | -------------------------------------- |
+| `--json <json>`            | JSON операции                          |
+| `--description <markdown>` | Многострочный Markdown напрямую        |
+| `--body <markdown>`        | Многострочный текст документа напрямую |
+
+## product passport create
+
+**Синтаксис:** `relay-cli product passport create [options]`.
+
+Создать запись
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product passport update
+
+**Синтаксис:** `relay-cli product passport update [options] <id>`.
+
+Изменить запись
+
+| Аргумент | Назначение    |
+| -------- | ------------- |
+| `id`     | Постоянный ID |
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product feature create
+
+**Синтаксис:** `relay-cli product feature create [options]`.
+
+Создать запись
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product feature update
+
+**Синтаксис:** `relay-cli product feature update [options] <id>`.
+
+Изменить запись
+
+| Аргумент | Назначение    |
+| -------- | ------------- |
+| `id`     | Постоянный ID |
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product scenario create
+
+**Синтаксис:** `relay-cli product scenario create [options]`.
+
+Создать запись
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product scenario update
+
+**Синтаксис:** `relay-cli product scenario update [options] <id>`.
+
+Изменить запись
+
+| Аргумент | Назначение    |
+| -------- | ------------- |
+| `id`     | Постоянный ID |
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product application create
+
+**Синтаксис:** `relay-cli product application create [options]`.
+
+Создать запись
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product application update
+
+**Синтаксис:** `relay-cli product application update [options] <id>`.
+
+Изменить запись
+
+| Аргумент | Назначение    |
+| -------- | ------------- |
+| `id`     | Постоянный ID |
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product document create
+
+**Синтаксис:** `relay-cli product document create [options]`.
+
+Создать запись
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product document update
+
+**Синтаксис:** `relay-cli product document update [options] <id>`.
+
+Изменить запись
+
+| Аргумент | Назначение    |
+| -------- | ------------- |
+| `id`     | Постоянный ID |
+
+| Параметр                   | Назначение                                                            |
+| -------------------------- | --------------------------------------------------------------------- |
+| `--name <name>`            | Название                                                              |
+| `--summary <text>`         | Краткое описание По умолчанию: "".                                    |
+| `--description <markdown>` | Полное описание напрямую                                              |
+| `--body <markdown>`        | Текст документа напрямую                                              |
+| `--type <type>`            | frontend/backend/internal По умолчанию: "frontend".                   |
+| `--feature <id>`           | Родительская фича сценария                                            |
+| `--links <json>`           | Типизированные связи документа По умолчанию: "[]".                    |
+| `--document-kind <kind>`   | specification/description/rules/decision По умолчанию: "description". |
+| `--if-revision <n>`        | Прочитанная ревизия                                                   |
+| `--request-id <id>`        | Ключ безопасного повтора                                              |
+
+## product scope replace
+
+**Синтаксис:** `relay-cli product scope replace [options] <applicationId>`.
+
+Заменить весь активный состав
+
+| Аргумент        | Назначение    |
+| --------------- | ------------- |
+| `applicationId` | ID приложения |
+
+| Параметр                 | Назначение                    |
+| ------------------------ | ----------------------------- |
+| `--json <json>`          | Массив контрактов JSON        |
+| `--if-revision <n>`      | Ревизия состава; 0 для нового |
+| `--if-version <version>` | Версия прочитанного продукта  |
+| `--request-id <id>`      | Ключ повтора                  |
+
+## product contract update
+
+**Синтаксис:** `relay-cli product contract update [options] <id>`.
+
+Изменить или подтвердить контракт
+
+| Аргумент | Назначение   |
+| -------- | ------------ |
+| `id`     | ID контракта |
+
+| Параметр                   | Назначение                      |
+| -------------------------- | ------------------------------- |
+| `--application <id>`       | Приложение                      |
+| `--status <status>`        | none/partial/done               |
+| `--title <text>`           | Заголовок вклада                |
+| `--description <markdown>` | Многострочное описание напрямую |
+| `--if-revision <n>`        | Ревизия состава                 |
+| `--if-version <version>`   | Версия прочитанного продукта    |
+| `--request-id <id>`        | Ключ повтора                    |
+
 ## overview
 
 **Синтаксис:** `relay-cli overview [options] [id]`.
