@@ -12,8 +12,8 @@ pnpm-lock.yaml
 **/.relay/project/
 .agents/
 .npmrc
-apps/playground/.tasks/
-apps/playground/tasks.config.json
+# Точная копия внешнего ТЗ; форматирование исходного документа сохраняется.
+apps/playground/p2p-rental/product-spec.md
 apps/ui/reference/
 apps/server/reference/
 apps/web/.templates/

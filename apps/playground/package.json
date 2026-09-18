@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "tasks": "tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts",
-    "demo:reset": "node demo/seed.mjs --write",
-    "demo:check": "node demo/seed.mjs --check",
-    "demo:stats": "node demo/seed.mjs --stats"
+    "init": "node init.mjs",
+    "cli": "tsx --tsconfig ../cli/tsconfig.dev.json --conditions=tasks-source ../cli/src/main.ts --config relay.workspace.json",
+    "tasks": "pnpm --silent run cli",
+    "mcp": "tsx --conditions=tasks-source ../mcp/src/main.ts --config relay.workspace.json"
   },
   "devDependencies": {
     "@gromlab/relay-cli": "workspace:*",

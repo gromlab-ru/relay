@@ -46,7 +46,10 @@ pnpm run skills:install
 - Swagger: http://127.0.0.1:4700/api/docs.
 
 `dev` запускает API и web через Turbo. По умолчанию backend открывает
-`apps/playground/local/.relay/config.json`; действия в UI изменяют демонстрационные данные.
+`apps/playground/coffee-shop/.relay/config.json`; Web автоматически открывает кофейню.
+Два пустых демопроекта инициализируются командой `pnpm --filter @relay/playground run init`.
+Для работы с кофейней и P2P-арендой через один Server используйте workspace-запуск ниже;
+подробности — в [README playground](../apps/playground/README.md).
 Для проверки мутаций используйте отдельный временный проект с абсолютным `RELAY_CONFIG`.
 
 ```bash
@@ -62,7 +65,7 @@ CLI из исходников запускается отдельно, без Tu
 
 ```bash
 pnpm --silent run dev:cli --version
-pnpm --silent run playground a list --format json
+pnpm --silent run playground coffee-shop list --format json
 ```
 
 `dev:cli` сохраняет рабочий каталог вызова. Условие `tasks-source` позволяет

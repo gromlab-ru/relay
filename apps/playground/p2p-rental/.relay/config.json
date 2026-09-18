@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "mode": "local",
+  "projectId": "88481f85-4286-49c8-a4b0-02de1795ad4c",
+  "storageDir": "tasks",
+  "defaultStatus": "todo",
+  "readyStatuses": ["todo"],
+  "statuses": {
+    "todo": {
+      "terminal": false,
+      "satisfiesDependencies": false,
+      "color": "cyan"
+    },
+    "in_progress": {
+      "terminal": false,
+      "satisfiesDependencies": false,
+      "color": "yellow"
+    },
+    "review": {
+      "terminal": false,
+      "satisfiesDependencies": false,
+      "color": "magenta"
+    },
+    "done": {
+      "terminal": true,
+      "satisfiesDependencies": true,
+      "color": "green"
+    },
+    "cancelled": {
+      "terminal": true,
+      "satisfiesDependencies": false,
+      "color": "gray"
+    }
+  },
+  "server": {
+    "port": 4700
+  },
+  "output": {
+    "format": "text",
+    "defaultLimit": 20,
+    "maxBytes": 16384
+  }
+}
