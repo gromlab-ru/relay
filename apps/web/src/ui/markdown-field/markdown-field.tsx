@@ -31,7 +31,7 @@ export const MarkdownField = (props: MarkdownFieldProps) => {
       <Tabs defaultValue="write" onChange={() => setPreview(input.current?.value ?? defaultValue)}>
         <div className={styles.heading}>
           <span className={styles.label}>{label}</span>
-          <Tabs.List>
+          <Tabs.List className={styles.tabs}>
             <Tabs.Tab value="write">Текст</Tabs.Tab>
             <Tabs.Tab value="preview">Просмотр</Tabs.Tab>
           </Tabs.List>

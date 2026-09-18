@@ -1,0 +1,33 @@
+.root {
+  display: grid;
+  align-items: start;
+  gap: 1.75rem;
+
+  @media (--xl) {
+    grid-template-columns: minmax(0, 1fr) 19rem;
+  }
+}
+
+.document {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--tasks-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--tasks-surface);
+
+  @media (--md) {
+    padding: 1.75rem 2rem;
+  }
+}
+
+.content {
+  display: grid;
+  gap: 2rem;
+  min-width: 0;
+}
+
+.workLink {
+  color: var(--tasks-muted);
+  font-size: 0.75rem;
+  text-underline-offset: 3px;
+}

@@ -1,5 +1,134 @@
 # Журнал создания TSX
 
+## Библиотека документов — 18 сентября 2026
+
+Из `apps/web` выполнены:
+
+```bash
+pnpm run create ui-unit product-documents src/compositions/screens
+pnpm run create ui-unit product-document src/compositions/screens
+pnpm run create ui-unit product-document-editor src/compositions/screens
+pnpm run create ui-component documentation-scopes src/domains/product-demo/ui
+pnpm run create ui-unit document-card src/compositions/screens/product-documents/ui
+pnpm run create ui-unit documentation-form src/compositions/screens/product-document-editor/ui
+pnpm run create ui-unit document-scope-picker src/compositions/screens/product-document-editor/ui/documentation-form/ui
+```
+
+Экраны переименованы в `product-documents.screen.tsx`, `product-document.screen.tsx`
+и `product-document-editor.screen.tsx`, подключены через собственные `lazy.ts`.
+Карточка, форма и выбор моковых областей принадлежат ближайшим экранным владельцам.
+`documentation-scopes.tsx` — внутренняя доменная проекция, опубликованная через
+`domains/product-demo`. Данные, примеры областей и локальное сохранение находятся
+в том же домене. Неиспользуемые типы и стили начальных экранов удалены.
+
+## Состав реализации приложения — 18 сентября 2026
+
+Для единого оформления обоих деревьев дополнительно выполнено:
+
+```bash
+pnpm run create ui-unit product-tree-row src/compositions/widgets
+```
+
+`src/compositions/widgets/product-tree-row/product-tree-row.tsx` владеет строкой и линиями
+двухуровневого дерева. Стили перенесены от `product-features/ui/feature-row`; тот стал
+адаптером данных каталога. `application-feature` использует ту же строку для заголовка
+вклада, перехода в редактор и отдельной ссылки на исходное описание.
+
+Из `apps/web` выполнены:
+
+```bash
+pnpm run create ui-unit application-features src/compositions/screens/product-application/ui
+pnpm run create ui-unit product-application-scope src/compositions/screens
+pnpm run create ui-component application-feature src/compositions/screens/product-application/ui/application-features/ui
+pnpm run create ui-unit application-scope-form src/compositions/screens/product-application-scope/ui
+pnpm run create ui-unit scope-tree src/compositions/screens/product-application-scope/ui/application-scope-form/ui
+pnpm run create ui-unit scope-editor src/compositions/screens/product-application-scope/ui/application-scope-form/ui
+pnpm run create ui-component scope-node src/compositions/screens/product-application-scope/ui/application-scope-form/ui/scope-tree/ui
+```
+
+`product-application-scope.tsx` переименован в `product-application-scope.screen.tsx`,
+экран подключён через `lazy.ts`. Сгенерированные типы и стили без потребителей удалены.
+`application-features` владеет чтением состава; `application-scope-form` — вводом,
+черновиком и сохранением. `scope-tree` и `scope-editor` получают проекции и callbacks
+от формы. Внутренние `application-feature` и `scope-node` не имеют фасетов.
+Операции и целостность ссылок принадлежат `domains/product-demo`.
+
+Прежний `link-fields` удалён: общие редакторы больше не переписывают состав приложения.
+
+## Дерево фич и сценарии — 18 сентября 2026
+
+Из `apps/web` выполнены:
+
+```bash
+pnpm run create ui-component product-readiness src/domains/product-demo/ui
+pnpm run create ui-unit feature-scenarios src/compositions/screens/product-feature/ui
+pnpm run create ui-component scenario-section src/compositions/screens/product-feature/ui/feature-scenarios/ui
+```
+
+Созданы и адаптированы:
+
+- `src/domains/product-demo/ui/product-readiness/product-readiness.tsx` — внутренний индикатор
+  готовности, опубликованный через фасет домена.
+- `src/compositions/screens/product-feature/ui/feature-scenarios/feature-scenarios.tsx` —
+  вложенный юнит страницы фичи, владеющий её подразделами и добавлением сценария.
+- `src/compositions/screens/product-feature/ui/feature-scenarios/ui/scenario-section/scenario-section.tsx` —
+  внутреннее отображение отдельного описания, постоянной ссылки и перехода к редактору.
+
+Дерево использует Mantine Tree и существующий `feature-row`; редактор сценария расширяет
+существующий `document-form`. Расчёт статуса принадлежит `domains/product-demo`.
+
+## Вложенная навигация продукта
+
+Из `apps/web` выполнено:
+
+```bash
+pnpm run create ui-unit project-navigation src/compositions/layouts/project/ui
+```
+
+Создан `src/compositions/layouts/project/ui/project-navigation/project-navigation.tsx`.
+Юнит принадлежит существующему `ProjectLayout`, показывает дерево разделов и получает
+корень маршрутов проекта и действие завершения выбора. Используется в постоянном
+сайдбаре и мобильном Drawer. Через `index.ts` опубликован только компонент.
+
+Навигация и стили адаптированы к Mantine и теме Relay. Дерево URL находится в
+`app/router`; подразделы продукта открываются в общем каркасе выбранного проекта.
+
+Для подключения общей области данных и состояний подразделов выполнены:
+
+```bash
+pnpm run create ui-unit product src/compositions/layouts
+pnpm run create ui-unit product-controls src/compositions/layouts/product/ui
+pnpm run create ui-unit product-outlet src/compositions/layouts/product/ui
+```
+
+`product.tsx` переименован в `product.layout.tsx` и подключён через `lazy.ts`.
+Страницы и редакторы восстановлены из реализации предыдущего прототипа, где они
+были созданы следующими командами, а затем адаптированы к проектным URL:
+
+```bash
+pnpm run create ui-unit product-passport src/compositions/screens
+pnpm run create ui-unit product-features src/compositions/screens
+pnpm run create ui-unit product-feature src/compositions/screens
+pnpm run create ui-unit product-applications src/compositions/screens
+pnpm run create ui-unit product-application src/compositions/screens
+pnpm run create ui-unit product-work src/compositions/screens
+pnpm run create ui-unit product-editor src/compositions/screens
+pnpm run create ui-unit product-page src/compositions/widgets
+pnpm run create ui-unit product-contributions src/compositions/widgets
+pnpm run create ui-unit product-work-list src/compositions/widgets
+pnpm run create ui-component product-demo-provider src/domains/product-demo/providers
+pnpm run create ui-component product-status src/domains/product-demo/ui
+pnpm run create ui-unit feature-row src/compositions/screens/product-features/ui
+pnpm run create ui-unit document-form src/compositions/screens/product-editor/ui
+pnpm run create ui-component link-fields src/compositions/screens/product-editor/ui/document-form/ui
+pnpm run create ui-unit work-plan src/compositions/widgets/product-work-list/ui
+```
+
+У экранов сохранены файлы `product-*.screen.tsx` и фасеты `lazy.ts`.
+Внутренние компоненты домена и `link-fields` не имеют собственных фасетов.
+Модель моков принадлежит `domains/product-demo`, экземпляр и локальное хранение
+теперь ограничены текущим проектом. Отдельный демокаркас удалён.
+
 ## Жизненный цикл проекта
 
 Из `apps/web` выполнены команды закреплённого генератора:

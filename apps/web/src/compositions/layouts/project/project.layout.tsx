@@ -1,36 +1,14 @@
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ActionIcon, Badge, Button, Group, Select, Text, Tooltip } from "@mantine/core";
-import {
-  BookOpen,
-  ChartNoAxesCombined,
-  ClipboardList,
-  FileText,
-  Flag,
-  History,
-  Layers3,
-  LayoutDashboard,
-  Moon,
-  Plus,
-  Radio,
-  Sun,
-} from "lucide-react";
+import { useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { ActionIcon, Badge, Button, Drawer, Group, Select, Text, Tooltip } from "@mantine/core";
+import { ClipboardList, Layers3, Menu, Moon, Plus, Sun } from "lucide-react";
 import { useGetProject, useProjectId } from "domains/project";
 import { useWorkspace } from "domains/workspace";
 import { useTaskConnection } from "domains/tasks";
 import { isRecordOf, useLifecycle } from "domains/lifecycle";
 import { useThemeColorScheme } from "ui/themes";
+import { ProjectNavigation } from "./ui/project-navigation";
 import styles from "./styles/project.module.css";
-
-const NAVIGATION = [
-  { path: "", label: "Обзор", Icon: ChartNoAxesCombined },
-  { path: "passport", label: "Паспорт", Icon: FileText },
-  { path: "plans", label: "Планы", Icon: Flag },
-  { path: "board", label: "Доска задач", Icon: LayoutDashboard },
-  { path: "knowledge", label: "Требования и знания", Icon: BookOpen },
-  { path: "activity", label: "Работа и проверки", Icon: Radio },
-  { path: "releases", label: "Релизы", Icon: Layers3 },
-  { path: "history", label: "История и передача", Icon: History },
-];
 
 /**
  * Организует постоянную навигацию и рабочую область одного проекта.
@@ -47,6 +25,7 @@ export const ProjectLayout = () => {
   const connection = useTaskConnection();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isNavigationOpen, setNavigationOpen] = useState(false);
   const { colorScheme, setColorScheme } = useThemeColorScheme();
   const base = `/projects/${encodeURIComponent(projectId)}`;
   const passport = lifecycle.data?.records.find((record) => isRecordOf(record, "passport"));
@@ -72,11 +51,6 @@ export const ProjectLayout = () => {
   const attentionCount = lifecycle.data?.attention.length ?? 0;
   const hasAttention = attentionCount > 0;
   const isTaskPage = location.pathname.startsWith(`${base}/tasks/`);
-  const navItems = NAVIGATION.map((item) => ({
-    ...item,
-    href: item.path === "" ? `${base}/` : `${base}/${item.path}`,
-    isTaskBoard: item.path === "board" && isTaskPage,
-  }));
 
   /**
    * Открывает создание, сохраняя выбранные на доске план, этап и группу.
@@ -91,10 +65,19 @@ export const ProjectLayout = () => {
     <div className={styles.root}>
       <header className={styles.header}>
         <Group gap="sm" wrap="nowrap" className={styles.identity}>
+          <ActionIcon
+            className={styles.menuToggle}
+            variant="subtle"
+            color="gray"
+            aria-label="Открыть навигацию"
+            aria-expanded={isNavigationOpen}
+            aria-haspopup="dialog"
+            onClick={() => setNavigationOpen(true)}
+          >
+            <Menu size={20} aria-hidden="true" />
+          </ActionIcon>
           <Layers3 size={22} className={styles.brandIcon} />
-          <span className={styles.brand} data-workspace={isWorkspace}>
-            Relay
-          </span>
+          <span className={styles.brand}>Relay</span>
           <span className={styles.divider}>/</span>
           <Text
             className={styles.projectName}
@@ -148,20 +131,7 @@ export const ProjectLayout = () => {
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>
           <div className={styles.sectionLabel}>ПРОЕКТ</div>
-          <nav aria-label="Разделы проекта" className={styles.navigation}>
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.href}
-                end={item.path === ""}
-                className={styles.navItem}
-                data-active={item.isTaskBoard || undefined}
-              >
-                <item.Icon size={17} />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+          <ProjectNavigation basePath={base} />
           <div className={styles.sidebarFooter}>
             <ClipboardList size={16} />
             <Text size="xs" c="dimmed">
@@ -183,6 +153,17 @@ export const ProjectLayout = () => {
           <Outlet />
         </main>
       </div>
+      <Drawer
+        opened={isNavigationOpen}
+        onClose={() => setNavigationOpen(false)}
+        position="left"
+        size="min(20rem, calc(100vw - 2rem))"
+        title="Разделы проекта"
+        closeButtonProps={{ "aria-label": "Закрыть навигацию" }}
+        classNames={{ content: styles.drawer, header: styles.drawerHeader }}
+      >
+        <ProjectNavigation basePath={base} onNavigate={() => setNavigationOpen(false)} />
+      </Drawer>
     </div>
   );
 };

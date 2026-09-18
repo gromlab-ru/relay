@@ -11,6 +11,10 @@
   --tasks-ink: light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-1));
   --tasks-muted: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2));
   --tasks-soft: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-5));
+  --tasks-warning-ink: light-dark(
+    color-mix(in srgb, var(--mantine-color-orange-9), black 18%),
+    var(--mantine-color-orange-3)
+  );
   --tasks-scrollbar: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
   --tasks-card-shadow: 0 1px 2px light-dark(#00000006, #00000016);
   --tasks-card-hover: 0 4px 14px light-dark(#0000000c, #00000032);

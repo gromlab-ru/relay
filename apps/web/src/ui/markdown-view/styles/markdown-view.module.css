@@ -35,6 +35,7 @@
 
   & :where(pre) {
     overflow: auto;
+    white-space: pre-wrap;
     padding: 1rem;
     border: 1px solid var(--tasks-border);
     border-radius: var(--mantine-radius-md);
