@@ -22,10 +22,13 @@ export class ProductRepository {
   readonly productId: string;
   constructor(readonly workspace: Workspace) {
     this.root = join(dirname(workspace.configPath), "product");
-    this.productId = `product_${createHash("sha256")
-      .update(workspace.config.projectId ?? workspace.root)
-      .digest("hex")
-      .slice(0, 32)}`;
+    this.productId =
+      workspace.config.projectId && /^[A-Za-z0-9]{8}$/.test(workspace.config.projectId)
+        ? workspace.config.projectId
+        : `product_${createHash("sha256")
+            .update(workspace.config.projectId ?? workspace.root)
+            .digest("hex")
+            .slice(0, 32)}`;
   }
   async all(): Promise<ProductRecord[]> {
     const records: ProductRecord[] = [];

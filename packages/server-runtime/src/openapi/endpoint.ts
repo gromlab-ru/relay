@@ -59,7 +59,10 @@ export function ApiEndpoint(options: {
         name: options.record,
         schema: {
           type: "string",
-          pattern: options.record === "commentId" ? "^cmt_[a-f0-9]{32}$" : "^log_[a-f0-9]{32}$",
+          pattern:
+            options.record === "commentId"
+              ? "^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$"
+              : "^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$",
         },
       }),
     );

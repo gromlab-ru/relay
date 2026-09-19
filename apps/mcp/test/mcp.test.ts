@@ -59,12 +59,88 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
       error: z.object({ code: z.string() }).passthrough().optional(),
     })
     .parse(result.structuredContent);
-  assert.deepEqual(
-    JSON.parse(z.object({ text: z.string() }).parse(result.content[0]).text),
-    result.structuredContent,
-  );
+  const content = z.object({ text: z.string() }).parse(result.content[0]).text;
+  if (
+    body.ok &&
+    ["board_task_create", "board_task_update", "board_task_move", "board_task_link"].includes(name)
+  ) {
+    assert.match(content, /Задача .*Ревизия/);
+    assert.ok(content.includes(String(body.data?.id)));
+  } else assert.deepEqual(JSON.parse(content), result.structuredContent);
   return { ...body, isError: result.isError };
 }
+
+test("MCP канбана: предметные аргументы, блокеры, повтор и перенос со стабильным ID", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const definition = (await client.listTools()).tools.find(
+    (tool) => tool.name === "board_task_create",
+  );
+  assert.ok(definition);
+  const properties = definition.inputSchema.properties as Record<string, { description?: string }>;
+  for (const name of [
+    "board",
+    "title",
+    "description",
+    "column",
+    "requestId",
+    "actor",
+    "productLinks",
+    "parentId",
+  ])
+    assert.match(properties[name]?.description ?? "", /[А-Яа-яЁё]/);
+  assert.equal("kind" in properties, false);
+  const create = {
+    board: "product",
+    title: "Цель",
+    description: "## Цель\nРабота",
+    requestId: "create",
+    actor: "agent",
+  };
+  const saved = await call(client, "board_task_create", create);
+  assert.equal(saved.ok, true);
+  assert.match(String(saved.data?.id), /^[A-Za-z0-9]{8}$/);
+  assert.deepEqual((await call(client, "board_task_create", create)).data, saved.data);
+  const dep = await call(client, "board_task_create", {
+    ...create,
+    board: "infrastructure",
+    requestId: "dep",
+  });
+  const reference = String(saved.data?.id);
+  const linked = await call(client, "board_task_link", {
+    reference,
+    target: dep.data?.id,
+    relation: "depends-on",
+    ifRevision: 1,
+    requestId: "link",
+    actor: "agent",
+  });
+  assert.equal(linked.ok, true);
+  assert.equal((await call(client, "board_tasks_list", { readiness: "blocked" })).data?.total, 1);
+  assert.equal(
+    (
+      await call(client, "board_task_move", {
+        reference,
+        column: "done",
+        ifRevision: 2,
+        requestId: "blocked",
+        actor: "agent",
+      })
+    ).error?.code,
+    "TASK_BLOCKED",
+  );
+  const moved = await call(client, "board_task_move", {
+    reference,
+    board: "infrastructure",
+    column: "ready",
+    ifRevision: 2,
+    requestId: "move",
+    actor: "agent",
+  });
+  assert.equal(moved.data?.id, reference);
+  assert.equal(moved.data?.key, "INFRA-2");
+});
 
 test("продукт доступен агенту через API и изолирован между областями", async (t) => {
   const app = await setup(t);

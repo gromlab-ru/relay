@@ -34,5 +34,6 @@ export const getEditorInput = (
     status: scenarioData?.status ?? "none",
     type: applicationData?.type ?? "Фронтенд",
     slug: applicationData?.slug ?? "",
+    prefix: applicationData?.prefix ?? "",
   };
 };

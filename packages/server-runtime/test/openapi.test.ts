@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 79);
+    assert.equal(operations.size, 93);
     for (const [name, schema] of Object.entries(document.components!.schemas!)) {
       ajv.compile({ ...schema, components: document.components });
       if (!("$ref" in schema) && Array.isArray(schema.examples))
@@ -90,6 +90,39 @@ for (const scoped of [false, true])
     await request("GET", "/api/v1/context");
     await request("GET", "/api/v1/boards");
     await request("GET", "/api/v1/boards/{slug}", "/api/v1/boards/product");
+    const card = await request("POST", "/api/v1/board-tasks", undefined, {
+      board: "product",
+      requestId: "kanban-empty",
+      includeTask: true,
+    });
+    assert.equal(card.data.task.title, "");
+    const otherCard = await request("POST", "/api/v1/board-tasks", undefined, {
+      board: "infrastructure",
+      title: "Зависимость канбана",
+      requestId: "kanban-dependency",
+    });
+    const cardBase = `/api/v1/board-tasks/${card.data.id}`;
+    await request("GET", "/api/v1/board-tasks");
+    await request("GET", "/api/v1/board-tasks/{reference}", cardBase);
+    await request("POST", "/api/v1/board-tasks/{reference}/update", `${cardBase}/update`, {
+      title: "Проверка контракта",
+      description: "## Цель\n\nПроверить Markdown",
+      ifRevision: 1,
+      requestId: "kanban-update",
+    });
+    await request("POST", "/api/v1/board-tasks/{reference}/move", `${cardBase}/move`, {
+      board: "infrastructure",
+      column: "ready",
+      ifRevision: 2,
+      requestId: "kanban-move",
+    });
+    await request("POST", "/api/v1/board-tasks/{reference}/links", `${cardBase}/links`, {
+      target: otherCard.data.id,
+      relation: "depends-on",
+      ifRevision: 3,
+      requestId: "kanban-link",
+    });
+    await request("GET", "/api/v1/board-tasks/{reference}/links", `${cardBase}/links`);
     await request("POST", "/api/v1/product/records", undefined, {
       action: "create",
       requestId: "product-passport",
@@ -196,7 +229,7 @@ for (const scoped of [false, true])
       { patch: { title: "Conflict" }, ifRevision: 1 },
       409,
     );
-    assert.equal(visited.size, 41);
+    assert.equal(visited.size, 48);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;

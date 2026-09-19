@@ -14,13 +14,14 @@
 
 ## Полный конфиг
 
-`relay-cli init` создаёт проектный конфиг, UUID проекта и каталог `.relay/tasks`:
+`relay-cli init` создаёт проектный конфиг, ID проекта из 8 символов, прежний каталог
+`.relay/tasks` и системные [доски](BOARDS.md):
 
 ```json
 {
   "version": 1,
   "mode": "local",
-  "projectId": "067572e0-2833-43a9-a922-b96821e7f840",
+  "projectId": "kUZ84THO",
   "storageDir": "tasks",
   "defaultStatus": "todo",
   "readyStatuses": ["todo"],
@@ -36,7 +37,8 @@
 }
 ```
 
-UUID создаётся отдельно для каждого проекта. `storageDir` считается от файла
+ID создаётся отдельно для каждого проекта; старые UUID продолжают читаться.
+`storageDir` считается от файла
 конфигурации: `tasks` означает `.relay/tasks`, а не каталог в корне репозитория.
 Имена статусов сами по себе не определяют успех: это задаёт `satisfiesDependencies`.
 `defaultStatus` и `readyStatuses` ссылаются на существующие неконечные статусы.

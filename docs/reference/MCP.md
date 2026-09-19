@@ -10,6 +10,46 @@
 Один процесс обслуживает оркестратора и субагентов через **Streamable HTTP**.
 Все операции проекта выполняются через общий `@relay/rest-sdk` и REST API.
 
+## Канбан отдельных досок
+
+Новая модель использует `boards_list`, `board_tasks_list` и `board_task_*`.
+Прежние инструменты `task_*` относятся к числовым задачам старой доски.
+`board_tasks_list` принимает `completion?: unfinished|finished` (незавершённые либо
+done/cancelled) и `searchIn?: title|all` (ключи/ID/название либо также Markdown).
+Без параметров прежний поиск и полный набор статусов сохраняются. Фильтры применяются
+до вычисления total/nextOffset и не изменяют существующие связи.
+
+`board_task_create` и `board_task_update` принимают `productLinks?` — до 100
+типизированных целей `{kind: feature|scenario|implementation, id}`. Обновление заменяет
+набор целиком, `[]` очищает. Создание принимает `parentId?` для атомарной подзадачи.
+`board_tasks_list.productTarget?` фильтрует явные связи по ID цели. Требования читаются
+через `product_context`. Отдельного типа эпика нет. Сохранение задачи не подтверждает
+готовность продукта.
+
+| Инструмент          | Параметры и результат                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| `boards_list`       | `offset?`, `limit?`, `version?`: доски, slug, ID и префиксы                                    |
+| `board_tasks_list`  | `board?`, `column?`, `q?`, `readiness?`, `offset?`, `limit?`, `version?`                       |
+| `board_task_get`    | `reference`: полная задача, Markdown и ID блокеров                                             |
+| `board_task_links`  | `reference`, `offset?`, `limit?`, `version?`: связи в обе стороны                              |
+| `board_task_create` | `board`, `title?`, `description?`, `column?`, `includeTask?`, `actor`, `requestId`             |
+| `board_task_update` | `reference`, `title?`, `description?`, `ifRevision`, `actor`, `requestId`                      |
+| `board_task_move`   | `reference`, `column`, `board?`, `beforeId?`, `ifRevision`, `ifVersion?`, `actor`, `requestId` |
+| `board_task_link`   | `reference`, `target`, `relation`, `remove?`, `ifRevision`, `actor`, `requestId`               |
+
+В workspace указывается `project`; у всех инструментов доступен `maxBytes`.
+`reference` — постоянный короткий ID или ключ `WEB-24`; при переносе ключ меняется,
+ID сохраняется. `relation`: `depends-on`, `related`, `parent`.
+Для оркестратора `readiness=ready` даёт задачи из «К выполнению» без блокеров;
+`readiness=blocked` и `board_task_links` объясняют зависимости разных досок.
+Списки ограничены и возвращают `nextOffset`/`version`; полный граф читается адресно.
+Ошибка бюджета предлагает уменьшить `limit` или увеличить `maxBytes`.
+Запись возвращает человеческую квитанцию и структурированный первоначальный результат.
+
+Приложение при `product_application_save` принимает `prefix?`, например `WEB`.
+Префикс уникален в проекте и неизменяем; без значения получается из slug.
+Системные префиксы — `PRODUCT`, `INFRA`. Полный контракт: [канбан](KANBAN.md).
+
 ## Запуск и конфигурация
 
 ```bash

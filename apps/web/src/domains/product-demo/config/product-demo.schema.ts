@@ -30,11 +30,13 @@ export const PRODUCT_FEATURE_SCHEMA = PRODUCT_DOCUMENT_SCHEMA.extend({
 export const PRODUCT_APPLICATION_SCHEMA = PRODUCT_DOCUMENT_SCHEMA.extend({
   type: z.string(),
   slug: z.string(),
+  prefix: z.string().default(""),
 });
 /** Часть общего сценария, которую обязуется реализовать приложение. */
 export const PRODUCT_SCENARIO_CONTRIBUTION_SCHEMA = z
   .object({
     scenarioId: z.string(),
+    contractId: z.string().optional(),
     title: z.string().optional(),
     description: z.string(),
     status: PRODUCT_STATUS_SCHEMA.default("none"),
@@ -46,6 +48,7 @@ export const PRODUCT_SCENARIO_CONTRIBUTION_SCHEMA = z
 /** Общая запись участия приложения в фиче и выбранных сценариях. */
 export const PRODUCT_CONTRIBUTION_SCHEMA = z
   .object({
+    contractId: z.string().optional(),
     featureId: z.string(),
     applicationId: z.string(),
     title: z.string().optional(),

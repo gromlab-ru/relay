@@ -100,10 +100,13 @@ export const appRouter = createBrowserRouter([
           { path: "board", lazy: () => import("compositions/screens/board/lazy") },
           { path: "boards", element: <Navigate to="product" replace /> },
           {
-            path: "boards/:boardSlug",
             lazy: () => import("compositions/screens/project-board/lazy"),
+            children: [
+              { path: "boards/:boardSlug", element: null },
+              { path: "boards/:boardSlug/:taskId", element: null },
+              { path: "tasks/:id", element: null },
+            ],
           },
-          { path: "tasks/:id", lazy: () => import("compositions/screens/board/lazy") },
           { path: "knowledge", lazy: () => import("compositions/screens/knowledge/lazy") },
           { path: "activity", lazy: () => import("compositions/screens/activity/lazy") },
           { path: "releases", lazy: () => import("compositions/screens/releases/lazy") },

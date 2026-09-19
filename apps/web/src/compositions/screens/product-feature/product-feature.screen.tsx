@@ -9,6 +9,7 @@ import {
 } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductContributions } from "compositions/widgets/product-contributions";
+import { ProductTasks } from "compositions/widgets/product-tasks";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { isEmptyArray } from "shared/value-predicates";
@@ -87,6 +88,7 @@ export const ProductFeatureScreen = () => {
             <MarkdownView text={featureData.description} />
           </article>
           <FeatureScenarios feature={featureData} />
+          <ProductTasks targetId={featureData.id} />
         </div>
         <ProductContributions featureId={featureData.id} />
       </div>

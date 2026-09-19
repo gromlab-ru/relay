@@ -23,8 +23,9 @@ export class LogService {
     actor: string,
     requestId?: string,
   ): Promise<Log> {
-    const id = recordRequestId("log", requestId);
+    let id = "";
     const updated = await this.tasks.mutate(reference, { actor }, (task) => {
+      id = recordRequestId("log", requestId, Object.keys(task.logs));
       const log = parse(
         logSchema,
         {
@@ -35,6 +36,7 @@ export class LogService {
           ...input,
           version: 1,
           id,
+          ...(requestId && !id.startsWith("log_") ? { requestKey: requestId } : {}),
           taskId: task.id,
           actor,
           createdAt: new Date().toISOString(),

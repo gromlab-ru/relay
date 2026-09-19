@@ -32,8 +32,8 @@ export const taskSchema = taskFieldsSchema
     createdBy: actorSchema,
     updatedBy: actorSchema,
     revision: z.number().int().positive(),
-    comments: z.record(z.string().regex(/^cmt_[a-f0-9]{32}$/), commentSchema),
-    logs: z.record(z.string().regex(/^log_[a-f0-9]{32}$/), logSchema),
+    comments: z.record(z.string().regex(/^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$/), commentSchema),
+    logs: z.record(z.string().regex(/^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$/), logSchema),
   })
   .superRefine((task, context) => {
     for (const field of ["comments", "logs"] as const) {

@@ -15,6 +15,7 @@
     "docs/reference/MCP.md": "references/MCP.md",
     "docs/reference/PRODUCT.md": "references/PRODUCT.md",
     "docs/reference/BOARDS.md": "references/BOARDS.md",
+    "docs/reference/KANBAN.md": "references/KANBAN.md",
     "docs/reference/PRODUCT-CONTENT.md": "references/PRODUCT-CONTENT.md",
     "docs/guides/LIFECYCLE.md": "references/LIFECYCLE.md"
   },
@@ -23,7 +24,9 @@
     "references/RECORDS.md": "records"
   },
   "aliases": {
+    "docs/reference/CLI.md": "references/CLI-COMMANDS.md",
     "docs/product/entities/boards/README.md": "references/BOARDS.md",
+    "docs/product/entities/tasks/KANBAN.md": "references/KANBAN.md",
     "docs/README.md": "SKILL.md",
     "docs/reference/ERRORS.md": "references/RECOVERY.md"
   },

@@ -11,6 +11,7 @@ import { ProjectRepository } from "@relay/core/storage/project";
 import { ProductRepository, PRODUCT_DIRECTORIES } from "@relay/core/storage/product";
 import { ProductService } from "@relay/core/application/product/service";
 import { BoardRepository } from "@relay/core/storage/boards";
+import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
@@ -114,7 +115,10 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
         ]),
       ];
       this.rebind();
-      const boardsVersion = createHash("sha256").update(JSON.stringify(boards)).digest("hex");
+      const kanban = await new BoardTasksService(workspace).list({ limit: 1 });
+      const boardsVersion = createHash("sha256")
+        .update(JSON.stringify([boards, kanban.version]))
+        .digest("hex");
       if (this.boardsVersion !== undefined && this.boardsVersion !== boardsVersion)
         this.events.next({ type: "changed", data: { source: "storage" } });
       this.boardsVersion = boardsVersion;

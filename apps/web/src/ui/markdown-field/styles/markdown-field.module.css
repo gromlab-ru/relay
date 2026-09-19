@@ -34,3 +34,12 @@
   color: var(--tasks-soft);
   font-size: 0.6875rem;
 }
+.editor {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.editor:focus-within {
+  border-color: var(--tasks-focus-ring);
+}

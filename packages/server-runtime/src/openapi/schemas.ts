@@ -1,5 +1,16 @@
 import { z } from "zod";
 import {
+  boardTaskViewSchema,
+  boardTaskSavedSchema,
+  boardTasksPageSchema,
+  boardTaskLinksPageSchema,
+  boardTasksQuerySchema,
+  createBoardTaskSchema,
+  updateBoardTaskSchema,
+  moveBoardTaskSchema,
+  linkBoardTaskSchema,
+} from "@relay/core/domain/board-task";
+import {
   productStateSchema,
   productMutationSchema,
   productSavedSchema,
@@ -207,6 +218,15 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  BoardTaskView: boardTaskViewSchema,
+  BoardTaskSaved: boardTaskSavedSchema,
+  BoardTasksPage: boardTasksPageSchema,
+  BoardTaskLinksPage: boardTaskLinksPageSchema,
+  BoardTasksQuery: boardTasksQuerySchema,
+  CreateBoardTask: createBoardTaskSchema,
+  UpdateBoardTask: updateBoardTaskSchema,
+  MoveBoardTask: moveBoardTaskSchema,
+  LinkBoardTask: linkBoardTaskSchema,
   ProjectRecord: projectRecordSchema,
   SaveProjectRecord: saveProjectRecordSchema,
   ProjectState: projectStateSchema,

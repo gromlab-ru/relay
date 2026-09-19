@@ -66,8 +66,9 @@ export function validateProduct(records: ProductRecord[]): void {
     ids.add(record.id);
     const fields = record.fields;
     invariant(
-      record.id ===
-        (fields.kind === "passport" ? "passport" : `${fields.kind}_${record.id.split("_")[1]}`),
+      /^[A-Za-z0-9]{8}$/.test(record.id) ||
+        record.id ===
+          (fields.kind === "passport" ? "passport" : `${fields.kind}_${record.id.split("_")[1]}`),
       "INVALID_DATA",
       "ID не соответствует виду записи",
       5,
@@ -85,9 +86,14 @@ export function validateProduct(records: ProductRecord[]): void {
         "Приложение не найдено",
       );
       invariant(
-        record.id === fields.applicationId.replace("application_", "scope_"),
+        !records.some(
+          (other) =>
+            other.id !== record.id &&
+            other.fields.kind === "scope" &&
+            other.fields.applicationId === fields.applicationId,
+        ),
         "INVALID_DATA",
-        "Неверный ID состава",
+        "Повтор состава приложения",
         5,
       );
       const targets = new Set<string>();

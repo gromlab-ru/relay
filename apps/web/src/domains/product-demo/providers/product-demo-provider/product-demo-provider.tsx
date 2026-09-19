@@ -101,7 +101,17 @@ export const ProductDemoProvider = (props: ProductDemoProviderProps) => {
       );
     const type =
       Object.entries(APPLICATION_TYPES).find(([label]) => label === input.type)?.[1] ?? "frontend";
-    return persist({ kind: "application", ...common, type, slug: input.slug }, input.id, revision);
+    return persist(
+      {
+        kind: "application",
+        ...common,
+        type,
+        slug: input.slug,
+        ...(input.prefix ? { prefix: input.prefix } : {}),
+      },
+      input.id,
+      revision,
+    );
   };
 
   /**

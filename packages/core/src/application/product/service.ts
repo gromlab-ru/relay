@@ -1,4 +1,6 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
+import { shortId } from "../../shared/ids.js";
+import { defaultBoardPrefix } from "../../domain/board.js";
 import { productMutationSchema, productRecordSchema } from "../../domain/product.js";
 import type {
   ProductMutation,
@@ -61,9 +63,25 @@ export class ProductService {
         kind === "passport"
           ? "passport"
           : command.fields.kind === "scope" || command.fields.kind === "contract"
-            ? command.fields.applicationId.replace("application_", "scope_")
+            ? records.find(
+                (record) =>
+                  record.fields.kind === "scope" &&
+                  record.fields.applicationId ===
+                    (command.fields.kind === "scope" || command.fields.kind === "contract"
+                      ? command.fields.applicationId
+                      : ""),
+              )?.id
             : undefined;
-      const id = command.id ?? stableId ?? `${kind}_${randomBytes(16).toString("hex")}`;
+      const occupied = new Set(
+        records.flatMap((record) => [
+          record.id,
+          ...(record.fields.kind === "scope"
+            ? record.fields.contracts.map((contract) => contract.id)
+            : []),
+        ]),
+      );
+      const id = command.id ?? stableId ?? shortId(occupied);
+      occupied.add(id);
       invariant(!stableId || id === stableId, "INVALID_ARGUMENT", "Неверный ID записи");
       const previous = records.find((record) => record.id === id);
       invariant(
@@ -160,9 +178,11 @@ export class ProductService {
             command.fields.kind === "contract" &&
             prior !== undefined &&
             prior.id !== command.fields.contractId;
+          const contractId = prior?.id ?? shortId(occupied);
+          occupied.add(contractId);
           return {
             ...entry,
-            id: prior?.id ?? `contract_${randomBytes(16).toString("hex")}`,
+            id: contractId,
             active: true,
             basis: preserveBasis ? prior.basis : contractBasis(entry, records),
           };
@@ -179,6 +199,35 @@ export class ProductService {
       } else fields = inputFields;
       if (fields.kind === "application") {
         const slug = fields.slug;
+        const prefix =
+          fields.prefix ??
+          (previous?.fields.kind === "application" ? previous.fields.prefix : undefined) ??
+          defaultBoardPrefix(slug);
+        fields = { ...fields, prefix };
+        invariant(
+          previous?.fields.kind !== "application" ||
+            (previous.fields.prefix ?? defaultBoardPrefix(previous.fields.slug)) === prefix,
+          "IMMUTABLE_FIELD",
+          "Префикс доски нельзя менять после создания",
+          4,
+        );
+        const boards = await new BoardRepository(this.workspace).all();
+        invariant(
+          !boards.some(
+            (entry) =>
+              entry.applicationId !== id &&
+              (entry.prefix ?? defaultBoardPrefix(entry.slug)) === prefix,
+          ),
+          "ALREADY_EXISTS",
+          "Префикс доски уже занят",
+          4,
+        );
+        invariant(
+          !["PRODUCT", "INFRA"].includes(prefix),
+          "ALREADY_EXISTS",
+          "Префикс зарезервирован системной доской",
+          4,
+        );
         invariant(
           previous?.fields.kind !== "application" || previous.fields.slug === slug,
           "IMMUTABLE_FIELD",

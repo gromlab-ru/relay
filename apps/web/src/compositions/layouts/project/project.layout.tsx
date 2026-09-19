@@ -51,7 +51,10 @@ export const ProjectLayout = () => {
   const attentionCount = lifecycle.data?.attention.length ?? 0;
   const hasAttention = attentionCount > 0;
   const isTaskPage = location.pathname.startsWith(`${base}/tasks/`);
-  const canCreateLegacyTask = !location.pathname.startsWith(`${base}/boards`);
+  const isKanbanTask =
+    location.pathname.startsWith(`${base}/tasks/`) &&
+    /[A-Za-z]/.test(location.pathname.split("/").at(-1) ?? "");
+  const canCreateLegacyTask = !location.pathname.startsWith(`${base}/boards`) && !isKanbanTask;
 
   /**
    * Открывает создание, сохраняя выбранные на доске план, этап и группу.

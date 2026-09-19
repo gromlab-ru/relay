@@ -11,4 +11,5 @@ export const createFormValues = (input: ProductDocumentInput): ProductFormValues
   status: input.status,
   type: input.type,
   slug: input.slug,
+  prefix: input.prefix,
 });

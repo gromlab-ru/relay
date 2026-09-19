@@ -1,6 +1,7 @@
 import { mkdir, readdir, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { boardSchema } from "../domain/board.js";
+import { boardSchema, defaultBoardPrefix } from "../domain/board.js";
+import { derivedId, shortId } from "../shared/ids.js";
 import type { Board } from "../domain/board.js";
 import { productRecordSchema } from "../domain/product.js";
 import type { ProductRecord } from "../domain/product.js";
@@ -56,6 +57,23 @@ export class BoardRepository {
   /** Повтор восстанавливает только недостающие части, никогда не переписывая задачи. */
   async ensure(board: Board, assertOwned: () => void): Promise<void> {
     parse(boardSchema, board, "доска");
+    const others = (await this.all()).filter((entry) => entry.slug !== board.slug);
+    invariant(
+      !others.some((entry) => entry.id === board.id),
+      "ALREADY_EXISTS",
+      "ID доски уже занят",
+      4,
+    );
+    invariant(
+      !others.some(
+        (entry) =>
+          (entry.prefix ?? defaultBoardPrefix(entry.slug)) ===
+          (board.prefix ?? defaultBoardPrefix(board.slug)),
+      ),
+      "ALREADY_EXISTS",
+      "Префикс доски уже занят",
+      4,
+    );
     assertOwned();
     const directory = join(this.root, board.slug);
     const path = join(directory, "board.json");
@@ -80,11 +98,15 @@ export class BoardRepository {
 
   async initialize(assertOwned: () => void): Promise<void> {
     for (const kind of ["product", "infrastructure"] as const) {
+      const existing = await this.all();
       await this.ensure(
         {
           version: 1,
-          id: `board_${kind}`,
+          id:
+            existing.find((board) => board.kind === kind)?.id ??
+            shortId(existing.map((board) => board.id)),
           slug: kind,
+          prefix: defaultBoardPrefix(kind),
           kind,
           applicationId: null,
           revision: 1,
@@ -139,8 +161,11 @@ export class BoardRepository {
       await this.ensure(
         {
           version: 1,
-          id: record.id.replace("application_", "board_"),
+          id: record.id.startsWith("application_")
+            ? record.id.replace("application_", "board_")
+            : derivedId(`board:${record.id}`),
           slug: record.fields.slug,
+          prefix: record.fields.prefix ?? defaultBoardPrefix(record.fields.slug),
           kind: "application",
           applicationId: record.id,
           revision: 1,

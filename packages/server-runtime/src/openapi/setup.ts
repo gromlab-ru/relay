@@ -45,7 +45,19 @@ export function setupOpenApi(app: INestApplication): void {
   document.components.schemas = Object.fromEntries(
     Object.entries(schemas).map(([name, schema]) => [
       name,
-      jsonSchema(schema, name === "SaveProjectRecord" ? "input" : "output"),
+      jsonSchema(
+        schema,
+        [
+          "SaveProjectRecord",
+          "CreateBoardTask",
+          "UpdateBoardTask",
+          "MoveBoardTask",
+          "LinkBoardTask",
+          "BoardTasksQuery",
+        ].includes(name)
+          ? "input"
+          : "output",
+      ),
     ]),
   );
   SwaggerModule.setup(API_DOCS_PATH, app, document, {

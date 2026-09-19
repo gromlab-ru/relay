@@ -4,6 +4,7 @@ import { Button, NavLink, Text } from "@mantine/core";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { Box, ChartNoAxesCombined, LayoutDashboard } from "lucide-react";
 import { useBoards } from "domains/boards";
+import { useBoardTask } from "domains/board-tasks";
 import { useProjectId } from "domains/project";
 import { PRODUCT_NAVIGATION, PROJECT_NAVIGATION } from "./config/navigation";
 import type { ProjectNavigationProps } from "./types/project-navigation-props.type";
@@ -26,7 +27,12 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
   const boards = useBoards(projectId);
   const boardsNavigationId = useId();
   const [isBoardsOpened, setBoardsOpened] = useState(true);
-  const isBoardsRoute = pathname.startsWith(`${basePath}/boards/`);
+  const taskReference = pathname.startsWith(`${basePath}/tasks/`)
+    ? pathname.split("/").at(-1)
+    : undefined;
+  const isKanbanTask = taskReference !== undefined && /[A-Za-z]/.test(taskReference);
+  const openedTask = useBoardTask(projectId, isKanbanTask ? taskReference : null);
+  const isBoardsRoute = pathname.startsWith(`${basePath}/boards/`) || isKanbanTask;
   const boardItems = boards.data?.flatMap((page) => page.items) ?? [];
   const hasMoreBoards = boards.data?.at(-1)?.nextOffset != null;
   const hasBoardsError = boards.error !== undefined;
@@ -34,7 +40,7 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
   const [isProductOpened, setProductOpened] = useState(true);
   const productPath = `${basePath}/product`;
   const isProductRoute = pathname === productPath || pathname.startsWith(`${productPath}/`);
-  const isTaskRoute = pathname.startsWith(`${basePath}/tasks/`);
+  const isTaskRoute = pathname.startsWith(`${basePath}/tasks/`) && !isKanbanTask;
   const overviewPath = `${basePath}/`;
   const productItems = PRODUCT_NAVIGATION.map((entry) => ({
     ...entry,
@@ -131,6 +137,7 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
               component={RouterNavLink}
               to={`${basePath}/boards/${board.slug}`}
               label={board.name}
+              active={isKanbanTask && openedTask.data?.boardSlug === board.slug}
               className={clsx(styles.link, styles._child)}
               classNames={LINK_CLASSES}
               onClick={onNavigate}

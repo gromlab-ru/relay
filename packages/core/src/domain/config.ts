@@ -57,7 +57,7 @@ export const configSchema = z
   .strictObject({
     version: z.literal(1),
     mode: z.literal("local").default("local"),
-    projectId: z.string().uuid().optional(),
+    projectId: z.union([z.string().regex(/^[A-Za-z0-9]{8}$/), z.string().uuid()]).optional(),
     storageDir: z.string().trim().min(1),
     defaultStatus: z.string().min(1),
     readyStatuses: z.array(z.string()).min(1),

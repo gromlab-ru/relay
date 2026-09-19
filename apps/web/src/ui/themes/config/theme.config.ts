@@ -52,6 +52,9 @@ export const theme = createTheme({
   // Цвет текста заливки меняется вместе со схемой, а не вычисляется один раз по светлой палитре.
   variantColorResolver: (input) => {
     const colors = defaultVariantColorsResolver(input);
+    if (input.color === "orange" && input.variant === "light") {
+      return { ...colors, color: "var(--tasks-warning-ink)" };
+    }
     if (input.color === "gray" && input.variant === "filled") {
       return { ...colors, color: "var(--mantine-primary-color-contrast)" };
     }

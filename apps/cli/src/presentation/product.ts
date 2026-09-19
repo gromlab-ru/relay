@@ -49,6 +49,7 @@ export function productRecordText(record: RecordView, options: TextOptions): str
     parts.push(
       `Тип: ${{ frontend: "Фронтенд", backend: "Бэкенд", internal: "Внутренний инструмент" }[fields.type]}`,
       wrap(`Адрес приложения и доски: ${safeText(fields.slug)}`, options.width),
+      wrap(`Префикс задач: ${safeText(fields.prefix ?? fields.slug.toUpperCase())}`, options.width),
     );
   if (fields.kind === "scope") {
     parts.push(wrap(`Приложение: ${fields.applicationId}`, options.width));

@@ -55,6 +55,7 @@ export type ProductDocumentInput = {
   type: string;
   /** Постоянный адрес приложения и доски; у других документов пустая строка. */
   slug: string;
+  prefix: string;
 };
 /** Результат локального сохранения. */
 export type ProductSaveResult =

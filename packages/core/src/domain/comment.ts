@@ -6,8 +6,9 @@ export const MAX_COMMENT_BYTES = 64 * 1024;
 
 export const commentSchema = z.strictObject({
   version: z.literal(1),
-  id: z.string().regex(/^cmt_[a-f0-9]{32}$/),
+  id: z.string().regex(/^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$/),
   taskId: taskIdSchema,
+  requestKey: z.string().optional(),
   actor: actorSchema,
   createdAt: timestampSchema,
   body: nonemptyMarkdown(MAX_COMMENT_BYTES),

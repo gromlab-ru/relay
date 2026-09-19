@@ -11,6 +11,8 @@ import type { Workspace } from "@relay/core/storage/workspace";
 import type { LifecycleQueries } from "@relay/core/application/project/queries";
 import type { ProjectService } from "@relay/core/application/project/service";
 import type { ProductQueries } from "@relay/core/application/product/queries";
+import type { BoardTasksService } from "@relay/core/application/board-tasks/service";
+import type { BoardsService } from "@relay/core/application/boards/service";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -42,6 +44,11 @@ export interface TasksBackend {
 }
 
 export interface Backend {
+  boardTasks: Pick<
+    BoardTasksService,
+    "list" | "get" | "links" | "create" | "update" | "move" | "link"
+  >;
+  boards: Pick<BoardsService, "list" | "get">;
   product: Pick<ProductQueries, "state" | "mutate" | "overview" | "list" | "context">;
   lifecycle: Pick<LifecycleQueries, "state" | "context" | "briefing" | "changes"> &
     Pick<ProjectService, "save">;

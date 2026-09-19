@@ -1,5 +1,13 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
+import { boardsPageSchema, boardViewSchema, boardsQuerySchema } from "@relay/core/domain/board";
+import {
+  boardTaskViewSchema,
+  boardTaskSavedSchema,
+  boardTasksPageSchema,
+  boardTaskLinksPageSchema,
+  boardTasksQuerySchema,
+} from "@relay/core/domain/board-task";
 import { HttpClient, ApiError } from "@relay/rest-sdk/http-client";
 import { createApiClient } from "@relay/rest-sdk/create-api-client";
 import { operationsTree } from "@relay/rest-sdk/operations-tree";
@@ -148,6 +156,82 @@ export async function createHttpBackend(url: string, project?: string): Promise<
     );
   return {
     kind: "http",
+    boards: {
+      list: async (input = {}) =>
+        decode(
+          boardsPageSchema,
+          await call(() => api.boards.getBoards(defined(boardsQuerySchema.parse(input)))),
+        ),
+      get: async (slug) =>
+        decode(boardViewSchema, await call(() => api.boards.getBoardBySlug({ slug }))),
+    },
+    boardTasks: {
+      list: async (input = {}) =>
+        decode(
+          boardTasksPageSchema,
+          await call(() => api.kanban.getBoardTasks(defined(boardTasksQuerySchema.parse(input)))),
+        ),
+      get: async (reference) =>
+        decode(boardTaskViewSchema, await call(() => api.kanban.getBoardTask({ reference }))),
+      links: async (reference, input = {}) =>
+        decode(
+          boardTaskLinksPageSchema,
+          await call(() =>
+            api.kanban.getBoardTaskLinks({
+              reference,
+              ...defined(boardTasksQuerySchema.parse(input)),
+            }),
+          ),
+        ),
+      create: async (input, actor) =>
+        decode(
+          boardTaskSavedSchema,
+          await call(
+            () => api.kanban.createBoardTask(defined({ ...input, actor: input.actor ?? actor })),
+            "write",
+            input.requestId,
+          ),
+        ),
+      update: async (reference, input, actor) =>
+        decode(
+          boardTaskSavedSchema,
+          await call(
+            () =>
+              api.kanban.updateBoardTask(
+                { reference },
+                defined({ ...input, actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
+      move: async (reference, input, actor) =>
+        decode(
+          boardTaskSavedSchema,
+          await call(
+            () =>
+              api.kanban.moveBoardTask(
+                { reference },
+                defined({ ...input, actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
+      link: async (reference, input, actor) =>
+        decode(
+          boardTaskSavedSchema,
+          await call(
+            () =>
+              api.kanban.linkBoardTask(
+                { reference },
+                defined({ ...input, actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
+    },
     product: {
       state: async () =>
         decode(productStateSchema, await call(() => api.product.getProductState())),

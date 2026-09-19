@@ -12,11 +12,19 @@ import { changeDependencyForProject } from "./operations/change-dependency-for-p
 import { changeDependency } from "./operations/change-dependency.js";
 import { claimTaskForProject } from "./operations/claim-task-for-project.js";
 import { claimTask } from "./operations/claim-task.js";
+import { createBoardTaskForProject } from "./operations/create-board-task-for-project.js";
+import { createBoardTask } from "./operations/create-board-task.js";
 import { createTaskForProject } from "./operations/create-task-for-project.js";
 import { createTask } from "./operations/create-task.js";
 import { getBoardBySlugForProject } from "./operations/get-board-by-slug-for-project.js";
 import { getBoardBySlug } from "./operations/get-board-by-slug.js";
 import { getBoardForProject } from "./operations/get-board-for-project.js";
+import { getBoardTaskForProject } from "./operations/get-board-task-for-project.js";
+import { getBoardTaskLinksForProject } from "./operations/get-board-task-links-for-project.js";
+import { getBoardTaskLinks } from "./operations/get-board-task-links.js";
+import { getBoardTask } from "./operations/get-board-task.js";
+import { getBoardTasksForProject } from "./operations/get-board-tasks-for-project.js";
+import { getBoardTasks } from "./operations/get-board-tasks.js";
 import { getBoard } from "./operations/get-board.js";
 import { getBoardsForProject } from "./operations/get-boards-for-project.js";
 import { getBoards } from "./operations/get-boards.js";
@@ -61,12 +69,16 @@ import { getTaskMarkdown } from "./operations/get-task-markdown.js";
 import { getTaskTreeForProject } from "./operations/get-task-tree-for-project.js";
 import { getTaskTree } from "./operations/get-task-tree.js";
 import { getTask } from "./operations/get-task.js";
+import { linkBoardTaskForProject } from "./operations/link-board-task-for-project.js";
+import { linkBoardTask } from "./operations/link-board-task.js";
 import { listCommentsForProject } from "./operations/list-comments-for-project.js";
 import { listComments } from "./operations/list-comments.js";
 import { listLogsForProject } from "./operations/list-logs-for-project.js";
 import { listLogs } from "./operations/list-logs.js";
 import { listTasksForProject } from "./operations/list-tasks-for-project.js";
 import { listTasks } from "./operations/list-tasks.js";
+import { moveBoardTaskForProject } from "./operations/move-board-task-for-project.js";
+import { moveBoardTask } from "./operations/move-board-task.js";
 import { moveTaskForProject } from "./operations/move-task-for-project.js";
 import { moveTask } from "./operations/move-task.js";
 import { mutateProductForProject } from "./operations/mutate-product-for-project.js";
@@ -77,6 +89,8 @@ import { releaseTask } from "./operations/release-task.js";
 import { saveProjectRecordForProject } from "./operations/save-project-record-for-project.js";
 import { saveProjectRecord } from "./operations/save-project-record.js";
 import { unregisterProject } from "./operations/unregister-project.js";
+import { updateBoardTaskForProject } from "./operations/update-board-task-for-project.js";
+import { updateBoardTask } from "./operations/update-board-task.js";
 import { updateTaskForProject } from "./operations/update-task-for-project.js";
 import { updateTask } from "./operations/update-task.js";
 import { validateProjectForProject } from "./operations/validate-project-for-project.js";
@@ -169,6 +183,22 @@ export const operationsTree = {
     getBoardBySlug: getBoardBySlug,
     getBoardsForProject: getBoardsForProject,
     getBoardBySlugForProject: getBoardBySlugForProject,
+  },
+  kanban: {
+    getBoardTasks: getBoardTasks,
+    createBoardTask: createBoardTask,
+    getBoardTask: getBoardTask,
+    getBoardTaskLinks: getBoardTaskLinks,
+    linkBoardTask: linkBoardTask,
+    updateBoardTask: updateBoardTask,
+    moveBoardTask: moveBoardTask,
+    getBoardTasksForProject: getBoardTasksForProject,
+    createBoardTaskForProject: createBoardTaskForProject,
+    getBoardTaskForProject: getBoardTaskForProject,
+    getBoardTaskLinksForProject: getBoardTaskLinksForProject,
+    linkBoardTaskForProject: linkBoardTaskForProject,
+    updateBoardTaskForProject: updateBoardTaskForProject,
+    moveBoardTaskForProject: moveBoardTaskForProject,
   },
   comments: {
     listComments: listComments,

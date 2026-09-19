@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { actorSchema, singleLine, text, timestampSchema } from "./validation.js";
 import { requestIdSchema } from "../application/record-request.js";
-import { applicationSlugSchema } from "./board.js";
+import { applicationSlugSchema, boardPrefixSchema } from "./board.js";
 
 export const productIdSchema = z
   .string()
-  .regex(/^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$/);
+  .regex(
+    /^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$/,
+  );
 const title = singleLine(1024);
 const markdown = text(256 * 1024).refine(
   (value) => value.trim().length > 0,
@@ -49,6 +51,9 @@ export const productFieldsSchema = z.discriminatedUnion("kind", [
     kind: z.literal("application"),
     ...description,
     slug: applicationSlugSchema,
+    prefix: boardPrefixSchema
+      .optional()
+      .describe("Префикс задач доски; при создании по умолчанию из slug, затем неизменяем"),
     type: z.enum(["frontend", "backend", "internal"]),
   }),
   z.strictObject({

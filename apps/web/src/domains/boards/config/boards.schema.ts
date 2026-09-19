@@ -4,6 +4,7 @@ import { z } from "zod";
 export const BOARD_SCHEMA = z.object({
   id: z.string(),
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  prefix: z.string(),
   kind: z.enum(["product", "application", "infrastructure"]),
   applicationId: z.string().nullable(),
   name: z.string(),

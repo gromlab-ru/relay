@@ -23,13 +23,15 @@ export class CommentService {
     actor: string,
     requestId?: string,
   ): Promise<Comment> {
-    const id = recordRequestId("cmt", requestId);
+    let id = "";
     const updated = await this.tasks.mutate(reference, { actor }, (task) => {
+      id = recordRequestId("cmt", requestId, Object.keys(task.comments));
       const comment = parse(
         commentSchema,
         {
           version: 1,
           id,
+          ...(requestId && !id.startsWith("cmt_") ? { requestKey: requestId } : {}),
           taskId: task.id,
           actor,
           body: toLines(text),

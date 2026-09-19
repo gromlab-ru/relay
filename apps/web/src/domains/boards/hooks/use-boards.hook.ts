@@ -34,7 +34,7 @@ export const useBoards = (projectId: string): SWRInfiniteResponse<BoardsPage, Er
 
 /** Поддерживает актуальность открытой доски, в том числе её названия. */
 export const useBoard = (projectId: string, slug: string): SWRResponse<Board, Error> => {
-  const query = useSWR<Board, Error>(["board-info", projectId, slug], () =>
+  const query = useSWR<Board, Error>(slug ? ["board-info", projectId, slug] : null, () =>
     getBoard(projectId, slug),
   );
   const { mutate } = query;

@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useProductPath } from "compositions/widgets/product-page";
 import { ProductTreeRow } from "compositions/widgets/product-tree-row";
+import { ProductTasks } from "compositions/widgets/product-tasks";
 import { isEmptyArray } from "shared/value-predicates";
 import type { ApplicationFeatureProps } from "./types/application-feature-props.type";
 
@@ -36,20 +37,23 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
       : `Готово ${readyCount} из ${contribution.scenarios.length}`
     : undefined;
   return (
-    <ProductTreeRow
-      id={anchor}
-      tabIndex={-1}
-      name={name}
-      summary={selected.title}
-      status={selected.status}
-      href={href}
-      sourceHref={sourceHref}
-      sourceLabel={sourceLabel}
-      returnTo={returnTo}
-      countLabel={countLabel}
-      isFeature={isFeature}
-      isLastScenario={isLastScenario}
-      payload={payload}
-    />
+    <div>
+      <ProductTreeRow
+        id={anchor}
+        tabIndex={-1}
+        name={name}
+        summary={selected.title}
+        status={selected.status}
+        href={href}
+        sourceHref={sourceHref}
+        sourceLabel={sourceLabel}
+        returnTo={returnTo}
+        countLabel={countLabel}
+        isFeature={isFeature}
+        isLastScenario={isLastScenario}
+        payload={payload}
+      />
+      <ProductTasks targetId={selected.contractId} />
+    </div>
   );
 };

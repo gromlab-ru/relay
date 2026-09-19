@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { boardSlugSchema, boardsQuerySchema } from "../../domain/board.js";
+import { boardSlugSchema, boardsQuerySchema, defaultBoardPrefix } from "../../domain/board.js";
 import type { BoardView, BoardsQuery } from "../../domain/board.js";
 import { parse } from "../../domain/validation.js";
 import { BoardRepository } from "../../storage/boards.js";
@@ -18,25 +18,29 @@ export class BoardsService {
       const views = boards.map((board): BoardView => {
         if (board.kind !== "application") {
           invariant(
-            board.slug === board.kind &&
-              board.id === `board_${board.kind}` &&
-              board.applicationId === null,
+            board.slug === board.kind && board.applicationId === null,
             "INVALID_DATA",
             "Некорректная системная доска",
             5,
           );
-          return { ...board, name: board.kind === "product" ? "Продукт" : "Инфраструктура" };
+          return {
+            ...board,
+            prefix: board.prefix ?? defaultBoardPrefix(board.slug),
+            name: board.kind === "product" ? "Продукт" : "Инфраструктура",
+          };
         }
         const application = products.find((record) => record.id === board.applicationId);
         invariant(
-          application?.fields.kind === "application" &&
-            application.fields.slug === board.slug &&
-            board.id === application.id.replace("application_", "board_"),
+          application?.fields.kind === "application" && application.fields.slug === board.slug,
           "INVALID_DATA",
           "Доска не соответствует приложению",
           5,
         );
-        return { ...board, name: application.fields.name };
+        return {
+          ...board,
+          prefix: board.prefix ?? defaultBoardPrefix(board.slug),
+          name: application.fields.name,
+        };
       });
       invariant(
         views.some((board) => board.kind === "product") &&

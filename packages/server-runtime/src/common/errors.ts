@@ -6,6 +6,7 @@ import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
   "ALREADY_EXISTS",
+  "INVALID_REFERENCE",
   "REVISION_CONFLICT",
   "BOARD_CHANGED",
   "RANK_CONFLICT",

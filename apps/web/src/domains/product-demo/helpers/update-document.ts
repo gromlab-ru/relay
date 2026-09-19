@@ -41,7 +41,12 @@ export const updateDocument = (
       : [...snapshot.features, featureData];
     return { ...nextSnapshot, features };
   }
-  const applicationData = { ...documentData, type: input.type, slug: input.slug };
+  const applicationData = {
+    ...documentData,
+    type: input.type,
+    slug: input.slug,
+    prefix: input.prefix,
+  };
   const hasApplication = snapshot.applications.some((application) => application.id === input.id);
   const applications = hasApplication
     ? snapshot.applications.map((application) =>

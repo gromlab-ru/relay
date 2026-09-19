@@ -40,6 +40,7 @@ export const PRODUCT_FIELDS_SCHEMA = z.discriminatedUnion("kind", [
     kind: z.literal("application"),
     ...description,
     slug: APPLICATION_SLUG_SCHEMA,
+    prefix: z.string().optional(),
     type: z.enum(["frontend", "backend", "internal"]),
   }),
   z.object({
@@ -77,4 +78,14 @@ export const PRODUCT_STATE_SCHEMA = z.object({
       stale: z.number(),
     }),
   ),
+});
+
+/** Контекст с причинами включения, собранный общим ядром продукта. */
+export const PRODUCT_CONTEXT_SCHEMA = z.object({
+  productId: z.string(),
+  version: z.string(),
+  records: z.array(
+    z.object({ record: PRODUCT_STATE_SCHEMA.shape.records.element, reasons: z.array(z.string()) }),
+  ),
+  readiness: PRODUCT_STATE_SCHEMA.shape.readiness,
 });

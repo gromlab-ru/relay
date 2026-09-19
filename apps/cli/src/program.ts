@@ -8,6 +8,7 @@ import { registerOverview } from "./commands/overview.js";
 import { registerProjects } from "./commands/projects.js";
 import { registerLifecycle } from "./commands/lifecycle.js";
 import { registerProduct } from "./commands/product.js";
+import { registerBoardTasks } from "./commands/board-tasks.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -46,6 +47,7 @@ export function createProgram(runtime: Runtime): Command {
   registerProjects(program, runtime);
   registerLifecycle(program, runtime);
   registerProduct(program, runtime);
+  registerBoardTasks(program, runtime);
   registerOverview(program, runtime);
   registerTasks(program, runtime);
   registerAssignments(program, runtime);

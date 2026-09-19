@@ -1,4 +1,5 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
+import { shortId } from "../../shared/ids.js";
 import { projectRecordSchema, saveProjectRecordSchema } from "../../domain/project.js";
 import type { ProjectRecord, SaveProjectRecord } from "../../domain/project.js";
 import { actorSchema, parse } from "../../domain/validation.js";
@@ -23,19 +24,24 @@ export class ProjectService {
       const requestHash = createHash("sha256")
         .update(JSON.stringify({ actor, fields: command.fields }))
         .digest("hex");
-      const suffix = command.requestId
-        ? createHash("sha256")
-            .update(`${actor}/${kind}/${command.requestId}`)
-            .digest("hex")
-            .slice(0, 32)
-        : randomBytes(16).toString("hex");
+      const requestKey = command.requestId
+        ? createHash("sha256").update(`${actor}/${kind}/${command.requestId}`).digest("hex")
+        : undefined;
       const stableId =
         kind === "passport"
           ? "passport"
           : kind === "task"
             ? `task_${command.fields.taskId}`
             : undefined;
-      const id = command.id ?? stableId ?? `${kind}_${suffix}`;
+      const repeated = requestKey
+        ? records.find(
+            (record) =>
+              record.requestKey === requestKey ||
+              record.id === `${kind}_${requestKey.slice(0, 32)}`,
+          )
+        : undefined;
+      const id =
+        command.id ?? stableId ?? repeated?.id ?? shortId(records.map((record) => record.id));
       invariant(
         stableId === undefined || stableId === id,
         "INVALID_ARGUMENT",
@@ -119,6 +125,11 @@ export class ProjectService {
             ? { requestHash: previous.requestHash }
             : command.requestId && previous === undefined
               ? { requestHash }
+              : {}),
+          ...(previous?.requestKey
+            ? { requestKey: previous.requestKey }
+            : requestKey && previous === undefined
+              ? { requestKey }
               : {}),
           ...(kind === "checkpoint"
             ? {

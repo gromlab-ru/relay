@@ -15,6 +15,7 @@ import { ServerModule } from "./modules/workspace/server.module.js";
 import { LifecycleModule } from "./modules/lifecycle/lifecycle.module.js";
 import { ProductModule } from "./modules/product/product.module.js";
 import { BoardsModule } from "./modules/boards/boards.module.js";
+import { BoardTasksModule } from "./modules/board-tasks/board-tasks.module.js";
 
 @Module({})
 export class AppModule {
@@ -40,6 +41,7 @@ export class AppModule {
         LifecycleModule,
         ProductModule,
         BoardsModule,
+        BoardTasksModule,
         CommentsModule,
         LogsModule,
         EventsModule,

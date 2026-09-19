@@ -1,5 +1,42 @@
 # Журнал создания TSX
 
+## Обратные задачи реализации — 19 сентября 2026
+
+Из apps/web: `pnpm run create ui-unit product-tasks src/compositions/widgets`.
+Самостоятельный виджет обслуживает страницы фич, сценариев и контрактов приложений,
+получает ID цели и читает ограниченный обратный список через domains/board-tasks.
+Остальные компоненты карточки и MarkdownField изменены на месте.
+
+## Рабочее окно задачи — 19 сентября 2026
+
+Из `apps/web` выполнено:
+
+```bash
+pnpm run create ui-unit task-context src/compositions/screens/project-board/ui/task-modal/ui/task-editor/ui
+```
+
+Вложенный юнит отвечает за временный выбор области и чтение контекста. Данные и
+варианты выбора предоставляет фасет `domains/product`; готовый SDK используется
+через существующий адаптер. Модалка, редактор и связи переработаны на месте.
+
+## Канбан отдельных досок — 19 сентября 2026
+
+Из `apps/web` выполнены:
+
+```bash
+pnpm run create ui-unit task-kanban src/compositions/screens/project-board/ui
+pnpm run create ui-unit task-column src/compositions/screens/project-board/ui/task-kanban/ui
+pnpm run create ui-unit task-card src/compositions/screens/project-board/ui/task-kanban/ui/task-column/ui
+pnpm run create ui-unit task-modal src/compositions/screens/project-board/ui
+pnpm run create ui-unit task-editor src/compositions/screens/project-board/ui/task-modal/ui
+pnpm run create ui-unit task-relations src/compositions/screens/project-board/ui/task-modal/ui/task-editor/ui
+```
+
+Вложенные фасеты доступны родителям. Предметные данные предоставляет `domains/board-tasks`.
+После первой пользовательской оценки существующие сгенерированные компоненты переработаны:
+широкое центральное окно чтения, редактор уже созданной задачи, формы связей по действию,
+sortable-карточки и согласованная подгрузка как на прежней доске.
+
 ## Множественные доски — 19 сентября 2026
 
 Из `apps/web` выполнено:

@@ -1,5 +1,5 @@
 import { mkdir, realpath } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { shortId } from "../shared/ids.js";
 import { basename, dirname, join, resolve } from "node:path";
 import { configSchema, defaultConfig } from "../domain/config.js";
 import type { Config } from "../domain/config.js";
@@ -8,6 +8,7 @@ import { AppError, invariant, isErrno } from "../shared/errors.js";
 import { atomicJson, exists, readJson } from "./files.js";
 import { prepareRuntime, runtimeDirectory, withStorageLock } from "./lock.js";
 import { BoardRepository } from "./boards.js";
+import { BoardTaskRepository } from "./board-tasks.js";
 
 export const CONFIG_NAME = ".relay/config.json";
 export const MIGRATION_STATE = "migration-v2.json";
@@ -47,6 +48,7 @@ export class Workspace {
         4,
       );
       await new BoardRepository(this).recover(assertOwned);
+      await new BoardTaskRepository(this).recover(assertOwned);
       return operation(assertOwned);
     });
   }
@@ -100,7 +102,7 @@ export async function initialize(
   invariant(!(await exists(configPath)), "ALREADY_INITIALIZED", "Конфигурация уже существует", 4);
   const config = parse(
     configSchema,
-    { ...structuredClone(defaultConfig), projectId: randomUUID(), storageDir },
+    { ...structuredClone(defaultConfig), projectId: shortId(), storageDir },
     "конфигурация",
   );
   const root = resolve(dirname(configPath), storageDir);

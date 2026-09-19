@@ -21,8 +21,7 @@ import type { TaskPreview } from "domains/tasks";
 import { isDefined } from "shared/value-predicates";
 import { KanbanColumn } from "compositions/screens/board/ui/kanban/ui/kanban-column";
 import { getDropPosition } from "./helpers/drop-position";
-import { getBoardCollisions } from "./helpers/get-board-collisions";
-import { getKeyboardCoordinates } from "./helpers/get-keyboard-coordinates";
+import { getBoardCollisions, getKeyboardCoordinates } from "ui/kanban-dnd";
 import type { KanbanProps } from "./types/kanban-props.type";
 import styles from "./styles/kanban.module.css";
 

@@ -229,6 +229,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         body?: string;
         type: string;
         slug?: string;
+        prefix?: string;
         feature?: string;
         links: string;
         documentKind: string;
@@ -243,10 +244,15 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         examples: [[`relay-cli product ${kind} ${action} --help`, "Показать параметры"]],
         configure: (command) => {
           if (kind === "application")
-            command.requiredOption(
-              "--slug <slug>",
-              "Неизменяемый адрес приложения и доски: латинские строчные буквы, цифры и дефисы",
-            );
+            command
+              .option(
+                "--prefix <prefix>",
+                "Неизменяемый префикс задач: WEB, API; по умолчанию из slug",
+              )
+              .requiredOption(
+                "--slug <slug>",
+                "Неизменяемый адрес приложения и доски: латинские строчные буквы, цифры и дефисы",
+              );
           return command
             .requiredOption("--name <name>", "Название")
             .option("--summary <text>", "Краткое описание", "")
@@ -296,7 +302,9 @@ export function registerProduct(program: Command, runtime: Runtime): void {
                     name: options.name,
                     summary: options.summary,
                     description: options.description,
-                    ...(kind === "application" ? { type: options.type, slug: options.slug } : {}),
+                    ...(kind === "application"
+                      ? { type: options.type, slug: options.slug, prefix: options.prefix }
+                      : {}),
                   };
           const command = parse(
             productMutationSchema,

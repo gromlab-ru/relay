@@ -7,8 +7,9 @@ export const logKindSchema = z.enum(["progress", "decision", "execution", "error
 
 export const logSchema = z.strictObject({
   version: z.literal(1),
-  id: z.string().regex(/^log_[a-f0-9]{32}$/),
+  id: z.string().regex(/^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$/),
   taskId: taskIdSchema,
+  requestKey: z.string().optional(),
   actor: actorSchema,
   createdAt: timestampSchema,
   kind: logKindSchema,

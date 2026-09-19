@@ -12,6 +12,16 @@ import manifest from "#manifest" with { type: "json" };
 import { asAppError, invariant } from "@relay/core/shared/errors";
 import { actorSchema, parse, taskIdSchema } from "@relay/core/domain/validation";
 import { taskFieldsSchema } from "@relay/core/domain/task";
+import { boardsQuerySchema } from "@relay/core/domain/board";
+import {
+  boardTaskReferenceSchema,
+  boardTasksQuerySchema,
+  createBoardTaskSchema,
+  updateBoardTaskSchema,
+  moveBoardTaskSchema,
+  linkBoardTaskSchema,
+} from "@relay/core/domain/board-task";
+import type { BoardTaskSaved } from "@relay/core/domain/board-task";
 import { logKindSchema, logBrief } from "@relay/core/domain/log";
 import { toLines, toText } from "@relay/core/domain/markdown";
 import { taskListQuerySchema } from "@relay/core/application/queries/project";
@@ -62,6 +72,16 @@ const selector = {
 };
 const revision = { actor: actorSchema, ifRevision: z.number().int().positive().optional() };
 const task = { id: taskIdSchema };
+const boardTask = { reference: boardTaskReferenceSchema };
+
+/** Квитанция нового канбана сохраняет первоначальный ключ даже после следующего переноса. */
+async function changedBoardTask(operation: Promise<BoardTaskSaved>): Promise<Result> {
+  const data = await operation;
+  return {
+    data,
+    text: `Задача ${data.key}: ${data.action}. ID: ${data.id}. Ревизия: ${data.revision}. Ключ повтора: ${data.requestId}.`,
+  };
+}
 const taskInputSchema = taskFieldsSchema.extend({
   description: z
     .union([z.string().transform(toLines), taskFieldsSchema.shape.description])
@@ -161,6 +181,115 @@ export function createTools(projects: Projects): Server {
       });
     });
   }
+
+  projectTool(
+    "boards_list",
+    "Доски проекта: названия, slug и префиксы задач; постраничное продолжение",
+    { ...selector, ...boardsQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.boards.list(boardsQuerySchema.strip().parse(input)),
+    }),
+  );
+  projectTool(
+    "board_tasks_list",
+    "Задачи новых досок; readiness=ready возвращает работу без блокеров, blocked — задачи с невыполненными зависимостями",
+    { ...selector, ...boardTasksQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.boardTasks.list(boardTasksQuerySchema.strip().parse(input)),
+    }),
+  );
+  projectTool(
+    "board_task_get",
+    "Прочитать задачу новой доски: полный Markdown, ревизия и ID блокеров",
+    { ...selector, ...boardTask },
+    true,
+    async (backend, input) => ({ data: await backend.boardTasks.get(input.reference) }),
+  );
+  projectTool(
+    "board_task_links",
+    "Понять порядок выполнения: зависимости, блокируемые задачи, родительство и связи между досками с текущими состояниями",
+    { ...selector, ...boardTask, ...boardTasksQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.boardTasks.links(
+        input.reference,
+        boardTasksQuerySchema.strip().parse(input),
+      ),
+    }),
+  );
+  projectTool(
+    "board_task_create",
+    "Создать задачу на выбранной доске: заголовок и Markdown. Ключ выдаётся автоматически; requestId позволяет безопасный повтор",
+    {
+      ...selector,
+      ...createBoardTaskSchema.shape,
+      actor: actorSchema.describe("Автор создания задачи"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.create(createBoardTaskSchema.strip().parse(input), input.actor),
+      ),
+  );
+  projectTool(
+    "board_task_update",
+    "Изменить заголовок, Markdown или явные продуктовые связи задачи с проверкой ревизии. productLinks заменяет весь набор; [] очищает. Требования читаются адресно через product_context",
+    {
+      ...selector,
+      ...boardTask,
+      ...updateBoardTaskSchema.shape,
+      actor: actorSchema.describe("Автор изменения задачи"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.update(
+          input.reference,
+          updateBoardTaskSchema.strip().parse(input),
+          input.actor,
+        ),
+      ),
+  );
+  projectTool(
+    "board_task_move",
+    "Изменить колонку, порядок или доску. При переносе ключ меняется, ID и связи сохраняются. Блокеры препятствуют завершению",
+    {
+      ...selector,
+      ...boardTask,
+      ...moveBoardTaskSchema.shape,
+      actor: actorSchema.describe("Автор перемещения задачи"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.move(
+          input.reference,
+          moveBoardTaskSchema.strip().parse(input),
+          input.actor,
+        ),
+      ),
+  );
+  projectTool(
+    "board_task_link",
+    "Добавить или удалить междосочную зависимость, обычную связь либо родителя. Циклы запрещены; обратные связи видны в board_task_links",
+    {
+      ...selector,
+      ...boardTask,
+      ...linkBoardTaskSchema.shape,
+      actor: actorSchema.describe("Автор изменения связи"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.link(
+          input.reference,
+          linkBoardTaskSchema.strip().parse(input),
+          input.actor,
+        ),
+      ),
+  );
 
   projectTool(
     "product_overview",
@@ -674,7 +803,7 @@ export function createTools(projects: Projects): Server {
   projectTool(
     "comment_get",
     "Прочитать комментарий полностью",
-    { ...selector, ...task, commentId: z.string().regex(/^cmt_[a-f0-9]{32}$/) },
+    { ...selector, ...task, commentId: z.string().regex(/^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$/) },
     true,
     async (backend, { id, commentId }) => ({ data: await backend.comments.get(id, commentId) }),
   );
@@ -723,7 +852,7 @@ export function createTools(projects: Projects): Server {
   projectTool(
     "log_get",
     "Прочитать отчёт полностью",
-    { ...selector, ...task, logId: z.string().regex(/^log_[a-f0-9]{32}$/) },
+    { ...selector, ...task, logId: z.string().regex(/^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$/) },
     true,
     async (backend, { id, logId }) => ({ data: await backend.logs.get(id, logId) }),
   );

@@ -4,6 +4,7 @@ import { Link2, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProductReadiness } from "domains/product-demo";
 import { MarkdownView } from "ui/markdown-view";
+import { ProductTasks } from "compositions/widgets/product-tasks";
 import type { ScenarioSectionProps } from "./types/scenario-section-props.type";
 import styles from "./styles/scenario-section.module.css";
 
@@ -56,6 +57,7 @@ export const ScenarioSection = (props: ScenarioSectionProps) => {
         </Group>
       </header>
       <MarkdownView text={scenario.description} />
+      <ProductTasks targetId={scenario.id} />
     </section>
   );
 };

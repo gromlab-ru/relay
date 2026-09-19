@@ -45,7 +45,7 @@ test("поиск отчётов сохраняет курсор и байтов�
         const call = await invokeRaw(app.root, args);
         assert.equal(call.code, 0, call.stdout + call.stderr);
         assert.ok(Buffer.byteLength(call.stdout) <= 1024);
-        seen.push(...(call.stdout.match(/^log_[a-f0-9]{32}/gm) ?? []));
+        seen.push(...(call.stdout.match(/^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})(?=\s)/gm) ?? []));
         cursor = /Продолжение: --cursor (\S+)/.exec(call.stdout)?.[1] ?? null;
       }
       if (!cursor) break;

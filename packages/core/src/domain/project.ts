@@ -4,7 +4,7 @@ import { actorSchema, singleLine, taskIdSchema, timestampSchema, text } from "./
 /** Проектные документы адресуются независимо от числовых задач. */
 export const projectRecordIdSchema = z
   .string()
-  .regex(/^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$/);
+  .regex(/^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$/);
 const reference = projectRecordIdSchema.nullable().default(null);
 const references = z.array(projectRecordIdSchema).max(1000).default([]);
 const taskIds = z.array(taskIdSchema).max(10000).default([]);
@@ -221,6 +221,7 @@ export const projectRecordSchema = z.strictObject({
   events: z.array(eventSchema),
   snapshot: checkpointSnapshotSchema.optional(),
   requestHash: z.string().optional(),
+  requestKey: z.string().optional(),
 });
 export type ProjectRecord = z.output<typeof projectRecordSchema>;
 export type RecordOf<K extends ProjectKind> = ProjectRecord & { fields: FieldsOf<K> };

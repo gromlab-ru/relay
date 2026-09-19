@@ -4,9 +4,605 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface BoardTaskView {
+  /**
+   * Постоянный ID задачи: 8 символов
+   * @pattern ^[A-Za-z0-9]{8}$
+   */
+  id: string;
+  /**
+   * Текущий ключ задачи с префиксом доски
+   * @pattern ^(?:[A-Za-z0-9]{8}|[A-Z][A-Z0-9]{1,15}-[1-9]\d*)$
+   */
+  key: string;
+  /** Постоянный ID текущей доски */
+  boardId: string;
+  /**
+   * Однострочный заголовок без Markdown; может быть пустым
+   * @minLength 0
+   */
+  title: string;
+  /** Описание задачи в Markdown; может быть пустым */
+  description: string;
+  /**
+   * Явные связи «Реализует», максимум 100; пустой массив удаляет все связи
+   * @maxItems 100
+   * @default []
+   */
+  productLinks: {
+    /** Цель реализации: общая фича, сценарий или контракт приложения */
+    kind: BoardTaskViewKindEnum;
+    /**
+     * Постоянный ID продуктовой цели в выбранном проекте
+     * @minLength 1
+     * @maxLength 128
+     */
+    id: string;
+  }[];
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column: BoardTaskViewColumnEnum;
+  /** Порядок внутри колонки */
+  rank: number;
+  /**
+   * Ревизия задачи, прочитанная перед изменением
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /**
+   * Прямые зависимости по постоянным ID; только done выполняет зависимость
+   * @maxItems 200
+   */
+  dependencies: string[];
+  /**
+   * Связанные задачи; обратное представление вычисляется
+   * @maxItems 200
+   */
+  related: string[];
+  /** Родительская задача или null */
+  parentId: string | null;
+  /**
+   * Время создания
+   * @format date-time
+   * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+   */
+  createdAt: string;
+  /**
+   * Время последнего изменения
+   * @format date-time
+   * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+   */
+  updatedAt: string;
+  /**
+   * Автор создания
+   * @maxLength 128
+   */
+  createdBy: string;
+  /**
+   * Автор последнего изменения
+   * @maxLength 128
+   */
+  updatedBy: string;
+  /** Текущий slug доски для навигации */
+  boardSlug: string;
+  /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+  blockers: string[];
+  /** Есть невыполненные зависимости */
+  blocked: boolean;
+  /** Можно брать в работу: колонка ready и нет блокеров */
+  ready: boolean;
+}
+
+export interface BoardTaskSaved {
+  /**
+   * Постоянный ID задачи: 8 символов
+   * @pattern ^[A-Za-z0-9]{8}$
+   */
+  id: string;
+  /**
+   * ID задачи или ключ, например WEB-24
+   * @pattern ^(?:[A-Za-z0-9]{8}|[A-Z][A-Z0-9]{1,15}-[1-9]\d*)$
+   */
+  key: string;
+  /** ID доски на момент операции */
+  boardId: string;
+  /**
+   * Ревизия задачи, прочитанная перед изменением
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /** Выполненное действие */
+  action: BoardTaskSavedActionEnum;
+  /**
+   * Ключ повтора: повтор с тем же содержимым возвращает первоначальную квитанцию
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** Первоначальное состояние при создании для открытия редактора без дополнительного GET */
+  task?: {
+    /**
+     * Постоянный ID задачи: 8 символов
+     * @pattern ^[A-Za-z0-9]{8}$
+     */
+    id: string;
+    /**
+     * Текущий ключ задачи с префиксом доски
+     * @pattern ^(?:[A-Za-z0-9]{8}|[A-Z][A-Z0-9]{1,15}-[1-9]\d*)$
+     */
+    key: string;
+    /** Постоянный ID текущей доски */
+    boardId: string;
+    /**
+     * Однострочный заголовок без Markdown; может быть пустым
+     * @minLength 0
+     */
+    title: string;
+    /** Описание задачи в Markdown; может быть пустым */
+    description: string;
+    /**
+     * Явные связи «Реализует», максимум 100; пустой массив удаляет все связи
+     * @maxItems 100
+     * @default []
+     */
+    productLinks: {
+      /** Цель реализации: общая фича, сценарий или контракт приложения */
+      kind: BoardTaskSavedKindEnum;
+      /**
+       * Постоянный ID продуктовой цели в выбранном проекте
+       * @minLength 1
+       * @maxLength 128
+       */
+      id: string;
+    }[];
+    /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+    column: BoardTaskSavedColumnEnum;
+    /** Порядок внутри колонки */
+    rank: number;
+    /**
+     * Ревизия задачи, прочитанная перед изменением
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * Прямые зависимости по постоянным ID; только done выполняет зависимость
+     * @maxItems 200
+     */
+    dependencies: string[];
+    /**
+     * Связанные задачи; обратное представление вычисляется
+     * @maxItems 200
+     */
+    related: string[];
+    /** Родительская задача или null */
+    parentId: string | null;
+    /**
+     * Время создания
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * Время последнего изменения
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /**
+     * Автор создания
+     * @maxLength 128
+     */
+    createdBy: string;
+    /**
+     * Автор последнего изменения
+     * @maxLength 128
+     */
+    updatedBy: string;
+    /** Текущий slug доски для навигации */
+    boardSlug: string;
+    /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+    blockers: string[];
+    /** Есть невыполненные зависимости */
+    blocked: boolean;
+    /** Можно брать в работу: колонка ready и нет блокеров */
+    ready: boolean;
+  };
+}
+
+export interface BoardTasksPage {
+  items: {
+    /**
+     * Постоянный ID задачи: 8 символов
+     * @pattern ^[A-Za-z0-9]{8}$
+     */
+    id: string;
+    /**
+     * Текущий ключ задачи с префиксом доски
+     * @pattern ^(?:[A-Za-z0-9]{8}|[A-Z][A-Z0-9]{1,15}-[1-9]\d*)$
+     */
+    key: string;
+    /** Постоянный ID текущей доски */
+    boardId: string;
+    /**
+     * Однострочный заголовок без Markdown; может быть пустым
+     * @minLength 0
+     */
+    title: string;
+    /**
+     * Явные связи «Реализует», максимум 100; пустой массив удаляет все связи
+     * @maxItems 100
+     * @default []
+     */
+    productLinks: {
+      /** Цель реализации: общая фича, сценарий или контракт приложения */
+      kind: BoardTasksPageKindEnum;
+      /**
+       * Постоянный ID продуктовой цели в выбранном проекте
+       * @minLength 1
+       * @maxLength 128
+       */
+      id: string;
+    }[];
+    /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+    column: BoardTasksPageColumnEnum;
+    /** Порядок внутри колонки */
+    rank: number;
+    /**
+     * Ревизия задачи, прочитанная перед изменением
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * Прямые зависимости по постоянным ID; только done выполняет зависимость
+     * @maxItems 200
+     */
+    dependencies: string[];
+    /**
+     * Связанные задачи; обратное представление вычисляется
+     * @maxItems 200
+     */
+    related: string[];
+    /** Родительская задача или null */
+    parentId: string | null;
+    /**
+     * Время создания
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * Время последнего изменения
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /**
+     * Автор создания
+     * @maxLength 128
+     */
+    createdBy: string;
+    /**
+     * Автор последнего изменения
+     * @maxLength 128
+     */
+    updatedBy: string;
+    /** Текущий slug доски для навигации */
+    boardSlug: string;
+    /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+    blockers: string[];
+    /** Есть невыполненные зависимости */
+    blocked: boolean;
+    /** Можно брать в работу: колонка ready и нет блокеров */
+    ready: boolean;
+  }[];
+  total: number;
+  nextOffset: number | null;
+  version: string;
+}
+
+export interface BoardTaskLinksPage {
+  items: {
+    /** Направление связи относительно запрошенной задачи */
+    relation: BoardTaskLinksPageRelationEnum;
+    task: {
+      /**
+       * Постоянный ID задачи: 8 символов
+       * @pattern ^[A-Za-z0-9]{8}$
+       */
+      id: string;
+      /**
+       * Текущий ключ задачи с префиксом доски
+       * @pattern ^(?:[A-Za-z0-9]{8}|[A-Z][A-Z0-9]{1,15}-[1-9]\d*)$
+       */
+      key: string;
+      /** Постоянный ID текущей доски */
+      boardId: string;
+      /**
+       * Однострочный заголовок без Markdown; может быть пустым
+       * @minLength 0
+       */
+      title: string;
+      /**
+       * Явные связи «Реализует», максимум 100; пустой массив удаляет все связи
+       * @maxItems 100
+       * @default []
+       */
+      productLinks: {
+        /** Цель реализации: общая фича, сценарий или контракт приложения */
+        kind: BoardTaskLinksPageKindEnum;
+        /**
+         * Постоянный ID продуктовой цели в выбранном проекте
+         * @minLength 1
+         * @maxLength 128
+         */
+        id: string;
+      }[];
+      /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+      column: BoardTaskLinksPageColumnEnum;
+      /** Порядок внутри колонки */
+      rank: number;
+      /**
+       * Ревизия задачи, прочитанная перед изменением
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      /**
+       * Прямые зависимости по постоянным ID; только done выполняет зависимость
+       * @maxItems 200
+       */
+      dependencies: string[];
+      /**
+       * Связанные задачи; обратное представление вычисляется
+       * @maxItems 200
+       */
+      related: string[];
+      /** Родительская задача или null */
+      parentId: string | null;
+      /**
+       * Время создания
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      createdAt: string;
+      /**
+       * Время последнего изменения
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /**
+       * Автор создания
+       * @maxLength 128
+       */
+      createdBy: string;
+      /**
+       * Автор последнего изменения
+       * @maxLength 128
+       */
+      updatedBy: string;
+      /** Текущий slug доски для навигации */
+      boardSlug: string;
+      /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+      blockers: string[];
+      /** Есть невыполненные зависимости */
+      blocked: boolean;
+      /** Можно брать в работу: колонка ready и нет блокеров */
+      ready: boolean;
+    };
+  }[];
+  total: number;
+  nextOffset: number | null;
+  version: string;
+}
+
+export interface BoardTasksQuery {
+  /**
+   * ID продуктовой цели: только задачи с явной связью реализации
+   * @minLength 1
+   * @maxLength 128
+   */
+  productTarget?: string;
+  /**
+   * Slug, префикс или постоянный ID доски выбранного проекта
+   * @minLength 1
+   * @maxLength 128
+   */
+  board?: string;
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column?: BoardTasksQueryColumnEnum;
+  /** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+  completion?: BoardTasksQueryCompletionEnum;
+  /** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+  searchIn?: BoardTasksQuerySearchInEnum;
+  /**
+   * Поиск по ключу, ID, заголовку и Markdown
+   * @maxLength 1024
+   */
+  q?: string;
+  /** Заблокированные задачи либо готовые к выполнению для оркестратора */
+  readiness?: BoardTasksQueryReadinessEnum;
+  /**
+   * Смещение страницы
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Число задач или связей на странице, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /** Версия первой страницы; изменение требует начать чтение заново */
+  version?: string;
+}
+
+export interface CreateBoardTask {
+  /**
+   * Ключ повтора: повтор с тем же содержимым возвращает первоначальную квитанцию
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** Автор изменения; по умолчанию автор текущего интерфейса */
+  actor?: string;
+  /**
+   * Slug, префикс или постоянный ID доски выбранного проекта
+   * @minLength 1
+   * @maxLength 128
+   */
+  board: string;
+  /**
+   * Однострочный заголовок без Markdown; может быть пустым
+   * @default ""
+   */
+  title?: string;
+  /**
+   * Описание задачи в Markdown; может быть пустым
+   * @default ""
+   */
+  description?: string;
+  /**
+   * Явные связи «Реализует», максимум 100; пустой массив удаляет все связи
+   * @maxItems 100
+   */
+  productLinks?: {
+    /** Цель реализации: общая фича, сценарий или контракт приложения */
+    kind: CreateBoardTaskKindEnum;
+    /**
+     * Постоянный ID продуктовой цели в выбранном проекте
+     * @minLength 1
+     * @maxLength 128
+     */
+    id: string;
+  }[];
+  /**
+   * ID родителя: создание подзадачи одной атомарной операцией
+   * @pattern ^[A-Za-z0-9]{8}$
+   */
+  parentId?: string;
+  /**
+   * Колонка: inbox, ready, in-progress, review, done; cancelled — отмена
+   * @default "inbox"
+   */
+  column?: CreateBoardTaskColumnEnum;
+  /**
+   * Вернуть первоначальную задачу в квитанции для открытия редактора без GET; по умолчанию компактная квитанция
+   * @default false
+   */
+  includeTask?: boolean;
+}
+
+export interface UpdateBoardTask {
+  /**
+   * Ключ повтора: повтор с тем же содержимым возвращает первоначальную квитанцию
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** Автор изменения; по умолчанию автор текущего интерфейса */
+  actor?: string;
+  /**
+   * Ревизия задачи, прочитанная перед изменением
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  ifRevision: number;
+  /** Однострочный заголовок без Markdown; может быть пустым */
+  title?: string;
+  /** Описание задачи в Markdown; может быть пустым */
+  description?: string;
+  /**
+   * Явные связи «Реализует», максимум 100; пустой массив удаляет все связи
+   * @maxItems 100
+   */
+  productLinks?: {
+    /** Цель реализации: общая фича, сценарий или контракт приложения */
+    kind: UpdateBoardTaskKindEnum;
+    /**
+     * Постоянный ID продуктовой цели в выбранном проекте
+     * @minLength 1
+     * @maxLength 128
+     */
+    id: string;
+  }[];
+}
+
+export interface MoveBoardTask {
+  /**
+   * Ключ повтора: повтор с тем же содержимым возвращает первоначальную квитанцию
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** Автор изменения; по умолчанию автор текущего интерфейса */
+  actor?: string;
+  /**
+   * Ревизия задачи, прочитанная перед изменением
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  ifRevision: number;
+  /**
+   * Целевая доска; при переносе меняется ключ, но не ID
+   * @minLength 1
+   * @maxLength 128
+   */
+  board?: string;
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column: MoveBoardTaskColumnEnum;
+  /**
+   * ID карточки, перед которой вставить; null — конец полной колонки
+   * @default null
+   */
+  beforeId?: string | null;
+  /** Версия списка до перетаскивания; защищает порядок от параллельных изменений */
+  ifVersion?: string;
+}
+
+export interface LinkBoardTask {
+  /**
+   * Ключ повтора: повтор с тем же содержимым возвращает первоначальную квитанцию
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** Автор изменения; по умолчанию автор текущего интерфейса */
+  actor?: string;
+  /**
+   * Ревизия задачи, прочитанная перед изменением
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  ifRevision: number;
+  /**
+   * ID или ключ второй задачи того же проекта
+   * @pattern ^(?:[A-Za-z0-9]{8}|[A-Z][A-Z0-9]{1,15}-[1-9]\d*)$
+   */
+  target: string;
+  /** Зависит от, связана с или родитель текущей задачи */
+  relation: LinkBoardTaskRelationEnum;
+  /**
+   * Удалить связь вместо добавления
+   * @default false
+   */
+  remove?: boolean;
+}
+
 export interface ProjectRecord {
   version: 1;
-  /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
   id: string;
   /**
    * @exclusiveMin 0
@@ -83,7 +679,7 @@ export interface ProjectRecord {
         kind: "stage";
         /** @minLength 1 */
         title: string;
-        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
         planId: string;
         /** @default "" */
         outcome: string;
@@ -368,7 +964,7 @@ export interface ProjectRecord {
          * @default ""
          */
         title: string;
-        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
         releaseId: string;
         /** @minLength 1 */
         environment: string;
@@ -447,10 +1043,11 @@ export interface ProjectRecord {
     tasks: Partial<Record<string, number>>;
   };
   requestHash?: string;
+  requestKey?: string;
 }
 
 export interface SaveProjectRecord {
-  /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
   id?: string;
   fields:
     | {
@@ -497,7 +1094,7 @@ export interface SaveProjectRecord {
     | {
         kind: "stage";
         title: string;
-        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
         planId: string;
         /** @default "" */
         outcome?: string;
@@ -724,7 +1321,7 @@ export interface SaveProjectRecord {
         kind: "deployment";
         /** @default "" */
         title?: string;
-        /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
         releaseId: string;
         environment: string;
         /** @default "installed" */
@@ -783,7 +1380,7 @@ export interface ProjectState {
   version: string;
   records: {
     version: 1;
-    /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
     id: string;
     /**
      * @exclusiveMin 0
@@ -860,7 +1457,7 @@ export interface ProjectState {
           kind: "stage";
           /** @minLength 1 */
           title: string;
-          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
           planId: string;
           /** @default "" */
           outcome: string;
@@ -1145,7 +1742,7 @@ export interface ProjectState {
            * @default ""
            */
           title: string;
-          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
           releaseId: string;
           /** @minLength 1 */
           environment: string;
@@ -1224,6 +1821,7 @@ export interface ProjectState {
       tasks: Partial<Record<string, number>>;
     };
     requestHash?: string;
+    requestKey?: string;
   }[];
   tasks: {
     id: number;
@@ -1359,7 +1957,7 @@ export interface CheckpointChanges {
   since: string;
   records: {
     version: 1;
-    /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
     id: string;
     /**
      * @exclusiveMin 0
@@ -1436,7 +2034,7 @@ export interface CheckpointChanges {
           kind: "stage";
           /** @minLength 1 */
           title: string;
-          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
           planId: string;
           /** @default "" */
           outcome: string;
@@ -1721,7 +2319,7 @@ export interface CheckpointChanges {
            * @default ""
            */
           title: string;
-          /** @pattern ^(passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|task_[1-9]\d*|[a-z]+_[a-f0-9]{32})$ */
           releaseId: string;
           /** @minLength 1 */
           environment: string;
@@ -1800,6 +2398,7 @@ export interface CheckpointChanges {
       tasks: Partial<Record<string, number>>;
     };
     requestHash?: string;
+    requestKey?: string;
   }[];
   tasks: {
     id: number;
@@ -1862,7 +2461,7 @@ export interface ProductState {
     version: 1;
     /** @minLength 1 */
     productId: string;
-    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
     /**
      * @exclusiveMin 0
@@ -1886,7 +2485,7 @@ export interface ProductState {
         }
       | {
           kind: "scenario";
-          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
           featureId: string;
           /** @minLength 1 */
           name: string;
@@ -1905,22 +2504,27 @@ export interface ProductState {
            * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
            */
           slug: string;
+          /**
+           * Префикс задач доски; при создании по умолчанию из slug, затем неизменяем
+           * @pattern ^[A-Z][A-Z0-9]{1,15}$
+           */
+          prefix?: string;
           type: ProductStateTypeEnum;
         }
       | {
           kind: "scope";
-          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
           applicationId: string;
           /** @maxItems 10000 */
           contracts: {
-            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             featureId: string;
             scenarioId: string | null;
             /** @minLength 1 */
             title: string;
             description: string;
             status: ProductStateStatusEnum;
-            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             id: string;
             active: boolean;
             basis: string;
@@ -1940,24 +2544,24 @@ export interface ProductState {
               }
             | {
                 kind: "feature";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
             | {
                 kind: "scenario";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
             | {
                 kind: "application";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
             | {
                 kind: "implementation";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 applicationId: string;
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
           )[];
@@ -1978,7 +2582,7 @@ export interface ProductState {
     updatedBy: string;
   }[];
   readiness: {
-    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
     status: ProductStateStatusEnum1;
     /**
@@ -2001,7 +2605,7 @@ export interface ProductState {
 
 export interface ProductMutation {
   action: ProductMutationActionEnum;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
   fields:
     | {
@@ -2020,7 +2624,7 @@ export interface ProductMutation {
       }
     | {
         kind: "scenario";
-        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
         featureId: string;
         /** @minLength 1 */
         name: string;
@@ -2039,6 +2643,11 @@ export interface ProductMutation {
          * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
          */
         slug: string;
+        /**
+         * Префикс задач доски; при создании по умолчанию из slug, затем неизменяем
+         * @pattern ^[A-Z][A-Z0-9]{1,15}$
+         */
+        prefix?: string;
         type: ProductMutationTypeEnum;
       }
     | {
@@ -2055,35 +2664,35 @@ export interface ProductMutation {
             }
           | {
               kind: "feature";
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               id: string;
             }
           | {
               kind: "scenario";
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               id: string;
             }
           | {
               kind: "application";
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               id: string;
             }
           | {
               kind: "implementation";
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               applicationId: string;
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               id: string;
             }
         )[];
       }
     | {
         kind: "scope";
-        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
         applicationId: string;
         /** @maxItems 10000 */
         contracts: {
-          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
           featureId: string;
           scenarioId: string | null;
           /** @minLength 1 */
@@ -2094,9 +2703,9 @@ export interface ProductMutation {
       }
     | {
         kind: "contract";
-        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
         applicationId: string;
-        /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
         contractId: string;
         status: ProductMutationStatusEnum1;
         /** @minLength 1 */
@@ -2120,7 +2729,7 @@ export interface ProductMutation {
 }
 
 export interface ProductSaved {
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id: string;
   /**
    * @exclusiveMin 0
@@ -2137,7 +2746,7 @@ export interface ProductContext {
       version: 1;
       /** @minLength 1 */
       productId: string;
-      /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+      /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
       id: string;
       /**
        * @exclusiveMin 0
@@ -2161,7 +2770,7 @@ export interface ProductContext {
           }
         | {
             kind: "scenario";
-            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             featureId: string;
             /** @minLength 1 */
             name: string;
@@ -2180,22 +2789,27 @@ export interface ProductContext {
              * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
              */
             slug: string;
+            /**
+             * Префикс задач доски; при создании по умолчанию из slug, затем неизменяем
+             * @pattern ^[A-Z][A-Z0-9]{1,15}$
+             */
+            prefix?: string;
             type: ProductContextTypeEnum;
           }
         | {
             kind: "scope";
-            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             applicationId: string;
             /** @maxItems 10000 */
             contracts: {
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               featureId: string;
               scenarioId: string | null;
               /** @minLength 1 */
               title: string;
               description: string;
               status: ProductContextStatusEnum;
-              /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               id: string;
               active: boolean;
               basis: string;
@@ -2215,24 +2829,24 @@ export interface ProductContext {
                 }
               | {
                   kind: "feature";
-                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                   id: string;
                 }
               | {
                   kind: "scenario";
-                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                   id: string;
                 }
               | {
                   kind: "application";
-                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                   id: string;
                 }
               | {
                   kind: "implementation";
-                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                   applicationId: string;
-                  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                   id: string;
                 }
             )[];
@@ -2255,7 +2869,7 @@ export interface ProductContext {
     reasons: string[];
   }[];
   readiness: {
-    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
     status: ProductContextStatusEnum1;
     /**
@@ -2277,9 +2891,9 @@ export interface ProductContext {
 }
 
 export interface ProductContextQuery {
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   applicationId?: string;
 }
 
@@ -2287,7 +2901,7 @@ export interface ProductOverview {
   productId: string;
   version: string;
   items: {
-    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
     revision: number;
     kind: string;
@@ -2295,7 +2909,7 @@ export interface ProductOverview {
     summary: string;
   }[];
   readiness: {
-    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
     status: ProductOverviewStatusEnum;
     /**
@@ -2323,7 +2937,7 @@ export interface ProductList {
     version: 1;
     /** @minLength 1 */
     productId: string;
-    /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
     /**
      * @exclusiveMin 0
@@ -2347,7 +2961,7 @@ export interface ProductList {
         }
       | {
           kind: "scenario";
-          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
           featureId: string;
           /** @minLength 1 */
           name: string;
@@ -2366,22 +2980,27 @@ export interface ProductList {
            * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
            */
           slug: string;
+          /**
+           * Префикс задач доски; при создании по умолчанию из slug, затем неизменяем
+           * @pattern ^[A-Z][A-Z0-9]{1,15}$
+           */
+          prefix?: string;
           type: ProductListTypeEnum;
         }
       | {
           kind: "scope";
-          /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
           applicationId: string;
           /** @maxItems 10000 */
           contracts: {
-            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             featureId: string;
             scenarioId: string | null;
             /** @minLength 1 */
             title: string;
             description: string;
             status: ProductListStatusEnum;
-            /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             id: string;
             active: boolean;
             basis: string;
@@ -2401,24 +3020,24 @@ export interface ProductList {
               }
             | {
                 kind: "feature";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
             | {
                 kind: "scenario";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
             | {
                 kind: "application";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
             | {
                 kind: "implementation";
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 applicationId: string;
-                /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
                 id: string;
               }
           )[];
@@ -2445,7 +3064,7 @@ export interface ProductListQuery {
   kind?: ProductListQueryKindEnum;
   /** @maxLength 4096 */
   q?: string;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
   /**
    * @min 0
@@ -2547,13 +3166,14 @@ export interface TaskDocumentData {
         string,
         {
           version: 1;
-          /** @pattern ^cmt_[a-f0-9]{32}$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$ */
           id: string;
           /**
            * @exclusiveMin 0
            * @max 9007199254740991
            */
           taskId: number;
+          requestKey?: string;
           /** @maxLength 128 */
           actor: string;
           /**
@@ -2570,13 +3190,14 @@ export interface TaskDocumentData {
         string,
         {
           version: 1;
-          /** @pattern ^log_[a-f0-9]{32}$ */
+          /** @pattern ^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$ */
           id: string;
           /**
            * @exclusiveMin 0
            * @max 9007199254740991
            */
           taskId: number;
+          requestKey?: string;
           /** @maxLength 128 */
           actor: string;
           /**
@@ -2922,10 +3543,6 @@ export interface ContextResponse {
     version: 1;
     /** @default "local" */
     mode: "local";
-    /**
-     * @format uuid
-     * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-     */
     projectId?: string;
     /** @minLength 1 */
     storageDir: string;
@@ -3168,7 +3785,7 @@ export interface BoardInfo {
   version: 1;
   /**
    * Постоянный ID доски
-   * @pattern ^board_(?:product|infrastructure|[a-f0-9]{32})$
+   * @pattern ^(?:[A-Za-z0-9]{8}|board_(?:product|infrastructure|[a-f0-9]{32}))$
    */
   id: string;
   /**
@@ -3178,6 +3795,11 @@ export interface BoardInfo {
    * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
    */
   slug: string;
+  /**
+   * Неизменяемый уникальный префикс ключей задач, например WEB или PRODUCT
+   * @pattern ^[A-Z][A-Z0-9]{1,15}$
+   */
+  prefix: string;
   /** Область ответственности доски */
   kind: BoardInfoKindEnum;
   /** ID приложения; null у системных досок */
@@ -3229,7 +3851,7 @@ export interface BoardsPage {
     version: 1;
     /**
      * Постоянный ID доски
-     * @pattern ^board_(?:product|infrastructure|[a-f0-9]{32})$
+     * @pattern ^(?:[A-Za-z0-9]{8}|board_(?:product|infrastructure|[a-f0-9]{32}))$
      */
     id: string;
     /**
@@ -3239,6 +3861,11 @@ export interface BoardsPage {
      * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
      */
     slug: string;
+    /**
+     * Неизменяемый уникальный префикс ключей задач, например WEB или PRODUCT
+     * @pattern ^[A-Z][A-Z0-9]{1,15}$
+     */
+    prefix: string;
     /** Область ответственности доски */
     kind: BoardsPageKindEnum;
     /** ID приложения; null у системных досок */
@@ -3716,10 +4343,6 @@ export interface BoardResponse {
       version: 1;
       /** @default "local" */
       mode: "local";
-      /**
-       * @format uuid
-       * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-       */
       projectId?: string;
       /** @minLength 1 */
       storageDir: string;
@@ -3857,13 +4480,14 @@ export interface BoardResponse {
 
 export interface CommentRecord {
   version: 1;
-  /** @pattern ^cmt_[a-f0-9]{32}$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$ */
   id: string;
   /**
    * @exclusiveMin 0
    * @max 9007199254740991
    */
   taskId: number;
+  requestKey?: string;
   /** @maxLength 128 */
   actor: string;
   /**
@@ -3876,13 +4500,14 @@ export interface CommentRecord {
 
 export interface LogRecord {
   version: 1;
-  /** @pattern ^log_[a-f0-9]{32}$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$ */
   id: string;
   /**
    * @exclusiveMin 0
    * @max 9007199254740991
    */
   taskId: number;
+  requestKey?: string;
   /** @maxLength 128 */
   actor: string;
   /**
@@ -3901,13 +4526,14 @@ export interface LogRecord {
 export interface CommentsPage {
   items: {
     version: 1;
-    /** @pattern ^cmt_[a-f0-9]{32}$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$ */
     id: string;
     /**
      * @exclusiveMin 0
      * @max 9007199254740991
      */
     taskId: number;
+    requestKey?: string;
     /** @maxLength 128 */
     actor: string;
     /**
@@ -3922,13 +4548,14 @@ export interface CommentsPage {
 export interface LogsPage {
   items: {
     version: 1;
-    /** @pattern ^log_[a-f0-9]{32}$ */
+    /** @pattern ^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$ */
     id: string;
     /**
      * @exclusiveMin 0
      * @max 9007199254740991
      */
     taskId: number;
+    requestKey?: string;
     /** @maxLength 128 */
     actor: string;
     /**
@@ -3964,6 +4591,116 @@ export interface ApiFailure {
     exitCode?: number;
   };
 }
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type BoardTaskViewKindEnum = "feature" | "scenario" | "implementation";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type BoardTaskViewColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Выполненное действие */
+export type BoardTaskSavedActionEnum = "create" | "update" | "move" | "link";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type BoardTaskSavedKindEnum = "feature" | "scenario" | "implementation";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type BoardTaskSavedColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type BoardTasksPageKindEnum = "feature" | "scenario" | "implementation";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type BoardTasksPageColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Направление связи относительно запрошенной задачи */
+export type BoardTaskLinksPageRelationEnum =
+  | "depends-on"
+  | "blocks"
+  | "related"
+  | "parent"
+  | "child";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type BoardTaskLinksPageKindEnum =
+  | "feature"
+  | "scenario"
+  | "implementation";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type BoardTaskLinksPageColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type BoardTasksQueryColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type BoardTasksQueryCompletionEnum = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type BoardTasksQuerySearchInEnum = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type BoardTasksQueryReadinessEnum = "blocked" | "ready";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type CreateBoardTaskKindEnum = "feature" | "scenario" | "implementation";
+
+/**
+ * Колонка: inbox, ready, in-progress, review, done; cancelled — отмена
+ * @default "inbox"
+ */
+export type CreateBoardTaskColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type UpdateBoardTaskKindEnum = "feature" | "scenario" | "implementation";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type MoveBoardTaskColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Зависит от, связана с или родитель текущей задачи */
+export type LinkBoardTaskRelationEnum = "depends-on" | "related" | "parent";
 
 /** @default "discovery" */
 export type ProjectRecordProductStageEnum =
@@ -4818,7 +5555,7 @@ export interface GetProductRecordsParams {
   kind?: KindEnum;
   /** @maxLength 4096 */
   q?: string;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
   /**
    * @min 0
@@ -4855,9 +5592,9 @@ export type MutateProductOkEnum = true;
 export type GetProductContextOkEnum = true;
 
 export interface GetProductContextParams {
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   applicationId?: string;
 }
 
@@ -4891,6 +5628,202 @@ export interface GetBoardBySlugParams {
    * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
    */
   slug: string;
+}
+
+export type GetBoardTasksOkEnum = true;
+
+export interface GetBoardTasksParams {
+  /**
+   * ID продуктовой цели: только задачи с явной связью реализации
+   * @minLength 1
+   * @maxLength 128
+   */
+  productTarget?: string;
+  /**
+   * Slug, префикс или постоянный ID доски выбранного проекта
+   * @minLength 1
+   * @maxLength 128
+   */
+  board?: string;
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column?: ColumnEnum;
+  /** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+  completion?: CompletionEnum;
+  /** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+  searchIn?: SearchInEnum;
+  /**
+   * Поиск по ключу, ID, заголовку и Markdown
+   * @maxLength 1024
+   */
+  q?: string;
+  /** Заблокированные задачи либо готовые к выполнению для оркестратора */
+  readiness?: ReadinessEnum;
+  /**
+   * Смещение страницы
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Число задач или связей на странице, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /** Версия первой страницы; изменение требует начать чтение заново */
+  version?: string;
+}
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type ColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type CompletionEnum = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type SearchInEnum = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type ReadinessEnum = "blocked" | "ready";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type GetBoardTasksParams1ColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type GetBoardTasksParams1CompletionEnum = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type GetBoardTasksParams1SearchInEnum = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type GetBoardTasksParams1ReadinessEnum = "blocked" | "ready";
+
+export type CreateBoardTaskOkEnum = true;
+
+export type GetBoardTaskOkEnum = true;
+
+export interface GetBoardTaskParams {
+  /** Постоянный ID или текущий/прежний ключ задачи */
+  reference: any;
+}
+
+export type GetBoardTaskLinksOkEnum = true;
+
+export interface GetBoardTaskLinksParams {
+  /**
+   * ID продуктовой цели: только задачи с явной связью реализации
+   * @minLength 1
+   * @maxLength 128
+   */
+  productTarget?: string;
+  /**
+   * Slug, префикс или постоянный ID доски выбранного проекта
+   * @minLength 1
+   * @maxLength 128
+   */
+  board?: string;
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column?: ColumnEnum1;
+  /** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+  completion?: CompletionEnum1;
+  /** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+  searchIn?: SearchInEnum1;
+  /**
+   * Поиск по ключу, ID, заголовку и Markdown
+   * @maxLength 1024
+   */
+  q?: string;
+  /** Заблокированные задачи либо готовые к выполнению для оркестратора */
+  readiness?: ReadinessEnum1;
+  /**
+   * Смещение страницы
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Число задач или связей на странице, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /** Версия первой страницы; изменение требует начать чтение заново */
+  version?: string;
+  /** ID или ключ задачи для чтения графа */
+  reference: any;
+}
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type ColumnEnum1 =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type CompletionEnum1 = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type SearchInEnum1 = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type ReadinessEnum1 = "blocked" | "ready";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type GetBoardTaskLinksParams1ColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type GetBoardTaskLinksParams1CompletionEnum = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type GetBoardTaskLinksParams1SearchInEnum = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type GetBoardTaskLinksParams1ReadinessEnum = "blocked" | "ready";
+
+export type LinkBoardTaskOkEnum = true;
+
+export interface LinkBoardTaskParams {
+  /** ID или ключ исходной задачи */
+  reference: any;
+}
+
+export type UpdateBoardTaskOkEnum = true;
+
+export interface UpdateBoardTaskParams {
+  /** ID или ключ редактируемой задачи */
+  reference: any;
+}
+
+export type MoveBoardTaskOkEnum = true;
+
+export interface MoveBoardTaskParams {
+  /** ID или ключ перемещаемой задачи */
+  reference: any;
 }
 
 export type ListCommentsOkEnum = true;
@@ -4938,7 +5871,7 @@ export interface GetCommentParams {
    * @max 9007199254740991
    */
   id: number;
-  /** @pattern ^cmt_[a-f0-9]{32}$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$ */
   commentId: string;
 }
 
@@ -5002,7 +5935,7 @@ export interface GetLogParams {
    * @max 9007199254740991
    */
   id: number;
-  /** @pattern ^log_[a-f0-9]{32}$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$ */
   logId: string;
 }
 
@@ -5377,7 +6310,7 @@ export interface GetProductRecordsForProjectParams {
   kind?: KindEnum2;
   /** @maxLength 4096 */
   q?: string;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
   /**
    * @min 0
@@ -5421,9 +6354,9 @@ export interface MutateProductForProjectParams {
 export type GetProductContextForProjectOkEnum = true;
 
 export interface GetProductContextForProjectParams {
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id?: string;
-  /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   applicationId?: string;
   /** Имя из реестра или идентификатор проекта */
   project: string;
@@ -5461,6 +6394,225 @@ export interface GetBoardBySlugForProjectParams {
    * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
    */
   slug: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetBoardTasksForProjectOkEnum = true;
+
+export interface GetBoardTasksForProjectParams {
+  /**
+   * ID продуктовой цели: только задачи с явной связью реализации
+   * @minLength 1
+   * @maxLength 128
+   */
+  productTarget?: string;
+  /**
+   * Slug, префикс или постоянный ID доски выбранного проекта
+   * @minLength 1
+   * @maxLength 128
+   */
+  board?: string;
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column?: ColumnEnum2;
+  /** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+  completion?: CompletionEnum2;
+  /** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+  searchIn?: SearchInEnum2;
+  /**
+   * Поиск по ключу, ID, заголовку и Markdown
+   * @maxLength 1024
+   */
+  q?: string;
+  /** Заблокированные задачи либо готовые к выполнению для оркестратора */
+  readiness?: ReadinessEnum2;
+  /**
+   * Смещение страницы
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Число задач или связей на странице, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /** Версия первой страницы; изменение требует начать чтение заново */
+  version?: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type ColumnEnum2 =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type CompletionEnum2 = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type SearchInEnum2 = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type ReadinessEnum2 = "blocked" | "ready";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type GetBoardTasksForProjectParams1ColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type GetBoardTasksForProjectParams1CompletionEnum =
+  | "unfinished"
+  | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type GetBoardTasksForProjectParams1SearchInEnum = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type GetBoardTasksForProjectParams1ReadinessEnum = "blocked" | "ready";
+
+export type CreateBoardTaskForProjectOkEnum = true;
+
+export interface CreateBoardTaskForProjectParams {
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetBoardTaskForProjectOkEnum = true;
+
+export interface GetBoardTaskForProjectParams {
+  /** Постоянный ID или текущий/прежний ключ задачи */
+  reference: any;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetBoardTaskLinksForProjectOkEnum = true;
+
+export interface GetBoardTaskLinksForProjectParams {
+  /**
+   * ID продуктовой цели: только задачи с явной связью реализации
+   * @minLength 1
+   * @maxLength 128
+   */
+  productTarget?: string;
+  /**
+   * Slug, префикс или постоянный ID доски выбранного проекта
+   * @minLength 1
+   * @maxLength 128
+   */
+  board?: string;
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column?: ColumnEnum3;
+  /** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+  completion?: CompletionEnum3;
+  /** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+  searchIn?: SearchInEnum3;
+  /**
+   * Поиск по ключу, ID, заголовку и Markdown
+   * @maxLength 1024
+   */
+  q?: string;
+  /** Заблокированные задачи либо готовые к выполнению для оркестратора */
+  readiness?: ReadinessEnum3;
+  /**
+   * Смещение страницы
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Число задач или связей на странице, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /** Версия первой страницы; изменение требует начать чтение заново */
+  version?: string;
+  /** ID или ключ задачи для чтения графа */
+  reference: any;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type ColumnEnum3 =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type CompletionEnum3 = "unfinished" | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type SearchInEnum3 = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type ReadinessEnum3 = "blocked" | "ready";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type GetBoardTaskLinksForProjectParams1ColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** unfinished исключает done и cancelled; finished возвращает только их; без параметра все задачи */
+export type GetBoardTaskLinksForProjectParams1CompletionEnum =
+  | "unfinished"
+  | "finished";
+
+/** title — поиск по ключам, ID и заголовку; all или отсутствие — также по Markdown */
+export type GetBoardTaskLinksForProjectParams1SearchInEnum = "title" | "all";
+
+/** Заблокированные задачи либо готовые к выполнению для оркестратора */
+export type GetBoardTaskLinksForProjectParams1ReadinessEnum =
+  | "blocked"
+  | "ready";
+
+export type LinkBoardTaskForProjectOkEnum = true;
+
+export interface LinkBoardTaskForProjectParams {
+  /** ID или ключ исходной задачи */
+  reference: any;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type UpdateBoardTaskForProjectOkEnum = true;
+
+export interface UpdateBoardTaskForProjectParams {
+  /** ID или ключ редактируемой задачи */
+  reference: any;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type MoveBoardTaskForProjectOkEnum = true;
+
+export interface MoveBoardTaskForProjectParams {
+  /** ID или ключ перемещаемой задачи */
+  reference: any;
   /** Имя из реестра или идентификатор проекта */
   project: string;
 }
@@ -5514,7 +6666,7 @@ export interface GetCommentForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** @pattern ^cmt_[a-f0-9]{32}$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$ */
   commentId: string;
   /** Имя из реестра или идентификатор проекта */
   project: string;
@@ -5584,7 +6736,7 @@ export interface GetLogForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** @pattern ^log_[a-f0-9]{32}$ */
+  /** @pattern ^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$ */
   logId: string;
   /** Имя из реестра или идентификатор проекта */
   project: string;

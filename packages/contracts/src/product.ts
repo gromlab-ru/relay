@@ -24,6 +24,8 @@ export type ProductFields =
       kind: "application";
       /** Неизменяемый адрес приложения и его доски. */
       slug: string;
+      /** Неизменяемый префикс задач доски; старые записи получают его из slug. */
+      prefix?: string | undefined;
       name: string;
       summary: string;
       description: string;

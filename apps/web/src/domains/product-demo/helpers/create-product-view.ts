@@ -82,7 +82,14 @@ export const createProductView = (
       applicationId: record.id,
       href: `/applications/${record.id}`,
     });
-    return [{ id: record.id, ...record.fields, type: APPLICATION_LABELS[record.fields.type] }];
+    return [
+      {
+        id: record.id,
+        ...record.fields,
+        prefix: record.fields.prefix ?? record.fields.slug.replaceAll("-", "").toUpperCase(),
+        type: APPLICATION_LABELS[record.fields.type],
+      },
+    ];
   });
   const contributions = state.records.flatMap((record) => {
     if (record.fields.kind !== "scope") return [];
@@ -107,6 +114,7 @@ export const createProductView = (
       .map((contract) => ({
         applicationId,
         featureId: contract.featureId,
+        contractId: contract.id,
         title: contract.title,
         description: contract.description,
         status: contract.status,
@@ -117,6 +125,7 @@ export const createProductView = (
           )
           .map((entry) => ({
             scenarioId: entry.scenarioId ?? "",
+            contractId: entry.id,
             title: entry.title,
             description: entry.description,
             status: entry.status,

@@ -1,0 +1,109 @@
+.root {
+  position: relative;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--tasks-border);
+  border-radius: 10px;
+  background: var(--tasks-surface);
+  box-shadow: var(--tasks-card-shadow);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+  &:hover {
+    border-color: var(--tasks-selected-border);
+    box-shadow: var(--tasks-card-hover);
+  }
+  &[data-dragging="true"] {
+    opacity: 0.25;
+    border-style: dashed;
+    box-shadow: none;
+  }
+  &[data-overlay="true"] {
+    height: 100%;
+    box-shadow: 0 12px 28px rgb(0 0 0 / 16%);
+    cursor: grabbing;
+  }
+  &[data-target="true"],
+  &[data-after="true"] {
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -6px 0 auto;
+      height: 2px;
+      z-index: 2;
+      background: var(--tasks-selected-border);
+      border-radius: 2px;
+    }
+  }
+  &[data-after="true"]::before {
+    top: auto;
+    bottom: -6px;
+  }
+}
+.title {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+  }
+  &:focus-visible {
+    outline: none;
+  }
+  &:focus-visible::after {
+    outline: 2px solid var(--tasks-selected-border);
+    outline-offset: 2px;
+  }
+}
+.handle {
+  position: relative;
+  z-index: 1;
+  touch-action: none;
+  cursor: grab;
+  opacity: 0;
+  .root:hover &,
+  &:focus-visible {
+    opacity: 1;
+  }
+}
+.previewHandle {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--tasks-muted);
+}
+.details {
+  margin-top: 16px;
+  color: var(--tasks-muted);
+}
+.blocker {
+  text-transform: none;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+@media (hover: none) {
+  .handle {
+    opacity: 1;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -11px;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

@@ -66,6 +66,10 @@ export const DocumentForm = (props: DocumentFormProps) => {
     },
     validate: {
       name: (name) => (name.trim() === "" ? "Введите название" : null),
+      prefix: (prefix) =>
+        !isApplication || prefix === "" || /^[A-Z][A-Z0-9]{1,15}$/.test(prefix)
+          ? null
+          : "Префикс: 2–16 заглавных латинских букв и цифр; первый символ — буква",
       slug: (slug) =>
         !isApplication || APPLICATION_SLUG_SCHEMA.safeParse(slug).success
           ? null
@@ -253,6 +257,16 @@ export const DocumentForm = (props: DocumentFormProps) => {
               required
               readOnly={isExistingApplication}
               {...form.getInputProps("slug")}
+            />
+          )}
+          {isApplication && (
+            <TextInput
+              key={form.key("prefix")}
+              label="Префикс задач доски"
+              description="Например WEB или API. Если оставить пустым, создаётся из адреса доски. После создания не меняется."
+              placeholder="WEB"
+              readOnly={isExistingApplication}
+              {...form.getInputProps("prefix")}
             />
           )}
           {isApplication && (
