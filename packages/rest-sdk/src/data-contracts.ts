@@ -1898,6 +1898,13 @@ export interface ProductState {
           name: string;
           summary: string;
           description: string;
+          /**
+           * Неизменяемый уникальный адрес приложения и доски: 1–64 символа, строчные латинские буквы, цифры и дефисы; product, infrastructure и new зарезервированы
+           * @minLength 1
+           * @maxLength 64
+           * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+           */
+          slug: string;
           type: ProductStateTypeEnum;
         }
       | {
@@ -2025,6 +2032,13 @@ export interface ProductMutation {
         name: string;
         summary: string;
         description: string;
+        /**
+         * Неизменяемый уникальный адрес приложения и доски: 1–64 символа, строчные латинские буквы, цифры и дефисы; product, infrastructure и new зарезервированы
+         * @minLength 1
+         * @maxLength 64
+         * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+         */
+        slug: string;
         type: ProductMutationTypeEnum;
       }
     | {
@@ -2159,6 +2173,13 @@ export interface ProductContext {
             name: string;
             summary: string;
             description: string;
+            /**
+             * Неизменяемый уникальный адрес приложения и доски: 1–64 символа, строчные латинские буквы, цифры и дефисы; product, infrastructure и new зарезервированы
+             * @minLength 1
+             * @maxLength 64
+             * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+             */
+            slug: string;
             type: ProductContextTypeEnum;
           }
         | {
@@ -2338,6 +2359,13 @@ export interface ProductList {
           name: string;
           summary: string;
           description: string;
+          /**
+           * Неизменяемый уникальный адрес приложения и доски: 1–64 символа, строчные латинские буквы, цифры и дефисы; product, infrastructure и new зарезервированы
+           * @minLength 1
+           * @maxLength 64
+           * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+           */
+          slug: string;
           type: ProductListTypeEnum;
         }
       | {
@@ -3133,6 +3161,118 @@ export interface BoardQuery {
    * @maxLength 4096
    */
   cursor?: string;
+}
+
+export interface BoardInfo {
+  /** Версия дискового формата доски */
+  version: 1;
+  /**
+   * Постоянный ID доски
+   * @pattern ^board_(?:product|infrastructure|[a-f0-9]{32})$
+   */
+  id: string;
+  /**
+   * Адрес доски: 1–64 символа, строчные латинские буквы, цифры и дефисы
+   * @minLength 1
+   * @maxLength 64
+   * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+   */
+  slug: string;
+  /** Область ответственности доски */
+  kind: BoardInfoKindEnum;
+  /** ID приложения; null у системных досок */
+  applicationId: string | null;
+  /**
+   * Ревизия записи доски
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /**
+   * Дата создания доски
+   * @format date-time
+   * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+   */
+  createdAt: string;
+  /**
+   * Автор создания доски
+   * @maxLength 128
+   */
+  createdBy: string;
+  /** Название доски; для приложения — его актуальное название */
+  name: string;
+}
+
+export interface BoardsQuery {
+  /**
+   * Смещение в каталоге досок
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset: number;
+  /**
+   * Размер страницы, не более 100 досок
+   * @min 1
+   * @max 100
+   * @default 50
+   */
+  limit: number;
+  /** Версия каталога первой страницы; защищает продолжение от изменений */
+  version?: string;
+}
+
+export interface BoardsPage {
+  /** Доски: продукт, приложения по времени создания, инфраструктура */
+  items: {
+    /** Версия дискового формата доски */
+    version: 1;
+    /**
+     * Постоянный ID доски
+     * @pattern ^board_(?:product|infrastructure|[a-f0-9]{32})$
+     */
+    id: string;
+    /**
+     * Адрес доски: 1–64 символа, строчные латинские буквы, цифры и дефисы
+     * @minLength 1
+     * @maxLength 64
+     * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+     */
+    slug: string;
+    /** Область ответственности доски */
+    kind: BoardsPageKindEnum;
+    /** ID приложения; null у системных досок */
+    applicationId: string | null;
+    /**
+     * Ревизия записи доски
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /**
+     * Дата создания доски
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+    /**
+     * Автор создания доски
+     * @maxLength 128
+     */
+    createdBy: string;
+    /** Название доски; для приложения — его актуальное название */
+    name: string;
+  }[];
+  /**
+   * Полное число досок проекта
+   * @min 0
+   * @max 9007199254740991
+   */
+  total: number;
+  /** Смещение продолжения; null в конце */
+  nextOffset: number | null;
+  /** Версия согласованного каталога */
+  version: string;
 }
 
 export interface CommentQuery {
@@ -4326,6 +4466,12 @@ export type BoardQueryTypeEnum =
   | "research"
   | "debt";
 
+/** Область ответственности доски */
+export type BoardInfoKindEnum = "product" | "application" | "infrastructure";
+
+/** Область ответственности доски */
+export type BoardsPageKindEnum = "product" | "application" | "infrastructure";
+
 export type LogQueryKindEnum =
   | "progress"
   | "decision"
@@ -4713,6 +4859,38 @@ export interface GetProductContextParams {
   id?: string;
   /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   applicationId?: string;
+}
+
+export type GetBoardsOkEnum = true;
+
+export interface GetBoardsParams {
+  /**
+   * Смещение в каталоге досок
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы, не более 100 досок
+   * @min 1
+   * @max 100
+   * @default 50
+   */
+  limit?: number;
+  /** Версия каталога первой страницы; защищает продолжение от изменений */
+  version?: string;
+}
+
+export type GetBoardBySlugOkEnum = true;
+
+export interface GetBoardBySlugParams {
+  /**
+   * Slug доски выбранного проекта
+   * @maxLength 64
+   * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+   */
+  slug: string;
 }
 
 export type ListCommentsOkEnum = true;
@@ -5247,6 +5425,42 @@ export interface GetProductContextForProjectParams {
   id?: string;
   /** @pattern ^(passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   applicationId?: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetBoardsForProjectOkEnum = true;
+
+export interface GetBoardsForProjectParams {
+  /**
+   * Смещение в каталоге досок
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы, не более 100 досок
+   * @min 1
+   * @max 100
+   * @default 50
+   */
+  limit?: number;
+  /** Версия каталога первой страницы; защищает продолжение от изменений */
+  version?: string;
+  /** Имя из реестра или идентификатор проекта */
+  project: string;
+}
+
+export type GetBoardBySlugForProjectOkEnum = true;
+
+export interface GetBoardBySlugForProjectParams {
+  /**
+   * Slug доски выбранного проекта
+   * @maxLength 64
+   * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+   */
+  slug: string;
   /** Имя из реестра или идентификатор проекта */
   project: string;
 }

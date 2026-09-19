@@ -8,6 +8,7 @@ export const PRODUCT_FORM_SCHEMA = z.object({
   description: z.string(),
   status: PRODUCT_STATUS_SCHEMA,
   type: z.string(),
+  slug: z.string(),
 });
 /** Черновик сохраняет исходную версию редактирования. */
 export const PRODUCT_DRAFT_SCHEMA = z.object({

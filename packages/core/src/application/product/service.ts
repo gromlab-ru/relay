@@ -9,6 +9,7 @@ import type {
 } from "../../domain/product.js";
 import { actorSchema, parse } from "../../domain/validation.js";
 import { ProductRepository } from "../../storage/product.js";
+import { BoardRepository } from "../../storage/boards.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
 import { contractBasis, productState, productVersion, validateProduct } from "./model.js";
@@ -176,6 +177,33 @@ export class ProductService {
           ],
         };
       } else fields = inputFields;
+      if (fields.kind === "application") {
+        const slug = fields.slug;
+        invariant(
+          previous?.fields.kind !== "application" || previous.fields.slug === slug,
+          "IMMUTABLE_FIELD",
+          "Адрес приложения и доски нельзя менять после создания",
+          4,
+        );
+        invariant(
+          !records.some(
+            (entry) =>
+              entry.id !== id && entry.fields.kind === "application" && entry.fields.slug === slug,
+          ),
+          "ALREADY_EXISTS",
+          "Этот адрес приложения уже занят",
+          4,
+        );
+        const board = (await new BoardRepository(this.workspace).all()).find(
+          (entry) => entry.slug === slug,
+        );
+        invariant(
+          board === undefined || board.applicationId === id,
+          "ALREADY_EXISTS",
+          "Этот адрес доски уже занят",
+          4,
+        );
+      }
       if (fields.kind === "document") {
         const oldLinks =
           previous?.fields.kind === "document"
@@ -217,7 +245,9 @@ export class ProductService {
       );
       validateProduct([...records.filter((entry) => entry.id !== id), record]);
       assertOwned();
-      await repository.save(record, previous === undefined, assertOwned);
+      if (record.fields.kind === "application" && previous === undefined)
+        await new BoardRepository(this.workspace).createApplication(record, assertOwned);
+      else await repository.save(record, previous === undefined, assertOwned);
       return result;
     });
   }

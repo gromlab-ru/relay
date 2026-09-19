@@ -14,6 +14,7 @@
     "docs/reference/CONFIGURATION.md": "references/CONFIGURATION.md",
     "docs/reference/MCP.md": "references/MCP.md",
     "docs/reference/PRODUCT.md": "references/PRODUCT.md",
+    "docs/reference/BOARDS.md": "references/BOARDS.md",
     "docs/reference/PRODUCT-CONTENT.md": "references/PRODUCT-CONTENT.md",
     "docs/guides/LIFECYCLE.md": "references/LIFECYCLE.md"
   },
@@ -22,6 +23,7 @@
     "references/RECORDS.md": "records"
   },
   "aliases": {
+    "docs/product/entities/boards/README.md": "references/BOARDS.md",
     "docs/README.md": "SKILL.md",
     "docs/reference/ERRORS.md": "references/RECOVERY.md"
   },

@@ -53,6 +53,8 @@ export type ProductDocumentInput = {
   status: ProductStatus;
   /** Назначение приложения. */
   type: string;
+  /** Постоянный адрес приложения и доски; у других документов пустая строка. */
+  slug: string;
 };
 /** Результат локального сохранения. */
 export type ProductSaveResult =

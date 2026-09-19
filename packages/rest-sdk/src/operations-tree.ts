@@ -14,8 +14,12 @@ import { claimTaskForProject } from "./operations/claim-task-for-project.js";
 import { claimTask } from "./operations/claim-task.js";
 import { createTaskForProject } from "./operations/create-task-for-project.js";
 import { createTask } from "./operations/create-task.js";
+import { getBoardBySlugForProject } from "./operations/get-board-by-slug-for-project.js";
+import { getBoardBySlug } from "./operations/get-board-by-slug.js";
 import { getBoardForProject } from "./operations/get-board-for-project.js";
 import { getBoard } from "./operations/get-board.js";
+import { getBoardsForProject } from "./operations/get-boards-for-project.js";
+import { getBoards } from "./operations/get-boards.js";
 import { getCheckpointChangesForProject } from "./operations/get-checkpoint-changes-for-project.js";
 import { getCheckpointChanges } from "./operations/get-checkpoint-changes.js";
 import { getCommentForProject } from "./operations/get-comment-for-project.js";
@@ -159,6 +163,12 @@ export const operationsTree = {
     getProductRecordsForProject: getProductRecordsForProject,
     mutateProductForProject: mutateProductForProject,
     getProductContextForProject: getProductContextForProject,
+  },
+  boards: {
+    getBoards: getBoards,
+    getBoardBySlug: getBoardBySlug,
+    getBoardsForProject: getBoardsForProject,
+    getBoardBySlugForProject: getBoardBySlugForProject,
   },
   comments: {
     listComments: listComments,

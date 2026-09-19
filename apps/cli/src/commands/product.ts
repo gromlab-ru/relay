@@ -228,6 +228,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         description?: string;
         body?: string;
         type: string;
+        slug?: string;
         feature?: string;
         links: string;
         documentKind: string;
@@ -240,8 +241,13 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         details:
           "Передавайте полное содержание записи. Общие статусы фич и сценариев вычисляются автоматически.",
         examples: [[`relay-cli product ${kind} ${action} --help`, "Показать параметры"]],
-        configure: (command) =>
-          command
+        configure: (command) => {
+          if (kind === "application")
+            command.requiredOption(
+              "--slug <slug>",
+              "Неизменяемый адрес приложения и доски: латинские строчные буквы, цифры и дефисы",
+            );
+          return command
             .requiredOption("--name <name>", "Название")
             .option("--summary <text>", "Краткое описание", "")
             .option(
@@ -258,7 +264,8 @@ export function registerProduct(program: Command, runtime: Runtime): void {
               "description",
             )
             .option("--if-revision <n>", "Прочитанная ревизия", integer(0, Number.MAX_SAFE_INTEGER))
-            .option("--request-id <id>", "Ключ безопасного повтора"),
+            .option("--request-id <id>", "Ключ безопасного повтора");
+        },
         run: async (context, input) => {
           const options = input.options;
           let links: unknown;
@@ -289,7 +296,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
                     name: options.name,
                     summary: options.summary,
                     description: options.description,
-                    ...(kind === "application" ? { type: options.type } : {}),
+                    ...(kind === "application" ? { type: options.type, slug: options.slug } : {}),
                   };
           const command = parse(
             productMutationSchema,

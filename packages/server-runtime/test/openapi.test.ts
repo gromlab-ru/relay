@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 75);
+    assert.equal(operations.size, 79);
     for (const [name, schema] of Object.entries(document.components!.schemas!)) {
       ajv.compile({ ...schema, components: document.components });
       if (!("$ref" in schema) && Array.isArray(schema.examples))
@@ -88,6 +88,8 @@ for (const scoped of [false, true])
     await request("PUT", "/api/v1/projects/{project}", "/api/v1/projects/a", { path: "." }, 400);
     await request("DELETE", "/api/v1/projects/{project}", "/api/v1/projects/a", undefined, 400);
     await request("GET", "/api/v1/context");
+    await request("GET", "/api/v1/boards");
+    await request("GET", "/api/v1/boards/{slug}", "/api/v1/boards/product");
     await request("POST", "/api/v1/product/records", undefined, {
       action: "create",
       requestId: "product-passport",
@@ -194,7 +196,7 @@ for (const scoped of [false, true])
       { patch: { title: "Conflict" }, ifRevision: 1 },
       409,
     );
-    assert.equal(visited.size, 39);
+    assert.equal(visited.size, 41);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;

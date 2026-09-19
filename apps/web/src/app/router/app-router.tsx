@@ -98,6 +98,11 @@ export const appRouter = createBrowserRouter([
           { path: "plans", lazy: () => import("compositions/screens/plans/lazy") },
           { path: "plans/:planId", lazy: () => import("compositions/screens/plans/lazy") },
           { path: "board", lazy: () => import("compositions/screens/board/lazy") },
+          { path: "boards", element: <Navigate to="product" replace /> },
+          {
+            path: "boards/:boardSlug",
+            lazy: () => import("compositions/screens/project-board/lazy"),
+          },
           { path: "tasks/:id", lazy: () => import("compositions/screens/board/lazy") },
           { path: "knowledge", lazy: () => import("compositions/screens/knowledge/lazy") },
           { path: "activity", lazy: () => import("compositions/screens/activity/lazy") },

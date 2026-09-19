@@ -7,6 +7,7 @@ import { parse } from "../domain/validation.js";
 import { AppError, invariant, isErrno } from "../shared/errors.js";
 import { atomicJson, exists, readJson } from "./files.js";
 import { prepareRuntime, runtimeDirectory, withStorageLock } from "./lock.js";
+import { BoardRepository } from "./boards.js";
 
 export const CONFIG_NAME = ".relay/config.json";
 export const MIGRATION_STATE = "migration-v2.json";
@@ -45,6 +46,7 @@ export class Workspace {
         "Обновите структуру хранилища: npx @gromlab/relay-cli migrate --actor <автор>",
         4,
       );
+      await new BoardRepository(this).recover(assertOwned);
       return operation(assertOwned);
     });
   }
@@ -105,12 +107,16 @@ export async function initialize(
   await mkdir(dirname(configPath), { recursive: true });
   await mkdir(root, { recursive: true });
   await prepareRuntime(await realpath(root));
+  const workspace = new Workspace(configPath, await realpath(root), config);
   try {
-    await atomicJson(configPath, config, dirname(configPath), true);
+    await workspace.locked(async (assertOwned) => {
+      await new BoardRepository(workspace).initialize(assertOwned);
+      await atomicJson(configPath, config, dirname(configPath), true, assertOwned);
+    });
   } catch (error) {
     if (isErrno(error, "EEXIST"))
       throw new AppError("ALREADY_INITIALIZED", "Конфигурация уже создана другим процессом", 4);
     throw error;
   }
-  return new Workspace(configPath, await realpath(root), config);
+  return workspace;
 }

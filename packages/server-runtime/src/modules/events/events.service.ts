@@ -10,6 +10,7 @@ import { TaskQueries } from "@relay/core/application/queries/tasks";
 import { ProjectRepository } from "@relay/core/storage/project";
 import { ProductRepository, PRODUCT_DIRECTORIES } from "@relay/core/storage/product";
 import { ProductService } from "@relay/core/application/product/service";
+import { BoardRepository } from "@relay/core/storage/boards";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
@@ -27,6 +28,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private projectRoot: string | undefined;
   private productRoot: string | undefined;
   private productVersion: string | undefined;
+  private boardPaths: string[] = [];
+  private boardsVersion: string | undefined;
   private debounce: NodeJS.Timeout | undefined;
   private poll: NodeJS.Timeout | undefined;
   private heartbeat: NodeJS.Timeout | undefined;
@@ -101,6 +104,20 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       this.rebind();
       const { tasks, version } = await new TaskQueries(workspace).snapshot();
       const product = await new ProductService(workspace).state();
+      const repository = new BoardRepository(workspace);
+      const boards = await workspace.locked(() => repository.all());
+      this.boardPaths = [
+        repository.root,
+        ...boards.flatMap((board) => [
+          join(repository.root, board.slug),
+          join(repository.root, board.slug, "tasks"),
+        ]),
+      ];
+      this.rebind();
+      const boardsVersion = createHash("sha256").update(JSON.stringify(boards)).digest("hex");
+      if (this.boardsVersion !== undefined && this.boardsVersion !== boardsVersion)
+        this.events.next({ type: "changed", data: { source: "storage" } });
+      this.boardsVersion = boardsVersion;
       if (this.productVersion !== undefined && this.productVersion !== product.version)
         this.events.next({ type: "changed", data: { source: "storage" } });
       this.productVersion = product.version;
@@ -141,6 +158,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     const configParent = dirname(this.workspace.options.configPath);
     const desired = new Set([
       configParent,
+      ...this.boardPaths,
       ...(this.projectRoot ? [this.projectRoot] : []),
       ...(this.productRoot ? [this.productRoot] : []),
       ...(this.productRoot
@@ -163,6 +181,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
           const name = filename?.toString();
           if (
             name === undefined ||
+            this.boardPaths.includes(path) ||
+            (path === configParent && name === "boards") ||
             path === this.projectRoot ||
             path === this.productRoot ||
             (this.productRoot !== undefined && dirname(path) === this.productRoot) ||

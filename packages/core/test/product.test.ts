@@ -65,6 +65,7 @@ test("хранение продукта: Markdown по строкам, мигр�
       requestId: "migration-app",
       fields: {
         kind: "application",
+        slug: "server",
         name: "Сервер",
         summary: "",
         description: text,
@@ -163,6 +164,7 @@ test("продукт: все участники, версии требовани
   });
   const frontend = await create({
     kind: "application",
+    slug: "web",
     name: "Web",
     summary: "Интерфейс",
     description: "Фронтенд",
@@ -170,6 +172,7 @@ test("продукт: все участники, версии требовани
   });
   const backend = await create({
     kind: "application",
+    slug: "api",
     name: "API",
     summary: "Данные",
     description: "Бэкенд",
@@ -406,6 +409,7 @@ test("точечное подтверждение не переподтверж�
   });
   const application = await create({
     kind: "application",
+    slug: "web",
     name: "Web",
     summary: "",
     description: "Интерфейс",

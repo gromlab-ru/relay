@@ -5,6 +5,7 @@ import type { ApiFailure } from "@relay/contracts";
 import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
+  "ALREADY_EXISTS",
   "REVISION_CONFLICT",
   "BOARD_CHANGED",
   "RANK_CONFLICT",
@@ -40,6 +41,7 @@ const conflicts = new Set([
   "REVISION_REQUIRED",
 ]);
 const missing = new Set([
+  "NOT_FOUND",
   "TASK_NOT_FOUND",
   "COMMENT_NOT_FOUND",
   "LOG_NOT_FOUND",

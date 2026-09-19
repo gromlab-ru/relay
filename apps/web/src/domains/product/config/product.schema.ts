@@ -10,6 +10,13 @@ export const PRODUCT_LINK_SCHEMA = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("implementation"), applicationId: z.string(), id: z.string() }),
 ]);
 const description = { name: z.string(), summary: z.string(), description: z.string() };
+/** Постоянный адрес приложения и его доски. */
+export const APPLICATION_SLUG_SCHEMA = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  .refine((slug) => !["product", "infrastructure", "new"].includes(slug));
 export const PRODUCT_CONTRACT_SCHEMA = z.object({
   id: z.string(),
   featureId: z.string(),
@@ -32,6 +39,7 @@ export const PRODUCT_FIELDS_SCHEMA = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("application"),
     ...description,
+    slug: APPLICATION_SLUG_SCHEMA,
     type: z.enum(["frontend", "backend", "internal"]),
   }),
   z.object({

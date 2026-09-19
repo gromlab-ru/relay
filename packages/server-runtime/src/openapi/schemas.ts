@@ -10,6 +10,7 @@ import {
   productListQuerySchema,
 } from "@relay/core/domain/product";
 import { configSchema } from "@relay/core/domain/config";
+import { boardViewSchema, boardsQuerySchema, boardsPageSchema } from "@relay/core/domain/board";
 import { taskFieldsSchema, taskSchema } from "@relay/core/domain/task";
 import { commentSchema, MAX_COMMENT_BYTES } from "@relay/core/domain/comment";
 import { logSchema, MAX_REPORT_BYTES } from "@relay/core/domain/log";
@@ -273,6 +274,9 @@ export const schemas = {
   AddCommentRequest: addCommentSchema,
   AddLogRequest: addLogSchema,
   BoardQuery: boardQuerySchema,
+  BoardInfo: boardViewSchema,
+  BoardsQuery: boardsQuerySchema,
+  BoardsPage: boardsPageSchema,
   CommentQuery: commentQuerySchema,
   LogQuery: logQuerySchema,
   TaskCard: taskCardSchema,

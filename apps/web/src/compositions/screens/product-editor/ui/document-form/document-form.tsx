@@ -16,6 +16,7 @@ import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useBeforeUnload, useBlocker, useLocation, useNavigate } from "react-router-dom";
 import { APPLICATION_TYPES, useProductDemo } from "domains/product-demo";
+import { APPLICATION_SLUG_SCHEMA } from "domains/product";
 import { useProductPath } from "compositions/widgets/product-page";
 import { readSessionStored, writeSessionStored, removeSessionStored } from "infra/browser-storage";
 import { MarkdownField } from "ui/markdown-field";
@@ -54,6 +55,7 @@ export const DocumentForm = (props: DocumentFormProps) => {
   const isScenario = initial.kind === "scenarios";
   const hasSummary = !isScenario;
   const isApplication = initial.kind === "applications";
+  const isExistingApplication = isApplication && initial.id !== "";
   const form = useForm<ProductFormValues>({
     mode: "uncontrolled",
     validateInputOnBlur: true,
@@ -64,6 +66,10 @@ export const DocumentForm = (props: DocumentFormProps) => {
     },
     validate: {
       name: (name) => (name.trim() === "" ? "Введите название" : null),
+      slug: (slug) =>
+        !isApplication || APPLICATION_SLUG_SCHEMA.safeParse(slug).success
+          ? null
+          : "Укажите уникальный адрес: латинские строчные буквы, цифры и дефисы, до 64 символов. product, infrastructure и new зарезервированы.",
       summary: (summary) =>
         !isScenario && summary.trim() === "" ? "Кратко опишите назначение" : null,
       description: (description) => (description.trim() === "" ? "Добавьте описание" : null),
@@ -237,6 +243,17 @@ export const DocumentForm = (props: DocumentFormProps) => {
               Сценарий готов, когда все участвующие приложения подтвердили реализацию его актуальных
               требований.
             </Text>
+          )}
+          {isApplication && (
+            <TextInput
+              key={form.key("slug")}
+              label="Адрес приложения и доски"
+              description="Slug в URL и имя папки доски. Задаётся при создании и не меняется при переименовании приложения."
+              placeholder="storefront"
+              required
+              readOnly={isExistingApplication}
+              {...form.getInputProps("slug")}
+            />
           )}
           {isApplication && (
             <NativeSelect

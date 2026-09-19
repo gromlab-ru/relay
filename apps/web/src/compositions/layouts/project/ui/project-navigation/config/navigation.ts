@@ -22,7 +22,7 @@ export const PRODUCT_NAVIGATION = [
 /** Рабочие разделы проекта после продуктового контекста. */
 export const PROJECT_NAVIGATION = [
   { path: "plans", label: "Планы", Icon: Flag },
-  { path: "board", label: "Доска задач", Icon: LayoutDashboard },
+  { path: "board", label: "Прежняя доска", Icon: LayoutDashboard },
   // Временно скрыты только в сайдбаре; страницы доступны по прямым адресам.
   { path: "knowledge", label: "Требования и знания", Icon: BookOpen, isHidden: true },
   { path: "activity", label: "Работа и проверки", Icon: Radio, isHidden: true },

@@ -1,0 +1,11 @@
+.columns {
+  display: flex;
+  gap: var(--mantine-spacing-md);
+  overflow-x: auto;
+  padding-bottom: var(--mantine-spacing-sm);
+}
+
+.column {
+  flex: 1 0 14rem;
+  min-height: 16rem;
+}

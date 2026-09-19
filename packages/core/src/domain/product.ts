@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { actorSchema, singleLine, text, timestampSchema } from "./validation.js";
 import { requestIdSchema } from "../application/record-request.js";
+import { applicationSlugSchema } from "./board.js";
 
 export const productIdSchema = z
   .string()
@@ -47,6 +48,7 @@ export const productFieldsSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("application"),
     ...description,
+    slug: applicationSlugSchema,
     type: z.enum(["frontend", "backend", "internal"]),
   }),
   z.strictObject({

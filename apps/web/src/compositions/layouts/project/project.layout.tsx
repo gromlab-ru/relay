@@ -51,6 +51,7 @@ export const ProjectLayout = () => {
   const attentionCount = lifecycle.data?.attention.length ?? 0;
   const hasAttention = attentionCount > 0;
   const isTaskPage = location.pathname.startsWith(`${base}/tasks/`);
+  const canCreateLegacyTask = !location.pathname.startsWith(`${base}/boards`);
 
   /**
    * Открывает создание, сохраняя выбранные на доске план, этап и группу.
@@ -118,14 +119,16 @@ export const ProjectLayout = () => {
           >
             <ThemeIcon size={17} />
           </ActionIcon>
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<Plus size={14} />}
-            onClick={handleCreate}
-          >
-            Задача
-          </Button>
+          {canCreateLegacyTask && (
+            <Button
+              size="xs"
+              variant="default"
+              leftSection={<Plus size={14} />}
+              onClick={handleCreate}
+            >
+              Задача
+            </Button>
+          )}
         </Group>
       </header>
       <div className={styles.workspace}>

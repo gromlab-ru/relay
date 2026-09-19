@@ -1,0 +1,92 @@
+import { createHash } from "node:crypto";
+import { boardSlugSchema, boardsQuerySchema } from "../../domain/board.js";
+import type { BoardView, BoardsQuery } from "../../domain/board.js";
+import { parse } from "../../domain/validation.js";
+import { BoardRepository } from "../../storage/boards.js";
+import { ProductRepository } from "../../storage/product.js";
+import type { Workspace } from "../../storage/workspace.js";
+import { invariant } from "../../shared/errors.js";
+
+/** Каталог досок одного проекта; не смешивает прежние задачи с новыми контейнерами. */
+export class BoardsService {
+  constructor(readonly workspace: Workspace) {}
+
+  private async snapshot(): Promise<BoardView[]> {
+    return this.workspace.locked(async () => {
+      const boards = await new BoardRepository(this.workspace).all();
+      const products = await new ProductRepository(this.workspace).all();
+      const views = boards.map((board): BoardView => {
+        if (board.kind !== "application") {
+          invariant(
+            board.slug === board.kind &&
+              board.id === `board_${board.kind}` &&
+              board.applicationId === null,
+            "INVALID_DATA",
+            "Некорректная системная доска",
+            5,
+          );
+          return { ...board, name: board.kind === "product" ? "Продукт" : "Инфраструктура" };
+        }
+        const application = products.find((record) => record.id === board.applicationId);
+        invariant(
+          application?.fields.kind === "application" &&
+            application.fields.slug === board.slug &&
+            board.id === application.id.replace("application_", "board_"),
+          "INVALID_DATA",
+          "Доска не соответствует приложению",
+          5,
+        );
+        return { ...board, name: application.fields.name };
+      });
+      invariant(
+        views.some((board) => board.kind === "product") &&
+          views.some((board) => board.kind === "infrastructure"),
+        "INVALID_DATA",
+        "Системные доски отсутствуют: требуется новый инициализированный проект",
+        5,
+      );
+      for (const record of products) {
+        if (record.fields.kind === "application")
+          invariant(
+            views.some((board) => board.applicationId === record.id),
+            "INVALID_DATA",
+            "У приложения отсутствует доска",
+            5,
+          );
+      }
+      const order = { product: 0, application: 1, infrastructure: 2 };
+      return views.sort(
+        (left, right) =>
+          order[left.kind] - order[right.kind] ||
+          left.createdAt.localeCompare(right.createdAt) ||
+          left.id.localeCompare(right.id),
+      );
+    });
+  }
+
+  async list(input: BoardsQuery = {}) {
+    const query = parse(boardsQuerySchema, input, "параметры каталога досок");
+    const boards = await this.snapshot();
+    const version = createHash("sha256").update(JSON.stringify(boards)).digest("hex");
+    invariant(
+      query.version === undefined || query.version === version,
+      "BOARD_CHANGED",
+      "Каталог досок изменился. Начните чтение заново.",
+      4,
+    );
+    const items = boards.slice(query.offset, query.offset + query.limit);
+    return {
+      items,
+      total: boards.length,
+      version,
+      nextOffset: query.offset + items.length < boards.length ? query.offset + items.length : null,
+    };
+  }
+
+  async get(slug: string): Promise<BoardView> {
+    const address = parse(boardSlugSchema, slug, "адрес доски");
+    const board = (await this.snapshot()).find((entry) => entry.slug === address);
+    invariant(board, "NOT_FOUND", "Доска не найдена", 3);
+    return board;
+  }
+}

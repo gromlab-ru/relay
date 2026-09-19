@@ -22,6 +22,8 @@ export type ProductFields =
   | { kind: "scenario"; featureId: string; name: string; description: string }
   | {
       kind: "application";
+      /** Неизменяемый адрес приложения и его доски. */
+      slug: string;
       name: string;
       summary: string;
       description: string;

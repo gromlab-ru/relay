@@ -27,7 +27,10 @@ export const PRODUCT_FEATURE_SCHEMA = PRODUCT_DOCUMENT_SCHEMA.extend({
   scenarios: z.array(PRODUCT_SCENARIO_SCHEMA),
 });
 /** Приложение отвечает за часть продукта. */
-export const PRODUCT_APPLICATION_SCHEMA = PRODUCT_DOCUMENT_SCHEMA.extend({ type: z.string() });
+export const PRODUCT_APPLICATION_SCHEMA = PRODUCT_DOCUMENT_SCHEMA.extend({
+  type: z.string(),
+  slug: z.string(),
+});
 /** Часть общего сценария, которую обязуется реализовать приложение. */
 export const PRODUCT_SCENARIO_CONTRIBUTION_SCHEMA = z
   .object({
