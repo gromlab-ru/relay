@@ -12,3 +12,6 @@ coverage/
 
 # Локальные настройки агентов и собранный скилл playground.
 /apps/playground/.agents/
+
+# Локальные данные Relay во всех каталогах playground.
+/apps/playground/**/.relay/

@@ -2,8 +2,8 @@
 
 [Документация](../README.md) → Справочники → Терминал
 
-В примерах `tasks-cli` означает исполняемую команду пакета. Для запуска через npx
-замените её на `npx @gromlab/tasks-cli`.
+В примерах `relay-cli` означает исполняемую команду пакета. Для запуска через npx
+замените её на `npx @gromlab/relay-cli`.
 
 Содержание: [цвета](#цвета), [представления](#представления), [ID](#числовые-id).
 
@@ -41,7 +41,7 @@ JSON никогда не содержит ANSI-кодов, в том числе 
 
 ### Цвета проекта
 
-Укажите `color` в нужном статусе `tasks.config.json`. Например, чтобы сделать
+Укажите `color` в нужном статусе `.relay/config.json`. Например, чтобы сделать
 проверку синей, измените значение `statuses.review`:
 
 ```json
@@ -57,20 +57,20 @@ JSON никогда не содержит ANSI-кодов, в том числе 
 ## Представления
 
 ```bash
-tasks-cli list
-tasks-cli list --all
-tasks-cli list --ready
-tasks-cli list --group backend
-tasks-cli overview
-tasks-cli overview 1 --limit 10
-tasks-cli get 3
-tasks-cli get 3 --full
-tasks-cli tree 1
-tasks-cli links 6
-tasks-cli comment list 3
-tasks-cli log list 3
-tasks-cli log search 3 --query "проверка"
-tasks-cli group list
+relay-cli list
+relay-cli list --all
+relay-cli list --ready
+relay-cli list --group backend
+relay-cli overview
+relay-cli overview 1 --limit 10
+relay-cli get 3
+relay-cli get 3 --full
+relay-cli tree 1
+relay-cli links 6
+relay-cli comment list 3
+relay-cli log list 3
+relay-cli log search 3 --query "проверка"
+relay-cli group list
 ```
 
 - Список: отдельные секции групп с таблицами ID, названий, статусов и исполнителей.
@@ -109,9 +109,9 @@ ID равен максимальному существующему плюс о�
 в командах используйте `3`. Отдельного поля `number` нет.
 
 ```bash
-tasks-cli create --title "Первая задача" --actor orchestrator
-tasks-cli get 1
-tasks-cli status 1 in_progress --actor backend-agent
+relay-cli create --title "Первая задача" --actor orchestrator
+relay-cli get 1
+relay-cli status 1 in_progress --actor backend-agent
 ```
 
 Старое хранилище с UUID перенесите командой `migrate --actor human`.

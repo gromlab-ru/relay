@@ -19,27 +19,32 @@
 
 ## Выбор интерфейса и проектов
 
-Одна база может использовать существующий `tasks.config.json`: CLI и MCP находят его
-от каталога запуска либо получают через `--config`. Для именованного доступа создайте
-`tasks.orchestrator.json` с путями и подключениями одного или нескольких проектов.
+Одна база использует `.relay/config.json`: приложения находят его от каталога запуска
+либо получают через `--config`. Для именованного доступа создайте `relay.workspace.json`.
+Инициализируйте проекты командой `relay-cli init` в их каталогах, затем в каталоге workspace:
 
 ```bash
-npx @gromlab/tasks-cli projects init
-npx @gromlab/tasks-cli projects add backend ../backend
-npx @gromlab/tasks-cli projects add frontend ../frontend
-npx @gromlab/tasks-cli backend overview
-npx @gromlab/tasks-mcp
+npx @gromlab/relay-cli projects init
+npx @gromlab/relay-server --config relay.workspace.json
 ```
 
-Каталоги в примере уже содержат `tasks.config.json`. Для новых баз после регистрации
-вызовите `backend init` и `frontend init`. CLI получает имя перед командой; MCP-инструменты
-получают поле `project`. В режиме реестра имя обязательно даже при одной записи.
+В другом терминале из того же каталога:
+
+```bash
+npx @gromlab/relay-cli projects add backend ../backend
+npx @gromlab/relay-cli projects add frontend ../frontend
+npx @gromlab/relay-cli backend overview
+npx @gromlab/relay-mcp --config relay.workspace.json
+```
+
+Каталоги проектов уже содержат `.relay/config.json`. CLI получает имя перед командой;
+MCP-инструменты получают поле `project`. В workspace имя обязательно даже при одной записи.
 
 Для MCP оркестратор запускает один HTTP-сервис и подключает всех агентов к
 `http://127.0.0.1:4710/mcp`. Вызовы `task_get`, `task_update`, `log_add` содержат проект,
 ID и при записи автора. При прямом проектном конфиге имя опускается.
-Если URL REST API отсутствует, MCP сам запускает API проекта и использует REST SDK.
-При заданном URL оркестратор обеспечивает доступность соответствующего API.
+MCP всегда обращается к уже работающему Relay Server через REST SDK.
+Оркестратор обеспечивает доступность Server; MCP не запускает API проектов самостоятельно.
 
 Оркестратор ведёт реестр вручную, через CLI `projects` или MCP `project_register`.
 Изменения читаются без перезапуска MCP. Субагенту передаются имя проекта, ID, автор,
@@ -51,14 +56,14 @@ ID и при записи автора. При прямом проектном �
 ## Общая схема
 
 ```text
-tasks.config.json → CLI выбирает транспорт
+.relay/config.json → CLI выбирает транспорт
                      ├─ есть server.url → API → Core → база оркестратора
                      └─ нет server.url  → Core → локальная база
 
 Оркестратор → задача + назначение → субагент → отчёты → оркестратор
 ```
 
-Сервер запускается в рабочей копии оркестратора. В HTTP CLI не открывает `.tasks`
+Сервер запускается в рабочей копии оркестратора. В HTTP CLI не открывает `.relay`
 субагента, даже если она существует. Сервер пишет в базу своего конфига; Git-коммиты
 и слияние кода выполняются отдельно.
 
@@ -67,10 +72,10 @@ tasks.config.json → CLI выбирает транспорт
 В новом проекте:
 
 ```bash
-npx @gromlab/tasks-cli init
+npx @gromlab/relay-cli init
 ```
 
-Оркестратор читает `tasks.config.json`. Для общей серверной базы добавляется секция
+Оркестратор читает `.relay/config.json`. Для общей серверной базы добавляется секция
 с согласованными URL и портом (остальные поля конфига сохраняются):
 
 ```json
@@ -80,10 +85,10 @@ npx @gromlab/tasks-cli init
 При заданном URL оркестратор обеспечивает запуск сервера до выдачи задач:
 
 ```bash
-npx @gromlab/tasks-cli server --actor human --open
+npx @gromlab/relay-server --actor human --open
 ```
 
-`server` запускается локально независимо от URL. Автор `human` используется для
+`relay-server` запускается локально независимо от URL. Автор `human` используется для
 дополнений из UI. Сервер занимает терминал; обычные команды выполняются в другом.
 Если сервер нужного проекта уже работает, используется существующий процесс.
 
@@ -94,7 +99,7 @@ CLI сам находит конфиг вверх от каталога вызо
 
 Без URL команды локальные. Один `server.port` определяет только запуск сервера.
 Если несколько рабочих каталогов используют локальный режим, оркестратор должен
-обеспечить общий путь базы: разные `.tasks` не синхронизируются автоматически.
+обеспечить общий путь базы: разные `.relay` не синхронизируются автоматически.
 Флаги и окружение остаются специальными [переопределениями](../reference/CONFIGURATION.md).
 
 ## Назначение задач
@@ -102,10 +107,10 @@ CLI сам находит конфиг вверх от каталога вызо
 Пример новой базы: API получает ID `1`, форма — `2`.
 
 ```bash
-npx @gromlab/tasks-cli create "API пользователей" --group backend --actor orchestrator
-npx @gromlab/tasks-cli create "Форма пользователя" --group frontend --depends-on 1 --actor orchestrator
-npx @gromlab/tasks-cli list --ready --format json
-npx @gromlab/tasks-cli update 1 --assignee backend-agent --status in_progress --actor orchestrator
+npx @gromlab/relay-cli create "API пользователей" --group backend --actor orchestrator
+npx @gromlab/relay-cli create "Форма пользователя" --group frontend --depends-on 1 --actor orchestrator
+npx @gromlab/relay-cli list --ready --format json
+npx @gromlab/relay-cli update 1 --assignee backend-agent --status in_progress --actor orchestrator
 ```
 
 В существующем проекте используются ID из ответов. `update` атомарно сохраняет
@@ -120,10 +125,10 @@ npx @gromlab/tasks-cli update 1 --assignee backend-agent --status in_progress --
 Субагент читает выданную задачу и фиксирует ход работы обычными командами:
 
 ```bash
-npx @gromlab/tasks-cli get 1 --format json
-npx @gromlab/tasks-cli log add 1 --actor backend-agent --kind progress --session-id wave-1 \
+npx @gromlab/relay-cli get 1 --format json
+npx @gromlab/relay-cli log add 1 --actor backend-agent --kind progress --session-id wave-1 \
   --request-id backend-agent-step-1 --text "Контракт готов, реализую обработчик"
-npx @gromlab/tasks-cli update 1 --actor backend-agent --summary "Обработчик реализован; следующий шаг — проверки"
+npx @gromlab/relay-cli update 1 --actor backend-agent --summary "Обработчик реализован; следующий шаг — проверки"
 ```
 
 Автор — подпись записи, не настройка подключения. Если задача назначена другому,
@@ -141,7 +146,7 @@ npx @gromlab/tasks-cli update 1 --actor backend-agent --summary "Обработ�
 автором и содержимым возвращает исходный ID без дубликата и увеличения ревизии:
 
 ```bash
-npx @gromlab/tasks-cli log add 1 --actor backend-agent --kind progress --session-id wave-1 \
+npx @gromlab/relay-cli log add 1 --actor backend-agent --kind progress --session-id wave-1 \
   --request-id backend-agent-step-1 --text "Контракт готов, реализую обработчик"
 ```
 
@@ -160,7 +165,7 @@ npx @gromlab/tasks-cli log add 1 --actor backend-agent --kind progress --session
 повторяет запрос напрямую в **той же базе**, с прежним автором, ключом и содержимым:
 
 ```bash
-npx @gromlab/tasks-cli --local --config /work/orchestrator/tasks.config.json \
+npx @gromlab/relay-cli --local --config /work/orchestrator/.relay/config.json \
   log add 1 --actor backend-agent --kind progress --session-id wave-1 \
   --request-id backend-agent-step-1 --text "Контракт готов, реализую обработчик"
 ```

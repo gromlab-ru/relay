@@ -3,6 +3,10 @@
 `@gromlab/relay-mcp` подключает AI-агентов к Relay Server через Streamable HTTP.
 Требуется Node.js 22+.
 
+[Контракт приложения](../../docs/product/applications/mcp/README.md) ·
+[Состояние реализации](../../docs/engineering/implementation/applications.md) ·
+[Протокол разработки](../../docs/development/PROTOCOL.md).
+
 ```bash
 npx @gromlab/relay-mcp --server-url http://127.0.0.1:4700
 ```

@@ -35,7 +35,7 @@ registerCommand<{ titleOnly?: boolean }>(program, runtime, {
   description: "Прочитать выбранные данные задачи",
   arguments: { id: "Числовой ID задачи, например 3" },
   details: "Читает одну задачу. --title-only возвращает только её название.",
-  examples: [["tasks-cli inspect 3 --title-only", "Выбрать название"]],
+  examples: [["relay-cli inspect 3 --title-only", "Выбрать название"]],
   configure: (command) => command.option("--title-only", "Только название"),
   async run(context, input) {
     const { task } = await context.tasks.document(input.argument());
@@ -67,7 +67,7 @@ const group = commandGroup(program, {
   name: "report",
   description: "Отчёты проекта",
   details: "Выберите подкоманду. Для каждой доступна справка с примерами.",
-  examples: [["tasks-cli report list", "Посмотреть отчёты"]],
+  examples: [["relay-cli report list", "Посмотреть отчёты"]],
 });
 
 registerCommand(group, runtime, definition);
@@ -113,12 +113,12 @@ registerCommand(group, runtime, definition);
 справку без конфига. Изменения записи должны сохранять конкурентные гарантии;
 изменения списка — байтовый бюджет и курсоры в обоих форматах.
 
-Обновите [руководства](../README.md#руководства-по-сценариям) и [справочник команд](../reference/CLI.md),
+Обновите [руководства](../guides/README.md) и [справочник команд](../reference/CLI.md),
 затем выполните из корня репозитория:
 
 ```bash
 pnpm run build
 pnpm run docs:check
-pnpm --filter @gromlab/tasks-cli run typecheck
-pnpm --filter @gromlab/tasks-cli run test
+pnpm --filter @gromlab/relay-cli run typecheck
+pnpm --filter @gromlab/relay-cli run test
 ```

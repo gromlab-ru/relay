@@ -13,10 +13,10 @@
 ## Область
 
 ```bash
-npx @gromlab/tasks-cli overview
-npx @gromlab/tasks-cli overview 1 --limit 10
-npx @gromlab/tasks-cli overview 1 --format json
-npx @gromlab/tasks-cli overview --review-status qa,acceptance
+npx @gromlab/relay-cli overview
+npx @gromlab/relay-cli overview 1 --limit 10
+npx @gromlab/relay-cli overview 1 --format json
+npx @gromlab/relay-cli overview --review-status qa,acceptance
 ```
 
 Последний пример требует соответствующих статусов в конфиге.

@@ -60,9 +60,9 @@
 ## Выбор полей
 
 ```bash
-npx @gromlab/tasks-cli get 1 --fields id,status,summary,revision --format json
-npx @gromlab/tasks-cli description 1 --format json
-npx @gromlab/tasks-cli get 1 --full --max-bytes 262144
+npx @gromlab/relay-cli get 1 --fields id,status,summary,revision --format json
+npx @gromlab/relay-cli description 1 --format json
+npx @gromlab/relay-cli get 1 --full --max-bytes 262144
 ```
 
 `get` без `--full` исключает словари комментариев и отчётов, оставляя их счётчики.
@@ -88,8 +88,8 @@ npx @gromlab/tasks-cli get 1 --full --max-bytes 262144
 Берите непрозрачный курсор из `meta.nextCursor`, пока `meta.hasMore` равно `true`.
 
 ```bash
-npx @gromlab/tasks-cli list --all --limit 2 --format json
-npx @gromlab/tasks-cli list --all --limit 2 --cursor "<nextCursor>" --format json
+npx @gromlab/relay-cli list --all --limit 2 --format json
+npx @gromlab/relay-cli list --all --limit 2 --cursor "<nextCursor>" --format json
 ```
 
 Подставьте настоящий курсор из первого ответа. Повреждённый курсор или изменение

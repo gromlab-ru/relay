@@ -31,7 +31,7 @@ MCP сохраняет коды прикладных ошибок в `structured
 | `PROJECT_CONFIG_REQUIRED`                                  | Запись реестра должна ссылаться на проектный конфиг, а не на другой реестр                            |
 | `LOCAL_CONFIG_REQUIRED`                                    | Для локальной операции задайте `path` или `config`; одного URL недостаточно                           |
 | `MCP_STOPPING`                                             | Дождитесь перезапуска MCP и переподключите клиент                                                     |
-| `ACTOR_REQUIRED`                                           | Для записи нужен `--actor` или `TASKS_ACTOR`                                                          |
+| `ACTOR_REQUIRED`                                           | Для записи нужен `--actor` или `RELAY_ACTOR`                                                          |
 | `ALREADY_INITIALIZED`                                      | Конфиг уже существует; используйте его или другой путь для нового проекта                             |
 | `INVALID_ARGUMENT`, `VALIDATION_ERROR`                     | Исправьте аргументы по `details`, схеме и `--help`                                                    |
 | `INVALID_CONFIG`                                           | Сервер не может открыть некорректный конфиг; исправьте JSON и значения                                |

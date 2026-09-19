@@ -17,9 +17,9 @@
 ## Машинный вывод
 
 ```bash
-npx @gromlab/tasks-cli list --ready --format json
-npx @gromlab/tasks-cli get 1 --fields id,status,assignee,summary,revision --format json
-npx @gromlab/tasks-cli overview --format json
+npx @gromlab/relay-cli list --ready --format json
+npx @gromlab/relay-cli get 1 --fields id,status,assignee,summary,revision --format json
+npx @gromlab/relay-cli overview --format json
 ```
 
 Успех содержит `ok: true` и `data`; ошибка — `ok: false` и `error` с кодом и сообщением.
@@ -41,7 +41,7 @@ CLI возвращает ненулевой код завершения при �
 ```bash
 args=(list --all --limit 20 --format json)
 while true; do
-  if response=$(npx --yes @gromlab/tasks-cli "${args[@]}"); then
+  if response=$(npx --yes @gromlab/relay-cli "${args[@]}"); then
     printf '%s\n' "$response" | jq -e '.ok == true' >/dev/null || exit 1
   else
     code=$?

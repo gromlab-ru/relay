@@ -3,6 +3,10 @@
 `@gromlab/relay-cli` — терминальный клиент Relay. Команда: `relay-cli`.
 Требуется Node.js 22+.
 
+[Контракт приложения](../../docs/product/applications/cli/README.md) ·
+[Состояние реализации](../../docs/engineering/implementation/applications.md) ·
+[Протокол разработки](../../docs/development/PROTOCOL.md).
+
 ```bash
 npx @gromlab/relay-cli init
 npx @gromlab/relay-cli create "Первая задача" --actor human

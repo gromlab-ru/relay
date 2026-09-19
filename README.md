@@ -133,6 +133,9 @@ task_briefing({ id: 1 })
 
 ## Документация
 
+- [Концепция Relay](docs/product/README.md) · [Карта возможностей](docs/product/CAPABILITIES.md).
+- [Приложения](docs/product/applications/README.md) · [Реализация](docs/engineering/implementation/README.md).
+- [Обязательный агентский протокол](docs/development/PROTOCOL.md) · [Работы и журналы](docs/work/README.md).
 - [Первый проект](docs/GETTING_STARTED.md) — запуск Relay и подключение нескольких проектов.
 - [Жизненный цикл проекта](docs/guides/LIFECYCLE.md) — от планирования до выпуска и передачи.
 - [Оркестрация](docs/guides/ORCHESTRATION.md) · [MCP](docs/reference/MCP.md) — работа с агентами.

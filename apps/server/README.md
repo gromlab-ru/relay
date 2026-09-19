@@ -3,6 +3,10 @@
 `@gromlab/relay-server` предоставляет REST API, SSE, OpenAPI, Swagger и готовый
 веб-интерфейс. Команда: `relay-server`. Требуется Node.js 22+.
 
+[Контракт приложения](../../docs/product/applications/server/README.md) ·
+[Состояние реализации](../../docs/engineering/implementation/applications.md) ·
+[Протокол разработки](../../docs/development/PROTOCOL.md).
+
 ```bash
 npx @gromlab/relay-server --open
 npx @gromlab/relay-server --config ./relay.workspace.json --port 3001

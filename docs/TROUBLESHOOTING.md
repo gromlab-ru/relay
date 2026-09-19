@@ -36,7 +36,7 @@ Tasks предоставляет общую JSON-базу задач и опер
 В HTTP это пути сервера, с `--local` — выбранной локальной базы.
 `storageDir` разрешается относительно конфига, а не рабочего каталога исходников агента.
 
-Для проверки локальной копии задайте `--local --config /work/project/tasks.config.json`.
+Для проверки локальной копии задайте `--local --config /work/project/.relay/config.json`.
 Если проект новый, начните с `init`; существующий конфиг повторно не создаётся.
 [Настройки и приоритеты](reference/CONFIGURATION.md).
 
@@ -49,9 +49,9 @@ Tasks предоставляет общую JSON-базу задач и опер
 или чужом исполнителе нужно сообщить оркестратору.
 
 ```bash
-npx @gromlab/tasks-cli get 1 --fields id,status,assignee,blockedBy,ready --format json
-npx @gromlab/tasks-cli links 1
-npx @gromlab/tasks-cli list --ready
+npx @gromlab/relay-cli get 1 --fields id,status,assignee,blockedBy,ready --format json
+npx @gromlab/relay-cli links 1
+npx @gromlab/relay-cli list --ready
 ```
 
 Подставьте ID своей задачи. `TASK_ASSIGNED` означает существующее назначение;
@@ -81,13 +81,13 @@ npx @gromlab/tasks-cli list --ready
 ## Сервер недоступен
 
 1. Проверьте, что сервер запущен на этом хосте и выбран правильный порт.
-2. Сверьте `--server-url`, `TASKS_SERVER_URL`, `server.url`. URL задаётся без `/api/v1`.
+2. Сверьте `--server-url`, `RELAY_SERVER_URL`, `server.url`. URL задаётся без `/api/v1`.
 3. При `SERVER_INCOMPATIBLE` обновите и перезапустите сервер; обновление CLI не меняет
    уже запущенный процесс.
 4. Если порт занят, выберите другой `--port` и передайте соответствующий URL агентам.
 
 Для прямой записи используйте `--local --config <конфиг-оркестратора>`.
-HTTP-ошибка не перенаправляет команду автоматически в `.tasks` агента.
+HTTP-ошибка не перенаправляет команду автоматически в `.relay` агента.
 Пример восстановления — [оркестрация](guides/ORCHESTRATION.md#прямая-запись-и-восстановление).
 
 ## Потерян ответ на добавление отчёта
@@ -132,6 +132,6 @@ HTTP-ошибка не перенаправляет команду автома�
 [Порядок обновления](guides/MIGRATION.md).
 
 Полный перечень диагностик: [коды ошибок](reference/ERRORS.md).
-Если ответа нет, создайте [issue](https://github.com/gromlab-ru/tasks-cli/issues),
+Если ответа нет, создайте [issue](https://github.com/gromlab-ru/relay/issues),
 указав версию CLI и Node.js, команду, режим local/HTTP и код ошибки. Для воспроизведения
 подойдёт минимальный пример задач с теми же связями.
