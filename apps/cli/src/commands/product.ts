@@ -7,6 +7,30 @@ import { author } from "../context.js";
 import type { Runtime } from "../context.js";
 import { commandGroup, registerCommand } from "../command.js";
 import { integer } from "../options.js";
+import { lintProduct } from "@relay/core/application/product/content";
+import type { ProductContentQuery } from "@relay/core/application/product/content";
+import { ProductRepository } from "@relay/core/storage/product";
+import { validateProduct } from "@relay/core/application/product/model";
+import {
+  productContextText,
+  productListText,
+  productOverviewText,
+  productRecordText,
+  productSavedText,
+  productStateText,
+  productLintText,
+} from "../presentation/product.js";
+import type { ProductMutation } from "@relay/core/domain/product";
+import type { CommandContext } from "../context.js";
+import type { Result } from "../queries/result.js";
+
+async function save(context: CommandContext, command: ProductMutation): Promise<Result> {
+  const data = {
+    ...(await context.backend.product.mutate(command, author(context))),
+    requestId: command.requestId,
+  };
+  return { data, text: (options) => productSavedText(command, data, options) };
+}
 
 /** Продуктовые операции с прямым многострочным Markdown и JSON-вводом. */
 export function registerProduct(program: Command, runtime: Runtime): void {
@@ -23,7 +47,14 @@ export function registerProduct(program: Command, runtime: Runtime): void {
       description: name === "state" ? "Полный снимок продукта" : "Компактная карта продукта",
       details: "Общая готовность вычисляется по контрактам всех проектов.",
       examples: [[`relay-cli product ${name}`, "Прочитать продукт"]],
-      run: async (context) => ({ data: await context.backend.product[name]() }),
+      run: async (context) => {
+        if (name === "state") {
+          const data = await context.backend.product.state();
+          return { data, text: (options) => productStateText(data, options) };
+        }
+        const data = await context.backend.product.overview();
+        return { data, text: (options) => productOverviewText(data, options) };
+      },
     });
   registerCommand<{
     kind?: "passport" | "feature" | "scenario" | "application" | "scope" | "document";
@@ -41,7 +72,10 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         .option("--q <text>", "Поиск")
         .option("--offset <n>", "Смещение", integer(0, Number.MAX_SAFE_INTEGER))
         .option("--limit <n>", "Размер страницы", integer(1, 100)),
-    run: async (context, input) => ({ data: await context.backend.product.list(input.options) }),
+    run: async (context, input) => {
+      const data = await context.backend.product.list(input.options);
+      return { data, text: (options) => productListText(data, input.options, options) };
+    },
   });
   registerCommand(group, runtime, {
     name: "get <id>",
@@ -53,7 +87,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
       const result = await context.backend.product.list({ id: input.argument() });
       const record = result.items[0];
       invariant(record, "PRODUCT_RECORD_NOT_FOUND", "Запись не найдена", 3);
-      return { data: record };
+      return { data: record, text: (options) => productRecordText(record, options) };
     },
   });
   registerCommand<{ id?: string; application?: string }>(group, runtime, {
@@ -65,12 +99,13 @@ export function registerProduct(program: Command, runtime: Runtime): void {
       command
         .option("--id <id>", "Цель контекста")
         .option("--application <id>", "Проект-реализатор"),
-    run: async (context, input) => ({
-      data: await context.backend.product.context({
+    run: async (context, input) => {
+      const data = await context.backend.product.context({
         id: input.options.id,
         applicationId: input.options.application,
-      }),
-    }),
+      });
+      return { data, text: (options) => productContextText(data, options) };
+    },
   });
   registerCommand(group, runtime, {
     name: "validate",
@@ -79,7 +114,51 @@ export function registerProduct(program: Command, runtime: Runtime): void {
     examples: [["relay-cli product validate", "Проверить продукт"]],
     run: async (context) => {
       const state = await context.backend.product.state();
-      return { data: { valid: true, records: state.records.length, version: state.version } };
+      return {
+        data: { valid: true, records: state.records.length, version: state.version },
+        text: `Продукт корректен. Проверено записей: ${state.records.length}.`,
+      };
+    },
+  });
+  registerCommand<ProductContentQuery>(group, runtime, {
+    name: "lint",
+    description: "Проверить структуру продуктовых описаний",
+    details:
+      "Предупреждения о Markdown и критериях не изменяют записи и не доказывают полноту требований.",
+    examples: [["relay-cli product lint", "Найти описания, требующие внимания"]],
+    configure: (command) =>
+      command
+        .option("--id <id>", "Проверить отдельную запись")
+        .option("--offset <n>", "Смещение предупреждений", integer(0, Number.MAX_SAFE_INTEGER))
+        .option("--limit <n>", "Число предупреждений на странице", integer(1, 100)),
+    run: async (context, input) => {
+      const data = lintProduct(await context.backend.product.state(), input.options);
+      return { data, text: (options) => productLintText(data, options, input.options) };
+    },
+  });
+  registerCommand(group, runtime, {
+    name: "migrate",
+    description: "Перенести продукт в каталоги и многострочный JSON",
+    details:
+      "Только локальный режим: --local --config <проект/.relay/config.json>. Перед запуском остановите старые клиенты и сохраните копию product. Возобновляемый перенос сохраняет содержание, ID, ревизии и повторы. Серверный конфиг workspace не подходит.",
+    examples: [
+      [
+        "relay-cli --local --config .relay/config.json product migrate",
+        "Обновить дисковый формат продукта",
+      ],
+    ],
+    run: async (context) => {
+      const workspace = context.backend.localWorkspace;
+      invariant(workspace, "LOCAL_ONLY", "Миграция требует --local и конфиг отдельного проекта.");
+      const migrated = await workspace.locked(async (assertOwned) => {
+        const repository = new ProductRepository(workspace);
+        validateProduct(await repository.all());
+        return repository.migrate(assertOwned);
+      });
+      return {
+        data: { migrated },
+        text: `Миграция завершена. Перенесено записей: ${migrated}. Содержание и ревизии сохранены.`,
+      };
     },
   });
   registerCommand<{ json?: string; description?: string; body?: string }>(group, runtime, {
@@ -126,18 +205,19 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         { requestId: randomUUID(), ...value, fields },
         "изменение продукта",
       );
-      return {
-        data: {
-          ...(await context.backend.product.mutate(command, author(context))),
-          requestId: command.requestId,
-        },
-      };
+      return save(context, command);
     },
   });
   for (const kind of ["passport", "feature", "scenario", "application", "document"] as const) {
     const entity = commandGroup(group, {
       name: kind,
-      description: `Операции ${kind}`,
+      description: {
+        passport: "Паспорт продукта",
+        feature: "Фичи продукта",
+        scenario: "Сценарии продукта",
+        application: "Приложения продукта",
+        document: "Документы продукта",
+      }[kind],
       details: "Прямой ввод текстов без промежуточных файлов.",
       examples: [[`relay-cli product ${kind} create --help`, "Параметры создания"]],
     });
@@ -164,14 +244,17 @@ export function registerProduct(program: Command, runtime: Runtime): void {
           command
             .requiredOption("--name <name>", "Название")
             .option("--summary <text>", "Краткое описание", "")
-            .option("--description <markdown>", "Полное описание напрямую")
-            .option("--body <markdown>", "Текст документа напрямую")
-            .option("--type <type>", "frontend/backend/internal", "frontend")
+            .option(
+              "--description <markdown>",
+              "Markdown: цель, правила, шаги, ошибки и критерии по смыслу",
+            )
+            .option("--body <markdown>", "Структурированный Markdown документа напрямую")
+            .option("--type <type>", "Тип приложения: frontend/backend/internal", "frontend")
             .option("--feature <id>", "Родительская фича сценария")
             .option("--links <json>", "Типизированные связи документа", "[]")
             .option(
               "--document-kind <kind>",
-              "specification/description/rules/decision",
+              "Назначение документа: specification/description/rules/decision",
               "description",
             )
             .option("--if-revision <n>", "Прочитанная ревизия", integer(0, Number.MAX_SAFE_INTEGER))
@@ -219,12 +302,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
             },
             "изменение продукта",
           );
-          return {
-            data: {
-              ...(await context.backend.product.mutate(command, author(context))),
-              requestId: command.requestId,
-            },
-          };
+          return save(context, command);
         },
       });
   }
@@ -280,12 +358,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
           },
           "состав реализации",
         );
-        return {
-          data: {
-            ...(await context.backend.product.mutate(command, author(context))),
-            requestId: command.requestId,
-          },
-        };
+        return save(context, command);
       },
     },
   );
@@ -318,7 +391,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
     configure: (command) =>
       command
         .requiredOption("--application <id>", "Приложение")
-        .requiredOption("--status <status>", "none/partial/done")
+        .requiredOption("--status <status>", "Готовность реализации: none/partial/done")
         .option("--title <text>", "Заголовок вклада")
         .option("--description <markdown>", "Многострочное описание напрямую")
         .requiredOption("--if-revision <n>", "Ревизия состава", integer(1, Number.MAX_SAFE_INTEGER))
@@ -344,12 +417,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
         },
         "контракт реализации",
       );
-      return {
-        data: {
-          ...(await context.backend.product.mutate(command, author(context))),
-          requestId: command.requestId,
-        },
-      };
+      return save(context, command);
     },
   });
 }

@@ -7,7 +7,8 @@ import { asAppError } from "@relay/core/shared/errors";
 
 const command = new Command("relay-mcp")
   .description("Общий HTTP MCP-сервер задач для одного проекта или реестра проектов")
-  .version(manifest.version)
+  .version(manifest.version, "-V, --version", "Показать версию MCP")
+  .helpOption("-h, --help", "Показать справку")
   .option("--server-url <url>", "Адрес Relay Server; приоритет над RELAY_SERVER_URL")
   .option("--format <format>", "Формат сообщения запуска: text или json", "text")
   .option(

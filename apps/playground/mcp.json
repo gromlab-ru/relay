@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "relay": {
+      "type": "remote",
+      "url": "http://127.0.0.1:4710/mcp",
+      "enabled": true,
+      "oauth": false
+    }
+  }
+}

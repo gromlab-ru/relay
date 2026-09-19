@@ -3,12 +3,12 @@ import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { watch } from "node:fs";
 import type { FSWatcher } from "node:fs";
-import { basename, dirname } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { Observable, Subject } from "rxjs";
 import type { ServerEvent } from "@relay/contracts";
 import { TaskQueries } from "@relay/core/application/queries/tasks";
 import { ProjectRepository } from "@relay/core/storage/project";
-import { ProductRepository } from "@relay/core/storage/product";
+import { ProductRepository, PRODUCT_DIRECTORIES } from "@relay/core/storage/product";
 import { ProductService } from "@relay/core/application/product/service";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
@@ -143,6 +143,11 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       configParent,
       ...(this.projectRoot ? [this.projectRoot] : []),
       ...(this.productRoot ? [this.productRoot] : []),
+      ...(this.productRoot
+        ? Object.values(PRODUCT_DIRECTORIES)
+            .filter(Boolean)
+            .map((directory) => join(this.productRoot!, directory))
+        : []),
       ...(this.storageRoot ? [this.storageRoot, dirname(this.storageRoot)] : []),
     ]);
     for (const [path, watcher] of this.watchers) {
@@ -160,6 +165,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
             name === undefined ||
             path === this.projectRoot ||
             path === this.productRoot ||
+            (this.productRoot !== undefined && dirname(path) === this.productRoot) ||
             (path === configParent && name === "product") ||
             (path === configParent && name === "project") ||
             (path === configParent && name === basename(this.workspace.options.configPath)) ||

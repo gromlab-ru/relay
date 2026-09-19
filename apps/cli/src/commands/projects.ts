@@ -34,6 +34,16 @@ export function registerProjects(program: Command, runtime: Runtime) {
         add: "Зарегистрировать или обновить проект",
         remove: "Удалить регистрацию проекта, сохранив его данные",
       }[operation],
+      ...(operation === "add"
+        ? {
+            arguments: {
+              name: "Имя проекта в workspace",
+              path: "Путь проекта относительно workspace-конфига",
+            },
+          }
+        : operation === "remove"
+          ? { arguments: { name: "Имя удаляемой регистрации проекта" } }
+          : {}),
       details:
         "--config выбирает workspace. --server-url задаёт общий Relay Server; --project-config — конфиг проекта относительно path. --replace разрешает заменить регистрацию.",
       examples: [

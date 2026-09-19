@@ -9,3 +9,6 @@ coverage/
 
 # Проектные копии скиллов; известные источники перечислены в skills-lock.json.
 /.agents/skills/
+
+# Локальные настройки агентов и собранный скилл playground.
+/apps/playground/.agents/

@@ -132,14 +132,24 @@ test("справочник включает все зарегистрирова�
       }),
     ),
   );
+  const violations: string[] = [];
   const check = (command: Command, path: string[]) => {
+    if (path.length && !/[А-Яа-яЁё]/.test(command.description()))
+      violations.push(`Команда ${path.join(" ")}`);
+    for (const argument of command.registeredArguments)
+      if (!/[А-Яа-яЁё]/.test(argument.description))
+        violations.push(`Аргумент ${path.join(" ")}.${argument.name()}`);
     if (path.length && command.commands.length === 0)
       assert(headings.has(path.join(" ")), `Нет раздела команды ${path.join(" ")}`);
-    for (const option of command.options)
+    for (const option of command.options) {
+      if (!/[А-Яа-яЁё]/.test(option.description))
+        violations.push(`Параметр ${path.join(" ")}.${option.long}`);
       if (option.long) assert(markdown.includes(option.long), `Нет параметра ${option.long}`);
+    }
     for (const child of command.commands) check(child, [...path, child.name()]);
   };
   check(program, []);
+  assert.deepEqual(violations, [], "Нарушение протокола: отсутствуют русские описания");
 });
 
 test("скилл relay сохраняет все локальные ссылки после установки без монорепозитория", async (t) => {

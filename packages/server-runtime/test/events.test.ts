@@ -140,6 +140,40 @@ test("SSE замечает продуктовые записи, созданны
   );
 });
 
+test("SSE замечает обновление Markdown в подкаталоге features", async (t) => {
+  const { app, workspace } = await fixture(t);
+  const service = new ProductService(workspace);
+  const fields = {
+    kind: "feature" as const,
+    name: "Каталог",
+    summary: "Поиск",
+    description: "## Цель\n\nНайти вещь.",
+  };
+  const created = await service.mutate(
+    { action: "create", requestId: "nested-create", fields },
+    "cli",
+  );
+  await app.listen(0, "127.0.0.1");
+  const stream = await connect(await app.getUrl());
+  t.after(() => stream.close());
+  await stream.next((event) => event.type === "connected");
+  const description = "## Цель\n\nНайти доступную вещь.\n";
+  await service.mutate(
+    {
+      action: "update",
+      id: created.id,
+      ifRevision: created.revision,
+      requestId: "nested-update",
+      fields: { ...fields, description },
+    },
+    "cli",
+  );
+  await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+  const response = (await app.inject(`/api/v1/product/records?id=${created.id}`)).json();
+  assert.equal(response.data.items[0].fields.description, description);
+  assert.equal(response.data.items[0].revision, 2);
+});
+
 test("SSE замечает проектные документы API и локального CLI", async (t) => {
   const { app, workspace } = await fixture(t);
   await app.listen(0, "127.0.0.1");

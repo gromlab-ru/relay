@@ -51,6 +51,9 @@ export function createCommand(parent: Command, definition: CommandHelp): Command
   const command = parent
     .command(definition.name)
     .description(definition.description, definition.arguments ?? {});
+  // Commander хранит старую карту отдельно; описание должно быть доступно и в метаданных аргумента.
+  for (const argument of command.registeredArguments)
+    argument.description = definition.arguments?.[argument.name()] ?? argument.description;
   command.allowExcessArguments(false);
   command.configureHelp({ showGlobalOptions: true });
   definition.configure?.(command);

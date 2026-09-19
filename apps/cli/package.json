@@ -50,6 +50,7 @@
     "@relay/core": "workspace:*",
     "@relay/project-runtime": "workspace:*",
     "commander": "^14.0.0",
+    "cli-table3": "^0.6.5",
     "picocolors": "^1.1.1",
     "string-width": "^8.2.2",
     "wrap-ansi": "^10.0.1",

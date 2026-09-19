@@ -27,6 +27,16 @@ import type { Backend } from "@relay/project-runtime/backend/types";
 import type { Projects } from "./projects.js";
 import { checked, page, paging, response } from "./output.js";
 import type { Result } from "./output.js";
+import { documentToolSchema } from "./schema-documentation.js";
+import { lintProduct, productContentQuerySchema } from "@relay/core/application/product/content";
+import {
+  productWriteTools,
+  productWriteArguments,
+  productScopeArguments,
+  productContractArguments,
+  scopeRevision,
+  saveProduct,
+} from "./product-tools.js";
 import {
   projectFieldsSchema,
   projectRecordIdSchema,
@@ -73,7 +83,7 @@ export function createTools(projects: Projects): Server {
     {
       capabilities: { tools: {} },
       instructions:
-        "projects_list показывает режим Relay Server и доступные проекты. В workspace передавайте project в каждом проектном вызове; в local проект можно опустить. Оркестратор назначает задачи и меняет статусы, субагент читает выданный ID и пишет отчёты. actor передаётся в каждой записи. Для повторяемых комментариев и отчётов используйте один requestId. Реестр читается с сервера без перезапуска MCP.",
+        "projects_list показывает режим Relay Server и доступные проекты. В workspace передавайте project в каждом проектном вызове; в local проект можно опустить. Заголовки — однострочные, краткие описания — многострочный обычный текст. Полные описания, требования и инструкции — структурированный Markdown: цель, правила, шаги, ошибки и проверяемый результат по смыслу. Не пишите сложные требования слитным абзацем и не выдумывайте сведения ради разделов. Предпочитайте предметные product_*_save вместо универсального product_save. Перед серией записей объясните цель, после перечитайте записи и проверьте product_lint. actor передаётся в каждой записи. После потери ответа повторяйте тот же requestId. Реестр читается с сервера без перезапуска MCP.",
     },
   );
   const tools = new Map<
@@ -93,7 +103,9 @@ export function createTools(projects: Projects): Server {
       definition: {
         name,
         description,
-        inputSchema: ToolSchema.shape.inputSchema.parse(z.toJSONSchema(schema, { io: "input" })),
+        inputSchema: ToolSchema.shape.inputSchema.parse(
+          documentToolSchema(z.toJSONSchema(schema, { io: "input" })),
+        ),
         annotations: {
           readOnlyHint: readOnly,
           destructiveHint: !readOnly,
@@ -183,10 +195,113 @@ export function createTools(projects: Projects): Server {
   );
   projectTool(
     "product_save",
-    "Создать или изменить продуктовую запись. Markdown передаётся строкой; update требует revision, scope также ifVersion. Общих ручных статусов нет. Повторяйте тот же requestId после потери ответа.",
+    "Совместимый универсальный ввод записи. Предпочитайте предметные product_feature_save, product_scenario_save и другие product_*_save: в них цель видна в аргументах. Полные описания — структурированный Markdown. update требует ifRevision, scope также ifVersion; повторяйте тот же requestId после потери ответа.",
     { ...selector, command: productMutationSchema, actor: actorSchema },
     false,
     async (backend, input) => ({ data: await backend.product.mutate(input.command, input.actor) }),
+  );
+  for (const tool of productWriteTools)
+    projectTool(
+      tool.name,
+      `Создать или изменить ${tool.title}. Передавайте полное содержание: обновление заменяет поля. Полное описание — структурированный Markdown, краткое — обычный многострочный текст. action=update требует id и ifRevision. После потери ответа повторите тот же requestId.`,
+      { ...selector, ...productWriteArguments, ...tool.schema.shape, actor: actorSchema },
+      false,
+      async (backend, input) => {
+        const {
+          project: _project,
+          maxBytes: _maxBytes,
+          actor,
+          action,
+          id,
+          ifRevision,
+          ifVersion,
+          requestId,
+          ...values
+        } = input;
+        const command = productMutationSchema.parse({
+          action,
+          id,
+          ifRevision,
+          ifVersion,
+          requestId,
+          fields: { kind: tool.kind, ...values },
+        });
+        return saveProduct(backend, command, actor);
+      },
+    );
+  projectTool(
+    "product_scope_replace",
+    "Атомарно заменить активный состав приложения. Пустой contracts снимает участие, сохраняя ID и ссылки. Описания реализаций — Markdown с обязательствами и проверкой. ifRevision=0 создаёт состав. Требуется свежая ifVersion продукта.",
+    {
+      ...selector,
+      ...productScopeArguments,
+      actor: actorSchema,
+      ifRevision: scopeRevision,
+      ifVersion: z.string().min(1),
+      requestId: requestIdSchema,
+    },
+    false,
+    async (backend, input) =>
+      saveProduct(
+        backend,
+        productMutationSchema.parse({
+          action: input.ifRevision === 0 ? "create" : "update",
+          id: input.applicationId.replace("application_", "scope_"),
+          ifRevision: input.ifRevision,
+          ifVersion: input.ifVersion,
+          requestId: input.requestId,
+          fields: { kind: "scope", applicationId: input.applicationId, contracts: input.contracts },
+        }),
+        input.actor,
+      ),
+  );
+  projectTool(
+    "product_contract_update",
+    "Изменить или подтвердить один контракт приложения. Остальные контракты сохраняются. done подтверждает актуальные требования: используйте только после проверки реализации. Описание — Markdown. Требуются ревизия состава и версия продукта.",
+    {
+      ...selector,
+      ...productContractArguments,
+      actor: actorSchema,
+      ifRevision: scopeRevision,
+      ifVersion: z.string().min(1),
+      requestId: requestIdSchema,
+    },
+    false,
+    async (backend, input) => {
+      const {
+        project: _project,
+        maxBytes: _maxBytes,
+        actor,
+        ifRevision,
+        ifVersion,
+        requestId,
+        ...values
+      } = input;
+      return saveProduct(
+        backend,
+        productMutationSchema.parse({
+          action: "update",
+          ifRevision,
+          ifVersion,
+          requestId,
+          fields: { kind: "contract", ...values },
+        }),
+        actor,
+      );
+    },
+  );
+  projectTool(
+    "product_lint",
+    "Проверить структуру Markdown и наличие проверяемых результатов. Возвращает предупреждения, не меняет записи и не подтверждает полноту требований.",
+    { ...selector, ...productContentQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: lintProduct(await backend.product.state(), {
+        id: input.id,
+        offset: input.offset,
+        limit: input.limit,
+      }),
+    }),
   );
 
   define(

@@ -4,6 +4,144 @@ import { randomUUID } from "node:crypto";
 import { ProductQueries } from "@relay/core/application/product/queries";
 import type { ProductMutation } from "@relay/core/domain/product";
 import { fixture } from "./helpers/workspace.js";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { ProductRepository } from "@relay/core/storage/product";
+import { encodeProduct } from "@relay/core/storage/product-codec";
+import { lintProduct } from "@relay/core/application/product/content";
+
+test("проверка содержания выдаёт страницы предупреждений без изменения требований", async (t) => {
+  const app = await fixture(t);
+  const service = new ProductQueries(app.workspace);
+  const feature = await service.mutate(
+    {
+      action: "create",
+      requestId: "content-feature",
+      fields: {
+        kind: "feature",
+        name: "Слитное описание",
+        summary: "Первая строка\nВторая строка",
+        description: "Общее длинное описание без структуры. ".repeat(12),
+      },
+    },
+    "agent",
+  );
+  const state = await service.state();
+  const first = lintProduct(state, { limit: 1 });
+  assert.equal(first.total, 2);
+  assert.equal(first.nextOffset, 1);
+  const second = lintProduct(state, { limit: 1, offset: first.nextOffset! });
+  assert.equal(second.nextOffset, null);
+  assert.notEqual(first.warnings[0]!.code, second.warnings[0]!.code);
+  assert.equal(lintProduct(state, { id: feature.id }).records, 1);
+  assert.deepEqual(await service.state(), state);
+});
+
+test("хранение продукта: Markdown по строкам, миграция без потери текста, ревизий и повторов", async (t) => {
+  const app = await fixture(t);
+  const service = new ProductQueries(app.workspace);
+  const repository = new ProductRepository(app.workspace);
+  const text = "## Правила\r\n\r\n- Пункт  \r\n\n```js\n  пример\n```\n";
+  const command: ProductMutation = {
+    action: "create",
+    requestId: "migration-feature",
+    fields: {
+      kind: "feature",
+      name: "Миграция",
+      summary: "Кратко\nВторая строка",
+      description: text,
+    },
+  };
+  const saved = await service.mutate(command, "agent");
+  const target = join(repository.root, "features", `${saved.id}.json`);
+  const stored = JSON.parse(await readFile(target, "utf8"));
+  assert.equal(stored.version, 2);
+  assert.deepEqual(stored.fields.description, text.split("\n"));
+  assert.equal(stored.fields.summary, "Кратко\nВторая строка");
+  const original = (await repository.all())[0]!;
+  const application = await service.mutate(
+    {
+      action: "create",
+      requestId: "migration-app",
+      fields: {
+        kind: "application",
+        name: "Сервер",
+        summary: "",
+        description: text,
+        type: "backend",
+      },
+    },
+    "agent",
+  );
+  const scope = await service.mutate(
+    {
+      action: "create",
+      requestId: "migration-scope",
+      ifVersion: (await service.state()).version,
+      fields: {
+        kind: "scope",
+        applicationId: application.id,
+        contracts: [
+          {
+            featureId: saved.id,
+            scenarioId: null,
+            title: "Проверенный вклад",
+            description: text,
+            status: "done",
+          },
+        ],
+      },
+    },
+    "agent",
+  );
+  const document = await service.mutate(
+    {
+      action: "create",
+      requestId: "migration-doc",
+      fields: {
+        kind: "document",
+        name: "Правила",
+        summary: "",
+        body: text,
+        documentKind: "rules",
+        links: [{ kind: "feature", id: saved.id }],
+      },
+    },
+    "agent",
+  );
+  assert.deepEqual(
+    JSON.parse(await readFile(join(repository.root, "scopes", `${scope.id}.json`), "utf8")).fields
+      .contracts[0].description,
+    text.split("\n"),
+  );
+  assert.deepEqual(
+    JSON.parse(await readFile(join(repository.root, "documents", `${document.id}.json`), "utf8"))
+      .fields.body,
+    text.split("\n"),
+  );
+  const legacy = join(repository.root, `${saved.id}.json`);
+  await rename(target, legacy);
+  await writeFile(legacy, JSON.stringify(original));
+  const before = await service.state();
+  assert.equal(await app.workspace.locked((owned) => repository.migrate(owned)), 1);
+  assert.deepEqual(await service.state(), before);
+  assert.deepEqual(
+    (await repository.all()).find((record) => record.id === saved.id),
+    original,
+  );
+  assert.deepEqual(await service.mutate(command, "agent"), saved);
+  assert.equal(await app.workspace.locked((owned) => repository.migrate(owned)), 0);
+  // Сбой между заменой формата и переносом: новый кодек ещё в плоском каталоге.
+  await rename(target, legacy);
+  await writeFile(legacy, JSON.stringify(encodeProduct(original)));
+  assert.deepEqual(await service.state(), before);
+  assert.equal(await app.workspace.locked((owned) => repository.migrate(owned)), 1);
+  assert.deepEqual(await service.state(), before);
+  // Дубликат не игнорируется и не перезаписывается миграцией.
+  await mkdir(repository.root, { recursive: true });
+  await writeFile(legacy, JSON.stringify(original));
+  await assert.rejects(service.state(), { code: "INVALID_DATA" });
+});
 
 test("продукт: все участники, версии требований, история связей и атомарный состав", async (t) => {
   const app = await fixture(t);

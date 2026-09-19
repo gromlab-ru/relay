@@ -6,6 +6,8 @@ import { decodeCursor, encodeCursor } from "@relay/core/shared/cursor";
 export interface Result {
   data: unknown;
   meta?: Record<string, unknown>;
+  /** Человекочитаемая квитанция; структурированный ответ сохраняет машинный контракт. */
+  text?: string;
 }
 export const paging = {
   limit: z.number().int().min(1).max(100).default(20),
@@ -21,7 +23,10 @@ export function response(value: Record<string, unknown>, isError = false): CallT
 }
 
 export function success(result: Result) {
-  return response({ ok: true, ...result });
+  const { text, ...structured } = result;
+  const output = response({ ok: true, ...structured });
+  if (text) output.content = [{ type: "text", text }];
+  return output;
 }
 
 export function checked(result: Result, maxBytes: number): CallToolResult {

@@ -95,6 +95,52 @@ test("продукт доступен агенту через API и изоли�
   assert.equal(list.data?.total, 1);
   assert.equal((await call(client, "product_list", { project: "b" })).data?.total, 0);
   assert.equal((await call(client, "product_context", { project: "a" })).ok, true);
+  const definition = (await client.listTools()).tools.find(
+    (tool) => tool.name === "product_feature_save",
+  );
+  assert.ok(definition);
+  const properties = definition.inputSchema.properties as Record<string, { description?: string }>;
+  for (const field of ["name", "description", "summary", "action", "requestId", "ifRevision"])
+    assert.match(properties[field]!.description ?? "", /[А-Яа-яЁё]/);
+  assert.equal(properties.command, undefined);
+  const featureArgs = {
+    project: "a",
+    actor: "agent",
+    action: "create",
+    requestId: "feature-tool",
+    name: "Каталог",
+    summary: "Поиск\nВыбор",
+    description: "## Цель\n\nНайти вещь.\n\n## Критерии приёмки\n\n- Вещь доступна.",
+  };
+  const result = CallToolResultSchema.parse(
+    await client.callTool({ name: "product_feature_save", arguments: featureArgs }),
+  );
+  assert.match(z.object({ text: z.string() }).parse(result.content[0]).text, /Каталог/);
+  const receipt = z
+    .object({
+      ok: z.literal(true),
+      data: z.object({ id: z.string(), revision: z.literal(1), name: z.literal("Каталог") }),
+    })
+    .parse(result.structuredContent);
+  const repeated = CallToolResultSchema.parse(
+    await client.callTool({ name: "product_feature_save", arguments: featureArgs }),
+  );
+  assert.deepEqual(result.structuredContent, repeated.structuredContent);
+  const wrongRevision = CallToolResultSchema.parse(
+    await client.callTool({
+      name: "product_feature_save",
+      arguments: {
+        ...featureArgs,
+        requestId: "bad-update",
+        action: "update",
+        id: receipt.data.id,
+        ifRevision: 99,
+      },
+    }),
+  );
+  assert.equal(wrongRevision.isError, true);
+  assert.equal((await call(client, "product_lint", { project: "a" })).ok, true);
+  assert.equal((await call(client, "product_list", { project: "b" })).data?.total, 0);
 });
 
 test("агентский контекст, поручения и проектные записи изолированы между проектами", async (t) => {
@@ -168,8 +214,27 @@ test("несколько MCP-клиентов, общий Relay Server, горя
     new URL("../../../docs/reference/MCP.md", import.meta.url),
     "utf8",
   );
-  for (const tool of toolsBefore.tools)
+  for (const tool of toolsBefore.tools) {
     assert(documentation.includes(`\`${tool.name}\``), `Нет справки инструмента ${tool.name}`);
+    assert.match(tool.description ?? "", /[А-Яа-яЁё]/);
+    const inspect = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        value.forEach(inspect);
+        return;
+      }
+      if (!value || typeof value !== "object") return;
+      const node = value as Record<string, unknown>;
+      if (node.properties && typeof node.properties === "object")
+        for (const [name, field] of Object.entries(node.properties))
+          assert.match(
+            (field as { description?: string }).description ?? "",
+            /[А-Яа-яЁё]/,
+            `${tool.name}.${name}`,
+          );
+      Object.values(node).forEach(inspect);
+    };
+    inspect(tool.inputSchema);
+  }
   assert.equal(
     (await call(first, "task_create", { project: "a", title: "Первая", actor: "agent-a" })).ok,
     true,
