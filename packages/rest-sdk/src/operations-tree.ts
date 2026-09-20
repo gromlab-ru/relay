@@ -14,8 +14,12 @@ import { claimTaskForProject } from "./operations/claim-task-for-project.js";
 import { claimTask } from "./operations/claim-task.js";
 import { createBoardTaskForProject } from "./operations/create-board-task-for-project.js";
 import { createBoardTask } from "./operations/create-board-task.js";
+import { createEntityForProject } from "./operations/create-entity-for-project.js";
+import { createEntity } from "./operations/create-entity.js";
 import { createTaskForProject } from "./operations/create-task-for-project.js";
 import { createTask } from "./operations/create-task.js";
+import { describeEntityTypeForProject } from "./operations/describe-entity-type-for-project.js";
+import { describeEntityType } from "./operations/describe-entity-type.js";
 import { getBoardBySlugForProject } from "./operations/get-board-by-slug-for-project.js";
 import { getBoardBySlug } from "./operations/get-board-by-slug.js";
 import { getBoardForProject } from "./operations/get-board-for-project.js";
@@ -34,6 +38,14 @@ import { getCommentForProject } from "./operations/get-comment-for-project.js";
 import { getComment } from "./operations/get-comment.js";
 import { getContextForProject } from "./operations/get-context-for-project.js";
 import { getContext } from "./operations/get-context.js";
+import { getEntityForProject } from "./operations/get-entity-for-project.js";
+import { getEntityHistoryForProject } from "./operations/get-entity-history-for-project.js";
+import { getEntityHistory } from "./operations/get-entity-history.js";
+import { getEntityKeySpacesForProject } from "./operations/get-entity-key-spaces-for-project.js";
+import { getEntityKeySpaces } from "./operations/get-entity-key-spaces.js";
+import { getEntityKeysForProject } from "./operations/get-entity-keys-for-project.js";
+import { getEntityKeys } from "./operations/get-entity-keys.js";
+import { getEntity } from "./operations/get-entity.js";
 import { getGraphForProject } from "./operations/get-graph-for-project.js";
 import { getGraphHistoryForProject } from "./operations/get-graph-history-for-project.js";
 import { getGraphHistory } from "./operations/get-graph-history.js";
@@ -81,14 +93,22 @@ import { getTaskTree } from "./operations/get-task-tree.js";
 import { getTask } from "./operations/get-task.js";
 import { linkBoardTaskForProject } from "./operations/link-board-task-for-project.js";
 import { linkBoardTask } from "./operations/link-board-task.js";
+import { linkEntityTaskForProject } from "./operations/link-entity-task-for-project.js";
+import { linkEntityTask } from "./operations/link-entity-task.js";
 import { listCommentsForProject } from "./operations/list-comments-for-project.js";
 import { listComments } from "./operations/list-comments.js";
+import { listEntitiesForProject } from "./operations/list-entities-for-project.js";
+import { listEntities } from "./operations/list-entities.js";
+import { listEntityTypesForProject } from "./operations/list-entity-types-for-project.js";
+import { listEntityTypes } from "./operations/list-entity-types.js";
 import { listLogsForProject } from "./operations/list-logs-for-project.js";
 import { listLogs } from "./operations/list-logs.js";
 import { listTasksForProject } from "./operations/list-tasks-for-project.js";
 import { listTasks } from "./operations/list-tasks.js";
 import { moveBoardTaskForProject } from "./operations/move-board-task-for-project.js";
 import { moveBoardTask } from "./operations/move-board-task.js";
+import { moveEntityTaskForProject } from "./operations/move-entity-task-for-project.js";
+import { moveEntityTask } from "./operations/move-entity-task.js";
 import { moveTaskForProject } from "./operations/move-task-for-project.js";
 import { moveTask } from "./operations/move-task.js";
 import { mutateGraphForProject } from "./operations/mutate-graph-for-project.js";
@@ -98,6 +118,10 @@ import { mutateProduct } from "./operations/mutate-product.js";
 import { registerProject } from "./operations/register-project.js";
 import { releaseTaskForProject } from "./operations/release-task-for-project.js";
 import { releaseTask } from "./operations/release-task.js";
+import { renameEntityKeyForProject } from "./operations/rename-entity-key-for-project.js";
+import { renameEntityKey } from "./operations/rename-entity-key.js";
+import { resolveEntityForProject } from "./operations/resolve-entity-for-project.js";
+import { resolveEntity } from "./operations/resolve-entity.js";
 import { saveProjectRecordForProject } from "./operations/save-project-record-for-project.js";
 import { saveProjectRecord } from "./operations/save-project-record.js";
 import { saveProjectSettingsForProject } from "./operations/save-project-settings-for-project.js";
@@ -105,6 +129,8 @@ import { saveProjectSettings } from "./operations/save-project-settings.js";
 import { unregisterProject } from "./operations/unregister-project.js";
 import { updateBoardTaskForProject } from "./operations/update-board-task-for-project.js";
 import { updateBoardTask } from "./operations/update-board-task.js";
+import { updateEntityForProject } from "./operations/update-entity-for-project.js";
+import { updateEntity } from "./operations/update-entity.js";
 import { updateProductImplementationForProject } from "./operations/update-product-implementation-for-project.js";
 import { updateProductImplementation } from "./operations/update-product-implementation.js";
 import { updateTaskForProject } from "./operations/update-task-for-project.js";
@@ -234,6 +260,34 @@ export const operationsTree = {
     getGraphForProject: getGraphForProject,
     mutateGraphForProject: mutateGraphForProject,
     getGraphHistoryForProject: getGraphHistoryForProject,
+  },
+  entities: {
+    listEntityTypes: listEntityTypes,
+    describeEntityType: describeEntityType,
+    listEntities: listEntities,
+    createEntity: createEntity,
+    getEntity: getEntity,
+    resolveEntity: resolveEntity,
+    getEntityKeys: getEntityKeys,
+    getEntityKeySpaces: getEntityKeySpaces,
+    getEntityHistory: getEntityHistory,
+    updateEntity: updateEntity,
+    renameEntityKey: renameEntityKey,
+    moveEntityTask: moveEntityTask,
+    linkEntityTask: linkEntityTask,
+    listEntityTypesForProject: listEntityTypesForProject,
+    describeEntityTypeForProject: describeEntityTypeForProject,
+    listEntitiesForProject: listEntitiesForProject,
+    createEntityForProject: createEntityForProject,
+    getEntityForProject: getEntityForProject,
+    resolveEntityForProject: resolveEntityForProject,
+    getEntityKeysForProject: getEntityKeysForProject,
+    getEntityKeySpacesForProject: getEntityKeySpacesForProject,
+    getEntityHistoryForProject: getEntityHistoryForProject,
+    updateEntityForProject: updateEntityForProject,
+    renameEntityKeyForProject: renameEntityKeyForProject,
+    moveEntityTaskForProject: moveEntityTaskForProject,
+    linkEntityTaskForProject: linkEntityTaskForProject,
   },
   comments: {
     listComments: listComments,

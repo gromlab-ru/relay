@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 109);
+    assert.equal(operations.size, 135);
     for (const [name, schema] of Object.entries(document.components!.schemas!)) {
       ajv.compile({ ...schema, components: document.components });
       if (!("$ref" in schema) && Array.isArray(schema.examples))
@@ -157,6 +157,49 @@ for (const scoped of [false, true])
     await request("GET", "/api/v1/product/overview");
     await request("GET", "/api/v1/product/records");
     await request("GET", "/api/v1/product/context");
+    await request("GET", "/api/v1/entities/types");
+    await request("GET", "/api/v1/entities/type", "/api/v1/entities/type?kind=task");
+    const entity = await request("POST", "/api/v1/entities", undefined, {
+      requestId: "entity-task",
+      data: { kind: "task", board: "BOARD-PRODUCT", title: "Задача движка" },
+    });
+    const entityKey = entity.data.key;
+    await request("GET", "/api/v1/entities", "/api/v1/entities?kind=task&board=BOARD-PRODUCT");
+    await request("GET", "/api/v1/entities/get", `/api/v1/entities/get?ref=${entityKey}`);
+    await request(
+      "GET",
+      "/api/v1/entities/resolve",
+      `/api/v1/entities/resolve?ref=${entity.data.ref.id}`,
+    );
+    await request("GET", "/api/v1/entities/keys", `/api/v1/entities/keys?ref=${entityKey}`);
+    await request("GET", "/api/v1/entities/key-spaces", "/api/v1/entities/key-spaces?kind=task");
+    await request("GET", "/api/v1/entities/history", `/api/v1/entities/history?ref=${entityKey}`);
+    await request("POST", "/api/v1/entities/update", undefined, {
+      ref: entityKey,
+      ifRevision: 1,
+      requestId: "entity-update",
+      changes: { kind: "task", description: "## Работа\n\nОписание" },
+    });
+    await request("POST", "/api/v1/entities/rename", undefined, {
+      ref: entityKey,
+      key: "TASK-SCHEMA-23",
+      ifRevision: 2,
+      requestId: "entity-rename",
+    });
+    await request("POST", "/api/v1/entities/move-task", undefined, {
+      ref: entityKey,
+      column: "ready",
+      board: "BOARD-INFRA",
+      ifRevision: 3,
+      requestId: "entity-move",
+    });
+    await request("POST", "/api/v1/entities/link-task", undefined, {
+      ref: entityKey,
+      target: otherCard.data.key,
+      relation: "depends-on",
+      ifRevision: 4,
+      requestId: "entity-link",
+    });
     const created = await request(
       "POST",
       "/api/v1/tasks",
@@ -249,7 +292,7 @@ for (const scoped of [false, true])
       { patch: { title: "Conflict" }, ifRevision: 1 },
       409,
     );
-    assert.equal(visited.size, 53);
+    assert.equal(visited.size, 66);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;

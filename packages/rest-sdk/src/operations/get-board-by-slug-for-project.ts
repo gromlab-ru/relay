@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Прочитать доску по slug; неизвестный адрес возвращает 404
  *
  * @tags boards
  * @name GetBoardBySlugForProject

@@ -3,12 +3,17 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { API_DOCS_PATH, OPENAPI_PATH } from "@relay/contracts";
 import { schemas } from "./schemas.js";
 import { jsonSchema } from "./endpoint.js";
+import {
+  swaggerProjectRequest,
+  swaggerProjectScript,
+  swaggerProjectStyles,
+} from "./project-selector.js";
 
 export function setupOpenApi(app: INestApplication): void {
   const config = new DocumentBuilder()
     .setTitle("Relay API")
     .setDescription(
-      "Локальный API задач для веб-приложения и MCP. Автор изменений задаётся при запуске сервера. Markdown передаётся массивами строк; rank и курсоры непрозрачны для клиента.",
+      "API основных сущностей, графа и предметных операций Relay. Публичные ссылки принимают ключи или ID; внутри Core связи используют ID. Markdown основных сущностей передаётся строками, прежних задач — массивами строк.",
     )
     .setVersion("1")
     .addServer("/")
@@ -49,6 +54,15 @@ export function setupOpenApi(app: INestApplication): void {
         schema,
         [
           "SaveProjectRecord",
+          "EntityPageQuery",
+          "EntitiesQuery",
+          "EntityKeysQuery",
+          "EntityKeySpacesQuery",
+          "CreateEntity",
+          "UpdateEntity",
+          "RenameEntity",
+          "MoveEntityTask",
+          "LinkEntityTask",
           "GraphMutation",
           "GraphQuery",
           "GraphHistoryQuery",
@@ -66,6 +80,13 @@ export function setupOpenApi(app: INestApplication): void {
   SwaggerModule.setup(API_DOCS_PATH, app, document, {
     jsonDocumentUrl: OPENAPI_PATH,
     raw: ["json"],
-    swaggerOptions: { displayOperationId: true, docExpansion: "list" },
+    customJsStr: swaggerProjectScript(),
+    customCss: swaggerProjectStyles,
+    swaggerOptions: {
+      displayOperationId: true,
+      docExpansion: "list",
+      requestInterceptor: swaggerProjectRequest,
+      showMutatedRequest: true,
+    },
   });
 }

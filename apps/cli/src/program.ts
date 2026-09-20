@@ -10,6 +10,7 @@ import { registerLifecycle } from "./commands/lifecycle.js";
 import { registerProduct } from "./commands/product.js";
 import { registerBoardTasks } from "./commands/board-tasks.js";
 import { registerGraph } from "./commands/graph.js";
+import { registerEntities } from "./commands/entities.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -17,7 +18,7 @@ import { addCommandHelp, commandPath, groupHelpAction } from "./command.js";
 
 export function createProgram(runtime: Runtime): Command {
   const program = new Command("relay-cli")
-    .description("Relay: контекст, планы и задачи одного проекта или workspace")
+    .description("Relay: сущности, связи и работа одного проекта или workspace")
     .version(packageVersion, "-V, --version", "Показать версию CLI")
     .helpOption("-h, --help", "Справка, параметры и примеры")
     .option(
@@ -50,6 +51,7 @@ export function createProgram(runtime: Runtime): Command {
   registerProduct(program, runtime);
   registerBoardTasks(program, runtime);
   registerGraph(program, runtime);
+  registerEntities(program, runtime);
   registerOverview(program, runtime);
   registerTasks(program, runtime);
   registerAssignments(program, runtime);
@@ -59,6 +61,8 @@ export function createProgram(runtime: Runtime): Command {
     details:
       "Режимы: .relay/config.json → local; relay.workspace.json → workspace.\nВ workspace укажите проект: relay-cli <проект> <команда>. Рабочие операции идут через общий сервер.\nВ local URL выбирает HTTP, отсутствие URL — Core; --local явно выбирает файлы.\nURL: --server-url → RELAY_SERVER_URL → server.url. Сервер запускается командой relay-server.\nID задачи — число от 1. Автор записи: --actor или RELAY_ACTOR.\nСправка: relay-cli <команда> --help. JSON: {ok, data, meta} или {ok, error}.",
     examples: [
+      ["relay-cli entities types", "Узнать виды основных сущностей и их назначение"],
+      ["relay-cli entities get WEB-24", "Прочитать сущность по понятному ключу"],
       ["relay-cli init", "Подготовить текущий проект"],
       ['relay-cli create "Реализовать API" --group backend --actor human', "Создать первую задачу"],
       ["relay-cli list", "Посмотреть незавершённые задачи по группам"],

@@ -7,7 +7,7 @@ import type {
   ProductOverview,
 } from "../../domain/product.js";
 import { parse } from "../../domain/validation.js";
-import { invariant } from "../../shared/errors.js";
+import { invariant, AppError } from "../../shared/errors.js";
 import { ProductService } from "./service.js";
 import { productAddresses, resolveProductAddress } from "../../domain/product-addresses.js";
 import { assertProductKey } from "../../domain/product-addresses.js";
@@ -25,6 +25,7 @@ import type {
 import { createHash } from "node:crypto";
 import { actorSchema } from "../../domain/validation.js";
 import { contractBasis } from "./model.js";
+import { readEntityCatalog, resolveEntity, assertEntityKeyAvailable } from "../entities/catalog.js";
 
 /** Выборки продукта не зависят от планов, задач и отчётов. */
 export class ProductQueries extends ProductService {
@@ -74,6 +75,27 @@ export class ProductQueries extends ProductService {
   async entity(ref: string): Promise<ProductEntity> {
     return this.workspace.locked(async (owned) => {
       const catalog = await productCatalog(this.workspace, owned);
+      const entities = await readEntityCatalog(this.workspace, owned);
+      const known =
+        entities.entries.some(
+          (entry) => entry.ref.id === ref || entry.key === ref || entry.aliases.includes(ref),
+        ) || ref.includes(":");
+      if (known) {
+        try {
+          ref = resolveEntity(entities, ref, [
+            "product",
+            "feature",
+            "scenario",
+            "application",
+            "implementation",
+            "document",
+          ]).ref.id;
+        } catch (error) {
+          if (error instanceof AppError && error.code === "AMBIGUOUS_ENTITY_REFERENCE")
+            throw new AppError("AMBIGUOUS_PRODUCT_KEY", error.message, 4, error.details);
+          throw error;
+        }
+      }
       if (!catalog.items.some((entry) => entry.id === ref || entry.key === ref)) {
         const scope = (await new ProductRepository(this.workspace).all()).find(
           (entry) => entry.id === ref && entry.fields.kind === "scope",
@@ -173,6 +195,10 @@ export class ProductQueries extends ProductService {
         4,
       );
       if (command.key) {
+        assertEntityKeyAvailable(await readEntityCatalog(this.workspace, owned), command.key, {
+          kind: "implementation",
+          id: record.id,
+        });
         invariant(
           ![...reservations].some(([id, keys]) => id !== record.id && keys.includes(command.key!)),
           "ALREADY_EXISTS",
@@ -180,13 +206,6 @@ export class ProductQueries extends ProductService {
           4,
         );
         assertProductKey(command.key, "implementation", record.id, records);
-        invariant(
-          new RegExp(`-${record.fields.scenarioId === null ? "FI" : "SI"}-[1-9]\\d*$`).test(
-            command.key,
-          ),
-          "INVALID_ARGUMENT",
-          "Ключ не соответствует виду реализации",
-        );
       }
       const fields = {
         ...record.fields,

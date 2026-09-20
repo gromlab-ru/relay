@@ -30,6 +30,7 @@
     "@mantine/hooks": "^9.6.1",
     "@mantine/notifications": "^9.6.1",
     "@relay/rest-sdk": "workspace:*",
+    "@relay/contracts": "workspace:*",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.23",
     "lucide-react": "^1.45.0",

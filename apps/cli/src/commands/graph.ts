@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Command } from "commander";
-import { graphMutationSchema, parseEntityAddress } from "@relay/core/domain/entity-graph";
+import { graphMutationSchema } from "@relay/core/domain/entity-graph";
 import type { GraphQuery, GraphHistoryQuery } from "@relay/core/domain/entity-graph";
 import { parse } from "@relay/core/domain/validation";
 import { AppError } from "@relay/core/shared/errors";
@@ -29,10 +29,10 @@ export function registerGraph(program: Command, runtime: Runtime): void {
     name: "graph",
     description: "Связи всех сущностей, контекст и история проекта",
     details:
-      "Адрес сущности — kind:id из graph list. Типы отношений расширяемы, циклы допустимы. Предметные проекции помечены domain и изменяются у своего владельца.",
+      "Сущность задаётся читаемым ключом, ID или kind:ID. Core разрешает адрес; сохранённые связи используют ID. Типы расширяемы, циклы допустимы. Предметные проекции domain изменяются у своего владельца.",
     examples: [
       ["relay-cli graph list", "Найти сущности и прочитать версию"],
-      ["relay-cli graph context scenario:ID --format json", "Восстановить цепочку для агента"],
+      ["relay-cli graph context SCENARIO-1 --format json", "Восстановить цепочку для агента"],
     ],
   });
   for (const action of ["migrate", "reindex"] as const)
@@ -71,18 +71,20 @@ export function registerGraph(program: Command, runtime: Runtime): void {
         action === "list"
           ? "Прочитать граф или выбранный подграф с продолжением"
           : "Восстановить окружение сущности с объясняющими путями",
-      ...(action === "context" ? { arguments: { root: "Адрес исходной сущности kind:id" } } : {}),
+      ...(action === "context"
+        ? { arguments: { root: "Ключ или ID исходной сущности; допустим kind:ID" } }
+        : {}),
       details:
         "Узлы и рёбра читаются страницами одного снимка. context не расширяет соседние области через документы. depthLimited обозначает границу глубины, nextOffset — продолжение страницы.",
       examples: [
         [
-          `relay-cli graph ${action === "list" ? "list --limit 20" : "context task:ID --depth 5"}`,
+          `relay-cli graph ${action === "list" ? "list --limit 20" : "context WEB-24 --depth 5"}`,
           "Прочитать связи",
         ],
       ],
       configure: (command) => {
         if (action === "list")
-          command.option("--root <address>", "Корневая сущность kind:id; без неё весь проект");
+          command.option("--root <address>", "Ключ или ID корня; без него весь проект");
         return command
           .option("--type <type>", "Фильтр типа отношений")
           .option("--direction <direction>", "both, outgoing или incoming")
@@ -155,7 +157,7 @@ export function registerGraph(program: Command, runtime: Runtime): void {
         "Требуется прочитанная версия графа и автор. Повтор после потери ответа выполняйте с тем же request-id, версией и содержимым. Новое отношение не изменяет предметные статусы автоматически.",
       examples: [
         [
-          "relay-cli --actor agent graph link --from task:ID --to document:ID --type references --if-version VERSION",
+          "relay-cli --actor agent graph link --from WEB-24 --to DOC-1 --type references --if-version VERSION",
           "Прикрепить контекстный материал",
         ],
       ],
@@ -165,8 +167,8 @@ export function registerGraph(program: Command, runtime: Runtime): void {
           .option("--request-id <id>", "Ключ безопасного повтора; по умолчанию генерируется");
         if (action === "link")
           command
-            .requiredOption("--from <address>", "Начало kind:id")
-            .requiredOption("--to <address>", "Конец kind:id")
+            .requiredOption("--from <address>", "Ключ или ID начала связи")
+            .requiredOption("--to <address>", "Ключ или ID конца связи")
             .requiredOption("--type <type>", "Произвольный тип отношения");
         if (action === "link" || action === "update")
           command.option("--description <markdown>", "Пояснение назначения связи в Markdown");
@@ -186,8 +188,8 @@ export function registerGraph(program: Command, runtime: Runtime): void {
               ? [
                   {
                     action: "add",
-                    from: parseEntityAddress(options.from ?? ""),
-                    to: parseEntityAddress(options.to ?? ""),
+                    from: options.from ?? "",
+                    to: options.to ?? "",
                     type: options.type,
                     description: options.description ?? "",
                   },

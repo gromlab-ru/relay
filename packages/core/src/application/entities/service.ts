@@ -1,0 +1,420 @@
+import { z } from "zod";
+import {
+  entityKindSchema,
+  entityDefinitions,
+  entityDataSchemas,
+  entityCreateDataSchemas,
+  entityUpdateDataSchemas,
+  entityPageQuerySchema,
+  entitiesQuerySchema,
+  entityGetQuerySchema,
+  entityKeysQuerySchema,
+  entityKeySpacesQuerySchema,
+  entityCreateSchema,
+  entityUpdateSchema,
+  entityRenameSchema,
+  entityMoveTaskSchema,
+  entityLinkTaskSchema,
+  entityDetailSchema,
+  entityTypeDetailSchema,
+} from "@relay/contracts/entities";
+import type {
+  EntityKind,
+  EntityRef,
+  EntityPageQuery,
+  EntitiesQuery,
+  EntityGetQuery,
+  CreateEntity,
+  UpdateEntity,
+  RenameEntity,
+  MoveEntityTask,
+  LinkEntityTask,
+  EntityDetail,
+} from "@relay/contracts/entities";
+import { actorSchema } from "@relay/contracts/primitives";
+import type { Workspace } from "../../storage/workspace.js";
+import { invariant } from "../../shared/errors.js";
+import { parse } from "../../domain/validation.js";
+import { BoardTasksService } from "../board-tasks/service.js";
+import {
+  entityAddress,
+  entityDigest,
+  entitySummary,
+  readEntityCatalog,
+  resolveEntity,
+} from "./catalog.js";
+import type { EntityCatalog } from "./catalog.js";
+import { entityHandlers, entitySaved } from "./handlers.js";
+import type { EntityOperationContext } from "./handlers.js";
+
+/** Общий движок адресации, чтения и исполнения зарегистрированных предметных операций. */
+export class EntityEngine {
+  constructor(readonly workspace: Workspace) {}
+
+  private page<T>(items: readonly T[], input: EntityPageQuery, version: string) {
+    const query = parse(entityPageQuerySchema, input, "страница сущностей");
+    invariant(
+      query.version === undefined || query.version === version,
+      "ENTITIES_CHANGED",
+      "Сущности изменились. Начните чтение с первой страницы",
+      4,
+    );
+    const next = query.offset + query.limit;
+    return {
+      items: items.slice(query.offset, next),
+      total: items.length,
+      nextOffset: next < items.length ? next : null,
+      version,
+    };
+  }
+  private read<T>(operation: (catalog: EntityCatalog) => T | Promise<T>) {
+    return this.workspace.locked(async (owned) =>
+      operation(await readEntityCatalog(this.workspace, owned)),
+    );
+  }
+  private write<T>(
+    input: { actor?: string | undefined; requestId: string },
+    actor: string,
+    operation: (context: EntityOperationContext) => Promise<T>,
+  ) {
+    const author = parse(actorSchema, input.actor ?? actor, "автор операции");
+    return this.workspace.locked(async (owned) =>
+      operation({
+        workspace: this.workspace,
+        catalog: await readEntityCatalog(this.workspace, owned),
+        actor: author,
+        requestId: input.requestId,
+        owned,
+      }),
+    );
+  }
+
+  /** Девять видов доступны независимо от наличия записей в конкретном проекте. */
+  async types(input: EntityPageQuery = {}) {
+    return this.page(structuredClone(entityDefinitions), input, entityDigest(entityDefinitions));
+  }
+  async describe(input: { kind: EntityKind }): Promise<z.infer<typeof entityTypeDetailSchema>> {
+    const kind = parse(entityKindSchema, input.kind, "вид сущности");
+    const definition = entityDefinitions.find((entry) => entry.kind === kind)!;
+    const create =
+      kind in entityCreateDataSchemas
+        ? entityCreateDataSchemas[kind as keyof typeof entityCreateDataSchemas]
+        : undefined;
+    const update =
+      kind in entityUpdateDataSchemas
+        ? entityUpdateDataSchemas[kind as keyof typeof entityUpdateDataSchemas]
+        : undefined;
+    return {
+      ...structuredClone(definition),
+      schema: z.toJSONSchema(entityDataSchemas[kind]),
+      createSchema: create ? z.toJSONSchema(create, { io: "input" }) : null,
+      updateSchema: update ? z.toJSONSchema(update, { io: "input" }) : null,
+    };
+  }
+  async list(input: EntitiesQuery = {}) {
+    const query = parse(entitiesQuerySchema, input, "каталог сущностей");
+    const {
+      kind,
+      q,
+      refs,
+      board,
+      application,
+      feature,
+      scenario,
+      target,
+      parent,
+      status,
+      active,
+      sort,
+      ...pagination
+    } = query;
+    const filters = { board, application, feature, scenario, target, parent, status, active };
+    if (kind) {
+      const available = entityDefinitions.find((entry) => entry.kind === kind)!.filters;
+      for (const [name, value] of Object.entries(filters))
+        invariant(
+          value === undefined || available.includes(name),
+          "UNSUPPORTED_ENTITY_FILTER",
+          `Вид ${kind} не поддерживает фильтр ${name}`,
+          2,
+        );
+    }
+    return this.read((catalog) => {
+      const expected: Record<string, EntityKind | readonly EntityKind[] | undefined> = {
+        board: "board",
+        application: "application",
+        feature: "feature",
+        scenario: "scenario",
+        parent: "task",
+        target: undefined,
+      };
+      const resolved = Object.fromEntries(
+        Object.entries({ board, application, feature, scenario, target, parent })
+          .filter(([, value]) => value !== undefined)
+          .map(([name, value]) => [name, resolveEntity(catalog, value!, expected[name]).ref.id]),
+      );
+      const selected =
+        refs === undefined
+          ? undefined
+          : new Set(refs.map((ref) => entityAddress(resolveEntity(catalog, ref, kind).ref)));
+      const needle = q?.trim().toLocaleLowerCase();
+      const items = catalog.entries
+        .filter(
+          (entry) =>
+            (!kind || entry.ref.kind === kind) &&
+            (!selected || selected.has(entityAddress(entry.ref))) &&
+            (!needle ||
+              `${entry.key} ${entry.aliases.join(" ")} ${entityAddress(entry.ref)} ${entry.title} ${entry.summary}`
+                .toLocaleLowerCase()
+                .includes(needle)) &&
+            (status === undefined || entry.status === status) &&
+            (active === undefined || entry.active === (active === "true")) &&
+            Object.entries(resolved).every(([name, value]) =>
+              Array.isArray(entry.filters[name])
+                ? entry.filters[name].includes(value)
+                : entry.filters[name] === value,
+            ),
+        )
+        .sort(
+          (a, b) =>
+            a[sort].localeCompare(b[sort], "ru", { numeric: true }) ||
+            entityAddress(a.ref).localeCompare(entityAddress(b.ref)),
+        )
+        .map(entitySummary);
+      return this.page(items, pagination, catalog.version);
+    });
+  }
+  async get(input: EntityGetQuery): Promise<EntityDetail> {
+    const query = parse(entityGetQuerySchema, input, "адрес сущности");
+    return this.read((catalog) => {
+      const entry = resolveEntity(catalog, query.ref, query.kind);
+      const refs: { kind: string; id: string }[] = [];
+      const data = entry.data;
+      if (data.kind === "scenario") refs.push({ kind: "feature", id: data.featureId });
+      if (data.kind === "implementation") {
+        refs.push(
+          { kind: "application", id: data.applicationId },
+          { kind: "feature", id: data.featureId },
+        );
+        if (data.scenarioId) refs.push({ kind: "scenario", id: data.scenarioId });
+      }
+      if (data.kind === "board" && data.applicationId)
+        refs.push({ kind: "application", id: data.applicationId });
+      if (data.kind === "document")
+        refs.push(
+          ...data.links.map((link) =>
+            link.kind === "product" ? { kind: "product", id: "passport" } : link,
+          ),
+        );
+      if (data.kind === "task") {
+        refs.push(
+          { kind: "board", id: data.boardId },
+          ...data.productLinks,
+          ...[...data.dependencies, ...data.related, ...(data.parentId ? [data.parentId] : [])].map(
+            (id) => ({ kind: "task", id }),
+          ),
+        );
+      }
+      const addresses = new Set(refs.map(entityAddress));
+      const references = catalog.entries
+        .filter((item) => addresses.has(entityAddress(item.ref)))
+        .map(entitySummary);
+      return parse(
+        entityDetailSchema,
+        { ...entitySummary(entry), data: entry.data, references },
+        "данные сущности",
+        true,
+      );
+    });
+  }
+  async resolve(input: EntityGetQuery) {
+    const query = parse(entityGetQuerySchema, input, "адрес сущности");
+    return this.read((catalog) => entitySummary(resolveEntity(catalog, query.ref, query.kind)));
+  }
+  async keys(input: z.input<typeof entityKeysQuerySchema>) {
+    const { ref, kind, ...page } = parse(entityKeysQuerySchema, input, "ключи сущности");
+    return this.read((catalog) => {
+      const entry = resolveEntity(catalog, ref, kind);
+      const items = [...new Set([entry.key, ...entry.aliases])].map((key) => ({
+        ref: entry.ref,
+        key,
+        current: key === entry.key,
+      }));
+      return this.page(items, page, entityDigest(items));
+    });
+  }
+  async keySpaces(input: z.input<typeof entityKeySpacesQuerySchema>) {
+    const { kind, ...page } = parse(entityKeySpacesQuerySchema, input, "пространства ключей");
+    return this.read((catalog) => {
+      const dynamic =
+        kind === "task" || kind === "board" || kind === "implementation" || kind === "application";
+      const scopeKind =
+        kind === "implementation" || kind === "application" ? "application" : "board";
+      const items: { scope: EntityRef | null; title: string; prefix: string; pattern: string }[] =
+        dynamic
+          ? catalog.entries
+              .filter((entry) => entry.ref.kind === scopeKind)
+              .map((entry) => {
+                const prefix =
+                  entry.data.kind === "board" || entry.data.kind === "application"
+                    ? (entry.data.prefix ?? entry.key)
+                    : "";
+                return {
+                  scope: entry.ref,
+                  title: entry.title,
+                  prefix: kind === "board" ? `BOARD-${prefix}` : prefix,
+                  pattern:
+                    kind === "implementation"
+                      ? `${prefix}-FI/SI-<номер>`
+                      : kind === "application"
+                        ? prefix
+                        : kind === "board"
+                          ? `BOARD-${prefix}`
+                          : `${prefix}-<номер>`,
+                };
+              })
+          : [
+              {
+                scope: null,
+                title: entityDefinitions.find((entry) => entry.kind === kind)!.title,
+                prefix: {
+                  project: "PROJECT",
+                  product: "PRODUCT",
+                  feature: "FEATURE",
+                  scenario: "SCENARIO",
+                  document: "DOC",
+                }[kind as "project" | "product" | "feature" | "scenario" | "document"],
+                pattern:
+                  kind === "project"
+                    ? "PROJECT"
+                    : kind === "product"
+                      ? "PRODUCT"
+                      : `${kind === "document" ? "DOC" : kind.toUpperCase()}-<номер>`,
+              },
+            ];
+      return this.page(items, page, entityDigest(items));
+    });
+  }
+  async history(input: z.input<typeof entityKeysQuerySchema>) {
+    const { ref, kind, ...page } = parse(entityKeysQuerySchema, input, "история сущности");
+    return this.read((catalog) => {
+      const entry = resolveEntity(catalog, ref, kind);
+      return this.page(entry.events, page, entityDigest(entry.events));
+    });
+  }
+  async create(input: CreateEntity, actor: string) {
+    const command = parse(entityCreateSchema, input, "создание сущности");
+    return this.write(command, actor, async (context) => {
+      const handler = entityHandlers[command.data.kind].create;
+      invariant(
+        handler,
+        "UNSUPPORTED_ENTITY_ACTION",
+        "Этот вид создаётся другим предметным действием",
+        2,
+      );
+      return entitySaved(
+        command.data.kind,
+        await handler(command.data, context),
+        "create",
+        command.requestId,
+      );
+    });
+  }
+  async update(input: UpdateEntity, actor: string) {
+    const command = parse(entityUpdateSchema, input, "изменение сущности");
+    invariant(
+      Object.keys(command.changes).length > 1,
+      "INVALID_ARGUMENT",
+      "Изменения не заданы",
+      2,
+    );
+    return this.write(command, actor, async (context) => {
+      const entry = resolveEntity(context.catalog, command.ref, command.changes.kind);
+      invariant(
+        entry.status !== "uninitialized",
+        "UNSUPPORTED_ENTITY_ACTION",
+        "Сначала заполните паспорт операцией создания продукта",
+        2,
+      );
+      const handler = entityHandlers[entry.ref.kind].update;
+      invariant(
+        handler,
+        "UNSUPPORTED_ENTITY_ACTION",
+        "Содержание этого вида изменяется у его владельца",
+        2,
+      );
+      return entitySaved(
+        entry.ref.kind,
+        await handler(entry, command.changes, command.ifRevision, context),
+        "update",
+        command.requestId,
+      );
+    });
+  }
+  async rename(input: RenameEntity, actor: string) {
+    const command = parse(entityRenameSchema, input, "смена ключа сущности");
+    return this.write(command, actor, async (context) => {
+      const entry = resolveEntity(context.catalog, command.ref);
+      invariant(
+        entry.status !== "uninitialized",
+        "UNSUPPORTED_ENTITY_ACTION",
+        "Сначала заполните паспорт операцией создания продукта",
+        2,
+      );
+      return entitySaved(
+        entry.ref.kind,
+        await entityHandlers[entry.ref.kind].rename(
+          entry,
+          command.key,
+          command.ifRevision,
+          context,
+        ),
+        "rename",
+        command.requestId,
+      );
+    });
+  }
+  async moveTask(input: MoveEntityTask, actor: string) {
+    const command = parse(entityMoveTaskSchema, input, "перемещение задачи");
+    return this.write(command, actor, async (context) => {
+      const ref = resolveEntity(context.catalog, command.ref, "task").ref;
+      const saved = await new BoardTasksService(this.workspace).move(
+        ref.id,
+        {
+          actor: context.actor,
+          requestId: command.requestId,
+          ifRevision: command.ifRevision,
+          column: command.column,
+          beforeId:
+            command.before === null
+              ? null
+              : resolveEntity(context.catalog, command.before, "task").ref.id,
+          ...(command.board === undefined
+            ? {}
+            : { board: resolveEntity(context.catalog, command.board, "board").ref.id }),
+        },
+        context.actor,
+      );
+      return entitySaved("task", saved, "move", command.requestId);
+    });
+  }
+  async linkTask(input: LinkEntityTask, actor: string) {
+    const command = parse(entityLinkTaskSchema, input, "связь задач");
+    return this.write(command, actor, async (context) => {
+      const ref = resolveEntity(context.catalog, command.ref, "task").ref;
+      const saved = await new BoardTasksService(this.workspace).link(
+        ref.id,
+        {
+          actor: context.actor,
+          requestId: command.requestId,
+          ifRevision: command.ifRevision,
+          target: resolveEntity(context.catalog, command.target, "task").ref.id,
+          relation: command.relation,
+          remove: command.remove,
+        },
+        context.actor,
+      );
+      return entitySaved("task", saved, "link", command.requestId);
+    });
+  }
+}

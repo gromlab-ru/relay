@@ -15,7 +15,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Сохранить имя и slug проекта; повтор тех же значений идемпотентен
  *
  * @tags context
  * @name SaveProjectSettingsForProject

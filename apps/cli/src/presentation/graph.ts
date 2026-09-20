@@ -18,14 +18,9 @@ export function graphText(page: GraphPage, query: GraphQuery, options: TextOptio
       `${node.key} · ${node.title}`,
     ]),
   );
-  const rows = page.nodes.map((node) => [
-    entityAddress(node.ref),
-    node.key,
-    node.title,
-    node.status || "—",
-  ]);
+  const rows = page.nodes.map((node) => [node.key, node.ref.kind, node.title, node.status || "—"]);
   const table = new Table({
-    head: ["Адрес", "Ключ", "Сущность", "Состояние"],
+    head: ["Ключ", "Вид", "Сущность", "Состояние"],
     wordWrap: true,
     colWidths: [30, 20, Math.max(20, options.width - 72), 17],
   });
@@ -52,7 +47,7 @@ export function graphText(page: GraphPage, query: GraphQuery, options: TextOptio
     .filter((path) => path.edges.length > 0)
     .map((path) =>
       wrap(
-        `${entityAddress(path.target)}: ${path.nodes.map(entityAddress).join(" → ")}\nОснования: ${path.edges.join(", ")}`,
+        `${safeText(labels.get(entityAddress(path.target)) ?? entityAddress(path.target))}: ${(path.keys ?? path.nodes.map(entityAddress)).map(safeText).join(" → ")}\nОснования: ${path.edges.join(", ")}`,
         options.width,
       ),
     )

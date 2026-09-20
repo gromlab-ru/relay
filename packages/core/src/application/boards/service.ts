@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { boardSlugSchema, boardsQuerySchema, defaultBoardPrefix } from "../../domain/board.js";
+import { boardsQuerySchema, defaultBoardPrefix } from "../../domain/board.js";
 import type { BoardView, BoardsQuery } from "../../domain/board.js";
 import { parse } from "../../domain/validation.js";
 import { BoardRepository } from "../../storage/boards.js";
 import { ProductRepository } from "../../storage/product.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
+import { entityReferenceSchema } from "@relay/contracts/primitives";
 
 /** Каталог досок одного проекта; не смешивает прежние задачи с новыми контейнерами. */
 export class BoardsService {
@@ -16,6 +17,7 @@ export class BoardsService {
       const boards = await new BoardRepository(this.workspace).all();
       const products = await new ProductRepository(this.workspace).all();
       const views = boards.map((board): BoardView => {
+        const { aliases: _aliases, requests: _requests, events: _events, ...data } = board;
         if (board.kind !== "application") {
           invariant(
             board.slug === board.kind && board.applicationId === null,
@@ -24,7 +26,7 @@ export class BoardsService {
             5,
           );
           return {
-            ...board,
+            ...data,
             prefix: board.prefix ?? defaultBoardPrefix(board.slug),
             name: board.kind === "product" ? "Продукт" : "Инфраструктура",
           };
@@ -37,7 +39,7 @@ export class BoardsService {
           5,
         );
         return {
-          ...board,
+          ...data,
           prefix: board.prefix ?? defaultBoardPrefix(board.slug),
           name: application.fields.name,
         };
@@ -87,10 +89,22 @@ export class BoardsService {
     };
   }
 
-  async get(slug: string): Promise<BoardView> {
-    const address = parse(boardSlugSchema, slug, "адрес доски");
-    const board = (await this.snapshot()).find((entry) => entry.slug === address);
-    invariant(board, "NOT_FOUND", "Доска не найдена", 3);
-    return board;
+  async get(ref: string): Promise<BoardView> {
+    return this.workspace.locked(async () => {
+      const parsed = parse(entityReferenceSchema, ref, "ключ или ID доски");
+      const address = parsed.startsWith("board:") ? parsed.slice(6) : parsed;
+      const stored = (await new BoardRepository(this.workspace).all()).find(
+        (entry) =>
+          entry.id === address ||
+          entry.slug === address ||
+          entry.key === address ||
+          entry.aliases?.includes(address) ||
+          `BOARD-${entry.prefix ?? defaultBoardPrefix(entry.slug)}` === address ||
+          (entry.prefix ?? defaultBoardPrefix(entry.slug)) === address,
+      );
+      const board = (await this.snapshot()).find((entry) => entry.id === stored?.id);
+      invariant(board, "NOT_FOUND", "Доска не найдена", 3);
+      return board;
+    });
   }
 }

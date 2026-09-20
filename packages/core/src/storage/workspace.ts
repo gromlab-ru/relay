@@ -13,6 +13,13 @@ import { createProjectSlug, defaultProjectName } from "./project-settings.js";
 import { ProductTransaction } from "./product-transaction.js";
 import { GraphTransaction } from "./graph-transaction.js";
 import { recoverGraphMigration } from "./graph-migration.js";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const lockContext = new AsyncLocalStorage<{
+  root: string;
+  assertOwned: () => void;
+  active: boolean;
+}>();
 
 export const CONFIG_NAME = ".relay/config.json";
 export const MIGRATION_STATE = "migration-v2.json";
@@ -33,6 +40,11 @@ export class Workspace {
     operation: (assertOwned: () => void) => Promise<T>,
     mode: "normal" | "migration" = "normal",
   ): Promise<T> {
+    const context = lockContext.getStore();
+    if (context?.active && context.root === this.root) {
+      context.assertOwned();
+      return operation(context.assertOwned);
+    }
     return withStorageLock(this.root, async (assertOwned) => {
       invariant(
         mode === "migration" ||
@@ -56,7 +68,14 @@ export class Workspace {
       await recoverGraphMigration(this, assertOwned);
       await new BoardRepository(this).recover(assertOwned);
       await new BoardTaskRepository(this).recover(assertOwned);
-      return operation(assertOwned);
+      const owned = { root: this.root, assertOwned, active: true };
+      return lockContext.run(owned, async () => {
+        try {
+          return await operation(assertOwned);
+        } finally {
+          owned.active = false;
+        }
+      });
     });
   }
 }

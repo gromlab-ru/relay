@@ -12,7 +12,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Согласованное состояние продукта и готовность
  *
  * @tags product
  * @name GetProductState

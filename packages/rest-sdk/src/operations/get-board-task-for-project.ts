@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Полная задача с Markdown и вычисляемыми блокерами
  *
  * @tags kanban
  * @name GetBoardTaskForProject

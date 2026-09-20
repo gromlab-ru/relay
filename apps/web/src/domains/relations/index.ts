@@ -3,7 +3,6 @@ export {
   getRelations,
   saveRelations,
   relationAddress,
-  relationRef,
   relationError,
 } from "./adapters/relations.adapter";
 export type {

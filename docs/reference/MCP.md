@@ -10,6 +10,55 @@
 Один процесс обслуживает оркестратора и субагентов через **Streamable HTTP**.
 Все операции проекта выполняются через общий `@relay/rest-sdk` и REST API.
 
+## Движок основных сущностей
+
+[Контракт сущностей](ENTITIES.md). Виды: project, product, feature, scenario, application,
+implementation, board, task, document. Ключ — основной адрес для агента; во всех ссылках
+допустим также ID. Резолвер Core переводит адрес в постоянный ID под общей блокировкой.
+
+| Инструмент          | Назначение и аргументы                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `entity_types`      | Виды, назначение, действия; offset/limit/version                                                                             |
+| `entity_type_get`   | Контракт и JSON-схемы вида; kind                                                                                             |
+| `entities_list`     | kind?, q?, refs?, board?, application?, feature?, scenario?, target?, parent?, status?, active?, sort?, offset/limit/version |
+| `entity_get`        | Полные данные; ref, kind?                                                                                                    |
+| `entity_resolve`    | Постоянный адрес и текущий ключ; ref, kind?                                                                                  |
+| `entity_keys`       | Текущий ключ и алиасы; ref, kind?, offset/limit/version                                                                      |
+| `entity_key_spaces` | Владельцы нумерации и форматы; kind, offset/limit/version                                                                    |
+| `entity_history`    | Сохранённые события; ref, kind?, offset/limit/version                                                                        |
+| `entity_context`    | Граф с путями; ref, profile?, depth?, direction?, type?, q?, offset/limit/version                                            |
+| `entity_rename_key` | Смена публичного ключа; ref, key, ifRevision, actor, requestId                                                               |
+| `entity_task_move`  | ref, board?, column, before?, ifRevision, actor, requestId                                                                   |
+| `entity_task_link`  | ref, target, relation, remove?, ifRevision, actor, requestId                                                                 |
+
+Поля предметных инструментов находятся на верхнем уровне, их схемы выводятся из определения вида:
+
+- `entity_product_create`, `entity_product_update` — паспорт продукта: name, summary, description.
+- `entity_feature_create`, `entity_feature_update` — фича: name, summary, description.
+- `entity_scenario_create`, `entity_scenario_update` — сценарий; при создании также featureId (ключ/ID).
+- `entity_application_create`, `entity_application_update` — приложение; при создании slug, prefix?, type.
+- `entity_implementation_create`, `entity_implementation_update` — вклад; при создании application и target,
+  title, description, status?. Общий вклад фичи создаётся перед её сценарным вкладом.
+- `entity_task_create`, `entity_task_update` — задача: title, description, targets; создание также принимает
+  board, dependencies, related, parent, column. Цели и зависимости создаются атомарно с задачей.
+- `entity_document_create`, `entity_document_update` — материал: name, summary, body, documentKind, targets.
+- `entity_project_update` — имя выбранного проекта.
+
+Запись требует actor/requestId; обновление — ref/ifRevision. Пропущенные поля обновления
+сохраняются. Строки Markdown передаются напрямую. В workspace обязателен project; maxBytes
+ограничивает полный ответ, при крупной схеме или тексте его можно увеличить. Страницы 1–100
+возвращают total/nextOffset/version. После записи перечитайте содержание и отношения.
+
+```text
+entity_task_create({project: "app", board: "BOARD-WEB", title: "Сделать форму",
+  targets: ["WEB-SI-8"], dependencies: ["API-15"], actor: "agent", requestId: "form-1"})
+entity_get({project: "app", ref: "WEB-24"})
+entity_context({project: "app", ref: "WEB-24", depth: 4, profile: "context"})
+```
+
+Ключи примера заменяются прочитанными значениями. Готовность реализации по завершению
+задачи не назначается автоматически; действуют предметные правила продукта.
+
 ## Канбан отдельных досок
 
 ### Адресные продуктовые цели

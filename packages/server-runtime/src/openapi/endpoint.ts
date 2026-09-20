@@ -25,7 +25,11 @@ export function ApiEndpoint(options: {
   record?: "commentId" | "logId";
 }) {
   const decorators = [
-    ApiOperation({ operationId: options.id, summary: options.summary }),
+    ApiOperation({
+      operationId: options.id,
+      summary: options.summary,
+      description: options.summary,
+    }),
     ApiResponse({
       status: options.status ?? 200,
       description: "Операция выполнена",

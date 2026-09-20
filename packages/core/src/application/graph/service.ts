@@ -1,6 +1,5 @@
 import {
   entityAddress,
-  parseEntityAddress,
   graphQuerySchema,
   graphMutationSchema,
   graphHistoryQuerySchema,
@@ -28,6 +27,8 @@ import { projectGraphCatalog } from "./catalog.js";
 import type { GraphCatalogProvider, GraphCatalog } from "./catalog.js";
 import { projectContextPolicy } from "./context.js";
 import type { GraphTraversalPolicy } from "./context.js";
+import { resolveAddress } from "../entities/resolver.js";
+import { AppError } from "../../shared/errors.js";
 
 type EdgeReference = GraphSummary | GraphEdge;
 const versions = new Map<string, string>();
@@ -55,7 +56,14 @@ export class GraphService {
       edges: source.edges.map((edge) => graphEdgeSchema.parse(edge)),
     };
     const store = await this.repository.open(assertOwned);
-    const catalogHash = graphDigest(catalog);
+    const references = catalog.nodes.map((node) => ({
+      ...node,
+      aliases: source.aliases?.[entityAddress(node.ref)] ?? [],
+    }));
+    const catalogHash = graphDigest({
+      ...catalog,
+      ...(source.aliases ? { aliases: source.aliases } : {}),
+    });
     // V1 остаётся читаемым с прежней версией до явной миграции.
     const version = store.legacy
       ? graphDigest([
@@ -91,20 +99,21 @@ export class GraphService {
       versions.set(this.repository.root, version);
       if (versions.size > 8) versions.delete(versions.keys().next().value!);
     }
-    return { catalog, catalogHash, store, version, addresses };
+    return { catalog, catalogHash, store, version, addresses, references };
   }
 
   async read(input: GraphQuery = {}): Promise<GraphPage> {
     const query = parse(graphQuerySchema, input, "выборка графа");
     return this.workspace.locked(async (assertOwned) => {
-      const { catalog, store, version } = await this.snapshot(assertOwned);
+      const { catalog, store, version, references } = await this.snapshot(assertOwned);
       invariant(
         query.version === undefined || query.version === version,
         "GRAPH_CHANGED",
         "Граф изменился. Начните чтение с первой страницы.",
         4,
       );
-      const root = query.root === undefined ? undefined : parseEntityAddress(query.root);
+      const root =
+        query.root === undefined ? undefined : resolveAddress(references, query.root).ref;
       const byAddress = new Map(catalog.nodes.map((node) => [entityAddress(node.ref), node]));
       const domainById = new Map(catalog.edges.map((edge) => [edge.id, edge]));
       if (root)
@@ -199,7 +208,9 @@ export class GraphService {
         endpoints: [...endpoints].map((address) => byAddress.get(address)!),
         paths: pageNodes.flatMap((node) => {
           const path = paths.get(entityAddress(node.ref));
-          return path ? [path] : [];
+          return path
+            ? [{ ...path, keys: path.nodes.map((ref) => byAddress.get(entityAddress(ref))!.key) }]
+            : [];
         }),
         totalNodes: nodes.length,
         totalEdges: edges.length,
@@ -229,7 +240,8 @@ export class GraphService {
         );
         return previous.result;
       }
-      const { catalog, catalogHash, store, version, addresses } = await this.snapshot(assertOwned);
+      const { catalog, catalogHash, store, version, addresses, references } =
+        await this.snapshot(assertOwned);
       invariant(
         !store.legacy,
         "GRAPH_MIGRATION_REQUIRED",
@@ -251,9 +263,22 @@ export class GraphService {
       for (const operation of command.operations) {
         let record: GraphCurrent;
         if (operation.action === "add") {
+          let from: EntityRef;
+          let to: EntityRef;
+          try {
+            from = resolveAddress(references, operation.from).ref;
+            to = resolveAddress(references, operation.to).ref;
+          } catch (error) {
+            if (error instanceof AppError && error.code === "ENTITY_NOT_FOUND")
+              throw new AppError(
+                "INVALID_REFERENCE",
+                "Начало или конец связи не найдены в выбранном проекте",
+                4,
+              );
+            throw error;
+          }
           invariant(
-            addresses.has(entityAddress(operation.from)) &&
-              addresses.has(entityAddress(operation.to)),
+            addresses.has(entityAddress(from)) && addresses.has(entityAddress(to)),
             "INVALID_REFERENCE",
             "Начало или конец связи не найдены в выбранном проекте",
             4,
@@ -267,8 +292,8 @@ export class GraphService {
             edge: {
               id,
               type: operation.type,
-              from: operation.from,
-              to: operation.to,
+              from,
+              to,
               description: operation.description,
               revision: 1,
               source: "graph",

@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Граф проекта или контекст сущности с путями и согласованным продолжением
  *
  * @tags graph
  * @name GetGraphForProject

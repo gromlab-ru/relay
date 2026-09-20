@@ -17,6 +17,7 @@ import { ProductModule } from "./modules/product/product.module.js";
 import { BoardsModule } from "./modules/boards/boards.module.js";
 import { BoardTasksModule } from "./modules/board-tasks/board-tasks.module.js";
 import { GraphModule } from "./modules/graph/graph.module.js";
+import { EntitiesModule } from "./modules/entities/entities.module.js";
 
 @Module({})
 export class AppModule {
@@ -44,6 +45,7 @@ export class AppModule {
         BoardsModule,
         BoardTasksModule,
         GraphModule,
+        EntitiesModule,
         CommentsModule,
         LogsModule,
         EventsModule,

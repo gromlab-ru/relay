@@ -43,7 +43,23 @@ export async function saveProjectSettings(
     };
     await atomicJson(
       workspace.configPath,
-      { ...config, projectSettings: { version: 1, ...saved } },
+      {
+        ...config,
+        projectSettings: {
+          ...config.projectSettings,
+          version: 2,
+          ...saved,
+          events: [
+            ...(config.projectSettings?.events ?? []),
+            {
+              revision: saved.revision,
+              actor: "relay",
+              at: new Date().toISOString(),
+              action: "settings",
+            },
+          ],
+        },
+      },
       dirname(workspace.configPath),
       false,
       assertAllOwned,

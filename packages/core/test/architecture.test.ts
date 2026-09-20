@@ -19,11 +19,11 @@ test("Core и Contracts изолированы от приложений, сер
   for (const [directory, forbidden] of [
     [
       "packages/core/src",
-      /^(?:@nestjs|react|commander|picocolors|@tasks\/(?:contracts|server-runtime|server|cli|web)|@gromlab\/tasks-cli)|apps\/|contracts\/|server-runtime\/|presentation/,
+      /^(?:@nestjs|react|commander|picocolors|@(?:tasks|relay)\/(?:server-runtime|server|cli|web)|@gromlab\/(?:tasks-cli|relay-cli))|apps\/|server-runtime\/|presentation/,
     ],
     [
       "packages/contracts/src",
-      /^(?:node:|@nestjs|react|@tasks\/(?:core|server-runtime|server|cli)|@gromlab\/tasks-cli)|apps\/|core\/|server-runtime\//,
+      /^(?:node:|@nestjs|react|@(?:tasks|relay)\/(?:core|server-runtime|server|cli)|@gromlab\/(?:tasks-cli|relay-cli))|apps\/|core\/|server-runtime\//,
     ],
     [
       "packages/server-runtime/src",

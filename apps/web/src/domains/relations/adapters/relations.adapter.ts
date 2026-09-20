@@ -16,15 +16,6 @@ const GRAPH_FAILURE_SCHEMA = z.object({ error: z.object({ code: z.string() }) })
 export const relationAddress = (ref: EntityRef): string => `${ref.kind}:${ref.id}`;
 
 /**
- * Разбирает выбранный адрес без подмены постоянного ID читаемым ключом.
- */
-export const relationRef = (address: string): EntityRef => {
-  const [kind, id] = address.split(":");
-  if (!kind || !id) throw new Error("Выберите сущность из каталога");
-  return { kind, id };
-};
-
-/**
  * Переводит ожидаемые ошибки транспорта в сообщения интерфейса связей.
  */
 export const relationError = (error: unknown): Error => {

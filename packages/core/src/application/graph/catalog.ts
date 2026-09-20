@@ -8,6 +8,7 @@ import { ProjectRepository } from "../../storage/project.js";
 import { TaskRepository } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
+import { readEntityCatalog } from "../entities/catalog.js";
 
 const lifecycleReferences = new Set([
   "focusPlanId",
@@ -28,18 +29,30 @@ const lifecycleReferences = new Set([
 ]);
 
 /** Адаптер проекта: графовый движок не знает видов продуктовых сущностей. */
-export type GraphCatalog = { nodes: GraphNode[]; edges: GraphEdge[] };
+export type GraphCatalog = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  aliases?: Readonly<Record<string, readonly string[]>>;
+};
 /** Источник вызывается только под блокировкой выбранного проекта. */
 export type GraphCatalogProvider = () => Promise<GraphCatalog>;
 
 /** Собирает существующие факты без дублирования предметных ссылок в JSON графа. */
 export async function projectGraphCatalog(workspace: Workspace): Promise<GraphCatalog> {
+  const entities = await workspace.locked((owned) => readEntityCatalog(workspace, owned));
   const product = await new ProductRepository(workspace).all();
   const boards = await new BoardRepository(workspace).all();
   const tasks = await new BoardTaskRepository(workspace).all();
   const records = await new ProjectRepository(workspace).all();
   const legacy = await new TaskRepository(workspace).all();
-  const nodes: GraphNode[] = [];
+  const nodes: GraphNode[] = entities.entries.map((entry) => ({
+    ref: entry.ref,
+    key: entry.key,
+    title: entry.title,
+    revision: entry.revision,
+    status: entry.status ?? "",
+  }));
+  const knownNodes = new Set(nodes.map((node) => entityAddress(node.ref)));
   const edges: GraphEdge[] = [];
   const ref = (kind: string, id: string): EntityRef => ({ kind, id });
   const addNode = (
@@ -49,7 +62,12 @@ export async function projectGraphCatalog(workspace: Workspace): Promise<GraphCa
     key: string,
     revision: number,
     status = "",
-  ) => nodes.push({ ref: ref(kind, id), title, key, revision, status });
+  ) => {
+    if (!knownNodes.has(`${kind}:${id}`)) {
+      nodes.push({ ref: ref(kind, id), title, key, revision, status });
+      knownNodes.add(`${kind}:${id}`);
+    }
+  };
   const addEdge = (from: EntityRef, to: EntityRef, type: string, revision: number, at: string) => {
     const id = `domain-${createHash("sha256")
       .update(JSON.stringify([from, type, to]))
@@ -230,5 +248,11 @@ export async function projectGraphCatalog(workspace: Workspace): Promise<GraphCa
     }
   }
   nodes.sort((a, b) => entityAddress(a.ref).localeCompare(entityAddress(b.ref)));
-  return { nodes, edges };
+  return {
+    nodes,
+    edges,
+    aliases: Object.fromEntries(
+      entities.entries.map((entry) => [entityAddress(entry.ref), entry.aliases]),
+    ),
+  };
 }

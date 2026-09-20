@@ -57,9 +57,10 @@ export const ProjectRelationsScreen = () => {
   const pathsMap = new Map(
     (graph?.paths ?? []).map((path) => [
       relationAddress(path.target),
-      path.nodes
-        .map((ref) => labelsMap.get(relationAddress(ref)) ?? relationAddress(ref))
-        .join(" → "),
+      (
+        path.keys ??
+        path.nodes.map((ref) => labelsMap.get(relationAddress(ref)) ?? relationAddress(ref))
+      ).join(" → "),
     ]),
   );
   const nodeItems = nodesData.map((node) => ({

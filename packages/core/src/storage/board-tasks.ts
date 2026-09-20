@@ -33,7 +33,7 @@ const currentStoredSchema = boardTaskRecordSchema.extend({
   description: z.array(z.string()),
   requests: z.record(z.string(), z.strictObject({ hash: z.string(), result: storedSavedSchema })),
 });
-// Версия 1 читается без изменения файла; следующая атомарная запись публикует версию 2.
+// Версии 1/2 читаются без изменения файла; следующая предметная запись публикует v3 с событиями.
 const storedSchema = z.preprocess((value) => {
   // Совместимость с промежуточной локальной итерацией; классификация задач отменена пользователем.
   if (typeof value === "object" && value !== null && "kind" in value) {

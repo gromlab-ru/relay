@@ -67,6 +67,7 @@ export async function saveProduct(
     document: "Документ",
     scope: "Состав приложения",
     contract: "Контракт",
+    implementation: "Реализация",
   };
   return {
     data: {

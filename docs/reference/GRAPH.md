@@ -5,7 +5,8 @@
 
 ## Адреса и отношения
 
-Адрес — `{kind,id}`, в CLI `kind:id`. Каталог содержит `project`, `product`, `feature`,
+Постоянный адрес — `{kind,id}`. Во внешнем API и CLI допускаются читаемый ключ, ID или
+уточнённый `kind:id`; их разрешает общий [движок сущностей](ENTITIES.md). Каталог содержит `project`, `product`, `feature`,
 `scenario`, `application`, `implementation`, `document`, `board`, `task`, `legacy-task`
 и `lifecycle-<kind>`. Движок получает каталог через адаптер и не ограничивает пары видов.
 Тип отношения расширяемый; допускает циклы, несколько родителей и несколько отношений
@@ -34,7 +35,7 @@
 
 ## Чтение
 
-`GET /api/v1/graph` (также проектный префикс) принимает `root?`, `type?`, `direction`
+`GET /api/v1/graph` (также проектный префикс) принимает `root?` (ключ/ID), `type?`, `direction`
 (`both/outgoing/incoming`), `depth` (0–100, по умолчанию 3), `profile` (`all/context`),
 `q?`, `offset`, `limit` (1–100, по умолчанию 40), `version?`.
 
@@ -42,6 +43,7 @@
 по адресу/ключу/названию и отношения между найденными узлами. Ответ: `nodes`, `edges`,
 `endpoints` для рендера концов текущих рёбер, `paths` (один кратчайший путь на узел),
 `totalNodes`, `totalEdges`, `nextOffset`, `version`, `boundary`, `depthLimited`.
+Пути также содержат keys — актуальные читаемые ключи промежуточных узлов для страницы.
 Смещение одновременно применяется к узлам и рёбрам; страницы одной выборки используют
 одну версию. Изменение требует перечитать с начала (`GRAPH_CHANGED`).
 
@@ -56,6 +58,7 @@
 `POST /api/v1/graph`: `operations` (1–100), `ifVersion`, `requestId`, `actor?`.
 Операции: `add` с type/from/to/description?, `update` с id/description,
 `remove` с id. Автор, версия снимка и цели проверяются под общей блокировкой.
+from/to принимают ключ, ID или объект `{kind,id}`. В сохранённом ребре остаются только ID.
 Повтор проверяется перед версией и возвращает исходную квитанцию.
 Квитанция: `ids`, `revision`, `version`, `requestId`.
 
@@ -140,8 +143,8 @@ Core; исходник остаётся `relations/v1-backup.json`. После �
 ```bash
 relay-cli graph list --limit 20
 relay-cli graph list --limit 20 --offset 20 --snapshot-version VERSION
-relay-cli graph context scenario:ID --depth 5 --format json
-relay-cli --actor agent graph link --from task:ID --to document:ID \
+relay-cli graph context SCENARIO-1 --depth 5 --format json
+relay-cli --actor agent graph link --from WEB-24 --to DOC-1 \
   --type references --description 'Пример для реализации' --if-version VERSION --request-id link-1
 relay-cli --actor agent graph update RELATION_ID --description 'Новое пояснение' --if-version VERSION
 relay-cli --actor agent graph unlink RELATION_ID --if-version VERSION

@@ -8,6 +8,7 @@ export type ProductAddress = {
   kind: string;
   name: string;
   applicationId?: string | null | undefined;
+  aliases?: readonly string[] | undefined;
 };
 
 /** Индивидуальные адреса включают реализации, даже пока читается прежний состав. */
@@ -20,6 +21,7 @@ export function productAddresses(
       key: record.key,
       kind: record.fields.kind,
       name: "name" in record.fields ? record.fields.name : "Состав приложения",
+      aliases: "reservedKeys" in record ? (record.reservedKeys as string[] | undefined) : undefined,
     },
     ...(record.fields.kind === "scope"
       ? record.fields.contracts.map((entry) => ({
@@ -39,8 +41,16 @@ export function resolveProductAddress(
   ref: string,
   kind?: string,
 ): ProductAddress {
-  const byId = addresses.find((entry) => entry.id === ref);
-  const matches = byId ? [byId] : addresses.filter((entry) => entry.key === ref);
+  const input = ref.includes(":") ? ref.split(":") : undefined;
+  const expected = input?.[0] ?? kind;
+  const value = input?.[1] ?? ref;
+  const candidates = addresses.filter(
+    (entry) =>
+      (!expected || entry.kind === expected) &&
+      (entry.id === value || entry.key === value || entry.aliases?.includes(value)),
+  );
+  const ids = candidates.filter((entry) => entry.id === value);
+  const matches = ids.length > 0 ? ids : candidates;
   invariant(
     matches.length > 0,
     kind ? "INVALID_REFERENCE" : "PRODUCT_RECORD_NOT_FOUND",
@@ -112,6 +122,13 @@ export function normalizeProductMutation(
         return { ...link, id: resolve(link.id, link.kind) };
       }),
     };
+  if (input.kind === "implementation")
+    fields = {
+      ...input,
+      applicationId: resolve(input.applicationId, "application"),
+      featureId: resolve(input.featureId, "feature"),
+      scenarioId: input.scenarioId === null ? null : resolve(input.scenarioId, "scenario"),
+    };
   return {
     ...command,
     fields,
@@ -132,19 +149,10 @@ export function assertProductKey(
 ): void {
   productKeySchema.parse(key);
   invariant(
-    ["feature", "scenario", "application", "implementation"].includes(kind),
+    ["passport", "feature", "scenario", "application", "implementation", "document"].includes(kind),
     "INVALID_ARGUMENT",
     "У этого вида записи нет публичного ключа",
   );
-  const pattern =
-    kind === "feature"
-      ? /^FEATURE-[1-9]\d*$/
-      : kind === "scenario"
-        ? /^SCENARIO-[1-9]\d*$/
-        : kind === "application"
-          ? /^(?!FEATURE$|SCENARIO$)[A-Z][A-Z0-9]{1,15}$/
-          : /-(?:FI|SI)-[1-9]\d*$/;
-  invariant(pattern.test(key), "INVALID_ARGUMENT", "Ключ не соответствует типу сущности");
   invariant(
     !productAddresses(records).some(
       (entry) => entry.id !== id && (entry.key === key || entry.id === key),
@@ -156,12 +164,21 @@ export function assertProductKey(
 }
 
 /** Номера учитывают прежние ключи, чтобы переименование не освобождало номер. */
-export function nextProductKey(kind: "feature" | "scenario", records: ProductRecord[]): string {
-  const prefix = kind === "feature" ? "FEATURE" : "SCENARIO";
-  const keys = records.flatMap((entry) => [entry.key, ...(entry.reservedKeys ?? [])]);
+export function nextProductKey(
+  kind: "feature" | "scenario" | "document",
+  records: ProductRecord[],
+  reserved: readonly string[] = [],
+): string {
+  const prefix = { feature: "FEATURE", scenario: "SCENARIO", document: "DOC" }[kind];
+  const keys = [
+    ...records.flatMap((entry) => [entry.key, ...(entry.reservedKeys ?? [])]),
+    ...reserved,
+  ];
   const maximum = keys.reduce(
     (max, key) =>
-      key?.startsWith(`${prefix}-`) ? Math.max(max, Number(key.slice(prefix.length + 1))) : max,
+      key && new RegExp(`^${prefix}-[1-9]\\d*$`).test(key)
+        ? Math.max(max, Number(key.slice(prefix.length + 1)))
+        : max,
     0,
   );
   invariant(

@@ -15,7 +15,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Добавить или удалить связь, зависимость либо родителя; циклы запрещены
  *
  * @tags kanban
  * @name LinkBoardTaskForProject

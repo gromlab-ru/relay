@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Связи и блокеры задачи
  *
  * @tags project
  * @name GetTaskLinks

@@ -14,7 +14,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Создать или изменить запись продукта
  *
  * @tags product
  * @name MutateProduct

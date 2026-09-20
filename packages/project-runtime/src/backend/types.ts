@@ -14,6 +14,7 @@ import type { ProductQueries } from "@relay/core/application/product/queries";
 import type { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import type { BoardsService } from "@relay/core/application/boards/service";
 import type { GraphService } from "@relay/core/application/graph/service";
+import type { EntityEngine } from "@relay/core/application/entities/service";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -45,6 +46,22 @@ export interface TasksBackend {
 }
 
 export interface Backend {
+  entities: Pick<
+    EntityEngine,
+    | "types"
+    | "describe"
+    | "list"
+    | "get"
+    | "resolve"
+    | "keys"
+    | "keySpaces"
+    | "history"
+    | "create"
+    | "update"
+    | "rename"
+    | "moveTask"
+    | "linkTask"
+  >;
   graph: Pick<GraphService, "read" | "mutate" | "history">;
   boardTasks: Pick<
     BoardTasksService,

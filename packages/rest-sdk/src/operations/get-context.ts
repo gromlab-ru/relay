@@ -12,7 +12,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Получить проект, автора и конфигурацию
  *
  * @tags context
  * @name GetContext

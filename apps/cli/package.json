@@ -47,6 +47,7 @@
     "prepack": "node -e \"throw new Error('Выполните pnpm run package:check из корня репозитория; публикуйте только проверенный архив.')\""
   },
   "dependencies": {
+    "@relay/contracts": "workspace:*",
     "@relay/core": "workspace:*",
     "@relay/project-runtime": "workspace:*",
     "commander": "^14.0.0",
@@ -58,7 +59,6 @@
   },
   "devDependencies": {
     "@relay/server-runtime": "workspace:*",
-    "@relay/contracts": "workspace:*",
     "@relay/typescript-config": "workspace:*",
     "@types/mdast": "^4.0.4",
     "@types/node": "^22.18.0",

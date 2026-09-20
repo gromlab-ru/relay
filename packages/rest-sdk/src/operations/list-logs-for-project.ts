@@ -14,7 +14,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Прочитать страницу отчётов от новых к старым
  *
  * @tags logs
  * @name ListLogsForProject

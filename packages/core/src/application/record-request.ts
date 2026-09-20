@@ -1,16 +1,12 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { z } from "zod";
+import { requestIdSchema } from "@relay/contracts/primitives";
 import { parse } from "../domain/validation.js";
 import { newId, derivedId } from "../shared/ids.js";
 import type { EntityPrefix } from "../shared/ids.js";
 import { invariant } from "../shared/errors.js";
 
-export const requestIdSchema = z
-  .string()
-  .min(1)
-  .max(128)
-  .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
+export { requestIdSchema } from "@relay/contracts/primitives";
 
 /** Ключ хранится в ID самой записи: публикация и дедупликация атомарны и переживают рестарт. */
 export function recordRequestId(

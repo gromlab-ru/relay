@@ -1,5 +1,9 @@
 # Проверка доски, SDK и плавности навигации
 
+Исторический журнал. Снимки в `.artifacts` не входят в Git. Перечисленные ниже снимки
+документов, дерева фич и сайдбара от 18 сентября недоступны в текущей рабочей копии;
+пути сохранены как метаданные прежней проверки, а не действующие ссылки на файлы.
+
 ## Библиотека документов — 18 сентября 2026
 
 Собственная headless-сессия `tasks-web-documents-20260918`, API на `4796`, Vite на `5188`.
@@ -32,12 +36,12 @@
 
 Снимки в `.artifacts/web/application-scope-review/`:
 
-- [Каталог, светлая тема](../../.artifacts/web/application-scope-review/documents-light-1440.png).
-- [Каталог, тёмная тема](../../.artifacts/web/application-scope-review/documents-dark-1440.png).
-- [Чтение документа](../../.artifacts/web/application-scope-review/document-reader-light-1440.png).
-- [Редактор и предпросмотр](../../.artifacts/web/application-scope-review/document-editor-light-1440.png).
-- [Множественный выбор областей](../../.artifacts/web/application-scope-review/document-scopes-light-1440.png).
-- [Мобильный выбор областей](../../.artifacts/web/application-scope-review/document-scopes-light-390.png).
+- Каталог, светлая тема: `documents-light-1440.png`.
+- Каталог, тёмная тема: `documents-dark-1440.png`.
+- Чтение документа: `document-reader-light-1440.png`.
+- Редактор и предпросмотр: `document-editor-light-1440.png`.
+- Множественный выбор областей: `document-scopes-light-1440.png`.
+- Мобильный выбор областей: `document-scopes-light-390.png`.
 
 Связи здесь — независимые визуальные моки. Их появление в карточках фич, сценариев
 и приложений не реализовывалось и не входило в эту проверку.
@@ -67,7 +71,7 @@ API на `4797`, временное хранилище `.artifacts/web/feature-s
 
 Широкая браузерная приёмка отложена по просьбе пользователя: продолжается работа над UI.
 Последний снимок этой итерации:
-[дерево фич](../../.artifacts/web/feature-scenarios-review/tree-connected-light-1440.png).
+дерево фич — `.artifacts/web/feature-scenarios-review/tree-connected-light-1440.png`.
 Предыдущие снимки в том же каталоге отражают промежуточные варианты оформления.
 
 ## Продукт в общем сайдбаре — 18 сентября 2026
@@ -97,13 +101,13 @@ API на `4797`, временное хранилище `.artifacts/web/feature-s
 
 Скриншоты в `.artifacts/web/sidebar-review/`:
 
-- [Паспорт и сайдбар, светлая тема](../../.artifacts/web/sidebar-review/passport-light-1440.png).
-- [Паспорт и сайдбар, тёмная тема](../../.artifacts/web/sidebar-review/passport-dark-1440.png).
-- [Мобильная навигация](../../.artifacts/web/sidebar-review/sidebar-light-390.png).
-- [Мобильная навигация, тёмная тема](../../.artifacts/web/sidebar-review/sidebar-dark-390.png).
-- [Каталог фич](../../.artifacts/web/sidebar-review/features-light-1440.png).
-- [AI-чат](../../.artifacts/web/sidebar-review/feature-light-1440.png).
-- [Приложения](../../.artifacts/web/sidebar-review/applications-light-1440.png).
+- Паспорт и сайдбар, светлая тема: `passport-light-1440.png`.
+- Паспорт и сайдбар, тёмная тема: `passport-dark-1440.png`.
+- Мобильная навигация: `sidebar-light-390.png`.
+- Мобильная навигация, тёмная тема: `sidebar-dark-390.png`.
+- Каталог фич: `features-light-1440.png`.
+- AI-чат: `feature-light-1440.png`.
+- Приложения: `applications-light-1440.png`.
 
 ## Графитовая тема — 17 сентября 2026
 

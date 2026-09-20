@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Прямые и обратные связи задач с состояниями и продолжением
  *
  * @tags kanban
  * @name GetBoardTaskLinksForProject

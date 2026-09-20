@@ -53,5 +53,6 @@ test("старый конфиг читается без записи; перво
   await saveProjectSettings(legacy, { name: "Прежний проект", slug: "legacy", ifRevision: 0 });
   const { projectSettings: stored, ...unchanged } = (await openWorkspace(root)).config;
   assert.deepEqual(unchanged, oldConfig);
-  assert.equal(stored?.version, 1);
+  assert.equal(stored?.version, 2);
+  assert.equal(stored?.events?.[0]?.revision, 1);
 });

@@ -53,6 +53,7 @@ const contractValue = (entry: ProductContract) => {
 
 /** Физические пути и связи используют ID. Состав — совместимая проекция отдельных реализаций. */
 export class ProductRepository {
+  private readonly decodedImplementations = new Map<string, ProductImplementation>();
   readonly root: string;
   readonly productId: string;
   constructor(readonly workspace: Workspace) {
@@ -132,6 +133,7 @@ export class ProductRepository {
           `${ref.id}.json`,
         );
         const implementation = decodeImplementation(await readJson(implPath, 16 * 1024 * 1024));
+        this.decodedImplementations.set(implementation.id, implementation);
         invariant(
           implementation.id === ref.id &&
             implementation.productId === this.productId &&
@@ -161,6 +163,7 @@ export class ProductRepository {
   }
 
   async all(): Promise<ProductRecord[]> {
+    this.decodedImplementations.clear();
     const records: ProductRecord[] = [];
     for (const path of await this.sources()) {
       const record = await this.decode(await readJson(path, 16 * 1024 * 1024), path);
@@ -187,6 +190,12 @@ export class ProductRepository {
     return records.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   }
 
+  /** Единый снимок предоставляет метаданные отдельных реализаций без повторного чтения файлов. */
+  async snapshot(assertOwned: () => void) {
+    const records = await this.ensureKeys(assertOwned);
+    return { records, implementations: new Map(this.decodedImplementations) };
+  }
+
   private path(record: ProductRecord): string {
     if (record.fields.kind === "application") return `applications/${record.id}/application.json`;
     if (record.fields.kind === "scope")
@@ -204,12 +213,17 @@ export class ProductRepository {
     );
     for (const record of ordered) {
       const kind = record.fields.kind;
-      if (record.key || (kind !== "feature" && kind !== "scenario" && kind !== "application"))
+      if (
+        record.key ||
+        !["passport", "feature", "scenario", "application", "document"].includes(kind)
+      )
         continue;
       record.key =
-        kind === "application" && record.fields.kind === "application"
-          ? (record.fields.prefix ?? defaultBoardPrefix(record.fields.slug))
-          : nextProductKey(kind as "feature" | "scenario", records);
+        kind === "passport"
+          ? "PRODUCT"
+          : kind === "application" && record.fields.kind === "application"
+            ? (record.fields.prefix ?? defaultBoardPrefix(record.fields.slug))
+            : nextProductKey(kind as "feature" | "scenario" | "document", records);
       await this.save(record, false, assertOwned);
     }
     const keys = new Set(
@@ -245,8 +259,13 @@ export class ProductRepository {
           (entry) => entry.id === (contract.scenarioId ?? contract.featureId),
         );
         invariant(app?.key && target?.key, "INVALID_REFERENCE", "Не найдена цель реализации", 5);
-        const prefix = `${app.key}-${contract.scenarioId === null ? "FI" : "SI"}`;
-        let number = Number(target.key.split("-").at(-1));
+        const applicationPrefix =
+          app.fields.kind === "application"
+            ? (app.fields.prefix ?? defaultBoardPrefix(app.fields.slug))
+            : app.key;
+        const prefix = `${applicationPrefix}-${contract.scenarioId === null ? "FI" : "SI"}`;
+        const suffix = Number(target.key.split("-").at(-1));
+        let number = Number.isSafeInteger(suffix) && suffix > 0 ? suffix : 1;
         while (keys.has(`${prefix}-${number}`)) number++;
         contract.key = `${prefix}-${number}`;
         contract.revision ??= 1;

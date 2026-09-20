@@ -5,6 +5,10 @@ import type { ApiFailure } from "@relay/contracts";
 import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
+  "ENTITIES_CHANGED",
+  "ENTITY_KEY_CONFLICT",
+  "ENTITY_KIND_MISMATCH",
+  "AMBIGUOUS_ENTITY_REFERENCE",
   "GRAPH_CHANGED",
   "GRAPH_MIGRATION_REQUIRED",
   "GRAPH_INDEX_STALE",
@@ -49,6 +53,7 @@ const conflicts = new Set([
   "REVISION_REQUIRED",
 ]);
 const missing = new Set([
+  "ENTITY_NOT_FOUND",
   "PRODUCT_RECORD_NOT_FOUND",
   "NOT_FOUND",
   "TASK_NOT_FOUND",

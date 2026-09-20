@@ -12,7 +12,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Компактная карта продукта без полных текстов
  *
  * @tags product
  * @name GetProductOverview

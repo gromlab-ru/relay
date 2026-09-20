@@ -32,6 +32,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@relay/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@relay/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -57,9 +60,6 @@ importers:
         specifier: ^4.1.0
         version: 4.6.2
     devDependencies:
-      '@relay/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@relay/server-runtime':
         specifier: workspace:*
         version: link:../../packages/server-runtime
@@ -93,6 +93,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(supports-color@10.2.2)(zod@4.6.2)
+      '@relay/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@relay/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -215,6 +218,9 @@ importers:
       '@mantine/notifications':
         specifier: ^9.6.1
         version: 9.6.1(@mantine/core@9.6.1(@mantine/hooks@9.6.1(react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@mantine/hooks@9.6.1(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@relay/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@relay/rest-sdk':
         specifier: workspace:*
         version: link:../../packages/rest-sdk
@@ -299,10 +305,11 @@ importers:
         version: 8.3.0(@types/node@22.20.2)(esbuild@0.28.2)(tsx@4.23.13)
 
   packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.2
     devDependencies:
-      '@relay/core':
-        specifier: workspace:*
-        version: link:../core
       '@relay/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -312,6 +319,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@relay/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -337,6 +347,9 @@ importers:
 
   packages/project-runtime:
     dependencies:
+      '@relay/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@relay/core':
         specifier: workspace:*
         version: link:../core

@@ -15,7 +15,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Атомарно добавить комментарий
  *
  * @tags comments
  * @name AddComment

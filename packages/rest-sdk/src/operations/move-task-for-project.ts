@@ -15,7 +15,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Атомарно изменить статус и позицию карточки
  *
  * @tags tasks
  * @name MoveTaskForProject

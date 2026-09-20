@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Готовое поручение работнику с требованиями и границами
  *
  * @tags lifecycle
  * @name GetTaskBriefingForProject

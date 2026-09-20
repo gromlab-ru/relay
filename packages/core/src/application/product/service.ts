@@ -20,6 +20,7 @@ import {
   nextProductKey,
   normalizeProductMutation,
 } from "../../domain/product-addresses.js";
+import { readEntityCatalog, assertEntityKeyAvailable } from "../entities/catalog.js";
 
 /** Единая граница записи для Web, REST, CLI и MCP. */
 export class ProductService {
@@ -69,16 +70,24 @@ export class ProductService {
         "Продукт изменился после чтения",
         4,
       );
-      const kind = command.fields.kind === "contract" ? "scope" : command.fields.kind;
+      const creatingImplementation = command.fields.kind === "implementation";
+      const kind =
+        command.fields.kind === "contract" || creatingImplementation
+          ? "scope"
+          : command.fields.kind;
       const stableId =
         kind === "passport"
           ? "passport"
-          : command.fields.kind === "scope" || command.fields.kind === "contract"
+          : command.fields.kind === "scope" ||
+              command.fields.kind === "contract" ||
+              command.fields.kind === "implementation"
             ? records.find(
                 (record) =>
                   record.fields.kind === "scope" &&
                   record.fields.applicationId ===
-                    (command.fields.kind === "scope" || command.fields.kind === "contract"
+                    (command.fields.kind === "scope" ||
+                    command.fields.kind === "contract" ||
+                    command.fields.kind === "implementation"
                       ? command.fields.applicationId
                       : ""),
               )?.id
@@ -96,7 +105,7 @@ export class ProductService {
       invariant(!stableId || id === stableId, "INVALID_ARGUMENT", "Неверный ID записи");
       const previous = records.find((record) => record.id === id);
       invariant(
-        command.action !== "create" || !previous,
+        creatingImplementation || command.action !== "create" || !previous,
         "ALREADY_EXISTS",
         "Запись уже существует",
         4,
@@ -118,7 +127,7 @@ export class ProductService {
       if (previous) {
         invariant(previous.fields.kind === kind, "IMMUTABLE_FIELD", "Вид записи неизменяем", 4);
         invariant(
-          command.ifRevision !== undefined,
+          creatingImplementation || command.ifRevision !== undefined,
           "REVISION_REQUIRED",
           "Передайте прочитанную ревизию",
           4,
@@ -140,6 +149,40 @@ export class ProductService {
       );
       let fields: ProductRecord["fields"];
       let inputFields = command.fields;
+      if (inputFields.kind === "implementation") {
+        const target = inputFields;
+        invariant(
+          command.action === "create",
+          "INVALID_ARGUMENT",
+          "Создание реализации требует action=create",
+        );
+        const prior = previous?.fields.kind === "scope" ? previous.fields.contracts : [];
+        invariant(
+          !prior.some(
+            (entry) =>
+              entry.active &&
+              entry.featureId === target.featureId &&
+              entry.scenarioId === target.scenarioId,
+          ),
+          "ALREADY_EXISTS",
+          "Приложение уже участвует в выбранной цели",
+          4,
+        );
+        inputFields = {
+          kind: "scope",
+          applicationId: target.applicationId,
+          contracts: [
+            ...prior.filter((entry) => entry.active).map((entry) => ({ ...entry })),
+            {
+              featureId: target.featureId,
+              scenarioId: target.scenarioId,
+              title: target.title,
+              description: target.description,
+              status: target.status,
+            },
+          ],
+        };
+      }
       if (inputFields.kind === "contract") {
         const patch = inputFields;
         invariant(
@@ -175,7 +218,7 @@ export class ProductService {
       }
       if (inputFields.kind === "scope") {
         invariant(
-          command.ifVersion !== undefined,
+          creatingImplementation || command.ifVersion !== undefined,
           "REVISION_REQUIRED",
           "Состав требует версию прочитанного каталога",
           4,
@@ -187,10 +230,11 @@ export class ProductService {
               (contract) =>
                 contract.featureId === entry.featureId && contract.scenarioId === entry.scenarioId,
             );
-            const preserveBasis =
-              command.fields.kind === "contract" &&
-              prior !== undefined &&
-              prior.id !== command.fields.contractId;
+            const preserveBasis = creatingImplementation
+              ? prior?.active === true
+              : command.fields.kind === "contract" &&
+                prior !== undefined &&
+                prior.id !== command.fields.contractId;
             const contractId = prior?.id ?? shortId(occupied);
             occupied.add(contractId);
             return {
@@ -199,7 +243,7 @@ export class ProductService {
               ...(prior?.key ? { key: prior.key } : {}),
               revision: prior?.revision ?? 1,
               active: true,
-              basis: preserveBasis ? prior.basis : contractBasis(entry, records),
+              basis: preserveBasis && prior ? prior.basis : contractBasis(entry, records),
             };
           },
         );
@@ -291,27 +335,79 @@ export class ProductService {
         }
       }
       const now = new Date().toISOString();
+      const catalog = await readEntityCatalog(this.workspace, assertOwned);
       const publicKey =
         command.key ??
         previous?.key ??
-        (fields.kind === "feature" || fields.kind === "scenario"
-          ? nextProductKey(fields.kind, records)
-          : fields.kind === "application"
-            ? (fields.prefix ?? defaultBoardPrefix(fields.slug))
-            : undefined);
+        (fields.kind === "passport"
+          ? "PRODUCT"
+          : fields.kind === "feature" || fields.kind === "scenario" || fields.kind === "document"
+            ? nextProductKey(
+                fields.kind,
+                records,
+                catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
+              )
+            : fields.kind === "application"
+              ? (fields.prefix ?? defaultBoardPrefix(fields.slug))
+              : undefined);
       if (publicKey && (command.key !== undefined || previous === undefined))
         assertProductKey(publicKey, kind, id, records);
-      const result = {
+      if (publicKey)
+        assertEntityKeyAvailable(catalog, publicKey, {
+          kind: kind === "passport" ? "product" : kind,
+          id,
+        });
+      let result = {
         id,
         revision: (previous?.revision ?? 0) + 1,
         ...(publicKey ? { key: publicKey } : {}),
       };
+      if (
+        creatingImplementation &&
+        fields.kind === "scope" &&
+        command.fields.kind === "implementation"
+      ) {
+        const target = command.fields;
+        const contract = fields.contracts.find(
+          (entry) => entry.featureId === target.featureId && entry.scenarioId === target.scenarioId,
+        )!;
+        const prior =
+          previous?.fields.kind === "scope"
+            ? previous.fields.contracts.find((entry) => entry.id === contract.id)
+            : undefined;
+        if (!contract.key) {
+          const applicationId = fields.applicationId;
+          const application = records.find((entry) => entry.id === applicationId);
+          invariant(
+            application?.fields.kind === "application",
+            "INVALID_REFERENCE",
+            "Приложение не найдено",
+            4,
+          );
+          const prefix = `${application.fields.prefix ?? defaultBoardPrefix(application.fields.slug)}-${contract.scenarioId === null ? "FI" : "SI"}`;
+          const targetRecord = records.find(
+            (entry) => entry.id === (contract.scenarioId ?? contract.featureId),
+          );
+          const suffix = Number(targetRecord?.key?.split("-").at(-1));
+          let number = Number.isSafeInteger(suffix) && suffix > 0 ? suffix : 1;
+          const used = new Set(catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]));
+          while (used.has(`${prefix}-${number}`)) number++;
+          contract.key = `${prefix}-${number}`;
+        }
+        assertEntityKeyAvailable(catalog, contract.key, {
+          kind: "implementation",
+          id: contract.id,
+        });
+        result = { id: contract.id, key: contract.key, revision: (prior?.revision ?? 0) + 1 };
+      }
       const record = parse(
         productRecordSchema,
         {
           version: 1,
           productId: repository.productId,
-          ...result,
+          id,
+          ...(publicKey ? { key: publicKey } : {}),
+          revision: (previous?.revision ?? 0) + 1,
           ...(previous?.reservedKeys || (previous?.key && previous.key !== publicKey)
             ? {
                 reservedKeys: [
@@ -327,7 +423,10 @@ export class ProductService {
           createdBy: previous?.createdBy ?? actor,
           updatedAt: now,
           updatedBy: actor,
-          events: [...(previous?.events ?? []), { revision: result.revision, actor, at: now }],
+          events: [
+            ...(previous?.events ?? []),
+            { revision: (previous?.revision ?? 0) + 1, actor, at: now },
+          ],
           requests: { ...previous?.requests, [key]: { hash, result } },
         },
         "запись продукта",

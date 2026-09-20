@@ -1,4 +1,5 @@
 /** Публичные переносимые DTO. Здесь нет импортов Core, NestJS, Node.js или React. */
+import type { StoredProjectSettings } from "./entities/project-settings.js";
 export type {
   ProductStatus,
   ProductReference,
@@ -62,18 +63,7 @@ export interface ProjectConfig {
   mode: "local";
   projectId?: string | undefined;
   /** Версионированные настройки имени и адреса; отсутствуют в прежних конфигурациях. */
-  projectSettings?:
-    | {
-        /** Версия вложенного документа. */
-        version: 1;
-        /** Однострочное отображаемое имя. */
-        name: string;
-        /** Человекочитаемый сегмент адреса. */
-        slug: string;
-        /** Ревизия настроек. */
-        revision: number;
-      }
-    | undefined;
+  projectSettings?: StoredProjectSettings | undefined;
   storageDir: string;
   defaultStatus: string;
   readyStatuses: string[];

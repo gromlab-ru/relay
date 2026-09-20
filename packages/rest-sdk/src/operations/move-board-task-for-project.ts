@@ -15,7 +15,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Изменить колонку, порядок или доску; ID сохраняется, ключ меняется при переносе
  *
  * @tags kanban
  * @name MoveBoardTaskForProject

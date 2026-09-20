@@ -14,7 +14,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Прочитать страницу комментариев от новых к старым
  *
  * @tags comments
  * @name ListComments

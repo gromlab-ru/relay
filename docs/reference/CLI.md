@@ -757,6 +757,107 @@ npx @gromlab/relay-cli log search 1 --query "Контракт" --kind progress
 
 Далее: [вывод](OUTPUT.md), [ошибки](ERRORS.md), [сценарии оркестрации](../guides/ORCHESTRATION.md).
 
+## Движок основных сущностей
+
+[Общий контракт](ENTITIES.md) описывает девять видов, единый резолвер и правила ключей.
+Везде допустим ключ или ID, включая доску, цель реализации и зависимости. По умолчанию
+человек и агент используют читаемые ключи. Полные описания передаются Markdown-строками.
+
+| Команда                             | Назначение                           |
+| ----------------------------------- | ------------------------------------ |
+| `entities types`                    | Виды, назначение, фильтры и действия |
+| `entities type <kind>`              | Поля и схемы вида                    |
+| `entities list`                     | Поиск и фильтрация кратких карточек  |
+| `entities get <ref>`                | Полное содержание сущности           |
+| `entities resolve <ref>`            | Постоянный адрес и текущий ключ      |
+| `entities keys <ref>`               | Текущий и прежние ключи              |
+| `entities key-spaces <kind>`        | Префиксы и владельцы нумерации       |
+| `entities history <ref>`            | Сохранённые события ревизий          |
+| `entities create <kind>`            | Создание с обязательными отношениями |
+| `entities update <ref>`             | Выбранные поля с --if-revision       |
+| `entities rename <ref> <key>`       | Смена ключа с сохранением ID/алиасов |
+| `entities move-task <ref>`          | Колонка и доска задачи               |
+| `entities link-task <ref> <target>` | Предметная связь задач               |
+
+Общие параметры списков: --limit 1–100, --offset, --snapshot-version. List также принимает
+--kind, --q, --refs и объявленные фильтры --board, --application, --feature, --scenario,
+--target, --parent, --status, --active, --sort. Текстовый ответ содержит команду продолжения.
+Создание и изменение имеют явные параметры содержания и ссылок; --json добавляет поля
+типизированного объекта. --request-id сохраняется при повторе после потери ответа.
+
+```bash
+relay-cli entities list --kind task --board BOARD-WEB
+relay-cli entities get WEB-24 --format json
+relay-cli --actor agent entities create task --board BOARD-WEB --title 'Сделать форму' --targets WEB-SI-8
+relay-cli --actor agent entities rename WEB-24 TASK-WEB-23 --if-revision 2
+relay-cli graph context TASK-WEB-23 --depth 4
+```
+
+### entities types
+
+Каталог видов с назначением и действиями, включая виды без записей. Параметры страницы общие.
+
+### entities type
+
+`entities type <kind>` описывает поля вида. В JSON доступны схемы чтения, создания и изменения.
+
+### entities list
+
+Краткие карточки по поиску и фильтрам. --refs принимает несколько ключей/ID;
+--snapshot-version сохраняет согласованность продолжения. Полный Markdown читается через get.
+
+### entities get
+
+`entities get <ref>` читает полное содержание. --kind уточняет вид; ключи прямых ссылок
+показываются вместе с данными. Поиск ключа выполняется в выбранном проекте.
+
+### entities resolve
+
+`entities resolve <ref>` возвращает краткую карточку и постоянный адрес. --kind уточняет вид.
+Это вспомогательное чтение: остальные операции сами разрешают переданные ключи и ID.
+
+### entities keys
+
+`entities keys <ref>` показывает текущий и прежние ключи с пагинацией.
+
+### entities key-spaces
+
+`entities key-spaces <kind>` показывает актуальные области нумерации: для задач — доски,
+для реализаций — приложения. Новый префикс появляется в данных без изменения контракта вида.
+
+### entities history
+
+`entities history <ref>` читает сохранённые события ревизий с продолжением. Старые операции
+без журнала не восстанавливаются вымышленными событиями.
+
+### entities create
+
+`entities create <kind>` принимает явные поля: --name, --title, --summary, --description,
+--body, --feature, --application, --target, --board, --slug, --prefix, --type, --document-kind,
+--status, --column, --parent, --targets, --dependencies, --related. Допустимые поля зависят
+от вида; их объясняет entities type. --json дополняет объект полей. --request-id защищает повтор.
+
+### entities update
+
+`entities update <ref>` принимает те же применимые параметры содержания и обязательную
+--if-revision. Отсутствующее поле сохраняется. Смена доски/колонки выполняется через move-task.
+
+### entities rename
+
+`entities rename <ref> <key> --if-revision N` меняет читаемый ключ; прежний остаётся алиасом.
+ID, отношения и данные сохраняются. --request-id возвращает первоначальную квитанцию повтора.
+
+### entities move-task
+
+`entities move-task <ref> --column COLUMN --if-revision N` меняет положение задачи.
+--board задаёт доску, --before — следующую задачу; оба параметра принимают ключ/ID.
+При переносе между досками новый ключ назначает Core; --request-id обеспечивает повтор.
+
+### entities link-task
+
+`entities link-task <ref> <target> --relation TYPE --if-revision N` задаёт предметную связь
+depends-on, related или parent. --remove снимает её. --request-id защищает повтор.
+
 ## Продуктовые команды
 
 Новый домен описан в [справочнике продукта](PRODUCT.md). Markdown передаётся напрямую:

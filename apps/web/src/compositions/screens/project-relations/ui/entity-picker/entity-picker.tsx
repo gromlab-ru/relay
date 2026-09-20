@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button, Select, Stack, Text } from "@mantine/core";
 import type { ComboboxItem } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import { relationAddress, useRelations } from "domains/relations";
+import { relationAddress } from "domains/relations";
+import { useEntities, useEntitySummary, entityKindLabel } from "domains/entities";
 import type { EntityPickerProps } from "./types/entity-picker-props.type";
 
 /**
@@ -16,38 +17,45 @@ export const EntityPicker = (props: EntityPickerProps) => {
   const [localValue, setLocalValue] = useState<string | null>(defaultValue ?? null);
   const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(null);
   const [search, setSearch] = useState("");
-  const [debouncedSearch] = useDebouncedValue(search, 200);
   const [page, setPage] = useState({ offset: 0, version: undefined as string | undefined });
-  const response = useRelations(projectId, { q: debouncedSearch, limit: 40, ...page });
   const selected = value === undefined ? localValue : value;
-  const selection = useRelations(
-    projectId,
-    selected ? { root: selected, depth: 0, limit: 1 } : null,
-  );
-  const selectedNode = selection.data?.nodes[0];
+  const selection = useEntitySummary(projectId, selected === "" ? null : selected);
+  const selectedNode = selection.data;
+  const selectedAddress = selectedNode ? relationAddress(selectedNode.ref) : selected;
   const selectedLabel = selectedNode
-    ? `${selectedNode.key} · ${selectedNode.title} (${selectedNode.ref.kind})`
-    : selected;
-  const optionsData = (response.data?.nodes ?? []).map((node) => ({
+    ? `${selectedNode.key} · ${selectedNode.title} (${entityKindLabel(selectedNode.ref.kind)})`
+    : selectedOption?.value === selected
+      ? selectedOption.label
+      : selected;
+  const [debouncedSearch] = useDebouncedValue(search === selectedLabel ? "" : search, 200);
+  const response = useEntities(projectId, { q: debouncedSearch, limit: 40, ...page });
+  const optionsData = (response.data?.items ?? []).map((node) => ({
     value: relationAddress(node.ref),
-    label: `${node.key} · ${node.title} (${node.ref.kind})`,
+    label: `${node.key} · ${node.title} (${entityKindLabel(node.ref.kind)})`,
   }));
-  if (selected && !optionsData.some((option) => option.value === selected))
+  if (selectedAddress && !optionsData.some((option) => option.value === selectedAddress))
     optionsData.unshift({
-      value: selected,
-      label:
-        selectedOption?.value === selected ? selectedOption.label : (selectedLabel ?? selected),
+      value: selectedAddress,
+      label: selectedLabel ?? selectedAddress,
     });
   const nextOffset = response.data?.nextOffset;
   const hasMore =
     nextOffset !== undefined &&
     nextOffset !== null &&
-    (response.data?.totalNodes ?? 0) > page.offset + 40;
-  const hasError = response.error !== undefined;
+    (response.data?.total ?? 0) > page.offset + 40;
+  const errorMessage = response.error?.message ?? selection.error?.message;
+  const hasError = errorMessage !== undefined;
+  const emptyMessage = response.isLoading ? "Загружаем сущности…" : "Сущностей не найдено";
   /** Сбрасывает продолжение при изменении серверного поиска. */
   const handleSearch = (text: string): void => {
     setSearch(text);
     setPage({ offset: 0, version: undefined });
+  };
+  /** Начинает новую страницу после ошибки сети или изменения снимка, сохраняя выбор. */
+  const handleRefresh = (): void => {
+    setPage({ offset: 0, version: undefined });
+    void response.mutate().catch(() => undefined);
+    void selection.mutate().catch(() => undefined);
   };
   return (
     <Stack gap={4}>
@@ -56,10 +64,10 @@ export const EntityPicker = (props: EntityPickerProps) => {
         searchable
         clearable
         data={optionsData}
-        value={selected}
+        value={selectedAddress}
         searchValue={search}
         onSearchChange={handleSearch}
-        nothingFoundMessage="Сущностей не найдено"
+        nothingFoundMessage={emptyMessage}
         filter={({ options }) => options}
         onChange={(address, option) => {
           setLocalValue(address);
@@ -68,9 +76,14 @@ export const EntityPicker = (props: EntityPickerProps) => {
         }}
       />
       {hasError && (
-        <Text size="xs" c="red" role="alert">
-          {response.error?.message}
-        </Text>
+        <Stack gap={4}>
+          <Text size="xs" c="red" role="alert">
+            {errorMessage}
+          </Text>
+          <Button size="compact-xs" variant="subtle" onClick={handleRefresh}>
+            Обновить варианты
+          </Button>
+        </Stack>
       )}
       {hasMore && (
         <Button

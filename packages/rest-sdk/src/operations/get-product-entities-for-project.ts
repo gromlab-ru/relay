@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Найти продуктовые цели без загрузки Markdown; до 100 записей и продолжение
  *
  * @tags product
  * @name GetProductEntitiesForProject

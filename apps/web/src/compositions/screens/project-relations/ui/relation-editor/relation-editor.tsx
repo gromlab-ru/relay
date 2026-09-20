@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Alert, Autocomplete, Button, Group, Stack, Text, Textarea } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { getRelations, relationError, relationRef, saveRelations } from "domains/relations";
+import { getRelations, relationError, saveRelations } from "domains/relations";
 import { EntityPicker } from "../entity-picker/entity-picker";
 import type { RelationEditorProps, RelationFormValues } from "./types/relation-editor-props.type";
 import styles from "./styles/relation-editor.module.css";
@@ -48,8 +48,8 @@ export const RelationEditor = (props: RelationEditorProps) => {
         [
           {
             action: "add",
-            from: relationRef(values.from),
-            to: relationRef(values.to),
+            from: values.from,
+            to: values.to,
             type: values.type,
             description: values.description,
           },

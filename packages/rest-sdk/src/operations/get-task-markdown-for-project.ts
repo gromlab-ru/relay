@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Текст задачи без загрузки истории и графа
  *
  * @tags project
  * @name GetTaskMarkdownForProject

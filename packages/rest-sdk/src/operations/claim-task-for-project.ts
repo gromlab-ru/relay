@@ -15,7 +15,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Назначить готовую задачу на автора запроса
  *
  * @tags tasks
  * @name ClaimTaskForProject

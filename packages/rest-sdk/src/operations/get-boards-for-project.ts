@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Каталог досок проекта с продолжением и проверкой версии
  *
  * @tags boards
  * @name GetBoardsForProject

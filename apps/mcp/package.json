@@ -37,6 +37,7 @@
     "prepack": "node -e \"throw new Error('Выполните pnpm run package:check:mcp из корня репозитория; публикуйте проверенный архив.')\""
   },
   "dependencies": {
+    "@relay/contracts": "workspace:*",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@relay/core": "workspace:*",
     "@relay/project-runtime": "workspace:*",

@@ -14,6 +14,7 @@ import { defaultConfig } from "@relay/core/domain/config";
 import { startServer } from "@relay/server-runtime";
 import { initializeRegistry, registerProject } from "@relay/project-runtime/registry";
 import { startMcp } from "../dist/server.js";
+import { entitySavedSchema, entityDetailSchema } from "@relay/contracts/entities";
 
 async function setup(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), "tasks-mcp-"));
@@ -74,9 +75,61 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   ) {
     assert.match(content, /Ревизия:/);
     assert.ok(content.includes(String(body.data?.id)));
+  } else if (
+    body.ok &&
+    (/^entity_.*(?:create|update|move|link|rename_key)$/.test(name) || name === "entity_get")
+  ) {
+    assert.match(content, /Ревизия/);
   } else assert.deepEqual(JSON.parse(content), result.structuredContent);
   return { ...body, isError: result.isError };
 }
+
+test("MCP движка: discovery из контрактов, публичные ключи, история адресов и контекст", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const tools = (await client.listTools()).tools;
+  const create = tools.find((tool) => tool.name === "entity_task_create");
+  assert.ok(create);
+  const properties = create.inputSchema.properties as Record<string, { description?: string }>;
+  for (const name of ["board", "title", "targets", "dependencies", "actor", "requestId"])
+    assert.match(properties[name]?.description ?? "", /[А-Яа-яЁё]/);
+  assert.equal("data" in properties, false);
+  assert.equal((await call(client, "entity_types")).data?.total, 9);
+  const args = {
+    board: "BOARD-PRODUCT",
+    title: "Проверить движок",
+    actor: "agent",
+    requestId: "entity-create",
+  };
+  const created = entitySavedSchema.parse((await call(client, "entity_task_create", args)).data);
+  assert.deepEqual((await call(client, "entity_task_create", args)).data, created);
+  const renamed = entitySavedSchema.parse(
+    (
+      await call(client, "entity_rename_key", {
+        ref: created.key,
+        key: "TASK-CHECK-23",
+        ifRevision: 1,
+        actor: "agent",
+        requestId: "entity-rename",
+      })
+    ).data,
+  );
+  const byKey = entityDetailSchema.parse(
+    (await call(client, "entity_get", { ref: created.key })).data,
+  );
+  const byId = entityDetailSchema.parse(
+    (await call(client, "entity_get", { ref: created.ref.id })).data,
+  );
+  assert.deepEqual(byKey, byId);
+  assert.equal(byKey.key, renamed.key);
+  assert.equal(
+    (await call(client, "entities_list", { kind: "task", board: "BOARD-PRODUCT" })).data?.total,
+    1,
+  );
+  assert.equal((await call(client, "entity_keys", { ref: renamed.key })).data?.total, 2);
+  assert.equal((await call(client, "entity_context", { ref: created.key, depth: 1 })).ok, true);
+});
 
 test("MCP канбана: предметные аргументы, блокеры, повтор и перенос со стабильным ID", async (t) => {
   const app = await setup(t);

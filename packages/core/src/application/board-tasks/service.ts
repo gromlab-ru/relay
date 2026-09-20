@@ -24,10 +24,11 @@ import { actorSchema, parse } from "../../domain/validation.js";
 import { BoardTaskRepository } from "../../storage/board-tasks.js";
 import { BoardRepository } from "../../storage/boards.js";
 import type { Workspace } from "../../storage/workspace.js";
-import { invariant } from "../../shared/errors.js";
+import { invariant, AppError } from "../../shared/errors.js";
 import { shortId } from "../../shared/ids.js";
 import { ProductRepository } from "../../storage/product.js";
-import { productAddresses, resolveProductAddress } from "../../domain/product-addresses.js";
+import { entityKeySchema } from "@relay/contracts/primitives";
+import { readEntityCatalog, resolveEntity, assertEntityKeyAvailable } from "../entities/catalog.js";
 
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const versionOf = (tasks: BoardTaskRecord[]) => hash(tasks.map((task) => [task.id, task.revision]));
@@ -96,22 +97,30 @@ function validate(tasks: BoardTaskRecord[]) {
 
 function resolveTask(tasks: BoardTaskRecord[], reference: string): BoardTaskRecord {
   parse(boardTaskReferenceSchema, reference, "ссылка на задачу");
-  const task = tasks.find((entry) => entry.id === reference || entry.keys.includes(reference));
+  const value = reference.startsWith("task:") ? reference.slice(5) : reference;
+  const task =
+    tasks.find((entry) => entry.id === value) ?? tasks.find((entry) => entry.keys.includes(value));
   invariant(task, "NOT_FOUND", "Задача не найдена в выбранном проекте", 3);
   return task;
 }
 function resolveBoard(boards: Board[], reference: string): Board {
-  const board = boards.find(
-    (entry) =>
-      entry.id === reference ||
-      entry.slug === reference ||
-      (entry.prefix ?? defaultBoardPrefix(entry.slug)) === reference,
-  );
+  const value = reference.startsWith("board:") ? reference.slice(6) : reference;
+  const board =
+    boards.find((entry) => entry.id === value) ??
+    boards.find(
+      (entry) =>
+        entry.id === value ||
+        entry.key === value ||
+        entry.aliases?.includes(value) ||
+        entry.slug === value ||
+        `BOARD-${entry.prefix ?? defaultBoardPrefix(entry.slug)}` === value ||
+        (entry.prefix ?? defaultBoardPrefix(entry.slug)) === value,
+    );
   invariant(board, "NOT_FOUND", "Доска не найдена в выбранном проекте", 3);
   return board;
 }
 function view(task: BoardTaskRecord, tasks: BoardTaskRecord[], boards: Board[]): BoardTaskView {
-  const { version: _version, keys: _keys, requests: _requests, ...data } = task;
+  const { version: _version, keys: _keys, requests: _requests, events: _events, ...data } = task;
   const blockers = task.dependencies.filter(
     (id) => tasks.find((entry) => entry.id === id)?.column !== "done",
   );
@@ -164,13 +173,16 @@ export class BoardTasksService {
     const query = parse(boardTasksQuerySchema, input, "список задач доски");
     return this.read(async (tasks, boards) => {
       if (query.productTarget) {
-        const addresses = productAddresses(await new ProductRepository(this.workspace).all());
-        if (
-          addresses.some(
-            (entry) => entry.id === query.productTarget || entry.key === query.productTarget,
-          )
-        )
-          query.productTarget = resolveProductAddress(addresses, query.productTarget).id;
+        try {
+          query.productTarget = resolveEntity(
+            await this.workspace.locked((owned) => readEntityCatalog(this.workspace, owned)),
+            query.productTarget,
+            ["feature", "scenario", "implementation"],
+          ).ref.id;
+        } catch (error) {
+          // Совместимый список канбана возвращает пустую выборку для отсутствующей цели.
+          if (!(error instanceof AppError) || error.code !== "ENTITY_NOT_FOUND") throw error;
+        }
       }
       const board = query.board === undefined ? undefined : resolveBoard(boards, query.board);
       const selected = tasks
@@ -276,6 +288,22 @@ export class BoardTasksService {
       );
       const before = new Map(tasks.map((task) => [task.id, JSON.stringify(task)]));
       const next = await change(tasks, boards, previous, actor);
+      invariant(
+        action !== "create" || next.column !== "done" || !view(next, tasks, boards).blocked,
+        "TASK_BLOCKED",
+        "Нельзя создать готовую задачу с невыполненными зависимостями",
+        4,
+      );
+      if (!previous || previous.key !== next.key)
+        assertEntityKeyAvailable(await readEntityCatalog(this.workspace, assertOwned), next.key, {
+          kind: "task",
+          id: next.id,
+        });
+      next.version = 3;
+      next.events = [
+        ...(previous?.events ?? []),
+        { revision: next.revision, actor, at: next.updatedAt, action },
+      ];
       const result: BoardTaskSaved = {
         id: next.id,
         key: next.key,
@@ -287,6 +315,15 @@ export class BoardTasksService {
       if (action === "create" && "includeTask" in input && input.includeTask === true)
         result.task = view(next, [...tasks, next], boards);
       next.requests[requestKey] = { hash: requestHash, result };
+      for (const task of tasks) {
+        if (task.id !== next.id && before.get(task.id) !== JSON.stringify(task)) {
+          task.version = 3;
+          task.events = [
+            ...(task.events ?? []),
+            { revision: task.revision, actor, at: task.updatedAt, action },
+          ];
+        }
+      }
       const candidates = [...tasks.filter((task) => task.id !== next.id), next].map((task) =>
         parse(boardTaskRecordSchema, task, "задача"),
       );
@@ -303,11 +340,16 @@ export class BoardTasksService {
     });
   }
 
-  private nextKey(tasks: BoardTaskRecord[], board: Board) {
+  private async nextKey(tasks: BoardTaskRecord[], board: Board) {
     const prefix = board.prefix ?? defaultBoardPrefix(board.slug);
-    const numbers = tasks
-      .flatMap((task) => task.keys)
-      .filter((key) => key.startsWith(`${prefix}-`))
+    const catalog = await this.workspace.locked((owned) =>
+      readEntityCatalog(this.workspace, owned),
+    );
+    const numbers = [
+      ...tasks.flatMap((task) => task.keys),
+      ...catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
+    ]
+      .filter((key) => new RegExp(`^${prefix}-[1-9]\\d*$`).test(key))
       .map((key) => Number(key.slice(prefix.length + 1)));
     const number = numbers.reduce((max, value) => Math.max(max, value), 0) + 1;
     invariant(Number.isSafeInteger(number), "INVALID_DATA", "Номера задач исчерпаны", 5);
@@ -320,10 +362,21 @@ export class BoardTasksService {
   ) {
     if (links.length === 0) return [];
     const records = await new ProductRepository(this.workspace).all();
-    const normalized = links.map((link) => ({
-      ...link,
-      id: resolveProductAddress(productAddresses(records), link.id, link.kind).id,
-    }));
+    const catalog = await this.workspace.locked((owned) =>
+      readEntityCatalog(this.workspace, owned),
+    );
+    const normalized = links.map((link) => {
+      try {
+        return { ...link, id: resolveEntity(catalog, link.id, link.kind).ref.id };
+      } catch (error) {
+        if (
+          error instanceof AppError &&
+          ["ENTITY_NOT_FOUND", "ENTITY_KIND_MISMATCH"].includes(error.code)
+        )
+          throw new AppError("INVALID_REFERENCE", error.message, 4);
+        throw error;
+      }
+    });
     const seen = new Set<string>();
     for (const link of normalized) {
       const key = `${link.kind}:${link.id}`;
@@ -359,14 +412,14 @@ export class BoardTasksService {
       async (tasks, boards, _previous, author) => {
         const productLinks = await this.validateProductLinks(command.productLinks ?? []);
         const board = resolveBoard(boards, command.board);
-        const key = this.nextKey(tasks, board);
+        const key = await this.nextKey(tasks, board);
         const now = new Date().toISOString();
         const rank =
           tasks
             .filter((task) => task.boardId === board.id && task.column === command.column)
             .reduce((max, task) => Math.max(max, task.rank), 0) + 1024;
         return {
-          version: 2,
+          version: 3,
           id: shortId(tasks.map((task) => task.id)),
           key,
           keys: [key],
@@ -377,8 +430,8 @@ export class BoardTasksService {
           column: command.column,
           rank,
           revision: 1,
-          dependencies: [],
-          related: [],
+          dependencies: (command.dependencies ?? []).map((ref) => resolveTask(tasks, ref).id),
+          related: (command.related ?? []).map((ref) => resolveTask(tasks, ref).id),
           parentId: command.parentId === undefined ? null : resolveTask(tasks, command.parentId).id,
           createdAt: now,
           updatedAt: now,
@@ -422,52 +475,87 @@ export class BoardTasksService {
   }
   async move(reference: string, input: MoveBoardTask, actor: string) {
     const command = parse(moveBoardTaskSchema, input, "перемещение задачи");
-    return this.mutate("move", reference, command, actor, (tasks, boards, previous, author) => {
-      const task = previous!;
-      const board = resolveBoard(boards, command.board ?? task.boardId);
-      invariant(
-        command.column !== "done" || !view(task, tasks, boards).blocked,
-        "TASK_BLOCKED",
-        "Нельзя завершить задачу с невыполненными зависимостями",
-        4,
-      );
-      const column = tasks
-        .filter(
-          (entry) =>
-            entry.id !== task.id && entry.boardId === board.id && entry.column === command.column,
-        )
-        .sort(ordered);
-      const index =
-        command.beforeId === null
-          ? column.length
-          : column.findIndex((entry) => entry.id === command.beforeId);
-      invariant(index >= 0, "INVALID_REFERENCE", "Место вставки отсутствует в целевой колонке", 4);
-      const now = new Date().toISOString();
-      // Перенумеровка целевой колонки публикуется общей транзакцией и не теряет параллельные переносы.
-      column.splice(index, 0, task);
-      for (let position = 0; position < column.length; position++) {
-        const entry = column[position]!;
-        const rank = (position + 1) * 1024;
-        if (entry.id !== task.id && entry.rank !== rank) {
-          entry.rank = rank;
-          entry.revision++;
-          entry.updatedAt = now;
-          entry.updatedBy = author;
+    return this.mutate(
+      "move",
+      reference,
+      command,
+      actor,
+      async (tasks, boards, previous, author) => {
+        const task = previous!;
+        if (command.beforeId !== null) command.beforeId = resolveTask(tasks, command.beforeId).id;
+        const board = resolveBoard(boards, command.board ?? task.boardId);
+        invariant(
+          command.column !== "done" || !view(task, tasks, boards).blocked,
+          "TASK_BLOCKED",
+          "Нельзя завершить задачу с невыполненными зависимостями",
+          4,
+        );
+        const column = tasks
+          .filter(
+            (entry) =>
+              entry.id !== task.id && entry.boardId === board.id && entry.column === command.column,
+          )
+          .sort(ordered);
+        const index =
+          command.beforeId === null
+            ? column.length
+            : column.findIndex((entry) => entry.id === command.beforeId);
+        invariant(
+          index >= 0,
+          "INVALID_REFERENCE",
+          "Место вставки отсутствует в целевой колонке",
+          4,
+        );
+        const now = new Date().toISOString();
+        // Перенумеровка целевой колонки публикуется общей транзакцией и не теряет параллельные переносы.
+        column.splice(index, 0, task);
+        for (let position = 0; position < column.length; position++) {
+          const entry = column[position]!;
+          const rank = (position + 1) * 1024;
+          if (entry.id !== task.id && entry.rank !== rank) {
+            entry.rank = rank;
+            entry.revision++;
+            entry.updatedAt = now;
+            entry.updatedBy = author;
+          }
         }
-      }
-      const key = board.id === task.boardId ? task.key : this.nextKey(tasks, board);
-      return {
-        ...task,
+        const key = board.id === task.boardId ? task.key : await this.nextKey(tasks, board);
+        return {
+          ...task,
+          key,
+          keys: key === task.key ? [...task.keys] : [...task.keys, key],
+          boardId: board.id,
+          column: command.column,
+          rank: (index + 1) * 1024,
+          revision: task.revision + 1,
+          updatedAt: now,
+          updatedBy: author,
+        };
+      },
+    );
+  }
+  /** Меняет только читаемый адрес; ID, доска и все прежние ключи сохраняются. */
+  async rename(
+    reference: string,
+    input: { key: string; ifRevision: number; requestId: string; actor?: string },
+    actor: string,
+  ) {
+    const key = parse(entityKeySchema, input.key, "новый ключ задачи");
+    const command = { ...input, key };
+    return this.mutate(
+      "rename",
+      reference,
+      command,
+      actor,
+      (_tasks, _boards, previous, author) => ({
+        ...previous!,
         key,
-        keys: key === task.key ? [...task.keys] : [...task.keys, key],
-        boardId: board.id,
-        column: command.column,
-        rank: (index + 1) * 1024,
-        revision: task.revision + 1,
-        updatedAt: now,
+        keys: [...new Set([...previous!.keys, key])],
+        revision: previous!.revision + 1,
+        updatedAt: new Date().toISOString(),
         updatedBy: author,
-      };
-    });
+      }),
+    );
   }
   async link(reference: string, input: LinkBoardTask, actor: string) {
     const command = parse(linkBoardTaskSchema, input, "связь задач");

@@ -1,6 +1,27 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import {
+  entityPageQuerySchema,
+  entitiesQuerySchema,
+  entityGetQuerySchema,
+  entityKeysQuerySchema,
+  entityKeySpacesQuerySchema,
+  entityTypesSchema,
+  entityTypeDetailSchema,
+  entitiesPageSchema,
+  entityDetailSchema,
+  entitySummarySchema,
+  entityKeysPageSchema,
+  entityKeySpacesSchema,
+  entityHistorySchema,
+  entitySavedSchema,
+  entityCreateSchema,
+  entityUpdateSchema,
+  entityRenameSchema,
+  entityMoveTaskSchema,
+  entityLinkTaskSchema,
+} from "@relay/contracts/entities";
+import {
   graphPageSchema,
   graphQuerySchema,
   graphMutationSchema,
@@ -169,6 +190,119 @@ export async function createHttpBackend(url: string, project?: string): Promise<
     );
   return {
     kind: "http",
+    entities: {
+      types: async (input = {}) =>
+        decode(
+          entityTypesSchema,
+          await call(() =>
+            api.entities.listEntityTypes(defined(entityPageQuerySchema.parse(input))),
+          ),
+        ),
+      describe: async (input) =>
+        decode(entityTypeDetailSchema, await call(() => api.entities.describeEntityType(input))),
+      list: async (input = {}) =>
+        decode(
+          entitiesPageSchema,
+          await call(() => api.entities.listEntities(defined(entitiesQuerySchema.parse(input)))),
+        ),
+      get: async (input) =>
+        decode(
+          entityDetailSchema,
+          await call(() => api.entities.getEntity(defined(entityGetQuerySchema.parse(input)))),
+        ),
+      resolve: async (input) =>
+        decode(
+          entitySummarySchema,
+          await call(() => api.entities.resolveEntity(defined(entityGetQuerySchema.parse(input)))),
+        ),
+      keys: async (input) =>
+        decode(
+          entityKeysPageSchema,
+          await call(() => api.entities.getEntityKeys(defined(entityKeysQuerySchema.parse(input)))),
+        ),
+      keySpaces: async (input) =>
+        decode(
+          entityKeySpacesSchema,
+          await call(() =>
+            api.entities.getEntityKeySpaces(defined(entityKeySpacesQuerySchema.parse(input))),
+          ),
+        ),
+      history: async (input) =>
+        decode(
+          entityHistorySchema,
+          await call(() =>
+            api.entities.getEntityHistory(defined(entityKeysQuerySchema.parse(input))),
+          ),
+        ),
+      create: async (input, actor) => {
+        const command = entityCreateSchema.parse(input);
+        return decode(
+          entitySavedSchema,
+          await call(
+            () =>
+              api.entities.createEntity({
+                ...defined(command),
+                data: defined(command.data),
+                actor: input.actor ?? actor,
+              }),
+            "write",
+            input.requestId,
+          ),
+        );
+      },
+      update: async (input, actor) => {
+        const command = entityUpdateSchema.parse(input);
+        return decode(
+          entitySavedSchema,
+          await call(
+            () =>
+              api.entities.updateEntity({
+                ...defined(command),
+                changes: defined(command.changes),
+                actor: input.actor ?? actor,
+              }),
+            "write",
+            input.requestId,
+          ),
+        );
+      },
+      rename: async (input, actor) =>
+        decode(
+          entitySavedSchema,
+          await call(
+            () =>
+              api.entities.renameEntityKey(
+                defined({ ...entityRenameSchema.parse(input), actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
+      moveTask: async (input, actor) =>
+        decode(
+          entitySavedSchema,
+          await call(
+            () =>
+              api.entities.moveEntityTask(
+                defined({ ...entityMoveTaskSchema.parse(input), actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
+      linkTask: async (input, actor) =>
+        decode(
+          entitySavedSchema,
+          await call(
+            () =>
+              api.entities.linkEntityTask(
+                defined({ ...entityLinkTaskSchema.parse(input), actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
+    },
     graph: {
       read: async (input = {}) =>
         decode(

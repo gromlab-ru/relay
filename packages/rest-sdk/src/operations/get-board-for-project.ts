@@ -14,7 +14,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Получить страницу доски со всеми статусами
  *
  * @tags board
  * @name GetBoardForProject

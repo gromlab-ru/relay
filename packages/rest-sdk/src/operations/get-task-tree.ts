@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Дерево подзадач из одного снимка
  *
  * @tags project
  * @name GetTaskTree

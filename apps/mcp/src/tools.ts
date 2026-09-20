@@ -43,6 +43,7 @@ import type { Projects } from "./projects.js";
 import { checked, page, paging, response } from "./output.js";
 import type { Result } from "./output.js";
 import { documentToolSchema } from "./schema-documentation.js";
+import { entityTools } from "./entity-tools.js";
 import { lintProduct, productContentQuerySchema } from "@relay/core/application/product/content";
 import {
   productWriteTools,
@@ -186,6 +187,18 @@ export function createTools(projects: Projects): Server {
       });
     });
   }
+
+  for (const tool of entityTools)
+    projectTool(
+      tool.name,
+      tool.description,
+      { ...selector, ...tool.schema.shape },
+      tool.readOnly,
+      (backend, input) => {
+        const { project: _project, maxBytes: _maxBytes, ...fields } = input;
+        return tool.run(backend, fields);
+      },
+    );
 
   projectTool(
     "boards_list",

@@ -14,7 +14,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
 import { ContentType } from "../http-client.js";
 
 /**
- * No description
+ * @description Атомарно установить, изменить или отозвать отношения; повтор requestId безопасен, устаревшая версия отклоняется
  *
  * @tags graph
  * @name MutateGraph

@@ -12,7 +12,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Проверить доступность сервера
  *
  * @tags health
  * @name GetHealth

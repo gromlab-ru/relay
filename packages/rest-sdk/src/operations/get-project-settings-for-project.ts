@@ -13,7 +13,7 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * No description
+ * @description Получить имя, slug и ревизию настроек проекта
  *
  * @tags context
  * @name GetProjectSettingsForProject

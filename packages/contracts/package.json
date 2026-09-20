@@ -8,6 +8,11 @@
       "tasks-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./*": {
+      "tasks-source": "./src/*.ts",
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
     }
   },
   "scripts": {
@@ -16,8 +21,10 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "tsc -p tsconfig.test.json"
   },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
   "devDependencies": {
-    "@relay/core": "workspace:*",
     "@relay/typescript-config": "workspace:*",
     "typescript": "^5.9.2"
   }
