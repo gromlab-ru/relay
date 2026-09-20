@@ -23,6 +23,12 @@ import {
 import type { ProductMutation } from "@relay/core/domain/product";
 import type { CommandContext } from "../context.js";
 import type { Result } from "../queries/result.js";
+import { updateImplementationSchema } from "@relay/core/domain/product-implementation";
+import type {
+  ProductEntitiesQuery,
+  UpdateImplementation,
+} from "@relay/core/domain/product-implementation";
+import { productEntitiesText } from "../presentation/product.js";
 
 async function save(context: CommandContext, command: ProductMutation): Promise<Result> {
   const data = {
@@ -80,16 +86,82 @@ export function registerProduct(program: Command, runtime: Runtime): void {
   registerCommand(group, runtime, {
     name: "get <id>",
     description: "Прочитать одну запись",
-    arguments: { id: "ID записи" },
+    arguments: { id: "ID или ключ записи, включая реализацию: WEB-FI-12" },
     details: "Ревизия из ответа используется при изменении.",
     examples: [["relay-cli product get passport", "Прочитать паспорт"]],
     run: async (context, input) => {
-      const result = await context.backend.product.list({ id: input.argument() });
-      const record = result.items[0];
-      invariant(record, "PRODUCT_RECORD_NOT_FOUND", "Запись не найдена", 3);
+      const record = await context.backend.product.entity(input.argument());
       return { data: record, text: (options) => productRecordText(record, options) };
     },
   });
+  registerCommand<ProductEntitiesQuery>(group, runtime, {
+    name: "entities",
+    description: "Найти цели для связи по ключу или названию",
+    details: "Краткие сведения без полных описаний; ограниченная страница и продолжение.",
+    examples: [["relay-cli product entities --q WEB-FI", "Найти реализации фич"]],
+    configure: (command) =>
+      command
+        .option("--q <text>", "Ключ или название")
+        .option(
+          "--kind <kind>",
+          "Тип цели: feature, scenario, application, implementation, passport, document",
+        )
+        .option("--application <ref>", "ID или ключ приложения")
+        .option("--active <value>", "Участие: true или false")
+        .option("--offset <n>", "Смещение", integer(0, Number.MAX_SAFE_INTEGER))
+        .option("--limit <n>", "Размер страницы", integer(1, 100)),
+    run: async (context, input) => {
+      const data = await context.backend.product.entities(input.options);
+      return { data, text: (options) => productEntitiesText(data, input.options, options) };
+    },
+  });
+  const implementation = commandGroup(group, {
+    name: "implementation",
+    description: "Самостоятельная реализация фичи или сценария",
+    details: "Правка по собственной ревизии; соседние реализации не изменяются.",
+    examples: [["relay-cli product get WEB-FI-12", "Прочитать реализацию"]],
+  });
+  registerCommand<Omit<UpdateImplementation, "ref" | "requestId"> & { requestId?: string }>(
+    implementation,
+    runtime,
+    {
+      name: "update <ref>",
+      description: "Изменить реализацию или разрешить конфликт ключа",
+      arguments: { ref: "ID или ключ реализации" },
+      details:
+        "Передайте прочитанную ревизию. done подтверждает актуальные требования. После потери ответа повторяйте тот же request-id.",
+      examples: [
+        [
+          "relay-cli product implementation update WEB-FI-12 --if-revision 1 --status partial --actor agent",
+          "Обновить готовность",
+        ],
+      ],
+      configure: (command) =>
+        command
+          .requiredOption(
+            "--if-revision <n>",
+            "Ревизия реализации",
+            integer(1, Number.MAX_SAFE_INTEGER),
+          )
+          .option("--title <text>", "Однострочный заголовок")
+          .option("--description <markdown>", "Полное описание Markdown")
+          .option("--status <status>", "none, partial или done")
+          .option("--key <key>", "Свободный ключ; ID и связи сохраняются")
+          .option("--request-id <id>", "Ключ повтора"),
+      run: async (context, input) => {
+        const command = updateImplementationSchema.parse({
+          ...input.options,
+          ref: input.argument(),
+          requestId: input.options.requestId ?? randomUUID(),
+        });
+        const result = await context.backend.product.updateImplementation(command, author(context));
+        return {
+          data: { ...result, requestId: command.requestId },
+          text: `Реализация сохранена: ${result.key ?? result.id}\nID: ${result.id}\nРевизия: ${result.revision}\nКлюч повтора: ${command.requestId}`,
+        };
+      },
+    },
+  );
   registerCommand<{ id?: string; application?: string }>(group, runtime, {
     name: "context",
     description: "Собрать связанный контекст",
@@ -334,7 +406,7 @@ export function registerProduct(program: Command, runtime: Runtime): void {
     {
       name: "replace <applicationId>",
       description: "Заменить весь активный состав",
-      arguments: { applicationId: "ID приложения" },
+      arguments: { applicationId: "ID или ключ приложения" },
       details:
         "--json содержит массив контрактов: featureId, scenarioId (или null), title, description, status. Пустой массив снимает участие, сохраняя историю ссылок.",
       examples: [
@@ -365,7 +437,6 @@ export function registerProduct(program: Command, runtime: Runtime): void {
           productMutationSchema,
           {
             action: input.options.ifRevision === 0 ? "create" : "update",
-            id: applicationId.replace("application_", "scope_"),
             ifRevision: input.options.ifRevision,
             ifVersion: input.options.ifVersion,
             requestId: input.options.requestId ?? randomUUID(),

@@ -1,4 +1,6 @@
-import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useProductRoute } from "compositions/widgets/product-page";
+import { findProductEntry, ProductKey } from "domains/product";
 import { Button } from "@mantine/core";
 import { useProductDemo } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
@@ -12,7 +14,7 @@ import { ApplicationScopeForm } from "./ui/application-scope-form";
  *  - настройки выбранных фич, сценариев и описаний вклада в области приложения
  */
 export const ProductApplicationScopeScreen = () => {
-  const { applicationId } = useParams();
+  const { applicationId } = useProductRoute();
   const { snapshot } = useProductDemo();
   const base = useProductPath();
   const location = useLocation();
@@ -46,6 +48,7 @@ export const ProductApplicationScopeScreen = () => {
       eyebrow="ПРОДУКТ / ПРИЛОЖЕНИЕ"
       backTo={backTo}
       backLabel="К приложению"
+      meta={<ProductKey value={application.key} copyable />}
     >
       <ApplicationScopeForm
         key={draftScope}
@@ -55,8 +58,15 @@ export const ProductApplicationScopeScreen = () => {
         revision={snapshot.revision}
         draftScope={draftScope}
         backTo={backTo}
-        initialFeatureId={searchParams.get("feature") ?? undefined}
-        initialScenarioId={searchParams.get("scenario") ?? undefined}
+        initialFeatureId={
+          findProductEntry(snapshot.features, searchParams.get("feature") ?? undefined)?.id
+        }
+        initialScenarioId={
+          findProductEntry(
+            snapshot.features.flatMap((entry) => entry.scenarios),
+            searchParams.get("scenario") ?? undefined,
+          )?.id
+        }
       />
     </ProductPage>
   );

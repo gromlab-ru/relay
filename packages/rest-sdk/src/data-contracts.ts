@@ -4,6 +4,52 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface ProjectSettings {
+  /**
+   * Отображаемое имя проекта, от 1 до 120 символов без переносов строк
+   * @minLength 1
+   * @maxLength 120
+   * @pattern ^[^\p{Cc}]+$
+   */
+  name: string;
+  /**
+   * Slug адреса: 2–64 строчные латинские буквы/цифры с одиночными дефисами между частями
+   * @minLength 2
+   * @maxLength 64
+   * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+   */
+  slug: string;
+  /**
+   * Ревизия настроек проекта для защиты от одновременного редактирования
+   * @min 0
+   * @max 9007199254740991
+   */
+  revision: number;
+}
+
+export interface SaveProjectSettings {
+  /**
+   * Отображаемое имя проекта, от 1 до 120 символов без переносов строк
+   * @minLength 1
+   * @maxLength 120
+   * @pattern ^[^\p{Cc}]+$
+   */
+  name: string;
+  /**
+   * Slug адреса: 2–64 строчные латинские буквы/цифры с одиночными дефисами между частями
+   * @minLength 2
+   * @maxLength 64
+   * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+   */
+  slug: string;
+  /**
+   * Исходная ревизия; конфликт возвращает REVISION_CONFLICT
+   * @min 0
+   * @max 9007199254740991
+   */
+  ifRevision: number;
+}
+
 export interface BoardTaskView {
   /**
    * Постоянный ID задачи: 8 символов
@@ -33,7 +79,7 @@ export interface BoardTaskView {
     /** Цель реализации: общая фича, сценарий или контракт приложения */
     kind: BoardTaskViewKindEnum;
     /**
-     * Постоянный ID продуктовой цели в выбранном проекте
+     * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
      * @minLength 1
      * @maxLength 128
      */
@@ -151,7 +197,7 @@ export interface BoardTaskSaved {
       /** Цель реализации: общая фича, сценарий или контракт приложения */
       kind: BoardTaskSavedKindEnum;
       /**
-       * Постоянный ID продуктовой цели в выбранном проекте
+       * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
        * @minLength 1
        * @maxLength 128
        */
@@ -240,7 +286,7 @@ export interface BoardTasksPage {
       /** Цель реализации: общая фича, сценарий или контракт приложения */
       kind: BoardTasksPageKindEnum;
       /**
-       * Постоянный ID продуктовой цели в выбранном проекте
+       * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
        * @minLength 1
        * @maxLength 128
        */
@@ -335,7 +381,7 @@ export interface BoardTaskLinksPage {
         /** Цель реализации: общая фича, сценарий или контракт приложения */
         kind: BoardTaskLinksPageKindEnum;
         /**
-         * Постоянный ID продуктовой цели в выбранном проекте
+         * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
          * @minLength 1
          * @maxLength 128
          */
@@ -478,7 +524,7 @@ export interface CreateBoardTask {
     /** Цель реализации: общая фича, сценарий или контракт приложения */
     kind: CreateBoardTaskKindEnum;
     /**
-     * Постоянный ID продуктовой цели в выбранном проекте
+     * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
      * @minLength 1
      * @maxLength 128
      */
@@ -529,7 +575,7 @@ export interface UpdateBoardTask {
     /** Цель реализации: общая фича, сценарий или контракт приложения */
     kind: UpdateBoardTaskKindEnum;
     /**
-     * Постоянный ID продуктовой цели в выбранном проекте
+     * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
      * @minLength 1
      * @maxLength 128
      */
@@ -661,6 +707,21 @@ export interface ProjectRecord {
         title: string;
         /** @default "" */
         goal: string;
+        /**
+         * Продуктовые цели плана: на входе ID или ключ, в хранилище только ID
+         * @maxItems 100
+         * @default []
+         */
+        productLinks: {
+          /** Цель реализации: общая фича, сценарий или контракт приложения */
+          kind: ProjectRecordKindEnum;
+          /**
+           * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+           * @minLength 1
+           * @maxLength 128
+           */
+          id: string;
+        }[];
         /** @default "" */
         scope: string;
         /** @default "" */
@@ -683,6 +744,21 @@ export interface ProjectRecord {
         planId: string;
         /** @default "" */
         outcome: string;
+        /**
+         * Продуктовые цели этапа: фичи, сценарии и реализации
+         * @maxItems 100
+         * @default []
+         */
+        productLinks: {
+          /** Цель реализации: общая фича, сценарий или контракт приложения */
+          kind: ProjectRecordKindEnum1;
+          /**
+           * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+           * @minLength 1
+           * @maxLength 128
+           */
+          id: string;
+        }[];
         /** @default "" */
         criteria: string;
         /** @default "" */
@@ -1080,6 +1156,21 @@ export interface SaveProjectRecord {
         title: string;
         /** @default "" */
         goal?: string;
+        /**
+         * Продуктовые цели плана: на входе ID или ключ, в хранилище только ID
+         * @maxItems 100
+         * @default []
+         */
+        productLinks?: {
+          /** Цель реализации: общая фича, сценарий или контракт приложения */
+          kind: SaveProjectRecordKindEnum;
+          /**
+           * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+           * @minLength 1
+           * @maxLength 128
+           */
+          id: string;
+        }[];
         /** @default "" */
         scope?: string;
         /** @default "" */
@@ -1098,6 +1189,21 @@ export interface SaveProjectRecord {
         planId: string;
         /** @default "" */
         outcome?: string;
+        /**
+         * Продуктовые цели этапа: фичи, сценарии и реализации
+         * @maxItems 100
+         * @default []
+         */
+        productLinks?: {
+          /** Цель реализации: общая фича, сценарий или контракт приложения */
+          kind: SaveProjectRecordKindEnum1;
+          /**
+           * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+           * @minLength 1
+           * @maxLength 128
+           */
+          id: string;
+        }[];
         /** @default "" */
         criteria?: string;
         /** @default "" */
@@ -1439,6 +1545,21 @@ export interface ProjectState {
           title: string;
           /** @default "" */
           goal: string;
+          /**
+           * Продуктовые цели плана: на входе ID или ключ, в хранилище только ID
+           * @maxItems 100
+           * @default []
+           */
+          productLinks: {
+            /** Цель реализации: общая фича, сценарий или контракт приложения */
+            kind: ProjectStateKindEnum;
+            /**
+             * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+             * @minLength 1
+             * @maxLength 128
+             */
+            id: string;
+          }[];
           /** @default "" */
           scope: string;
           /** @default "" */
@@ -1461,6 +1582,21 @@ export interface ProjectState {
           planId: string;
           /** @default "" */
           outcome: string;
+          /**
+           * Продуктовые цели этапа: фичи, сценарии и реализации
+           * @maxItems 100
+           * @default []
+           */
+          productLinks: {
+            /** Цель реализации: общая фича, сценарий или контракт приложения */
+            kind: ProjectStateKindEnum1;
+            /**
+             * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+             * @minLength 1
+             * @maxLength 128
+             */
+            id: string;
+          }[];
           /** @default "" */
           criteria: string;
           /** @default "" */
@@ -2016,6 +2152,21 @@ export interface CheckpointChanges {
           title: string;
           /** @default "" */
           goal: string;
+          /**
+           * Продуктовые цели плана: на входе ID или ключ, в хранилище только ID
+           * @maxItems 100
+           * @default []
+           */
+          productLinks: {
+            /** Цель реализации: общая фича, сценарий или контракт приложения */
+            kind: CheckpointChangesKindEnum;
+            /**
+             * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+             * @minLength 1
+             * @maxLength 128
+             */
+            id: string;
+          }[];
           /** @default "" */
           scope: string;
           /** @default "" */
@@ -2038,6 +2189,21 @@ export interface CheckpointChanges {
           planId: string;
           /** @default "" */
           outcome: string;
+          /**
+           * Продуктовые цели этапа: фичи, сценарии и реализации
+           * @maxItems 100
+           * @default []
+           */
+          productLinks: {
+            /** Цель реализации: общая фича, сценарий или контракт приложения */
+            kind: CheckpointChangesKindEnum1;
+            /**
+             * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
+             * @minLength 1
+             * @maxLength 128
+             */
+            id: string;
+          }[];
           /** @default "" */
           criteria: string;
           /** @default "" */
@@ -2426,6 +2592,8 @@ export interface ServerContextResponse {
     key: string;
     id: string;
     name: string;
+    /** Человекочитаемый адрес проекта; постоянный id не меняется */
+    slug?: string;
     configPath: string;
     available: boolean;
     error?: string;
@@ -2463,6 +2631,12 @@ export interface ProductState {
     productId: string;
     /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
+    /**
+     * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+     * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+     */
+    key?: string;
+    reservedKeys?: string[];
     /**
      * @exclusiveMin 0
      * @max 9007199254740991
@@ -2526,6 +2700,16 @@ export interface ProductState {
             status: ProductStateStatusEnum;
             /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             id: string;
+            /**
+             * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+             * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+             */
+            key?: string;
+            /**
+             * @exclusiveMin 0
+             * @max 9007199254740991
+             */
+            revision?: number;
             active: boolean;
             basis: string;
           }[];
@@ -2603,10 +2787,318 @@ export interface ProductState {
   }[];
 }
 
+export interface ProductEntities {
+  items: {
+    /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+    id: string;
+    /**
+     * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+     * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+     */
+    key?: string;
+    kind: ProductEntitiesKindEnum;
+    /** Однострочное название цели */
+    title: string;
+    /** Краткий обычный текст без полного Markdown */
+    summary: string;
+    /**
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    applicationId: string | null;
+    /** Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37 */
+    applicationKey: string | null;
+    applicationName: string | null;
+    featureId: string | null;
+    scenarioId: string | null;
+    /** Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37 */
+    targetKey: string | null;
+    targetName: string | null;
+    active: boolean;
+    status: ProductEntitiesStatusEnum | null;
+  }[];
+  total: number;
+  nextOffset: number | null;
+  version: string;
+}
+
+export interface ProductEntitiesQuery {
+  /**
+   * Поиск по ключу или названию; точное совпадение первым
+   * @maxLength 4096
+   */
+  q?: string;
+  /** Тип цели */
+  kind?: ProductEntitiesQueryKindEnum;
+  /** ID или ключ приложения */
+  application?: string;
+  /**
+   * До 100 ID или ключей для краткого чтения существующих связей
+   * @maxItems 100
+   */
+  refs?: string[];
+  /** Фильтр участия; прежние ссылки читаются без фильтра */
+  active?: ProductEntitiesQueryActiveEnum;
+  /**
+   * Смещение страницы; продолжение возвращается в nextOffset
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset: number;
+  /**
+   * Размер страницы от 1 до 100
+   * @min 1
+   * @max 100
+   * @default 30
+   */
+  limit: number;
+}
+
+export type ProductEntity =
+  | {
+      version: 1;
+      /** @minLength 1 */
+      productId: string;
+      /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+      id: string;
+      /**
+       * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+       * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+       */
+      key?: string;
+      reservedKeys?: string[];
+      /**
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      fields:
+        | {
+            kind: "passport";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            description: string;
+          }
+        | {
+            kind: "feature";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            description: string;
+          }
+        | {
+            kind: "scenario";
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            featureId: string;
+            /** @minLength 1 */
+            name: string;
+            description: string;
+          }
+        | {
+            kind: "application";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            description: string;
+            /**
+             * Неизменяемый уникальный адрес приложения и доски: 1–64 символа, строчные латинские буквы, цифры и дефисы; product, infrastructure и new зарезервированы
+             * @minLength 1
+             * @maxLength 64
+             * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+             */
+            slug: string;
+            /**
+             * Префикс задач доски; при создании по умолчанию из slug, затем неизменяем
+             * @pattern ^[A-Z][A-Z0-9]{1,15}$
+             */
+            prefix?: string;
+            type: ProductEntityTypeEnum;
+          }
+        | {
+            kind: "scope";
+            /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+            applicationId: string;
+            /** @maxItems 10000 */
+            contracts: {
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              featureId: string;
+              scenarioId: string | null;
+              /** @minLength 1 */
+              title: string;
+              description: string;
+              status: ProductEntityStatusEnum;
+              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              id: string;
+              /**
+               * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+               * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+               */
+              key?: string;
+              /**
+               * @exclusiveMin 0
+               * @max 9007199254740991
+               */
+              revision?: number;
+              active: boolean;
+              basis: string;
+            }[];
+          }
+        | {
+            kind: "document";
+            /** @minLength 1 */
+            name: string;
+            summary: string;
+            body: string;
+            documentKind: ProductEntityDocumentKindEnum;
+            /** @maxItems 1000 */
+            links: (
+              | {
+                  kind: "product";
+                }
+              | {
+                  kind: "feature";
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+              | {
+                  kind: "scenario";
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+              | {
+                  kind: "application";
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+              | {
+                  kind: "implementation";
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  applicationId: string;
+                  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+                  id: string;
+                }
+            )[];
+          };
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      createdAt: string;
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /** @maxLength 128 */
+      createdBy: string;
+      /** @maxLength 128 */
+      updatedBy: string;
+      /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
+      canonicalRef?: string;
+    }
+  | {
+      version: 1;
+      /** @minLength 1 */
+      productId: string;
+      /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+      id: string;
+      /**
+       * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+       * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+       */
+      key?: string;
+      reservedKeys?: string[];
+      /**
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      createdAt: string;
+      /**
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /** @maxLength 128 */
+      createdBy: string;
+      /** @maxLength 128 */
+      updatedBy: string;
+      fields: {
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        featureId: string;
+        scenarioId: string | null;
+        /** @minLength 1 */
+        title: string;
+        description: string;
+        status: ProductEntityStatusEnum1;
+        active: boolean;
+        basis: string;
+        kind: "implementation";
+        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        applicationId: string;
+      };
+      /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
+      canonicalRef?: string;
+    };
+
+export interface ProductEntityQuery {
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
+  ref: string;
+}
+
+export interface UpdateImplementation {
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
+  ref: string;
+  /**
+   * Ревизия выбранной реализации
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  ifRevision: number;
+  /**
+   * Однострочный заголовок реализации
+   * @minLength 1
+   */
+  title?: string;
+  /** Полное описание вклада в Markdown */
+  description?: string;
+  /** Состояние реализации; done подтверждает актуальные требования */
+  status?: UpdateImplementationStatusEnum;
+  /**
+   * Свободный ключ для разрешения коллизии; ID сохраняется
+   * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+   */
+  key?: string;
+  /**
+   * Ключ повтора записи
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /**
+   * Автор изменения
+   * @maxLength 128
+   */
+  actor?: string;
+}
+
 export interface ProductMutation {
   action: ProductMutationActionEnum;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
+  /**
+   * Новый ключ при явном разрешении конфликта; ID и связи сохраняются
+   * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+   */
+  key?: string;
   fields:
     | {
         kind: "passport";
@@ -2624,7 +3116,7 @@ export interface ProductMutation {
       }
     | {
         kind: "scenario";
-        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
         featureId: string;
         /** @minLength 1 */
         name: string;
@@ -2664,48 +3156,60 @@ export interface ProductMutation {
             }
           | {
               kind: "feature";
-              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
               id: string;
             }
           | {
               kind: "scenario";
-              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
               id: string;
             }
           | {
               kind: "application";
-              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
               id: string;
             }
           | {
               kind: "implementation";
-              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
               applicationId: string;
-              /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+              /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
               id: string;
             }
         )[];
       }
     | {
         kind: "scope";
-        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
         applicationId: string;
         /** @maxItems 10000 */
         contracts: {
-          /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+          /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
           featureId: string;
+          /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
           scenarioId: string | null;
           /** @minLength 1 */
           title: string;
           description: string;
           status: ProductMutationStatusEnum;
+          /**
+           * Прочитанный ключ; не меняется операцией замены состава
+           * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+           */
+          key?: string;
+          /**
+           * Прочитанная ревизия реализации; замена состава проверяет общую версию
+           * @exclusiveMin 0
+           * @max 9007199254740991
+           */
+          revision?: number;
         }[];
       }
     | {
         kind: "contract";
-        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
         applicationId: string;
-        /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+        /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
         contractId: string;
         status: ProductMutationStatusEnum1;
         /** @minLength 1 */
@@ -2732,6 +3236,11 @@ export interface ProductSaved {
   /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
   id: string;
   /**
+   * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+   * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+   */
+  key?: string;
+  /**
    * @exclusiveMin 0
    * @max 9007199254740991
    */
@@ -2748,6 +3257,12 @@ export interface ProductContext {
       productId: string;
       /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
       id: string;
+      /**
+       * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+       * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+       */
+      key?: string;
+      reservedKeys?: string[];
       /**
        * @exclusiveMin 0
        * @max 9007199254740991
@@ -2811,6 +3326,16 @@ export interface ProductContext {
               status: ProductContextStatusEnum;
               /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
               id: string;
+              /**
+               * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+               * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+               */
+              key?: string;
+              /**
+               * @exclusiveMin 0
+               * @max 9007199254740991
+               */
+              revision?: number;
               active: boolean;
               basis: string;
             }[];
@@ -2891,9 +3416,9 @@ export interface ProductContext {
 }
 
 export interface ProductContextQuery {
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   applicationId?: string;
 }
 
@@ -2903,6 +3428,11 @@ export interface ProductOverview {
   items: {
     /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
+    /**
+     * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+     * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+     */
+    key?: string;
     revision: number;
     kind: string;
     name: string;
@@ -2939,6 +3469,12 @@ export interface ProductList {
     productId: string;
     /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
     id: string;
+    /**
+     * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+     * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+     */
+    key?: string;
+    reservedKeys?: string[];
     /**
      * @exclusiveMin 0
      * @max 9007199254740991
@@ -3002,6 +3538,16 @@ export interface ProductList {
             status: ProductListStatusEnum;
             /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
             id: string;
+            /**
+             * Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37
+             * @pattern ^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$
+             */
+            key?: string;
+            /**
+             * @exclusiveMin 0
+             * @max 9007199254740991
+             */
+            revision?: number;
             active: boolean;
             basis: string;
           }[];
@@ -3064,7 +3610,7 @@ export interface ProductListQuery {
   kind?: ProductListQueryKindEnum;
   /** @maxLength 4096 */
   q?: string;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
   /**
    * @min 0
@@ -3544,6 +4090,29 @@ export interface ContextResponse {
     /** @default "local" */
     mode: "local";
     projectId?: string;
+    projectSettings?: {
+      /**
+       * Отображаемое имя проекта, от 1 до 120 символов без переносов строк
+       * @minLength 1
+       * @maxLength 120
+       * @pattern ^[^\p{Cc}]+$
+       */
+      name: string;
+      /**
+       * Slug адреса: 2–64 строчные латинские буквы/цифры с одиночными дефисами между частями
+       * @minLength 2
+       * @maxLength 64
+       * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+       */
+      slug: string;
+      /**
+       * Ревизия настроек проекта для защиты от одновременного редактирования
+       * @min 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      version: 1;
+    };
     /** @minLength 1 */
     storageDir: string;
     /** @minLength 1 */
@@ -4344,6 +4913,29 @@ export interface BoardResponse {
       /** @default "local" */
       mode: "local";
       projectId?: string;
+      projectSettings?: {
+        /**
+         * Отображаемое имя проекта, от 1 до 120 символов без переносов строк
+         * @minLength 1
+         * @maxLength 120
+         * @pattern ^[^\p{Cc}]+$
+         */
+        name: string;
+        /**
+         * Slug адреса: 2–64 строчные латинские буквы/цифры с одиночными дефисами между частями
+         * @minLength 2
+         * @maxLength 64
+         * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+         */
+        slug: string;
+        /**
+         * Ревизия настроек проекта для защиты от одновременного редактирования
+         * @min 0
+         * @max 9007199254740991
+         */
+        revision: number;
+        version: 1;
+      };
       /** @minLength 1 */
       storageDir: string;
       /** @minLength 1 */
@@ -4717,6 +5309,9 @@ export type ProjectRecordModeEnum =
   | "paused"
   | "archived";
 
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type ProjectRecordKindEnum = "feature" | "scenario" | "implementation";
+
 /** @default "draft" */
 export type ProjectRecordStatusEnum =
   | "draft"
@@ -4725,6 +5320,9 @@ export type ProjectRecordStatusEnum =
   | "paused"
   | "completed"
   | "cancelled";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type ProjectRecordKindEnum1 = "feature" | "scenario" | "implementation";
 
 /** @default "planned" */
 export type ProjectRecordStatusEnum1 = "planned" | "active" | "accepted";
@@ -4808,6 +5406,12 @@ export type SaveProjectRecordModeEnum =
   | "paused"
   | "archived";
 
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type SaveProjectRecordKindEnum =
+  | "feature"
+  | "scenario"
+  | "implementation";
+
 /** @default "draft" */
 export type SaveProjectRecordStatusEnum =
   | "draft"
@@ -4816,6 +5420,12 @@ export type SaveProjectRecordStatusEnum =
   | "paused"
   | "completed"
   | "cancelled";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type SaveProjectRecordKindEnum1 =
+  | "feature"
+  | "scenario"
+  | "implementation";
 
 /** @default "planned" */
 export type SaveProjectRecordStatusEnum1 = "planned" | "active" | "accepted";
@@ -4903,6 +5513,9 @@ export type ProjectStateModeEnum =
   | "paused"
   | "archived";
 
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type ProjectStateKindEnum = "feature" | "scenario" | "implementation";
+
 /** @default "draft" */
 export type ProjectStateStatusEnum =
   | "draft"
@@ -4911,6 +5524,9 @@ export type ProjectStateStatusEnum =
   | "paused"
   | "completed"
   | "cancelled";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type ProjectStateKindEnum1 = "feature" | "scenario" | "implementation";
 
 /** @default "planned" */
 export type ProjectStateStatusEnum1 = "planned" | "active" | "accepted";
@@ -5009,6 +5625,12 @@ export type CheckpointChangesModeEnum =
   | "paused"
   | "archived";
 
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type CheckpointChangesKindEnum =
+  | "feature"
+  | "scenario"
+  | "implementation";
+
 /** @default "draft" */
 export type CheckpointChangesStatusEnum =
   | "draft"
@@ -5017,6 +5639,12 @@ export type CheckpointChangesStatusEnum =
   | "paused"
   | "completed"
   | "cancelled";
+
+/** Цель реализации: общая фича, сценарий или контракт приложения */
+export type CheckpointChangesKindEnum1 =
+  | "feature"
+  | "scenario"
+  | "implementation";
 
 /** @default "planned" */
 export type CheckpointChangesStatusEnum1 = "planned" | "active" | "accepted";
@@ -5111,6 +5739,43 @@ export type ProductStateDocumentKindEnum =
   | "decision";
 
 export type ProductStateStatusEnum1 = "none" | "partial" | "done";
+
+export type ProductEntitiesKindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "document";
+
+export type ProductEntitiesStatusEnum = "none" | "partial" | "done";
+
+/** Тип цели */
+export type ProductEntitiesQueryKindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "document";
+
+/** Фильтр участия; прежние ссылки читаются без фильтра */
+export type ProductEntitiesQueryActiveEnum = "true" | "false";
+
+export type ProductEntityTypeEnum = "frontend" | "backend" | "internal";
+
+export type ProductEntityStatusEnum = "none" | "partial" | "done";
+
+export type ProductEntityDocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "decision";
+
+export type ProductEntityStatusEnum1 = "none" | "partial" | "done";
+
+/** Состояние реализации; done подтверждает актуальные требования */
+export type UpdateImplementationStatusEnum = "none" | "partial" | "done";
 
 export type ProductMutationActionEnum = "create" | "update";
 
@@ -5264,6 +5929,10 @@ export interface UnregisterProjectParams {
 }
 
 export type GetContextOkEnum = true;
+
+export type GetProjectSettingsOkEnum = true;
+
+export type SaveProjectSettingsOkEnum = true;
 
 export type GetBoardOkEnum = true;
 
@@ -5545,6 +6214,74 @@ export interface GetCheckpointChangesParams {
 
 export type SaveProjectRecordOkEnum = true;
 
+export type GetProductEntitiesOkEnum = true;
+
+export interface GetProductEntitiesParams {
+  /**
+   * Поиск по ключу или названию; точное совпадение первым
+   * @maxLength 4096
+   */
+  q?: string;
+  /** Тип цели */
+  kind?: KindEnum;
+  /** ID или ключ приложения */
+  application?: string;
+  /**
+   * До 100 ID или ключей для краткого чтения существующих связей
+   * @maxItems 100
+   */
+  refs?: string[];
+  /** Фильтр участия; прежние ссылки читаются без фильтра */
+  active?: ActiveEnum;
+  /**
+   * Смещение страницы; продолжение возвращается в nextOffset
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы от 1 до 100
+   * @min 1
+   * @max 100
+   * @default 30
+   */
+  limit?: number;
+}
+
+/** Тип цели */
+export type KindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "document";
+
+/** Фильтр участия; прежние ссылки читаются без фильтра */
+export type ActiveEnum = "true" | "false";
+
+/** Тип цели */
+export type GetProductEntitiesParams1KindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "document";
+
+/** Фильтр участия; прежние ссылки читаются без фильтра */
+export type GetProductEntitiesParams1ActiveEnum = "true" | "false";
+
+export type GetProductEntityOkEnum = true;
+
+export interface GetProductEntityParams {
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
+  ref: string;
+}
+
+export type UpdateProductImplementationOkEnum = true;
+
 export type GetProductStateOkEnum = true;
 
 export type GetProductOverviewOkEnum = true;
@@ -5552,10 +6289,10 @@ export type GetProductOverviewOkEnum = true;
 export type GetProductRecordsOkEnum = true;
 
 export interface GetProductRecordsParams {
-  kind?: KindEnum;
+  kind?: KindEnum1;
   /** @maxLength 4096 */
   q?: string;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
   /**
    * @min 0
@@ -5571,7 +6308,7 @@ export interface GetProductRecordsParams {
   limit?: number;
 }
 
-export type KindEnum =
+export type KindEnum1 =
   | "passport"
   | "feature"
   | "scenario"
@@ -5592,9 +6329,9 @@ export type MutateProductOkEnum = true;
 export type GetProductContextOkEnum = true;
 
 export interface GetProductContextParams {
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   applicationId?: string;
 }
 
@@ -5892,7 +6629,7 @@ export interface ListLogsParams {
    * @maxLength 4096
    */
   cursor?: string;
-  kind?: KindEnum1;
+  kind?: KindEnum2;
   /**
    * Положительный безопасный целочисленный ID задачи
    * @min 1
@@ -5901,7 +6638,7 @@ export interface ListLogsParams {
   id: number;
 }
 
-export type KindEnum1 =
+export type KindEnum2 =
   | "progress"
   | "decision"
   | "execution"
@@ -5942,7 +6679,21 @@ export interface GetLogParams {
 export type GetContextForProjectOkEnum = true;
 
 export interface GetContextForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetProjectSettingsForProjectOkEnum = true;
+
+export interface GetProjectSettingsForProjectParams {
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type SaveProjectSettingsForProjectOkEnum = true;
+
+export interface SaveProjectSettingsForProjectParams {
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -5974,7 +6725,7 @@ export interface GetBoardForProjectParams {
    * @maxLength 4096
    */
   cursor?: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6015,7 +6766,7 @@ export interface ListTasksForProjectParams {
    * @maxLength 4096
    */
   cursor?: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6031,7 +6782,7 @@ export type ListTasksForProjectParams1TypeEnum =
 export type CreateTaskForProjectOkEnum = true;
 
 export interface CreateTaskForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6044,7 +6795,7 @@ export interface GetTaskForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6057,7 +6808,7 @@ export interface UpdateTaskForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6070,7 +6821,7 @@ export interface MoveTaskForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6083,7 +6834,7 @@ export interface ClaimTaskForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6096,7 +6847,7 @@ export interface ReleaseTaskForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6116,7 +6867,7 @@ export interface GetTaskListForProjectParams {
   ready?: boolean;
   all?: boolean;
   sort?: SortEnum1;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6142,7 +6893,7 @@ export interface GetTaskDocumentForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6156,7 +6907,7 @@ export interface GetTaskMarkdownForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6175,7 +6926,7 @@ export interface GetTaskLinksForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6194,14 +6945,14 @@ export interface GetTaskTreeForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetGroupsForProjectOkEnum = true;
 
 export interface GetGroupsForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6224,14 +6975,14 @@ export interface GetOverviewForProjectParams {
    * @max 9007199254740991
    */
   rootId?: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type ValidateProjectForProjectOkEnum = true;
 
 export interface ValidateProjectForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6244,21 +6995,21 @@ export interface ChangeDependencyForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetProjectStateForProjectOkEnum = true;
 
 export interface GetProjectStateForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetProjectContextForProjectOkEnum = true;
 
 export interface GetProjectContextForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6271,7 +7022,7 @@ export interface GetTaskBriefingForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6279,38 +7030,115 @@ export type GetCheckpointChangesForProjectOkEnum = true;
 
 export interface GetCheckpointChangesForProjectParams {
   recordId: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type SaveProjectRecordForProjectOkEnum = true;
 
 export interface SaveProjectRecordForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetProductEntitiesForProjectOkEnum = true;
+
+export interface GetProductEntitiesForProjectParams {
+  /**
+   * Поиск по ключу или названию; точное совпадение первым
+   * @maxLength 4096
+   */
+  q?: string;
+  /** Тип цели */
+  kind?: KindEnum3;
+  /** ID или ключ приложения */
+  application?: string;
+  /**
+   * До 100 ID или ключей для краткого чтения существующих связей
+   * @maxItems 100
+   */
+  refs?: string[];
+  /** Фильтр участия; прежние ссылки читаются без фильтра */
+  active?: ActiveEnum1;
+  /**
+   * Смещение страницы; продолжение возвращается в nextOffset
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы от 1 до 100
+   * @min 1
+   * @max 100
+   * @default 30
+   */
+  limit?: number;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+/** Тип цели */
+export type KindEnum3 =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "document";
+
+/** Фильтр участия; прежние ссылки читаются без фильтра */
+export type ActiveEnum1 = "true" | "false";
+
+/** Тип цели */
+export type GetProductEntitiesForProjectParams1KindEnum =
+  | "passport"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "document";
+
+/** Фильтр участия; прежние ссылки читаются без фильтра */
+export type GetProductEntitiesForProjectParams1ActiveEnum = "true" | "false";
+
+export type GetProductEntityForProjectOkEnum = true;
+
+export interface GetProductEntityForProjectParams {
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
+  ref: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type UpdateProductImplementationForProjectOkEnum = true;
+
+export interface UpdateProductImplementationForProjectParams {
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetProductStateForProjectOkEnum = true;
 
 export interface GetProductStateForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetProductOverviewForProjectOkEnum = true;
 
 export interface GetProductOverviewForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetProductRecordsForProjectOkEnum = true;
 
 export interface GetProductRecordsForProjectParams {
-  kind?: KindEnum2;
+  kind?: KindEnum4;
   /** @maxLength 4096 */
   q?: string;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
   /**
    * @min 0
@@ -6324,11 +7152,11 @@ export interface GetProductRecordsForProjectParams {
    * @default 30
    */
   limit?: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
-export type KindEnum2 =
+export type KindEnum4 =
   | "passport"
   | "feature"
   | "scenario"
@@ -6347,18 +7175,18 @@ export type GetProductRecordsForProjectParams1KindEnum =
 export type MutateProductForProjectOkEnum = true;
 
 export interface MutateProductForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export type GetProductContextForProjectOkEnum = true;
 
 export interface GetProductContextForProjectParams {
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   id?: string;
-  /** @pattern ^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$ */
+  /** Постоянный ID или читаемый ключ сущности в выбранном проекте */
   applicationId?: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6381,7 +7209,7 @@ export interface GetBoardsForProjectParams {
   limit?: number;
   /** Версия каталога первой страницы; защищает продолжение от изменений */
   version?: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6394,7 +7222,7 @@ export interface GetBoardBySlugForProjectParams {
    * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
    */
   slug: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6442,7 +7270,7 @@ export interface GetBoardTasksForProjectParams {
   limit?: number;
   /** Версия первой страницы; изменение требует начать чтение заново */
   version?: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6487,7 +7315,7 @@ export type GetBoardTasksForProjectParams1ReadinessEnum = "blocked" | "ready";
 export type CreateBoardTaskForProjectOkEnum = true;
 
 export interface CreateBoardTaskForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6496,7 +7324,7 @@ export type GetBoardTaskForProjectOkEnum = true;
 export interface GetBoardTaskForProjectParams {
   /** Постоянный ID или текущий/прежний ключ задачи */
   reference: any;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6546,7 +7374,7 @@ export interface GetBoardTaskLinksForProjectParams {
   version?: string;
   /** ID или ключ задачи для чтения графа */
   reference: any;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6595,7 +7423,7 @@ export type LinkBoardTaskForProjectOkEnum = true;
 export interface LinkBoardTaskForProjectParams {
   /** ID или ключ исходной задачи */
   reference: any;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6604,7 +7432,7 @@ export type UpdateBoardTaskForProjectOkEnum = true;
 export interface UpdateBoardTaskForProjectParams {
   /** ID или ключ редактируемой задачи */
   reference: any;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6613,7 +7441,7 @@ export type MoveBoardTaskForProjectOkEnum = true;
 export interface MoveBoardTaskForProjectParams {
   /** ID или ключ перемещаемой задачи */
   reference: any;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6640,7 +7468,7 @@ export interface ListCommentsForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6653,7 +7481,7 @@ export interface AddCommentForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6668,7 +7496,7 @@ export interface GetCommentForProjectParams {
   id: number;
   /** @pattern ^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$ */
   commentId: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6689,18 +7517,18 @@ export interface ListLogsForProjectParams {
    * @maxLength 4096
    */
   cursor?: string;
-  kind?: KindEnum3;
+  kind?: KindEnum5;
   /**
    * Положительный безопасный целочисленный ID задачи
    * @min 1
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
-export type KindEnum3 =
+export type KindEnum5 =
   | "progress"
   | "decision"
   | "execution"
@@ -6723,7 +7551,7 @@ export interface AddLogForProjectParams {
    * @max 9007199254740991
    */
   id: number;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
@@ -6738,11 +7566,11 @@ export interface GetLogForProjectParams {
   id: number;
   /** @pattern ^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$ */
   logId: string;
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 export interface WatchEventsForProjectParams {
-  /** Имя из реестра или идентификатор проекта */
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }

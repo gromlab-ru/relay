@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { basename, dirname, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { realpath } from "node:fs/promises";
 import type { ContextResponse, RelayProject, ServerContextResponse } from "@relay/contracts";
 import { actorSchema, parse } from "@relay/core/domain/validation";
@@ -8,6 +8,10 @@ import { openWorkspace, readWorkspaceConfig } from "@relay/core/storage/workspac
 import type { Workspace } from "@relay/core/storage/workspace";
 import { configurationMode, entryTarget, readConfiguration } from "@relay/project-runtime/config";
 import { registerProject, unregisterProject } from "@relay/project-runtime/registry";
+import { saveProjectSettings } from "@relay/core/application/project-settings/service";
+import { projectSettings } from "@relay/core/storage/project-settings";
+import type { SaveProjectSettings, ProjectSettings } from "@relay/core/domain/project-settings";
+import { withStorageLock } from "@relay/core/storage/lock";
 import type { ProjectEntry } from "@relay/project-runtime/config";
 
 export interface WorkspaceOptions {
@@ -15,11 +19,6 @@ export interface WorkspaceOptions {
   configPath: string;
   actor: string;
   mode?: "local" | "workspace";
-}
-
-function projectName(path: string) {
-  const directory = dirname(path);
-  return basename(basename(directory) === ".relay" ? dirname(directory) : directory);
 }
 
 /** Неизменяемый выбор проекта; безопасен для параллельных запросов и наблюдателей. */
@@ -41,7 +40,7 @@ export class ProjectContext {
 
   context(workspace: Workspace): ContextResponse {
     return {
-      project: projectName(workspace.configPath),
+      project: projectSettings(workspace.config, workspace.configPath).name,
       capabilities: ["cli-http-v1", "record-request-v1", "relay-projects-v1"],
       projectId: this.projectId,
       configPath: workspace.configPath,
@@ -93,10 +92,13 @@ export class ProjectCatalog {
       entries.map(async ({ key, configPath }) => {
         try {
           const project = await this.at(configPath);
+          const { config } = await readWorkspaceConfig(dirname(configPath), configPath);
+          const settings = projectSettings(config, configPath);
           return {
             key,
             id: project.projectId,
-            name: projectName(configPath),
+            name: settings.name,
+            slug: settings.slug,
             configPath: project.options.configPath,
             available: true,
           };
@@ -112,7 +114,26 @@ export class ProjectCatalog {
         }
       }),
     );
+    const ambiguousIds = new Set(
+      projects
+        .filter(
+          (project) =>
+            project.slug !== undefined &&
+            projects.some(
+              (other) =>
+                other.id !== project.id &&
+                (other.slug === project.slug ||
+                  other.key === project.slug ||
+                  other.id === project.slug),
+            ),
+        )
+        .map((project) => project.id),
+    );
     for (const project of projects) {
+      if (ambiguousIds.has(project.id)) {
+        // Коллизия не закрывает доступ по ID: пользователь может исправить slug в настройках.
+        delete project.slug;
+      }
       if (
         projects.some((other) => other.id === project.id && other.configPath !== project.configPath)
       ) {
@@ -148,8 +169,13 @@ export class ProjectCatalog {
       const context =
         this.contexts.get(resolve(this.options.configPath)) ??
         (await this.at(this.options.configPath));
+      // SSE по постоянному ID должен сообщать повреждение конфига и уметь переподключаться.
+      if (selector === undefined || selector === "local" || selector === context.projectId)
+        return context;
+      const workspace = await context.open();
+      const settings = projectSettings(workspace.config, workspace.configPath);
       invariant(
-        selector === undefined || selector === "local" || selector === context.projectId,
+        selector === settings.slug,
         "PROJECT_NOT_FOUND",
         `Проект ${selector} не зарегистрирован`,
         3,
@@ -169,7 +195,56 @@ export class ProjectCatalog {
       const context = await this.at(entry.configPath).catch(() => undefined);
       if (context?.projectId === selector) return this.unique(context, entries);
     }
+    const matches: ProjectContext[] = [];
+    for (const entry of entries) {
+      const context = await this.at(entry.configPath).catch(() => undefined);
+      if (!context) continue;
+      const { config } = await readWorkspaceConfig(dirname(entry.configPath), entry.configPath);
+      if (
+        projectSettings(config, entry.configPath).slug === selector &&
+        !matches.some((match) => match.projectId === context.projectId)
+      )
+        matches.push(context);
+    }
+    invariant(
+      matches.length <= 1,
+      "PROJECT_SLUG_TAKEN",
+      "Этот slug принадлежит нескольким проектам. Откройте проект по ID и измените slug.",
+      4,
+    );
+    if (matches[0]) return this.unique(matches[0], entries);
     throw new AppError("PROJECT_NOT_FOUND", `Проект ${selector} не зарегистрирован`, 3);
+  }
+
+  /**
+   * Сериализует изменения адресов в одном каталоге; ID и ключи регистрации не меняются.
+   */
+  async saveSettings(
+    context: ProjectContext,
+    input: SaveProjectSettings,
+  ): Promise<ProjectSettings> {
+    const source = await this.source();
+    const save = async (assertOwned: () => void) => {
+      const { entries } = await this.entries();
+      invariant(input.slug !== "local", "PROJECT_SLUG_TAKEN", "Адрес local зарезервирован.", 4);
+      for (const entry of entries) {
+        const other = await this.at(entry.configPath);
+        if (other.projectId === context.projectId) continue;
+        const { config } = await readWorkspaceConfig(dirname(entry.configPath), entry.configPath);
+        invariant(
+          input.slug !== projectSettings(config, entry.configPath).slug &&
+            input.slug !== other.projectId &&
+            input.slug !== entry.key,
+          "PROJECT_SLUG_TAKEN",
+          "Этот slug уже занят другим проектом. Выберите другой адрес.",
+          4,
+        );
+      }
+      return saveProjectSettings(await context.open(), input, assertOwned);
+    };
+    // В локальном режиме файл конфигурации и данные используют одну проектную блокировку.
+    if (source.kind === "project") return save(() => {});
+    return withStorageLock(source.path, save);
   }
 
   async register(key: string, entry: ProjectEntry, replace: boolean) {

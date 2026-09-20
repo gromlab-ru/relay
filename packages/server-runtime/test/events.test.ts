@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { ProductQueries } from "@relay/core/application/product/queries";
 import { test } from "node:test";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -9,6 +10,27 @@ import { initializeRegistry, registerProject } from "@relay/project-runtime/regi
 import { startServer } from "@relay/server-runtime";
 import { ProjectService } from "@relay/core/application/project/service";
 import { ProductService } from "@relay/core/application/product/service";
+import { saveProjectSettings } from "@relay/core/application/project-settings/service";
+
+test("SSE замечает прямую запись имени и slug через Core", { timeout: 10000 }, async (t) => {
+  const { app, workspace } = await fixture(t);
+  await app.listen(0, "127.0.0.1");
+  const stream = await connect(await app.getUrl());
+  try {
+    await stream.next();
+    await saveProjectSettings(workspace, {
+      name: "Обновлённый проект",
+      slug: "sse-project",
+      ifRevision: 1,
+    });
+    await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+    const context = (await app.inject("/api/v1/projects/sse-project/context")).json().data;
+    assert.equal(context.project, "Обновлённый проект");
+    assert.equal(context.projectId, workspace.config.projectId);
+  } finally {
+    await stream.close();
+  }
+});
 
 async function connect(url: string, project?: string) {
   const controller = new AbortController();
@@ -172,6 +194,74 @@ test("SSE замечает обновление Markdown в подкаталог
   const response = (await app.inject(`/api/v1/product/records?id=${created.id}`)).json();
   assert.equal(response.data.items[0].fields.description, description);
   assert.equal(response.data.items[0].revision, 2);
+});
+
+test("SSE замечает независимую реализацию во вложенном каталоге приложения", async (t) => {
+  const { app, workspace } = await fixture(t);
+  const service = new ProductQueries(workspace);
+  const feature = await service.mutate(
+    {
+      action: "create",
+      requestId: "feature",
+      fields: { kind: "feature", name: "Каталог", summary: "", description: "Требования" },
+    },
+    "cli",
+  );
+  const application = await service.mutate(
+    {
+      action: "create",
+      requestId: "app",
+      fields: {
+        kind: "application",
+        name: "Web",
+        slug: "web",
+        prefix: "WEB",
+        summary: "",
+        description: "Интерфейс",
+        type: "frontend",
+      },
+    },
+    "cli",
+  );
+  await service.mutate(
+    {
+      action: "create",
+      requestId: "scope",
+      ifVersion: (await service.state()).version,
+      fields: {
+        kind: "scope",
+        applicationId: application.id,
+        contracts: [
+          {
+            featureId: feature.id,
+            scenarioId: null,
+            title: "Вклад",
+            description: "Описание",
+            status: "none",
+          },
+        ],
+      },
+    },
+    "cli",
+  );
+  const implementation = await service.entity("WEB-FI-1");
+  await app.listen(0, "127.0.0.1");
+  const stream = await connect(await app.getUrl());
+  t.after(() => stream.close());
+  await stream.next((event) => event.type === "connected");
+  await service.updateImplementation(
+    {
+      ref: implementation.id,
+      ifRevision: implementation.revision,
+      description: "## Новый вклад\n\nПроверка nested SSE.",
+      requestId: "nested",
+    },
+    "cli",
+  );
+  await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+  const response = await app.inject("/api/v1/product/entity?ref=WEB-FI-1");
+  assert.equal(response.statusCode, 200, response.body);
+  assert.equal(response.json().data.revision, implementation.revision + 1);
 });
 
 test("SSE замечает проектные документы API и локального CLI", async (t) => {

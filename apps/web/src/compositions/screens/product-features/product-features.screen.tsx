@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useProjectId } from "domains/project";
+import { useFeatureExpansion } from "domains/product";
 import { Button, Group, NativeSelect, Text, TextInput, Tree, useTree } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { RenderTreeNodePayload } from "@mantine/core";
@@ -26,6 +28,12 @@ import styles from "./styles/product-features.module.css";
 export const ProductFeaturesScreen = () => {
   const { snapshot, mode, setMode } = useProductDemo();
   const base = useProductPath();
+  const projectId = useProjectId();
+  const expansion = useFeatureExpansion(projectId);
+  const [searchExpansion, setSearchExpansion] = useState<{
+    query: string;
+    values: Record<string, boolean>;
+  }>({ query: "", values: {} });
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
   const status = searchParams.get("status") ?? "";
@@ -52,32 +60,26 @@ export const ProductFeaturesScreen = () => {
   const hasNoResults = !hasNoFeatures && isEmptyArray(treeData.nodes);
   const hasTree = !hasNoFeatures && !hasNoResults;
   const shouldExpandByDefault = normalizedQuery !== "";
-  const expansionParam = shouldExpandByDefault ? "closed" : "open";
-  const exceptionIds = searchParams.getAll(expansionParam);
+  const searchValues = searchExpansion.query === normalizedQuery ? searchExpansion.values : {};
   const expandedState = Object.fromEntries(
     treeData.nodes.map((node) => [
       node.value,
       shouldExpandByDefault
-        ? !exceptionIds.includes(node.value)
-        : exceptionIds.includes(node.value),
+        ? (searchValues[node.value] ?? true)
+        : (expansion.expanded[node.value] ?? false),
     ]),
   );
   /**
-   * Сохраняет раскрытие веток в адресе вместе с фильтрами для возврата из фичи.
+   * Меняет только состояние дерева проекта, без навигации и повторного открытия экрана.
    */
   const handleExpandedChange = (nextExpanded: Record<string, boolean>): void => {
-    const nextExceptions = new Set(exceptionIds);
+    const nextValues = { ...(shouldExpandByDefault ? searchValues : expansion.expanded) };
     for (const node of treeData.nodes) {
       const isExpanded = nextExpanded[node.value] === true;
-      if (isExpanded !== shouldExpandByDefault) nextExceptions.add(node.value);
-      else nextExceptions.delete(node.value);
+      nextValues[node.value] = isExpanded;
     }
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("closed");
-    nextParams.delete("open");
-    [...nextExceptions].sort().forEach((id) => nextParams.append(expansionParam, id));
-    if (nextParams.toString() !== searchParams.toString())
-      setSearchParams(nextParams, { replace: true, preventScrollReset: true });
+    if (shouldExpandByDefault) setSearchExpansion({ query: normalizedQuery, values: nextValues });
+    else expansion.setExpanded(nextValues);
   };
   const tree = useTree({ expandedState, onExpandedStateChange: handleExpandedChange });
   const hasExpandableNodes = treeData.nodes.some((node) => !isEmptyArray(node.children));
@@ -93,7 +95,10 @@ export const ProductFeaturesScreen = () => {
     if (hasExpandedNodes) tree.collapseAllNodes();
     else tree.expandAllNodes();
   };
-  const filterSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
+  const filterParams = new URLSearchParams(searchParams);
+  filterParams.delete("open");
+  filterParams.delete("closed");
+  const filterSearch = filterParams.size > 0 ? `?${filterParams.toString()}` : "";
   /**
    * Обновляет один фильтр без отдельных записей истории на каждый символ.
    */
@@ -101,10 +106,8 @@ export const ProductFeaturesScreen = () => {
     const nextParams = new URLSearchParams(searchParams);
     if (selection === "") nextParams.delete(name);
     else nextParams.set(name, selection);
-    if (name === "q") {
-      nextParams.delete("closed");
-      nextParams.delete("open");
-    }
+    nextParams.delete("closed");
+    nextParams.delete("open");
     if (mode === "no-results") setMode("filled");
     setSearchParams(nextParams, { replace: true, preventScrollReset: true });
   };
@@ -138,6 +141,11 @@ export const ProductFeaturesScreen = () => {
       }
     >
       <div className={styles.root}>
+        {!expansion.canPersist && (
+          <Text size="xs" c="dimmed" role="status">
+            Раскрытие сохранено до закрытия страницы: браузерное хранилище недоступно.
+          </Text>
+        )}
         <div className={styles.filters} role="search" aria-label="Поиск и фильтры фич">
           <TextInput
             aria-label="Найти фичу или сценарий"

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Badge, Button, Group, Modal, Stack, Tabs, Text } from "@mantine/core";
 import { Copy, Flag, Plus, WandSparkles } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath, useProjectId } from "domains/project";
 import { getBriefing, isRecordOf, statusColor, statusLabel, useLifecycle } from "domains/lifecycle";
 import { ProjectEditor } from "compositions/widgets/project-editor";
 import type { ProjectEdit } from "compositions/widgets/project-editor";
@@ -23,6 +23,7 @@ import styles from "./styles/task-lifecycle.module.css";
  */
 export const TaskLifecycle = (props: TaskLifecycleProps) => {
   const { taskId, className, ...rootAttrs } = props;
+  const base = useProjectBasePath();
   const projectId = useProjectId();
   const lifecycle = useLifecycle();
   const [tab, setTab] = useState<string | null>("context");
@@ -62,7 +63,6 @@ export const TaskLifecycle = (props: TaskLifecycleProps) => {
   const hasMessage = message !== null;
   const hasNoRuns = isEmptyArray(runs);
   const hasNoChecks = isEmptyArray(checks);
-  const base = `/projects/${encodeURIComponent(projectId)}`;
   const typeLabel = statusLabel(context?.type ?? "task");
   const severityLabel = statusLabel(context?.severity ?? "medium");
   const severityColor = statusColor(context?.severity ?? "medium");

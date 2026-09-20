@@ -66,6 +66,14 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   ) {
     assert.match(content, /Задача .*Ревизия/);
     assert.ok(content.includes(String(body.data?.id)));
+  } else if (
+    body.ok &&
+    ["product_application_save", "product_scope_replace", "product_implementation_update"].includes(
+      name,
+    )
+  ) {
+    assert.match(content, /Ревизия:/);
+    assert.ok(content.includes(String(body.data?.id)));
   } else assert.deepEqual(JSON.parse(content), result.structuredContent);
   return { ...body, isError: result.isError };
 }
@@ -215,6 +223,62 @@ test("продукт доступен агенту через API и изоли�
     }),
   );
   assert.equal(wrongRevision.isError, true);
+  const byKey = await call(client, "product_get", { project: "a", ref: "FEATURE-1" });
+  assert.equal(byKey.data?.id, receipt.data.id);
+  const compact = await call(client, "product_entities", {
+    project: "a",
+    q: "FEATURE-1",
+    limit: 1,
+  });
+  assert.equal(compact.data?.total, 1);
+  assert.equal((await call(client, "product_get", { project: "b", ref: "FEATURE-1" })).ok, false);
+  await call(client, "product_application_save", {
+    project: "a",
+    actor: "agent",
+    action: "create",
+    requestId: "app-keys",
+    name: "Web",
+    summary: "Интерфейс",
+    description: "## Назначение\n\nПоказывать каталог.",
+    slug: "web",
+    prefix: "WEB",
+    type: "frontend",
+  });
+  const overview = await call(client, "product_overview", { project: "a" });
+  const scope = await call(client, "product_scope_replace", {
+    project: "a",
+    actor: "agent",
+    applicationId: "WEB",
+    ifRevision: 0,
+    ifVersion: overview.data?.version,
+    requestId: "scope-keys",
+    contracts: [
+      {
+        featureId: "FEATURE-1",
+        scenarioId: null,
+        title: "Каталог Web",
+        description: "## Вклад\n\nОтобразить товары.",
+        status: "none",
+      },
+    ],
+  });
+  assert.equal(scope.ok, true);
+  const implementation = await call(client, "product_get", { project: "a", ref: "WEB-FI-1" });
+  const change = {
+    project: "a",
+    ref: "WEB-FI-1",
+    ifRevision: implementation.data?.revision,
+    actor: "agent",
+    requestId: "impl-keys",
+    status: "partial",
+  };
+  const changed = await call(client, "product_implementation_update", change);
+  assert.equal(changed.ok, true);
+  assert.equal(changed.data?.id, implementation.data?.id);
+  assert.deepEqual(
+    (await call(client, "product_implementation_update", change)).data,
+    changed.data,
+  );
   assert.equal((await call(client, "product_lint", { project: "a" })).ok, true);
   assert.equal((await call(client, "product_list", { project: "b" })).data?.total, 0);
 });

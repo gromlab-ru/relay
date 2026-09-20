@@ -12,6 +12,20 @@
 
 ## Канбан отдельных досок
 
+### Адресные продуктовые цели
+
+- `product_entities`: компактный поиск по q/kind/application, пакет refs (до 100),
+  active, offset/limit; возвращает total/nextOffset без полных Markdown.
+- `product_get`: ref — ID или ключ, например FEATURE-12, SCENARIO-37, WEB-SI-37;
+  возвращает одну запись, её ключ и ревизию. Неоднозначный ключ требует ID.
+- `product_implementation_update`: ref, ifRevision самой реализации, requestId, actor;
+  необязательные title, description (Markdown), status и key для разрешения коллизии.
+  Изменение ключа сохраняет ID и ссылки. Повтор запроса возвращает исходную квитанцию.
+
+Поля продуктовых ссылок принимают ID или ключ и сохраняются как ID. В планах и этапах
+`project_record_save.fields.productLinks` использует тот же набор kind/id, что задача.
+Ревизия отдельной реализации не равна ревизии всего состава приложения.
+
 Новая модель использует `boards_list`, `board_tasks_list` и `board_task_*`.
 Прежние инструменты `task_*` относятся к числовым задачам старой доски.
 `board_tasks_list` принимает `completion?: unfinished|finished` (незавершённые либо

@@ -1,6 +1,7 @@
 import { Alert, Button } from "@mantine/core";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useProductDemo } from "domains/product-demo";
+import { findProductEntry } from "domains/product";
 import { StatePanel } from "ui/state-panel";
 
 /**
@@ -10,7 +11,8 @@ import { StatePanel } from "ui/state-panel";
  *  - проверки загрузки, ошибки чтения и восстановления данных
  */
 export const ProductOutlet = () => {
-  const { mode, notice, setMode } = useProductDemo();
+  const { mode, notice, setMode, snapshot } = useProductDemo();
+  const location = useLocation();
   const hasNotice = notice !== "";
   if (mode === "loading")
     return (
@@ -26,6 +28,57 @@ export const ProductOutlet = () => {
         title="Не удалось прочитать продукт"
         description="Проверьте соединение с сервером. Несохранённый ввод остаётся в черновике."
         action={<Button onClick={() => setMode("filled")}>Повторить загрузку</Button>}
+      />
+    );
+  const separator = location.pathname.indexOf("/product/");
+  const base = location.pathname.slice(0, separator + "/product".length);
+  const parts = location.pathname.slice(separator + "/product/".length).split("/");
+  const collection = parts[0];
+  const targets =
+    collection === "features"
+      ? snapshot.features
+      : collection === "applications"
+        ? snapshot.applications
+        : [];
+  const ref = parts[1];
+  const matches = targets.filter((entry) => entry.key !== undefined && entry.key === ref);
+  const isAmbiguous = matches.length > 1 && !targets.some((entry) => entry.id === ref);
+  if (isAmbiguous)
+    return (
+      <StatePanel
+        title="Ключ используется несколькими записями"
+        description="Откройте нужную запись по ID и назначьте ей свободный ключ."
+      />
+    );
+  const selected = findProductEntry<{ id: string; key?: string }>(targets, ref);
+  if (
+    selected?.key !== undefined &&
+    targets.filter((entry) => entry.key === selected.key).length === 1
+  )
+    parts[1] = selected.key;
+  const feature = snapshot.features.find((entry) => entry.id === selected?.id);
+  if (feature !== undefined && location.hash.startsWith("#scenario-")) {
+    const scenario = findProductEntry(feature.scenarios, location.hash.slice("#scenario-".length));
+    if (scenario !== undefined)
+      return (
+        <Navigate
+          to={`${base}/features/${feature.key ?? feature.id}/scenarios/${scenario.key ?? scenario.id}${location.search}`}
+          state={location.state}
+          replace
+        />
+      );
+  }
+  if (feature !== undefined && parts[2] === "scenarios") {
+    const scenario = findProductEntry(feature.scenarios, parts[3]);
+    if (scenario?.key !== undefined) parts[3] = scenario.key;
+  }
+  const canonical = `${base}/${parts.join("/")}`;
+  if (canonical !== location.pathname)
+    return (
+      <Navigate
+        to={`${canonical}${location.search}${location.hash}`}
+        state={location.state}
+        replace
       />
     );
   return (

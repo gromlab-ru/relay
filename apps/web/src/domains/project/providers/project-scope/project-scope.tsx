@@ -1,5 +1,5 @@
 import type { ProjectScopeProps } from "./types/project-scope-props.type";
-import { ProjectScopeContext } from "./context";
+import { ProjectAddressContext, ProjectScopeContext } from "./context";
 
 /**
  * Закрепляет проект за деревом запросов, форм и подписок.
@@ -8,6 +8,10 @@ import { ProjectScopeContext } from "./context";
  *  - изоляции одновременно выполняемых операций разных проектов
  */
 export const ProjectScope = (props: ProjectScopeProps) => {
-  const { children, projectId } = props;
-  return <ProjectScopeContext value={projectId}>{children}</ProjectScopeContext>;
+  const { children, projectId, slug } = props;
+  return (
+    <ProjectScopeContext value={projectId}>
+      <ProjectAddressContext value={slug ?? projectId}>{children}</ProjectAddressContext>
+    </ProjectScopeContext>
+  );
 };

@@ -715,7 +715,24 @@ npx @gromlab/relay-cli log search 1 --query "Контракт" --kind progress
 
 ### product get
 
-`product get <id>` читает одну запись и её ревизию.
+`product get <id>` принимает постоянный ID или ключ (FEATURE-12, SCENARIO-37, WEB-FI-12)
+и читает одну запись с ревизией. Реализации читаются независимо от всего состава.
+
+### product entities
+
+Компактные цели для связей: `product entities --q WEB-SI --kind implementation`.
+Параметры: `--q`, `--kind`, `--application <ключ|ID>`, `--active true|false`,
+`--offset`, `--limit` (1–100). Полные Markdown не загружаются. JSON содержит total/nextOffset,
+текст — таблицу или карточки и точную команду продолжения с фильтрами.
+
+### product implementation update
+
+`product implementation update <ключ|ID> --if-revision N --actor agent` изменяет отдельный
+вклад. Поля: `--title`, `--description` (Markdown), `--status none|partial|done`,
+`--key` (свободный ключ для исправления конфликта), `--request-id` (повтор записи).
+Используется ревизия самой реализации из product get, не ревизия состава.
+ID и ссылки сохраняются при смене ключа. Неоднозначный ключ требует обращения по ID.
+Статус done подтверждает актуальные требования; после потери ответа повторяйте тот же запрос.
 
 ### product context
 

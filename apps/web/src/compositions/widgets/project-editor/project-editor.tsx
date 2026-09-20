@@ -12,6 +12,8 @@ import {
 import type { ProjectValues } from "domains/lifecycle";
 import { getBrowserSessionId, readStored, writeStored, removeStored } from "infra/browser-storage";
 import { isNonEmptyArray } from "shared/value-predicates";
+import { PRODUCT_TARGET_LINK_SCHEMA } from "domains/product";
+import { ProductLinks } from "compositions/widgets/product-links";
 import { EDITOR_FIELDS } from "./config/fields";
 import { editorValues, normalizeValues } from "./helpers/values";
 import { RecordField } from "./ui/record-field/record-field";
@@ -28,6 +30,7 @@ const DRAFT_SCHEMA = z.object({
       z.null(),
       z.array(z.string()),
       z.array(z.number()),
+      z.array(PRODUCT_TARGET_LINK_SCHEMA),
     ]),
   ),
   revision: z.number(),
@@ -103,6 +106,9 @@ export const ProjectEditor = (props: ProjectEditorProps) => {
     heading ??
     `${record === undefined ? "Создать" : "Изменить"}: ${KIND_LABELS[kind].toLowerCase()}`;
   const canClose = !form.submitting && (canPersist || !form.isDirty());
+  const hasProductLinks = kind === "plan" || kind === "stage";
+  const productLinksValue = form.useWatchValue("productLinks");
+  const productLinks = z.array(PRODUCT_TARGET_LINK_SCHEMA).catch([]).parse(productLinksValue);
 
   /**
    * Отправляет проверенный ввод и сбрасывает только подтверждённый черновик.
@@ -188,6 +194,12 @@ export const ProjectEditor = (props: ProjectEditorProps) => {
               <RecordField key={field.key} field={field} form={form} state={lifecycle.data} />
             ))}
           </Stack>
+          {hasProductLinks && (
+            <ProductLinks
+              value={productLinks}
+              onChange={(links) => form.setFieldValue("productLinks", links)}
+            />
+          )}
           <Accordion multiple mt="lg">
             {hasDetails && (
               <Accordion.Item value="details">

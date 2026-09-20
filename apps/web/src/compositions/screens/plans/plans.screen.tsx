@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Alert, Badge, Button, Group, Progress, SimpleGrid, Stack, Text } from "@mantine/core";
 import { ArrowLeft, CheckCircle2, Circle, Flag, Plus, Target } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath, useProjectId } from "domains/project";
 import {
   isRecordOf,
   PROJECT_INPUT_SCHEMAS,
@@ -15,6 +15,7 @@ import { ProjectPage } from "compositions/widgets/project-page";
 import { ProjectEditor } from "compositions/widgets/project-editor";
 import type { ProjectEdit } from "compositions/widgets/project-editor";
 import { ProjectRecord } from "compositions/widgets/project-record";
+import { ProductLinks } from "compositions/widgets/product-links";
 import { isDefined, isEmptyArray } from "shared/value-predicates";
 import { StageDetail } from "./ui/stage-detail/stage-detail";
 import styles from "./styles/plans.module.css";
@@ -28,6 +29,7 @@ import styles from "./styles/plans.module.css";
  */
 export const PlansScreen = () => {
   const lifecycle = useLifecycle();
+  const base = useProjectBasePath();
   const projectId = useProjectId();
   const { planId } = useParams();
   const [params, setParams] = useSearchParams();
@@ -35,7 +37,6 @@ export const PlansScreen = () => {
   const [editor, setEditor] = useState<ProjectEdit | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setSaving] = useState(false);
-  const base = `/projects/${encodeURIComponent(projectId)}`;
   const state = lifecycle.data;
   const planItems = state?.records.filter((record) => isRecordOf(record, "plan")) ?? [];
   const plan = planItems.find((record) => record.id === planId);
@@ -54,6 +55,7 @@ export const PlansScreen = () => {
   const hasError = error !== null;
   const isEmpty = isEmptyArray(planItems);
   const hasNoStages = isEmptyArray(stageItems);
+  const hasProductLinks = plan !== undefined && !isEmptyArray(plan.fields.productLinks);
   const progress = plan === undefined ? undefined : state?.progress[plan.id];
   const acceptedCount = stageItems.filter(
     (record) => isRecordOf(record, "stage") && record.fields.status === "accepted",
@@ -232,6 +234,7 @@ export const PlansScreen = () => {
           {error}
         </Alert>
       )}
+      {hasProductLinks && <ProductLinks value={plan.fields.productLinks} />}
       <div className={styles.workspace}>
         <aside className={styles.stages}>
           <Group justify="space-between" mb="md">

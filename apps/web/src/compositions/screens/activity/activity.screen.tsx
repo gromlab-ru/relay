@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button, Group, Select, SimpleGrid, Tabs, Text } from "@mantine/core";
 import { CheckCheck, Plus, Radio } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath } from "domains/project";
 import { useLifecycle } from "domains/lifecycle";
 import { ProjectPage } from "compositions/widgets/project-page";
 import { ProjectEditor } from "compositions/widgets/project-editor";
@@ -31,7 +31,7 @@ const TAB_SCHEMA = z
  */
 export const ActivityScreen = () => {
   const lifecycle = useLifecycle();
-  const projectId = useProjectId();
+  const base = useProjectBasePath();
   const [params, setParams] = useSearchParams();
   const [taskId, setTaskId] = useState<string | null>(null);
   const [editor, setEditor] = useState<ProjectEdit | null>(null);
@@ -154,7 +154,7 @@ export const ActivityScreen = () => {
                   {hasTask && (
                     <Button
                       component={Link}
-                      to={`/projects/${encodeURIComponent(projectId)}/tasks/${relatedTaskId}`}
+                      to={`${base}/tasks/${relatedTaskId}`}
                       state={{ fromBoard: true }}
                       variant="subtle"
                       size="xs"

@@ -55,7 +55,7 @@ test("хранение продукта: Markdown по строкам, мигр�
   const saved = await service.mutate(command, "agent");
   const target = join(repository.root, "features", `${saved.id}.json`);
   const stored = JSON.parse(await readFile(target, "utf8"));
-  assert.equal(stored.version, 2);
+  assert.equal(stored.version, 3);
   assert.deepEqual(stored.fields.description, text.split("\n"));
   assert.equal(stored.fields.summary, "Кратко\nВторая строка");
   const original = (await repository.all())[0]!;
@@ -110,9 +110,21 @@ test("хранение продукта: Markdown по строкам, мигр�
     },
     "agent",
   );
+  const scopeView = (await service.state()).records.find((entry) => entry.id === scope.id)!;
+  assert.ok(scopeView.fields.kind === "scope");
   assert.deepEqual(
-    JSON.parse(await readFile(join(repository.root, "scopes", `${scope.id}.json`), "utf8")).fields
-      .contracts[0].description,
+    JSON.parse(
+      await readFile(
+        join(
+          repository.root,
+          "applications",
+          application.id,
+          "features",
+          `${scopeView.fields.contracts[0]!.id}.json`,
+        ),
+        "utf8",
+      ),
+    ).fields.description,
     text.split("\n"),
   );
   assert.deepEqual(

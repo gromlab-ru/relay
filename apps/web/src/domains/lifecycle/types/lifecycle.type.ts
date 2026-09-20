@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { PRODUCT_TARGET_LINK_SCHEMA } from "domains/product";
+import type { ProductTargetLink } from "domains/product";
 
 const text = z.string().default("");
 const ref = z.string().nullable().default(null);
@@ -26,6 +28,7 @@ export const PROJECT_INPUT_SCHEMAS = {
   }),
   plan: z.object({
     kind: z.literal("plan"),
+    productLinks: z.array(PRODUCT_TARGET_LINK_SCHEMA).default([]),
     title,
     goal: text,
     scope: text,
@@ -38,6 +41,7 @@ export const PROJECT_INPUT_SCHEMAS = {
   }),
   stage: z.object({
     kind: z.literal("stage"),
+    productLinks: z.array(PRODUCT_TARGET_LINK_SCHEMA).default([]),
     title,
     planId: z.string().min(1, "Выберите план"),
     outcome: text,
@@ -197,7 +201,10 @@ export type ProjectFields = z.output<typeof PROJECT_FIELDS_SCHEMA>;
 /** Виды проектных документов. */
 export type ProjectKind = ProjectFields["kind"];
 /** Ввод редактора, включая временно незаполненные значения. */
-export type ProjectValues = Record<string, string | number | boolean | null | string[] | number[]>;
+export type ProjectValues = Record<
+  string,
+  string | number | boolean | null | string[] | number[] | ProductTargetLink[]
+>;
 /** Поля одного вида документа. */
 export type FieldsOf<K extends ProjectKind> = Extract<ProjectFields, { kind: K }>;
 

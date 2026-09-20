@@ -49,7 +49,17 @@ export interface Backend {
     "list" | "get" | "links" | "create" | "update" | "move" | "link"
   >;
   boards: Pick<BoardsService, "list" | "get">;
-  product: Pick<ProductQueries, "state" | "mutate" | "overview" | "list" | "context">;
+  product: Pick<
+    ProductQueries,
+    | "state"
+    | "mutate"
+    | "overview"
+    | "list"
+    | "context"
+    | "entities"
+    | "entity"
+    | "updateImplementation"
+  >;
   lifecycle: Pick<LifecycleQueries, "state" | "context" | "briefing" | "changes"> &
     Pick<ProjectService, "save">;
   kind: "local" | "http";

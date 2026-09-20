@@ -27,6 +27,7 @@ import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
 import { shortId } from "../../shared/ids.js";
 import { ProductRepository } from "../../storage/product.js";
+import { productAddresses, resolveProductAddress } from "../../domain/product-addresses.js";
 
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const versionOf = (tasks: BoardTaskRecord[]) => hash(tasks.map((task) => [task.id, task.revision]));
@@ -161,7 +162,16 @@ export class BoardTasksService {
   }
   async list(input: BoardTasksQuery = {}) {
     const query = parse(boardTasksQuerySchema, input, "список задач доски");
-    return this.read((tasks, boards) => {
+    return this.read(async (tasks, boards) => {
+      if (query.productTarget) {
+        const addresses = productAddresses(await new ProductRepository(this.workspace).all());
+        if (
+          addresses.some(
+            (entry) => entry.id === query.productTarget || entry.key === query.productTarget,
+          )
+        )
+          query.productTarget = resolveProductAddress(addresses, query.productTarget).id;
+      }
       const board = query.board === undefined ? undefined : resolveBoard(boards, query.board);
       const selected = tasks
         .filter((task) => {
@@ -308,10 +318,14 @@ export class BoardTasksService {
     links: BoardTaskRecord["productLinks"],
     previous: BoardTaskRecord["productLinks"] = [],
   ) {
-    if (links.length === 0) return;
+    if (links.length === 0) return [];
     const records = await new ProductRepository(this.workspace).all();
+    const normalized = links.map((link) => ({
+      ...link,
+      id: resolveProductAddress(productAddresses(records), link.id, link.kind).id,
+    }));
     const seen = new Set<string>();
-    for (const link of links) {
+    for (const link of normalized) {
       const key = `${link.kind}:${link.id}`;
       invariant(!seen.has(key), "INVALID_ARGUMENT", "Продуктовая связь повторяется", 4);
       seen.add(key);
@@ -333,6 +347,7 @@ export class BoardTasksService {
         4,
       );
     }
+    return normalized;
   }
   async create(input: CreateBoardTask, actor: string) {
     const command = parse(createBoardTaskSchema, input, "создание задачи");
@@ -342,7 +357,7 @@ export class BoardTasksService {
       command,
       actor,
       async (tasks, boards, _previous, author) => {
-        await this.validateProductLinks(command.productLinks ?? []);
+        const productLinks = await this.validateProductLinks(command.productLinks ?? []);
         const board = resolveBoard(boards, command.board);
         const key = this.nextKey(tasks, board);
         const now = new Date().toISOString();
@@ -358,7 +373,7 @@ export class BoardTasksService {
           boardId: board.id,
           title: command.title,
           description: command.description,
-          productLinks: command.productLinks ?? [],
+          productLinks,
           column: command.column,
           rank,
           revision: 1,
@@ -389,13 +404,15 @@ export class BoardTasksService {
       command,
       actor,
       async (_tasks, _boards, previous, author) => {
-        if (command.productLinks !== undefined)
-          await this.validateProductLinks(command.productLinks, previous!.productLinks);
+        const productLinks =
+          command.productLinks === undefined
+            ? previous!.productLinks
+            : await this.validateProductLinks(command.productLinks, previous!.productLinks);
         return {
           ...previous!,
           title: command.title ?? previous!.title,
           description: command.description ?? previous!.description,
-          productLinks: command.productLinks ?? previous!.productLinks,
+          productLinks,
           revision: previous!.revision + 1,
           updatedAt: new Date().toISOString(),
           updatedBy: author,

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge, Button, Group, Modal, Progress, SimpleGrid, Stack, Text } from "@mantine/core";
 import { ArrowRight, Compass, Copy, Flag, Plus, Save, Sparkles } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath } from "domains/project";
 import {
   contextMarkdown,
   isRecordOf,
@@ -28,11 +28,10 @@ import styles from "./styles/overview.module.css";
  */
 export const OverviewScreen = () => {
   const lifecycle = useLifecycle();
-  const projectId = useProjectId();
+  const base = useProjectBasePath();
   const [editor, setEditor] = useState<ProjectEdit | null>(null);
   const [isContextOpen, setContextOpen] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
-  const base = `/projects/${encodeURIComponent(projectId)}`;
   const state = lifecycle.data;
   if (state === undefined)
     return (

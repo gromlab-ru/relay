@@ -4,7 +4,7 @@ import { Alert, Button, Drawer, Group, Kbd, Modal, Stack, Text } from "@mantine/
 import { notifications } from "@mantine/notifications";
 import { useDebouncedValue } from "@mantine/hooks";
 import { Plus } from "lucide-react";
-import { useGetProject, useProjectId } from "domains/project";
+import { useGetProject, useProjectBasePath, useProjectId } from "domains/project";
 import { BOARD_FILTERS_SCHEMA, useGetBoard, useTaskConnection } from "domains/tasks";
 import { PROJECT_INPUT_SCHEMAS, saveProjectRecord, useLifecycle } from "domains/lifecycle";
 import type { BoardFilters } from "domains/tasks";
@@ -44,8 +44,8 @@ const CreateTask = lazy(() =>
  *  - прямых ссылок и истории браузера
  */
 export const BoardScreen = () => {
+  const projectPath = `${useProjectBasePath()}/`;
   const scopeId = useProjectId();
-  const projectPath = `/projects/${encodeURIComponent(scopeId)}/`;
   const boardPath = `${projectPath}board`;
   const project = useGetProject();
   const lifecycle = useLifecycle();

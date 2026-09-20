@@ -10,7 +10,7 @@ const lines = z.array(
 );
 const fields = productFieldsSchema.options;
 export const storedProductSchema = productRecordSchema.extend({
-  version: z.literal(2),
+  version: z.union([z.literal(2), z.literal(3)]),
   fields: z.discriminatedUnion("kind", [
     fields[0].extend({ description: lines }),
     fields[1].extend({ description: lines }),
@@ -60,5 +60,5 @@ export function encodeProduct(record: ProductRecord): z.infer<typeof storedProdu
       : data.kind === "document"
         ? { ...data, body: data.body.split("\n") }
         : { ...data, description: data.description.split("\n") };
-  return storedProductSchema.parse({ ...record, version: 2, fields: encoded });
+  return storedProductSchema.parse({ ...record, version: 3, fields: encoded });
 }

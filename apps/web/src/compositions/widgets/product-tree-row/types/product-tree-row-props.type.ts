@@ -6,6 +6,8 @@ import type { ProductStatus } from "domains/product-demo";
 export type ProductTreeRowParams = {
   /** Исходное название фичи или сценария. */
   name: string;
+  /** Читаемый ключ отображаемой сущности. */
+  entityKey?: string;
   /** Смысл фичи либо заголовок вклада приложения. */
   summary?: string;
   /** Переход по названию. */

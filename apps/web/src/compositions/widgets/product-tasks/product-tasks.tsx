@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useProjectBasePath, useProjectId } from "domains/project";
 import { Alert, Anchor, Button, Group, Stack, Text } from "@mantine/core";
 import { useBoardTasks, TASK_COLUMNS } from "domains/board-tasks";
 import { isEmptyArray } from "shared/value-predicates";
@@ -15,7 +16,8 @@ import styles from "./styles/product-tasks.module.css";
  */
 export const ProductTasks = (props: ProductTasksProps) => {
   const { targetId, className, ...rootAttrs } = props;
-  const { project } = useParams();
+  const project = useProjectId();
+  const base = useProjectBasePath();
   const [isOpen, setOpen] = useState(false);
   const canRead = project !== undefined && targetId !== undefined;
   const query = useBoardTasks(project ?? "", { productTarget: targetId }, canRead && isOpen);
@@ -49,11 +51,7 @@ export const ProductTasks = (props: ProductTasksProps) => {
           )}
           {items.map((task) => (
             <Group key={task.id} justify="space-between">
-              <Anchor
-                component={Link}
-                size="sm"
-                to={`/projects/${project}/boards/${task.boardSlug}/${task.id}`}
-              >
+              <Anchor component={Link} size="sm" to={`${base}/boards/${task.boardSlug}/${task.id}`}>
                 {task.key} · {task.label}
               </Anchor>
               <Text size="xs" c="dimmed">

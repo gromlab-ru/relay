@@ -7,6 +7,7 @@ export type ScopeTreeScenario = {
   id: string;
   /** Название общего сценария. */
   name: string;
+  key?: string;
   /** Включён ли он в состав приложения. */
   isEnabled: boolean;
   /** Описан ли вклад. */

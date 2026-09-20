@@ -5,6 +5,8 @@ import type { ApiFailure } from "@relay/contracts";
 import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
+  "AMBIGUOUS_PRODUCT_KEY",
+  "PRODUCT_RECOVERY_CONFLICT",
   "ALREADY_EXISTS",
   "INVALID_REFERENCE",
   "REVISION_CONFLICT",
@@ -26,6 +28,7 @@ const conflicts = new Set([
   "ID_EXHAUSTED",
   "IDEMPOTENCY_CONFLICT",
   "DUPLICATE_PROJECT_ID",
+  "PROJECT_SLUG_TAKEN",
   "PROJECT_REFERENCE_MISMATCH",
   "PROJECT_CYCLE",
   "ACCEPTANCE_REQUIRED",
@@ -42,6 +45,7 @@ const conflicts = new Set([
   "REVISION_REQUIRED",
 ]);
 const missing = new Set([
+  "PRODUCT_RECORD_NOT_FOUND",
   "NOT_FOUND",
   "TASK_NOT_FOUND",
   "COMMENT_NOT_FOUND",

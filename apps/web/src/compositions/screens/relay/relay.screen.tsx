@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 import { Badge, Button, Group, Select, Text } from "@mantine/core";
 import { useWorkspace } from "domains/workspace";
@@ -22,7 +22,42 @@ export const RelayScreen = () => {
   const selectedId = match?.params.project;
   const workspaceData = workspace.data;
   const projectItems = workspaceData?.projects ?? [];
-  const projectData = projectItems.find((project) => project.id === selectedId);
+  const [previousSelection, setPreviousSelection] = useState<{ reference: string; id: string }>();
+  const directProject =
+    projectItems.find((project) => project.id === selectedId) ??
+    projectItems.find((project) => project.slug === selectedId) ??
+    projectItems.find((project) => project.key === selectedId);
+  const projectData =
+    directProject ??
+    projectItems.find(
+      (project) =>
+        previousSelection?.reference === selectedId && previousSelection?.id === project.id,
+    );
+  const canonicalAddress = projectData?.slug ?? projectData?.id;
+  const resolvedId = projectData?.id;
+  useEffect(() => {
+    if (resolvedId === undefined || selectedId === undefined || canonicalAddress === undefined)
+      return;
+    setPreviousSelection({ reference: selectedId, id: resolvedId });
+    if (selectedId === canonicalAddress) return;
+    const suffix = location.pathname.replace(/^\/projects\/[^/]+/, "");
+    navigate(
+      `/projects/${encodeURIComponent(canonicalAddress)}${suffix}${location.search}${location.hash}`,
+      {
+        replace: true,
+        state: location.state,
+      },
+    );
+  }, [
+    resolvedId,
+    selectedId,
+    canonicalAddress,
+    location.pathname,
+    location.search,
+    location.hash,
+    location.state,
+    navigate,
+  ]);
   const isWorkspace = workspaceData?.mode === "workspace";
   const canOpenProject = projectData !== undefined && projectData.available;
   const selectItems = [
@@ -30,8 +65,8 @@ export const RelayScreen = () => {
       projectItems.map((project) => [
         project.id,
         {
-          value: project.id,
-          label: `${project.key} · ${project.name}`,
+          value: project.slug ?? project.id,
+          label: project.name,
           disabled: !project.available,
         },
       ]),
@@ -96,7 +131,7 @@ export const RelayScreen = () => {
         </Group>
       )}
       {canOpenProject && (
-        <ProjectScope key={projectData.id} projectId={projectData.id}>
+        <ProjectScope key={projectData.id} projectId={projectData.id} slug={projectData.slug}>
           <TasksSync />
           <LifecycleSync />
           <Outlet />

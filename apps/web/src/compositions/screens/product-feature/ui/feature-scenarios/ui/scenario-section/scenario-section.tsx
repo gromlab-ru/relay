@@ -3,6 +3,7 @@ import { ActionIcon, Group } from "@mantine/core";
 import { Link2, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProductReadiness } from "domains/product-demo";
+import { ProductKey } from "domains/product";
 import { MarkdownView } from "ui/markdown-view";
 import { ProductTasks } from "compositions/widgets/product-tasks";
 import type { ScenarioSectionProps } from "./types/scenario-section-props.type";
@@ -28,6 +29,7 @@ export const ScenarioSection = (props: ScenarioSectionProps) => {
     >
       <header className={styles.header}>
         <div className={styles.meaning}>
+          <ProductKey value={scenario.key} copyable />
           <h3 id={headingId} className={styles.title}>
             {scenario.name}
           </h3>
@@ -36,7 +38,7 @@ export const ScenarioSection = (props: ScenarioSectionProps) => {
         <Group gap={4} wrap="nowrap">
           <ActionIcon
             component={Link}
-            to={`${featurePath}${search}#${anchor}`}
+            to={`${featurePath}/scenarios/${scenario.key ?? scenario.id}${search}`}
             variant="subtle"
             color="gray"
             aria-label={`Ссылка на сценарий: ${scenario.name}`}
@@ -46,7 +48,7 @@ export const ScenarioSection = (props: ScenarioSectionProps) => {
           </ActionIcon>
           <ActionIcon
             component={Link}
-            to={`${featurePath}/scenarios/${scenario.id}/edit${search}`}
+            to={`${featurePath}/scenarios/${scenario.key ?? scenario.id}/edit${search}`}
             variant="subtle"
             color="gray"
             aria-label={`Редактировать сценарий: ${scenario.name}`}

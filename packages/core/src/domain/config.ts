@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { storedProjectSettingsSchema } from "./project-settings.js";
 
 /** Стандартный порт Relay Server для Web и REST API. */
 export const DEFAULT_SERVER_PORT = 4700;
@@ -58,6 +59,7 @@ export const configSchema = z
     version: z.literal(1),
     mode: z.literal("local").default("local"),
     projectId: z.union([z.string().regex(/^[A-Za-z0-9]{8}$/), z.string().uuid()]).optional(),
+    projectSettings: storedProjectSettingsSchema.optional(),
     storageDir: z.string().trim().min(1),
     defaultStatus: z.string().min(1),
     readyStatuses: z.array(z.string()).min(1),

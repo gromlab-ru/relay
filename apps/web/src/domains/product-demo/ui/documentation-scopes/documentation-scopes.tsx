@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { Link, useLocation } from "react-router-dom";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath } from "domains/project";
 import { AppWindow, Box, GitBranch, Link2, Sparkles } from "lucide-react";
 import { isEmptyArray } from "shared/value-predicates";
 import { useProductDemo } from "../../hooks/use-product-demo.hook";
@@ -16,7 +16,7 @@ import styles from "./styles/documentation-scopes.module.css";
 export const DocumentationScopes = (props: DocumentationScopesProps) => {
   const { scopeIds, limit = scopeIds.length, isDetailed = false, className, ...rootAttrs } = props;
   const { scopes } = useProductDemo();
-  const projectId = useProjectId();
+  const base = useProjectBasePath();
   const location = useLocation();
   const scopeItems = scopes.filter((scope) => scopeIds.includes(scope.id));
   const visibleItems = scopeItems.slice(0, limit).map((scope) => ({
@@ -52,7 +52,7 @@ export const DocumentationScopes = (props: DocumentationScopesProps) => {
               <span className={styles.context}>
                 {scope.kind} · {scope.path}
                 <Link
-                  to={`/projects/${encodeURIComponent(projectId)}/product${scope.href ?? "/documents"}`}
+                  to={`${base}/product${scope.href ?? "/documents"}`}
                   state={{ returnTo: location.pathname }}
                   aria-label={`Открыть: ${scope.name}`}
                 >

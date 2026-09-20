@@ -3,6 +3,7 @@ import { ActionIcon } from "@mantine/core";
 import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProductReadiness } from "domains/product-demo";
+import { ProductKey } from "domains/product";
 import { isDefined } from "shared/value-predicates";
 import type { ProductTreeRowProps } from "./types/product-tree-row-props.type";
 import styles from "./styles/product-tree-row.module.css";
@@ -16,6 +17,7 @@ import styles from "./styles/product-tree-row.module.css";
 export const ProductTreeRow = (props: ProductTreeRowProps) => {
   const {
     name,
+    entityKey,
     summary,
     href,
     status,
@@ -78,6 +80,7 @@ export const ProductTreeRow = (props: ProductTreeRowProps) => {
       <div className={styles.content}>
         <div className={styles.headline}>
           <ProductReadiness status={status} isCompact label={readinessLabel} />
+          <ProductKey value={entityKey} />
           <Link
             to={href}
             state={{ returnTo }}

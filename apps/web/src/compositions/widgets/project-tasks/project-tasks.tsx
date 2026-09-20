@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { Badge, Text } from "@mantine/core";
 import { CheckCircle2, Circle, ChevronRight } from "lucide-react";
-import { useGetProject, useProjectId } from "domains/project";
+import { useGetProject, useProjectBasePath } from "domains/project";
 import { isEmptyArray } from "shared/value-predicates";
 import type { ProjectTasksProps } from "./types/project-tasks-props.type";
 import styles from "./styles/project-tasks.module.css";
@@ -20,13 +20,13 @@ export const ProjectTasks = (props: ProjectTasksProps) => {
     className,
     ...rootAttrs
   } = props;
-  const projectId = useProjectId();
+  const base = useProjectBasePath();
   const project = useGetProject();
   const items = tasks.map((task) => ({
     ...task,
     label: project.data?.statuses.find((status) => status.id === task.status)?.label ?? task.status,
     Icon: task.completed ? CheckCircle2 : Circle,
-    href: `/projects/${encodeURIComponent(projectId)}/tasks/${task.id}`,
+    href: `${base}/tasks/${task.id}`,
   }));
   if (isEmptyArray(items))
     return (

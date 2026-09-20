@@ -16,7 +16,15 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { ArrowLeft, FileText, Plus, X, Layers } from "lucide-react";
-import { useProduct, useProductContext, getProductContextOptions } from "domains/product";
+import {
+  useProductEntities,
+  useProductEntity,
+  useProductTargetSearch,
+  useProductContext,
+  getProductTargetOptions,
+  ProductKey,
+} from "domains/product";
+import { useDebouncedValue } from "@mantine/hooks";
 import { BoardTaskError, updateBoardTask, useBoardTaskRefresh } from "domains/board-tasks";
 import { MarkdownView } from "ui/markdown-view";
 import { isEmptyArray } from "shared/value-predicates";
@@ -36,7 +44,7 @@ export const TaskContext = (props: TaskContextProps) => {
   const [mode, setMode] = useState("general");
   const [application, setApplication] = useState("");
   const [search, setSearch] = useState("");
-  const [limit, setLimit] = useState(20);
+  const [isContextOpen, setContextOpen] = useState(false);
   const [visibleLinks, setVisibleLinks] = useState(5);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [documentId, setDocumentId] = useState<string | null>(null);
@@ -45,43 +53,81 @@ export const TaskContext = (props: TaskContextProps) => {
   const [isRemoving, setRemoving] = useState(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
-  const product = useProduct(projectId);
-  const context = useProductContext(projectId, selectedId);
+  const [debouncedSearch] = useDebouncedValue(search, 200);
+  const candidateKind =
+    mode === "application"
+      ? "implementation"
+      : mode === "scenario" || /^SCENARIO-/i.test(debouncedSearch)
+        ? "scenario"
+        : "feature";
+  const product = useProductTargetSearch(
+    projectId,
+    isChoosing
+      ? {
+          kind: candidateKind,
+          q: debouncedSearch,
+          active: "true",
+          ...(application === "" || mode !== "application" ? {} : { application }),
+        }
+      : null,
+  );
+  const context = useProductContext(projectId, isContextOpen ? selectedId : null);
+  const details = useProductEntity(projectId, selectedId);
   const refresh = useBoardTaskRefresh(projectId);
-  const options = getProductContextOptions(product.data);
   const form = useForm({
     mode: "uncontrolled",
     initialValues: { ids: [] as string[], revision: task.revision },
   });
   const selectedIds = form.useWatchValue("ids");
-  const applications =
-    product.data?.records.flatMap((record) =>
-      record.fields.kind === "application" ? [{ value: record.id, label: record.fields.name }] : [],
-    ) ?? [];
-  const needle = search.toLocaleLowerCase().trim();
-  const matches = options.filter(
-    (option) =>
-      option.isActive &&
-      (mode === "general"
-        ? option.applicationId === null
-        : option.applicationId !== null &&
-          (application === "" || option.applicationId === application)) &&
-      `${option.title} ${option.path}`.toLocaleLowerCase().includes(needle),
+  const linkRefs = [
+    ...new Set([
+      ...task.productLinks.map((link) => link.id),
+      ...selectedIds,
+      ...(selectedId === null ? [] : [selectedId]),
+    ]),
+  ];
+  const linked = useProductEntities(
+    projectId,
+    isEmptyArray(linkRefs) ? null : { refs: linkRefs, limit: 100 },
   );
-  const candidateItems = matches
-    .slice(0, limit)
-    .map((option) => ({ ...option, isSelected: selectedIds.includes(option.id) }));
+  const appQuery = useProductTargetSearch(
+    projectId,
+    isChoosing && mode === "application" ? { kind: "application" } : null,
+  );
+  const applications = appQuery.items.map((entry) => ({
+    value: entry.id,
+    label: `${entry.key ?? ""} · ${entry.title}`,
+  }));
+  const options = getProductTargetOptions([...product.items, ...(linked.data?.items ?? [])]);
+  const candidateItems = getProductTargetOptions(product.items).map((option) => ({
+    ...option,
+    isSelected: selectedIds.includes(option.id),
+  }));
   const linkedItems = task.productLinks.slice(0, visibleLinks).map((link) => {
     const option = options.find((item) => item.id === link.id && item.targetKind === link.kind);
     return {
       ...link,
+      key: option?.key,
       title: option?.title ?? link.id,
       path: option?.path ?? "Продуктовая цель недоступна",
       label: option?.kind ?? "Связь",
       isInactive: option !== undefined && !option.isActive,
     };
   });
-  const selected = options.find((item) => item.id === selectedId);
+  const selectedOption = options.find((item) => item.id === selectedId);
+  const detailFields = details.data?.fields;
+  const selected =
+    selectedOption === undefined
+      ? undefined
+      : {
+          ...selectedOption,
+          description:
+            detailFields === undefined || detailFields.kind === "scope"
+              ? ""
+              : detailFields.kind === "document"
+                ? detailFields.body
+                : detailFields.description,
+        };
   const entryItems =
     context.data?.records.flatMap(({ record, reasons }) => {
       const fields = record.fields;
@@ -121,11 +167,15 @@ export const TaskContext = (props: TaskContextProps) => {
   const hasSelection = selectedId !== null;
   const shouldShowMaterials = hasSelection && !isChoosing;
   const hasPreview = selected !== undefined;
-  const hasMore = matches.length > limit;
+  const hasMore = product.hasMore;
   const hasMoreLinks = task.productLinks.length > visibleLinks;
   const isEmpty = isEmptyArray(task.productLinks);
   const hasLinks = !isEmpty;
-  const isEmptySearch = isEmptyArray(candidateItems) && !product.isLoading;
+  const isEmptySearch =
+    isEmptyArray(candidateItems) &&
+    !product.isLoading &&
+    !product.isValidating &&
+    product.error === undefined;
   const hasError = error !== "";
   const hasStale = context.data?.readiness.some((item) => item.stale > 0) === true;
   const isBusy = form.submitting || isRemoving;
@@ -237,6 +287,7 @@ export const TaskContext = (props: TaskContextProps) => {
               <Text size="sm" fw={600} mt={4}>
                 {item.title}
               </Text>
+              <ProductKey value={item.key} />
               {item.isInactive && (
                 <Text size="xs" c="orange">
                   Участие приложения снято
@@ -267,11 +318,11 @@ export const TaskContext = (props: TaskContextProps) => {
               value={mode}
               onChange={(value) => {
                 setMode(value);
-                setLimit(20);
               }}
               data={[
-                { value: "general", label: "Общие требования" },
-                { value: "application", label: "По приложению" },
+                { value: "general", label: "Фичи" },
+                { value: "scenario", label: "Сценарии" },
+                { value: "application", label: "Реализации" },
               ]}
             />
             {isApplicationMode && (
@@ -280,7 +331,6 @@ export const TaskContext = (props: TaskContextProps) => {
                 value={application}
                 onChange={(event) => {
                   setApplication(event.currentTarget.value);
-                  setLimit(20);
                 }}
                 data={[{ value: "", label: "Все приложения" }, ...applications]}
               />
@@ -288,13 +338,26 @@ export const TaskContext = (props: TaskContextProps) => {
             <TextInput
               ref={searchInput}
               label="Найти фичу или сценарий"
-              placeholder="Название или путь"
+              placeholder="Ключ или название, например WEB-FI-12"
               value={search}
               onChange={(event) => {
                 setSearch(event.currentTarget.value);
-                setLimit(20);
               }}
             />
+            {appQuery.hasMore && (
+              <Button
+                variant="subtle"
+                size="xs"
+                onClick={() => void appQuery.setSize(appQuery.size + 1)}
+              >
+                Ещё приложения
+              </Button>
+            )}
+            {product.isLoading && (
+              <Text role="status" size="sm" c="dimmed">
+                Ищем продуктовые цели…
+              </Text>
+            )}
             {isEmptySearch && (
               <Text c="dimmed" size="sm">
                 Подходящих целей нет. Состав приложения задаётся в разделе «Продукт».
@@ -327,6 +390,7 @@ export const TaskContext = (props: TaskContextProps) => {
                       <Text size="sm" fw={600}>
                         {item.title}
                       </Text>
+                      <ProductKey value={item.key} />
                       <Text size="xs" c="dimmed">
                         {item.kind} · {item.path}
                       </Text>
@@ -355,6 +419,12 @@ export const TaskContext = (props: TaskContextProps) => {
                     <Text fw={600} size="sm">
                       {selected.title}
                     </Text>
+                    <ProductKey value={selected.key} />
+                    {details.isLoading && (
+                      <Text size="sm" role="status">
+                        Загружаем описание…
+                      </Text>
+                    )}
                     <MarkdownView
                       text={selected.description}
                       emptyText="Описание пока не заполнено."
@@ -364,7 +434,11 @@ export const TaskContext = (props: TaskContextProps) => {
               </div>
             </div>
             {hasMore && (
-              <Button variant="subtle" onClick={() => setLimit(limit + 20)}>
+              <Button
+                variant="subtle"
+                loading={product.isValidating}
+                onClick={() => void product.setSize(product.size + 1)}
+              >
                 Показать ещё цели
               </Button>
             )}
@@ -404,6 +478,22 @@ export const TaskContext = (props: TaskContextProps) => {
           </Button>
         </Alert>
       )}
+      {linked.error !== undefined && (
+        <Alert color="red" mt="sm">
+          Не удалось прочитать сведения о связях.{" "}
+          <Button variant="subtle" onClick={() => void linked.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
+      {details.error !== undefined && (
+        <Alert color="red" mt="sm">
+          Описание недоступно.{" "}
+          <Button variant="subtle" onClick={() => void details.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
       {shouldShowMaterials && (
         <section className={styles.chooser}>
           <Group justify="space-between" mb="md">
@@ -435,6 +525,11 @@ export const TaskContext = (props: TaskContextProps) => {
               text={selected.description}
               emptyText="Описание цели пока не заполнено."
             />
+          )}
+          {!isContextOpen && (
+            <Button variant="subtle" size="sm" mt="sm" onClick={() => setContextOpen(true)}>
+              Показать связанные требования и документы
+            </Button>
           )}
           <Stack gap="xs" mt="md">
             {entryItems.map((entry) => (

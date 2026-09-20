@@ -17,6 +17,15 @@ import { ZodValidationPipe } from "../../common/validation.js";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { EventsService } from "../events/events.service.js";
 import { EventsModule } from "../events/events.module.js";
+import {
+  productEntitiesQuerySchema,
+  productEntityQuerySchema,
+  updateImplementationSchema,
+} from "@relay/core/domain/product-implementation";
+import type {
+  ProductEntitiesQuery,
+  UpdateImplementation,
+} from "@relay/core/domain/product-implementation";
 
 @ApiTags("product")
 @Controller("product")
@@ -25,6 +34,53 @@ class ProductController {
     @Inject(WorkspaceService) private readonly workspace: WorkspaceService,
     @Inject(EventsService) private readonly events: EventsService,
   ) {}
+
+  @Get("entities")
+  @ApiEndpoint({
+    id: "getProductEntities",
+    summary: "Найти продуктовые цели без загрузки Markdown; до 100 записей и продолжение",
+    response: "ProductEntities",
+    query: "ProductEntitiesQuery",
+  })
+  async entities(@Query() query: ProductEntitiesQuery) {
+    const normalized = {
+      ...query,
+      ...(typeof query.refs === "string" ? { refs: [query.refs] } : {}),
+    };
+    const parsed = new ZodValidationPipe(productEntitiesQuerySchema).transform(normalized);
+    return success(await new ProductQueries(await this.workspace.open()).entities(parsed));
+  }
+
+  @Get("entity")
+  @ApiEndpoint({
+    id: "getProductEntity",
+    summary: "Прочитать фичу, сценарий, приложение или реализацию по ключу либо ID",
+    response: "ProductEntity",
+    query: "ProductEntityQuery",
+  })
+  async entity(@Query(new ZodValidationPipe(productEntityQuerySchema)) query: { ref: string }) {
+    return success(await new ProductQueries(await this.workspace.open()).entity(query.ref));
+  }
+
+  @Post("implementations")
+  @HttpCode(200)
+  @ApiEndpoint({
+    id: "updateProductImplementation",
+    summary: "Изменить отдельную реализацию с проверкой её ревизии и защитой повтора",
+    response: "ProductSaved",
+    body: "UpdateImplementation",
+  })
+  async implementation(
+    @Body(new ZodValidationPipe(updateImplementationSchema)) input: UpdateImplementation,
+  ) {
+    const workspace = await this.workspace.open();
+    const result = await new ProductQueries(workspace).updateImplementation(
+      input,
+      this.workspace.actor(),
+    );
+    await this.events.apiChanged(workspace.config.projectId).catch(() => {});
+    return success(result);
+  }
 
   @Get("state")
   @ApiEndpoint({

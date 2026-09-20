@@ -1,6 +1,8 @@
 import { Anchor, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { ProductKey } from "domains/product";
+import { useProductRoute } from "compositions/widgets/product-page";
 import {
   getFeatureStatus,
   getRelatedDocuments,
@@ -23,7 +25,7 @@ import styles from "./styles/product-feature.module.css";
  *  - понимания полного пользовательского сценария без чтения логов
  */
 export const ProductFeatureScreen = () => {
-  const { featureId } = useParams();
+  const { featureId } = useProductRoute();
   const location = useLocation();
   const { snapshot } = useProductDemo();
   const base = useProductPath();
@@ -63,7 +65,7 @@ export const ProductFeatureScreen = () => {
       actions={
         <Button
           component={Link}
-          to={`${base}/features/${featureData.id}/edit${location.search}`}
+          to={`${base}/features/${featureData.key ?? featureData.id}/edit${location.search}`}
           variant="default"
           leftSection={<Pencil size={14} aria-hidden="true" />}
         >
@@ -72,6 +74,7 @@ export const ProductFeatureScreen = () => {
       }
       meta={
         <Group gap="md">
+          <ProductKey value={featureData.key} copyable />
           <ProductReadiness status={getFeatureStatus(featureData)} label={readinessLabel} />
           <Text size="xs" c="dimmed">
             Готовность по всем сценариям и контрактам приложений

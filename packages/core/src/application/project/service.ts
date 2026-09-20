@@ -8,6 +8,8 @@ import { TaskRepository } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
 import { validateProjectRecords, validateProjectTransition } from "./validation.js";
+import { ProductRepository } from "../../storage/product.js";
+import { productAddresses, resolveProductAddress } from "../../domain/product-addresses.js";
 
 /** Все изменения проекта используют ту же блокировку, что и изменения задач. */
 export class ProjectService {
@@ -88,6 +90,38 @@ export class ProjectService {
       );
       const now = new Date().toISOString();
       let fields = command.fields;
+      if (fields.kind === "plan" || fields.kind === "stage") {
+        const product = fields.productLinks.length
+          ? await new ProductRepository(this.workspace).ensureKeys(assertOwned)
+          : [];
+        const links = fields.productLinks.map((link) => ({
+          ...link,
+          id: resolveProductAddress(productAddresses(product), link.id, link.kind).id,
+        }));
+        invariant(
+          new Set(links.map((link) => `${link.kind}:${link.id}`)).size === links.length,
+          "INVALID_ARGUMENT",
+          "Продуктовая связь повторяется",
+        );
+        for (const link of links) {
+          if (link.kind !== "implementation") continue;
+          const contract = product
+            .flatMap((entry) => (entry.fields.kind === "scope" ? entry.fields.contracts : []))
+            .find((entry) => entry.id === link.id);
+          const prior =
+            previous?.fields.kind === "plan" || previous?.fields.kind === "stage"
+              ? previous.fields.productLinks
+              : [];
+          invariant(
+            contract?.active ||
+              prior.some((entry) => entry.kind === link.kind && entry.id === link.id),
+            "INVALID_REFERENCE",
+            "Новая связь требует активной реализации",
+            4,
+          );
+        }
+        fields = { ...fields, productLinks: links };
+      }
       if (fields.kind === "run") {
         const hasFinished = ["succeeded", "failed", "cancelled"].includes(fields.status);
         fields = {

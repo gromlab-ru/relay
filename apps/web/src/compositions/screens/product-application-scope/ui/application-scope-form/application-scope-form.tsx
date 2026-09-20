@@ -98,6 +98,7 @@ export const ApplicationScopeForm = (props: ApplicationScopeFormProps) => {
     return [
       {
         id: feature.id,
+        key: feature.key,
         name: feature.name,
         isEnabled: entry.isEnabled,
         hasDescription: entry.title.trim() !== "" && entry.description.trim() !== "",
@@ -106,6 +107,7 @@ export const ApplicationScopeForm = (props: ApplicationScopeFormProps) => {
           const selected = entry.scenarios.find((item) => item.scenarioId === scenario.id);
           return {
             id: scenario.id,
+            key: scenario.key,
             name: scenario.name,
             isEnabled: entry.isEnabled && selected?.isEnabled === true,
             hasDescription:

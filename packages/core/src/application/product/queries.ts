@@ -9,17 +9,226 @@ import type {
 import { parse } from "../../domain/validation.js";
 import { invariant } from "../../shared/errors.js";
 import { ProductService } from "./service.js";
+import { productAddresses, resolveProductAddress } from "../../domain/product-addresses.js";
+import { assertProductKey } from "../../domain/product-addresses.js";
+import { productCatalog } from "./catalog.js";
+import { ProductRepository } from "../../storage/product.js";
+import {
+  productEntitiesQuerySchema,
+  updateImplementationSchema,
+} from "../../domain/product-implementation.js";
+import type {
+  ProductEntitiesQuery,
+  ProductEntity,
+  UpdateImplementation,
+} from "../../domain/product-implementation.js";
+import { createHash } from "node:crypto";
+import { actorSchema } from "../../domain/validation.js";
+import { contractBasis } from "./model.js";
 
 /** Выборки продукта не зависят от планов, задач и отчётов. */
 export class ProductQueries extends ProductService {
+  async entities(input: ProductEntitiesQuery = {}) {
+    const query = parse(productEntitiesQuerySchema, input, "список продуктовых целей");
+    return this.workspace.locked(async (owned) => {
+      const catalog = await productCatalog(this.workspace, owned);
+      const addresses = catalog.items.map((entry) => ({ ...entry, name: entry.title }));
+      const applicationId = query.application
+        ? resolveProductAddress(addresses, query.application, "application").id
+        : undefined;
+      const ids = query.refs
+        ? new Set(query.refs.map((ref) => resolveProductAddress(addresses, ref).id))
+        : undefined;
+      const needle = query.q?.trim().toLocaleLowerCase();
+      const matches = catalog.items
+        .filter(
+          (entry) =>
+            (!query.kind || entry.kind === query.kind) &&
+            (!applicationId || entry.applicationId === applicationId) &&
+            (!ids || ids.has(entry.id)) &&
+            (query.active === undefined || entry.active === (query.active === "true")) &&
+            (!needle ||
+              `${entry.key ?? ""} ${entry.title} ${entry.applicationName ?? ""} ${entry.targetKey ?? ""} ${entry.targetName ?? ""}`
+                .toLocaleLowerCase()
+                .includes(needle)),
+        )
+        .sort(
+          (left, right) =>
+            Number(right.key?.toLocaleLowerCase() === needle) -
+              Number(left.key?.toLocaleLowerCase() === needle) ||
+            (left.key ?? left.title).localeCompare(right.key ?? right.title, "ru", {
+              numeric: true,
+            }) ||
+            left.id.localeCompare(right.id),
+        );
+      const next = query.offset + query.limit;
+      return {
+        items: matches.slice(query.offset, next),
+        total: matches.length,
+        nextOffset: next < matches.length ? next : null,
+        version: catalog.fingerprint,
+      };
+    });
+  }
+
+  async entity(ref: string): Promise<ProductEntity> {
+    return this.workspace.locked(async (owned) => {
+      const catalog = await productCatalog(this.workspace, owned);
+      if (!catalog.items.some((entry) => entry.id === ref || entry.key === ref)) {
+        const scope = (await new ProductRepository(this.workspace).all()).find(
+          (entry) => entry.id === ref && entry.fields.kind === "scope",
+        );
+        if (scope) {
+          const { requests: _requests, events: _events, ...view } = scope;
+          return view;
+        }
+      }
+      const id = resolveProductAddress(
+        catalog.items.map((entry) => ({ ...entry, name: entry.title })),
+        ref,
+      ).id;
+      const summary = catalog.items.find((entry) => entry.id === id)!;
+      const canonicalRef =
+        summary.key && catalog.items.filter((entry) => entry.key === summary.key).length === 1
+          ? summary.key
+          : summary.id;
+      const entity = {
+        ...(await new ProductRepository(this.workspace).entity(summary)),
+        canonicalRef,
+      };
+      if (entity.fields.kind === "implementation" && summary.status)
+        return { ...entity, fields: { ...entity.fields, status: summary.status } };
+      return entity;
+    });
+  }
+
+  /** Независимая ревизия реализации не конфликтует с правкой соседнего вклада. */
+  async updateImplementation(input: UpdateImplementation, defaultActor: string) {
+    const command = parse(updateImplementationSchema, input, "изменение реализации");
+    invariant(
+      command.title !== undefined ||
+        command.description !== undefined ||
+        command.status !== undefined ||
+        command.key !== undefined,
+      "INVALID_ARGUMENT",
+      "Изменения реализации не заданы",
+    );
+    const actor = parse(actorSchema, command.actor ?? defaultActor, "автор");
+    return this.workspace.locked(async (owned) => {
+      const repository = new ProductRepository(this.workspace);
+      const records = await repository.ensureKeys(owned);
+      const receiptKey = createHash("sha256").update(`${actor}/${command.requestId}`).digest("hex");
+      const requestHash = createHash("sha256")
+        .update(JSON.stringify({ ...command, actor }))
+        .digest("hex");
+      const reservations = new Map<string, string[]>();
+      for (const scope of records) {
+        if (scope.fields.kind !== "scope") continue;
+        for (const entry of scope.fields.contracts) {
+          const stored = await repository.implementation(
+            scope.fields.applicationId,
+            entry.id,
+            entry.scenarioId !== null,
+          );
+          reservations.set(stored.id, stored.reservedKeys ?? []);
+          const receipt = stored.requests[receiptKey];
+          if (!receipt) continue;
+          invariant(
+            receipt.hash === requestHash,
+            "IDEMPOTENCY_CONFLICT",
+            "Ключ запроса использован с другим содержимым",
+            4,
+          );
+          return receipt.result;
+        }
+      }
+      const selected = resolveProductAddress(
+        productAddresses(records),
+        command.ref,
+        "implementation",
+      );
+      const scope = records.find(
+        (entry) =>
+          entry.fields.kind === "scope" &&
+          entry.fields.contracts.some((contract) => contract.id === selected.id),
+      )!;
+      invariant(scope.fields.kind === "scope", "INVALID_DATA", "Не найден состав", 5);
+      const contract = scope.fields.contracts.find((entry) => entry.id === selected.id)!;
+      const record = await repository.implementation(
+        scope.fields.applicationId,
+        selected.id,
+        contract.scenarioId !== null,
+      );
+      invariant(
+        record.revision === command.ifRevision,
+        "REVISION_CONFLICT",
+        "Реализация изменилась. Перечитайте запись.",
+        4,
+        { actual: record.revision },
+      );
+      invariant(
+        record.fields.active || command.key !== undefined,
+        "INVALID_REFERENCE",
+        "Снятая реализация доступна для чтения и исправления ключа",
+        4,
+      );
+      if (command.key) {
+        invariant(
+          ![...reservations].some(([id, keys]) => id !== record.id && keys.includes(command.key!)),
+          "ALREADY_EXISTS",
+          "Ключ зарезервирован другой реализацией",
+          4,
+        );
+        assertProductKey(command.key, "implementation", record.id, records);
+        invariant(
+          new RegExp(`-${record.fields.scenarioId === null ? "FI" : "SI"}-[1-9]\\d*$`).test(
+            command.key,
+          ),
+          "INVALID_ARGUMENT",
+          "Ключ не соответствует виду реализации",
+        );
+      }
+      const fields = {
+        ...record.fields,
+        ...(command.title === undefined ? {} : { title: command.title }),
+        ...(command.description === undefined ? {} : { description: command.description }),
+        ...(command.status === undefined ? {} : { status: command.status }),
+      };
+      if (command.status !== undefined) fields.basis = contractBasis(fields, records);
+      const key = command.key ?? record.key;
+      const result = { id: record.id, revision: record.revision + 1, ...(key ? { key } : {}) };
+      const now = new Date().toISOString();
+      await repository.saveImplementation(
+        {
+          ...record,
+          ...result,
+          fields,
+          updatedAt: now,
+          updatedBy: actor,
+          reservedKeys: [
+            ...new Set([
+              ...(record.reservedKeys ?? []),
+              ...(record.key && record.key !== key ? [record.key] : []),
+            ]),
+          ],
+          events: [...record.events, { revision: result.revision, actor, at: now }],
+          requests: { ...record.requests, [receiptKey]: { hash: requestHash, result } },
+        },
+        owned,
+      );
+      return result;
+    });
+  }
+
   async overview(): Promise<ProductOverview> {
     const state = await this.state();
     return {
       productId: state.productId,
       version: state.version,
       readiness: state.readiness,
-      items: state.records.map(({ id, revision, fields }) => ({
+      items: state.records.map(({ id, key, revision, fields }) => ({
         id,
+        ...(key ? { key } : {}),
         revision,
         kind: fields.kind,
         name: "name" in fields ? fields.name : "Состав реализации",
@@ -31,12 +240,18 @@ export class ProductQueries extends ProductService {
   async list(input: ProductListQuery = {}): Promise<ProductList> {
     const query = parse(productListQuerySchema, input, "выборка продукта");
     const state = await this.state();
+    const id = query.id
+      ? resolveProductAddress(productAddresses(state.records), query.id).id
+      : undefined;
     const needle = query.q?.trim().toLocaleLowerCase();
     const records = state.records.filter(
       (record) =>
         (!query.kind || record.fields.kind === query.kind) &&
-        (!query.id || record.id === query.id) &&
-        (!needle || JSON.stringify(record.fields).toLocaleLowerCase().includes(needle)),
+        (!id || record.id === id) &&
+        (!needle ||
+          `${record.key ?? ""} ${JSON.stringify(record.fields)}`
+            .toLocaleLowerCase()
+            .includes(needle)),
     );
     const nextOffset = query.offset + query.limit;
     return {
@@ -50,6 +265,10 @@ export class ProductQueries extends ProductService {
   async context(input: ProductContextQuery = {}): Promise<ProductContext> {
     const query = parse(productContextQuerySchema, input, "контекст продукта");
     const state = await this.state();
+    const addresses = productAddresses(state.records);
+    if (query.id) query.id = resolveProductAddress(addresses, query.id).id;
+    if (query.applicationId)
+      query.applicationId = resolveProductAddress(addresses, query.applicationId, "application").id;
     const selected = state.records.find((record) => record.id === query.id);
     const contractScope = state.records.find(
       (record) =>

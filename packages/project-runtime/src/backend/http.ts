@@ -1,5 +1,10 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
+import {
+  productEntitySchema,
+  productEntitiesSchema,
+  productEntitiesQuerySchema,
+} from "@relay/core/domain/product-implementation";
 import { boardsPageSchema, boardViewSchema, boardsQuerySchema } from "@relay/core/domain/board";
 import {
   boardTaskViewSchema,
@@ -233,6 +238,27 @@ export async function createHttpBackend(url: string, project?: string): Promise<
         ),
     },
     product: {
+      entity: async (ref) =>
+        decode(productEntitySchema, await call(() => api.product.getProductEntity({ ref }))),
+      entities: async (input = {}) =>
+        decode(
+          productEntitiesSchema,
+          await call(() =>
+            api.product.getProductEntities(defined(productEntitiesQuerySchema.parse(input))),
+          ),
+        ),
+      updateImplementation: async (input, actor) =>
+        decode(
+          productSavedSchema,
+          await call(
+            () =>
+              api.product.updateProductImplementation(
+                defined({ ...input, actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
       state: async () =>
         decode(productStateSchema, await call(() => api.product.getProductState())),
       overview: async () =>
@@ -256,7 +282,10 @@ export async function createHttpBackend(url: string, project?: string): Promise<
             () =>
               api.product.mutateProduct({
                 ...defined(input),
-                fields: defined(input.fields),
+                fields:
+                  input.fields.kind === "scope"
+                    ? { ...input.fields, contracts: input.fields.contracts.map(defined) }
+                    : defined(input.fields),
                 actor: input.actor ?? actor,
               }),
             "write",

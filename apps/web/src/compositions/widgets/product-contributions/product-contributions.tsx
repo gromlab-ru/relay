@@ -3,6 +3,7 @@ import { Text } from "@mantine/core";
 import { ArrowUpRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { ProductReadiness, useProductDemo } from "domains/product-demo";
+import { ProductKey } from "domains/product";
 import { useProductPath } from "compositions/widgets/product-page";
 import { isEmptyArray } from "shared/value-predicates";
 import type { ProductContributionsProps } from "./types/product-contributions-props.type";
@@ -32,7 +33,7 @@ export const ProductContributions = (props: ProductContributionsProps) => {
           id: targetData.id,
           name: targetData.name,
           typeLabel: targetData.type,
-          href: `${base}/applications/${targetData.id}?open=${encodeURIComponent(link.featureId)}#application-feature-${link.featureId}`,
+          href: `${base}/implementations/${link.key ?? link.contractId}`,
         },
       ];
     });
@@ -56,6 +57,7 @@ export const ProductContributions = (props: ProductContributionsProps) => {
               {contribution.name}
               <ArrowUpRight size={14} aria-hidden="true" />
             </Link>
+            <ProductKey value={contribution.key} />
             <Text size="xs" c="dimmed" mb="sm">
               {contribution.typeLabel}
             </Text>

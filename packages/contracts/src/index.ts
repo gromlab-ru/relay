@@ -18,6 +18,8 @@ export interface RelayProject {
   key: string;
   id: string;
   name: string;
+  /** Человекочитаемый адрес проекта; у недоступной регистрации может отсутствовать. */
+  slug?: string;
   configPath: string;
   available: boolean;
   error?: string;
@@ -59,6 +61,19 @@ export interface ProjectConfig {
   version: 1;
   mode: "local";
   projectId?: string | undefined;
+  /** Версионированные настройки имени и адреса; отсутствуют в прежних конфигурациях. */
+  projectSettings?:
+    | {
+        /** Версия вложенного документа. */
+        version: 1;
+        /** Однострочное отображаемое имя. */
+        name: string;
+        /** Человекочитаемый сегмент адреса. */
+        slug: string;
+        /** Ревизия настроек. */
+        revision: number;
+      }
+    | undefined;
   storageDir: string;
   defaultStatus: string;
   readyStatuses: string[];

@@ -12,7 +12,7 @@ import type { ApplicationFeatureProps } from "./types/application-feature-props.
  *  - компактного отображения статуса и заголовка вклада под фичей или сценарием
  */
 export const ApplicationFeature = (props: ApplicationFeatureProps) => {
-  const { feature, contribution, scenario, isLastScenario, applicationId, payload } = props;
+  const { feature, contribution, scenario, isLastScenario, payload } = props;
   const base = useProductPath();
   const location = useLocation();
   const isFeature = scenario === undefined;
@@ -23,12 +23,13 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
       ? `application-feature-${feature.id}`
       : `application-feature-${feature.id}-${scenario.scenarioId}`;
   const returnTo = `${location.pathname}${location.search}#${anchor}`;
-  const editorPath = `${base}/applications/${applicationId}/scope?feature=${feature.id}`;
-  const href =
-    scenario === undefined ? editorPath : `${editorPath}&scenario=${scenario.scenarioId}`;
-  const featurePath = `${base}/features/${feature.id}`;
+  const href = `${base}/implementations/${selected.key ?? selected.contractId}`;
+  const featurePath = `${base}/features/${feature.key ?? feature.id}`;
+  const sourceScenario = feature.scenarios.find((entry) => entry.id === scenario?.scenarioId);
   const sourceHref =
-    scenario === undefined ? featurePath : `${featurePath}#scenario-${scenario.scenarioId}`;
+    scenario === undefined
+      ? featurePath
+      : `${featurePath}/scenarios/${sourceScenario?.key ?? scenario.scenarioId}`;
   const sourceLabel = `Открыть исходное описание: ${name}`;
   const readyCount = contribution.scenarios.filter((entry) => entry.status === "done").length;
   const countLabel = isFeature
@@ -42,6 +43,7 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
         id={anchor}
         tabIndex={-1}
         name={name}
+        entityKey={selected.key}
         summary={selected.title}
         status={selected.status}
         href={href}

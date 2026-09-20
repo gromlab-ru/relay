@@ -1,5 +1,6 @@
 import { Button } from "@mantine/core";
-import { Link, useLocation, useMatch, useParams } from "react-router-dom";
+import { Link, useLocation, useMatch } from "react-router-dom";
+import { useProductRoute } from "compositions/widgets/product-page";
 import { useProductDemo } from "domains/product-demo";
 import { ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { StatePanel } from "ui/state-panel";
@@ -13,7 +14,7 @@ import { DocumentForm } from "./ui/document-form";
  *  - создания и изменения паспорта, фич, их сценариев и приложений
  */
 export const ProductEditorScreen = () => {
-  const { collection, entityId, featureId, scenarioId } = useParams();
+  const { collection, entityId, featureId, scenarioId } = useProductRoute();
   const location = useLocation();
   const creationMatch = useMatch("/projects/:project/product/:collection/new");
   const { snapshot } = useProductDemo();

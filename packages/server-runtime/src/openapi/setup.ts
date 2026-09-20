@@ -35,7 +35,7 @@ export function setupOpenApi(app: INestApplication): void {
           in: "path",
           required: true,
           schema: { type: "string" },
-          description: "Имя из реестра или идентификатор проекта",
+          description: "Slug, имя из реестра или постоянный идентификатор проекта",
         },
       ];
     }

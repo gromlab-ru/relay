@@ -1,5 +1,12 @@
 import { z } from "zod";
 import {
+  productEntitiesQuerySchema,
+  productEntitiesSchema,
+  productEntitySchema,
+  productEntityQuerySchema,
+  updateImplementationSchema,
+} from "@relay/core/domain/product-implementation";
+import {
   boardTaskViewSchema,
   boardTaskSavedSchema,
   boardTasksPageSchema,
@@ -21,6 +28,10 @@ import {
   productListQuerySchema,
 } from "@relay/core/domain/product";
 import { configSchema } from "@relay/core/domain/config";
+import {
+  projectSettingsSchema,
+  saveProjectSettingsSchema,
+} from "@relay/core/domain/project-settings";
 import { boardViewSchema, boardsQuerySchema, boardsPageSchema } from "@relay/core/domain/board";
 import { taskFieldsSchema, taskSchema } from "@relay/core/domain/task";
 import { commentSchema, MAX_COMMENT_BYTES } from "@relay/core/domain/comment";
@@ -218,6 +229,8 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  ProjectSettings: projectSettingsSchema,
+  SaveProjectSettings: saveProjectSettingsSchema,
   BoardTaskView: boardTaskViewSchema,
   BoardTaskSaved: boardTaskSavedSchema,
   BoardTasksPage: boardTasksPageSchema,
@@ -242,6 +255,10 @@ export const schemas = {
         key: z.string(),
         id: z.string(),
         name: z.string(),
+        slug: z
+          .string()
+          .optional()
+          .describe("Человекочитаемый адрес проекта; постоянный id не меняется"),
         configPath: z.string(),
         available: z.boolean(),
         error: z.string().optional(),
@@ -255,6 +272,11 @@ export const schemas = {
   }),
   TaskListQuery: taskListQuerySchema,
   ProductState: productStateSchema,
+  ProductEntities: productEntitiesSchema,
+  ProductEntitiesQuery: productEntitiesQuerySchema,
+  ProductEntity: productEntitySchema,
+  ProductEntityQuery: productEntityQuerySchema,
+  UpdateImplementation: updateImplementationSchema,
   ProductMutation: productMutationSchema,
   ProductSaved: productSavedSchema,
   ProductContext: productContextSchema,

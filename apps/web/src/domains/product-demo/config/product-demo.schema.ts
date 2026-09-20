@@ -10,6 +10,7 @@ export const DEMO_MODE_SCHEMA = z.enum(DEMO_MODE);
 /** Общая читаемая часть документа. */
 export const PRODUCT_DOCUMENT_SCHEMA = z.object({
   id: z.string(),
+  key: z.string().optional(),
   name: z.string(),
   summary: z.string(),
   description: z.string(),
@@ -17,6 +18,7 @@ export const PRODUCT_DOCUMENT_SCHEMA = z.object({
 /** Сценарий имеет постоянный ID внутри фичи и собственное описание. */
 export const PRODUCT_SCENARIO_SCHEMA = z.object({
   id: z.string().min(1),
+  key: z.string().optional(),
   name: z.string(),
   description: z.string(),
   status: PRODUCT_STATUS_SCHEMA,
@@ -37,6 +39,7 @@ export const PRODUCT_SCENARIO_CONTRIBUTION_SCHEMA = z
   .object({
     scenarioId: z.string(),
     contractId: z.string().optional(),
+    key: z.string().optional(),
     title: z.string().optional(),
     description: z.string(),
     status: PRODUCT_STATUS_SCHEMA.default("none"),
@@ -49,6 +52,7 @@ export const PRODUCT_SCENARIO_CONTRIBUTION_SCHEMA = z
 export const PRODUCT_CONTRIBUTION_SCHEMA = z
   .object({
     contractId: z.string().optional(),
+    key: z.string().optional(),
     featureId: z.string(),
     applicationId: z.string(),
     title: z.string().optional(),

@@ -18,7 +18,7 @@ export const FeatureScenarios = (props: FeatureScenariosProps) => {
   const { feature, className, ...rootAttrs } = props;
   const base = useProductPath();
   const location = useLocation();
-  const featurePath = `${base}/features/${feature.id}`;
+  const featurePath = `${base}/features/${feature.key ?? feature.id}`;
   const hasNoScenarios = isEmptyArray(feature.scenarios);
   const readyCount = feature.scenarios.filter((scenario) => scenario.status === "done").length;
   return (

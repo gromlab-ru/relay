@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { ActionIcon, Checkbox, UnstyledButton } from "@mantine/core";
 import { ChevronRight, ListChecks } from "lucide-react";
 import { ProductReadiness } from "domains/product-demo";
+import { ProductKey } from "domains/product";
 import type { ScopeNodeProps } from "./types/scope-node-props.type";
 import styles from "./styles/scope-node.module.css";
 
@@ -74,6 +75,7 @@ export const ScopeNode = (props: ScopeNodeProps) => {
         }}
       >
         <span className={clsx(styles.name, isFeature && styles._feature)}>{item.name}</span>
+        <ProductKey value={item.key} />
         {isFeature && (
           <span className={styles.meta}>
             Сценарии: {selectedCount} из {feature.scenarios.length}

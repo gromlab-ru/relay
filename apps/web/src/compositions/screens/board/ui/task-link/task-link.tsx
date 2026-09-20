@@ -1,5 +1,5 @@
 import { Link, useLocation, useMatch } from "react-router-dom";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath } from "domains/project";
 import { readBoardOrigin, readTaskId } from "../../helpers/board-location";
 import { readLinkTarget } from "../../helpers/read-link-target";
 import type { TaskLinkProps } from "./types/task-link-props.type";
@@ -14,7 +14,7 @@ import type { TaskLinkProps } from "./types/task-link-props.type";
 export const TaskLink = (props: TaskLinkProps) => {
   const { href, children, ...anchorAttrs } = props;
   const location = useLocation();
-  const projectPath = `/projects/${encodeURIComponent(useProjectId())}`;
+  const projectPath = useProjectBasePath();
   const isTaskOpen = useMatch("/projects/:project/tasks/:id") !== null;
   const destination = readLinkTarget(href, window.location.href);
   const path = destination?.pathname.startsWith(`${projectPath}/`)

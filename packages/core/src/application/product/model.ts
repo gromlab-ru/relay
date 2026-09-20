@@ -99,6 +99,13 @@ export function validateProduct(records: ProductRecord[]): void {
       const targets = new Set<string>();
       const contractIds = new Set<string>();
       for (const contract of fields.contracts) {
+        invariant(
+          !ids.has(contract.id) && !records.some((entry) => entry.id === contract.id),
+          "INVALID_DATA",
+          "ID реализации повторяется в продукте",
+          5,
+        );
+        ids.add(contract.id);
         invariant(!contractIds.has(contract.id), "INVALID_REFERENCE", "Повтор ID контракта");
         contractIds.add(contract.id);
         const key = `${contract.featureId}/${contract.scenarioId ?? ""}`;

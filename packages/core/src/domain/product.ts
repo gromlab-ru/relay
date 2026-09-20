@@ -8,6 +8,13 @@ export const productIdSchema = z
   .regex(
     /^(?:[A-Za-z0-9]{8}|passport|(?:feature|scenario|application|scope|document|contract)_[a-f0-9]{32})$/,
   );
+export const productKeySchema = z
+  .string()
+  .regex(/^(?:FEATURE-[1-9]\d*|SCENARIO-[1-9]\d*|[A-Z][A-Z0-9]{1,15}(?:-(?:FI|SI)-[1-9]\d*)?)$/)
+  .describe("Читаемый ключ продукта: FEATURE-12, SCENARIO-37, WEB, WEB-FI-12 или WEB-SI-37");
+export const productRefSchema = z
+  .union([productIdSchema, productKeySchema])
+  .describe("Постоянный ID или читаемый ключ сущности в выбранном проекте");
 const title = singleLine(1024);
 const markdown = text(256 * 1024).refine(
   (value) => value.trim().length > 0,
@@ -35,6 +42,8 @@ export const productContractInputSchema = z.strictObject({
 });
 export const productContractSchema = productContractInputSchema.extend({
   id: productIdSchema,
+  key: productKeySchema.optional(),
+  revision: z.number().int().positive().optional(),
   active: z.boolean(),
   basis: z.string(),
 });
@@ -73,18 +82,50 @@ export const productFieldsSchema = z.discriminatedUnion("kind", [
 const writableFields = z.discriminatedUnion("kind", [
   productFieldsSchema.options[0],
   productFieldsSchema.options[1],
-  productFieldsSchema.options[2],
+  productFieldsSchema.options[2].extend({ featureId: productRefSchema }),
   productFieldsSchema.options[3],
-  productFieldsSchema.options[5],
+  productFieldsSchema.options[5].extend({
+    links: z
+      .array(
+        z.discriminatedUnion("kind", [
+          z.strictObject({ kind: z.literal("product") }),
+          z.strictObject({ kind: z.literal("feature"), id: productRefSchema }),
+          z.strictObject({ kind: z.literal("scenario"), id: productRefSchema }),
+          z.strictObject({ kind: z.literal("application"), id: productRefSchema }),
+          z.strictObject({
+            kind: z.literal("implementation"),
+            applicationId: productRefSchema,
+            id: productRefSchema,
+          }),
+        ]),
+      )
+      .max(1000),
+  }),
   z.strictObject({
     kind: z.literal("scope"),
-    applicationId: productIdSchema,
-    contracts: z.array(productContractInputSchema).max(10000),
+    applicationId: productRefSchema,
+    contracts: z
+      .array(
+        productContractInputSchema.extend({
+          featureId: productRefSchema,
+          scenarioId: productRefSchema.nullable(),
+          key: productKeySchema
+            .optional()
+            .describe("Прочитанный ключ; не меняется операцией замены состава"),
+          revision: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Прочитанная ревизия реализации; замена состава проверяет общую версию"),
+        }),
+      )
+      .max(10000),
   }),
   z.strictObject({
     kind: z.literal("contract"),
-    applicationId: productIdSchema,
-    contractId: productIdSchema,
+    applicationId: productRefSchema,
+    contractId: productRefSchema,
     status: productStatusSchema,
     title: title.optional(),
     description: markdown.optional(),
@@ -92,7 +133,10 @@ const writableFields = z.discriminatedUnion("kind", [
 ]);
 export const productMutationSchema = z.strictObject({
   action: z.enum(["create", "update"]),
-  id: productIdSchema.optional(),
+  id: productRefSchema.optional(),
+  key: productKeySchema
+    .optional()
+    .describe("Новый ключ при явном разрешении конфликта; ID и связи сохраняются"),
   fields: writableFields,
   ifRevision: z.number().int().nonnegative().optional(),
   ifVersion: z.string().optional(),
@@ -101,12 +145,15 @@ export const productMutationSchema = z.strictObject({
 });
 export const productSavedSchema = z.strictObject({
   id: productIdSchema,
+  key: productKeySchema.optional(),
   revision: z.number().int().positive(),
 });
 export const productRecordSchema = z.strictObject({
   version: z.literal(1),
   productId: z.string().min(1),
   id: productIdSchema,
+  key: productKeySchema.optional(),
+  reservedKeys: z.array(productKeySchema).optional(),
   revision: z.number().int().positive(),
   fields: productFieldsSchema,
   createdAt: timestampSchema,
@@ -136,8 +183,8 @@ export const productStateSchema = z.strictObject({
   readiness: z.array(productReadinessSchema),
 });
 export const productContextQuerySchema = z.strictObject({
-  id: productIdSchema.optional(),
-  applicationId: productIdSchema.optional(),
+  id: productRefSchema.optional(),
+  applicationId: productRefSchema.optional(),
 });
 export const productContextSchema = z.strictObject({
   productId: z.string(),
@@ -153,7 +200,7 @@ export const productContextSchema = z.strictObject({
 export const productListQuerySchema = z.strictObject({
   kind: z.enum(["passport", "feature", "scenario", "application", "scope", "document"]).optional(),
   q: z.string().max(4096).optional(),
-  id: productIdSchema.optional(),
+  id: productRefSchema.optional(),
   offset: z.coerce.number().int().nonnegative().default(0),
   limit: z.coerce.number().int().min(1).max(100).default(30),
 });
@@ -169,6 +216,7 @@ export const productOverviewSchema = z.strictObject({
   items: z.array(
     z.strictObject({
       id: productIdSchema,
+      key: productKeySchema.optional(),
       revision: z.number(),
       kind: z.string(),
       name: z.string(),

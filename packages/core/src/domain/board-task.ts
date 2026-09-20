@@ -39,7 +39,11 @@ export const taskProductLinkSchema = z.strictObject({
   kind: z
     .enum(["feature", "scenario", "implementation"])
     .describe("Цель реализации: общая фича, сценарий или контракт приложения"),
-  id: z.string().min(1).max(128).describe("Постоянный ID продуктовой цели в выбранном проекте"),
+  id: z
+    .string()
+    .min(1)
+    .max(128)
+    .describe("ID или ключ продуктовой цели; при записи нормализуется в постоянный ID"),
 });
 const productLinks = z
   .array(taskProductLinkSchema)

@@ -1,6 +1,8 @@
 import { Accordion, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { ProductKey } from "domains/product";
+import { useProductRoute } from "compositions/widgets/product-page";
 import { getRelatedDocuments, useProductDemo } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
@@ -15,7 +17,7 @@ import styles from "./styles/product-application.module.css";
  *  - переходов между вкладом приложения, фичами и задачами
  */
 export const ProductApplicationScreen = () => {
-  const { applicationId } = useParams();
+  const { applicationId } = useProductRoute();
   const location = useLocation();
   const { snapshot, scopes } = useProductDemo();
   const base = useProductPath();
@@ -58,7 +60,7 @@ export const ProductApplicationScreen = () => {
       actions={
         <Button
           component={Link}
-          to={`${base}/applications/${applicationData.id}/edit`}
+          to={`${base}/applications/${applicationData.key ?? applicationData.id}/edit`}
           variant="default"
           leftSection={<Pencil size={14} aria-hidden="true" />}
         >
@@ -67,6 +69,7 @@ export const ProductApplicationScreen = () => {
       }
       meta={
         <Group gap="md">
+          <ProductKey value={applicationData.key} copyable />
           <Badge color="gray" variant="light">
             {applicationData.type}
           </Badge>

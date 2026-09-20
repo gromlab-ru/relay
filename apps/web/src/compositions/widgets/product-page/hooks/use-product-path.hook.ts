@@ -1,7 +1,6 @@
-import { useProjectId } from "domains/project";
+import { useProjectBasePath } from "domains/project";
 
 /**
  * Возвращает адрес раздела продукта в выбранном проекте Relay.
  */
-export const useProductPath = (): string =>
-  `/projects/${encodeURIComponent(useProjectId())}/product`;
+export const useProductPath = (): string => `${useProjectBasePath()}/product`;

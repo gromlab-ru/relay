@@ -2,6 +2,10 @@ import { z } from "zod";
 
 /** Проверяемая граница постоянного продукта; Markdown остаётся строкой. */
 export const PRODUCT_STATUS_SCHEMA = z.enum(["none", "partial", "done"]);
+export const PRODUCT_TARGET_LINK_SCHEMA = z.object({
+  kind: z.enum(["feature", "scenario", "implementation"]),
+  id: z.string(),
+});
 export const PRODUCT_LINK_SCHEMA = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("product") }),
   z.object({ kind: z.literal("feature"), id: z.string() }),
@@ -19,6 +23,8 @@ export const APPLICATION_SLUG_SCHEMA = z
   .refine((slug) => !["product", "infrastructure", "new"].includes(slug));
 export const PRODUCT_CONTRACT_SCHEMA = z.object({
   id: z.string(),
+  key: z.string().optional(),
+  revision: z.number().optional(),
   featureId: z.string(),
   scenarioId: z.string().nullable(),
   title: z.string(),
@@ -63,6 +69,7 @@ export const PRODUCT_STATE_SCHEMA = z.object({
   records: z.array(
     z.object({
       id: z.string(),
+      key: z.string().optional(),
       revision: z.number(),
       fields: PRODUCT_FIELDS_SCHEMA,
       createdAt: z.string(),
@@ -78,6 +85,45 @@ export const PRODUCT_STATE_SCHEMA = z.object({
       stale: z.number(),
     }),
   ),
+});
+
+/** Компактная цель: список не содержит полных описаний и истории. */
+export const PRODUCT_ENTITY_SUMMARY_SCHEMA = z.object({
+  id: z.string(),
+  key: z.string().optional(),
+  kind: z.enum(["passport", "feature", "scenario", "application", "implementation", "document"]),
+  title: z.string(),
+  summary: z.string(),
+  revision: z.number(),
+  applicationId: z.string().nullable(),
+  applicationKey: z.string().nullable(),
+  applicationName: z.string().nullable(),
+  featureId: z.string().nullable(),
+  scenarioId: z.string().nullable(),
+  targetKey: z.string().nullable(),
+  targetName: z.string().nullable(),
+  active: z.boolean(),
+  status: PRODUCT_STATUS_SCHEMA.nullable(),
+});
+export const PRODUCT_ENTITIES_SCHEMA = z.object({
+  items: z.array(PRODUCT_ENTITY_SUMMARY_SCHEMA),
+  total: z.number(),
+  nextOffset: z.number().nullable(),
+  version: z.string(),
+});
+export const PRODUCT_ENTITY_SCHEMA = z.object({
+  id: z.string(),
+  key: z.string().optional(),
+  canonicalRef: z.string().optional(),
+  revision: z.number(),
+  updatedAt: z.string(),
+  fields: z.union([
+    PRODUCT_FIELDS_SCHEMA,
+    PRODUCT_CONTRACT_SCHEMA.omit({ id: true, key: true, revision: true }).extend({
+      kind: z.literal("implementation"),
+      applicationId: z.string(),
+    }),
+  ]),
 });
 
 /** Контекст с причинами включения, собранный общим ядром продукта. */

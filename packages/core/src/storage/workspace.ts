@@ -9,6 +9,8 @@ import { atomicJson, exists, readJson } from "./files.js";
 import { prepareRuntime, runtimeDirectory, withStorageLock } from "./lock.js";
 import { BoardRepository } from "./boards.js";
 import { BoardTaskRepository } from "./board-tasks.js";
+import { createProjectSlug, defaultProjectName } from "./project-settings.js";
+import { ProductTransaction } from "./product-transaction.js";
 
 export const CONFIG_NAME = ".relay/config.json";
 export const MIGRATION_STATE = "migration-v2.json";
@@ -47,6 +49,7 @@ export class Workspace {
         "Обновите структуру хранилища: npx @gromlab/relay-cli migrate --actor <автор>",
         4,
       );
+      await new ProductTransaction(this).recover(assertOwned);
       await new BoardRepository(this).recover(assertOwned);
       await new BoardTaskRepository(this).recover(assertOwned);
       return operation(assertOwned);
@@ -102,7 +105,17 @@ export async function initialize(
   invariant(!(await exists(configPath)), "ALREADY_INITIALIZED", "Конфигурация уже существует", 4);
   const config = parse(
     configSchema,
-    { ...structuredClone(defaultConfig), projectId: shortId(), storageDir },
+    {
+      ...structuredClone(defaultConfig),
+      projectId: shortId(),
+      storageDir,
+      projectSettings: {
+        version: 1,
+        name: defaultProjectName(configPath),
+        slug: createProjectSlug(),
+        revision: 1,
+      },
+    },
     "конфигурация",
   );
   const root = resolve(dirname(configPath), storageDir);

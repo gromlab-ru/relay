@@ -1,11 +1,22 @@
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { createHash } from "node:crypto";
-import { mkdir, rename } from "node:fs/promises";
-import type { ProductRecord } from "../domain/product.js";
+import { z } from "zod";
+import { stat } from "node:fs/promises";
+import { productRecordSchema, productIdSchema } from "../domain/product.js";
+import type { ProductRecord, ProductContract } from "../domain/product.js";
+import { decodeImplementation, encodeImplementation } from "../domain/product-implementation.js";
+import type {
+  ProductImplementation,
+  ProductEntity,
+  ProductEntitySummary,
+} from "../domain/product-implementation.js";
 import { invariant } from "../shared/errors.js";
-import { atomicJson, exists, jsonFiles, readJson, syncDirectory } from "./files.js";
+import { directories, exists, jsonFiles, readJson } from "./files.js";
 import { decodeProduct, encodeProduct } from "./product-codec.js";
 import type { Workspace } from "./workspace.js";
+import { nextProductKey, productAddresses } from "../domain/product-addresses.js";
+import { defaultBoardPrefix } from "../domain/board.js";
+import { ProductTransaction } from "./product-transaction.js";
 
 export const PRODUCT_DIRECTORIES = {
   passport: "",
@@ -15,8 +26,32 @@ export const PRODUCT_DIRECTORIES = {
   scope: "scopes",
   document: "documents",
 } as const;
+const manifestSchema = productRecordSchema.omit({ fields: true }).extend({
+  version: z.literal(3),
+  storage: z.literal("references"),
+  fields: z.strictObject({
+    kind: z.literal("scope"),
+    applicationId: productIdSchema,
+    contracts: z.array(
+      z.strictObject({ id: productIdSchema, directory: z.enum(["features", "scenarios"]) }),
+    ),
+  }),
+});
+const contractValue = (entry: ProductContract) => {
+  return JSON.stringify([
+    entry.id,
+    entry.key ?? null,
+    entry.featureId,
+    entry.scenarioId,
+    entry.title,
+    entry.description,
+    entry.status,
+    entry.active,
+    entry.basis,
+  ]);
+};
 
-/** Изолированные продуктовые записи; каждый агрегат публикуется одним JSON. */
+/** Физические пути и связи используют ID. Состав — совместимая проекция отдельных реализаций. */
 export class ProductRepository {
   readonly root: string;
   readonly productId: string;
@@ -30,90 +65,402 @@ export class ProductRepository {
             .digest("hex")
             .slice(0, 32)}`;
   }
-  async all(): Promise<ProductRecord[]> {
-    const records: ProductRecord[] = [];
+
+  private async sources(): Promise<string[]> {
+    const paths: string[] = [];
     for (const directory of Object.values(PRODUCT_DIRECTORIES)) {
       for (const filename of await jsonFiles(join(this.root, directory))) {
-        const path = join(this.root, directory, filename);
-        const record = decodeProduct(await readJson(path, 16 * 1024 * 1024), path);
-        invariant(
-          record.id + ".json" === filename &&
-            record.productId === this.productId &&
-            (directory === "" || directory === PRODUCT_DIRECTORIES[record.fields.kind]),
-          "INVALID_DATA",
-          `Неверная принадлежность записи: ${path}`,
-          5,
-        );
-        invariant(
-          !records.some((entry) => entry.id === record.id),
-          "INVALID_DATA",
-          `Дублирующийся ID: ${path}`,
-          5,
-        );
-        records.push(record);
+        if (!filename.startsWith(".")) paths.push(join(this.root, directory, filename));
       }
     }
-    // Версия снимка и страницы не должны зависеть от каталога или этапа миграции.
+    for (const id of await directories(join(this.root, "applications"))) {
+      productIdSchema.parse(id);
+      const directory = join(this.root, "applications", id);
+      for (const filename of ["application.json", "scope.json"]) {
+        const path = join(directory, filename);
+        if (await exists(path)) paths.push(path);
+      }
+    }
+    return paths;
+  }
+
+  private implementationPath(
+    applicationId: string,
+    contract: Pick<ProductContract, "id" | "scenarioId">,
+  ): string {
+    return `applications/${applicationId}/${contract.scenarioId === null ? "features" : "scenarios"}/${contract.id}.json`;
+  }
+
+  private async decode(value: unknown, path: string): Promise<ProductRecord> {
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "storage" in value &&
+      value.storage === "references"
+    ) {
+      const manifest = manifestSchema.parse(value);
+      const contracts: ProductContract[] = [];
+      const refs = new Map(manifest.fields.contracts.map((ref) => [ref.id, ref]));
+      invariant(
+        refs.size === manifest.fields.contracts.length,
+        "INVALID_DATA",
+        "Повтор ID реализации в составе",
+        5,
+      );
+      // После объединения веток отдельный файл не должен исчезать из чтения из-за старого списка.
+      for (const directory of ["features", "scenarios"] as const) {
+        for (const filename of await jsonFiles(
+          join(this.root, "applications", manifest.fields.applicationId, directory),
+        )) {
+          const id = productIdSchema.parse(filename.slice(0, -5));
+          const existing = refs.get(id);
+          invariant(
+            !existing || existing.directory === directory,
+            "INVALID_DATA",
+            "ID реализации находится в двух каталогах",
+            5,
+          );
+          refs.set(id, { id, directory });
+        }
+      }
+      for (const ref of refs.values()) {
+        const implPath = join(
+          this.root,
+          "applications",
+          manifest.fields.applicationId,
+          ref.directory,
+          `${ref.id}.json`,
+        );
+        const implementation = decodeImplementation(await readJson(implPath, 16 * 1024 * 1024));
+        invariant(
+          implementation.id === ref.id &&
+            implementation.productId === this.productId &&
+            implementation.fields.applicationId === manifest.fields.applicationId &&
+            (implementation.fields.scenarioId === null ? "features" : "scenarios") ===
+              ref.directory,
+          "INVALID_DATA",
+          "Неверная принадлежность реализации",
+          5,
+        );
+        const { kind: _kind, applicationId: _app, ...fields } = implementation.fields;
+        contracts.push({
+          ...fields,
+          id: implementation.id,
+          ...(implementation.key ? { key: implementation.key } : {}),
+          revision: implementation.revision,
+        });
+      }
+      const { storage: _storage, ...record } = manifest;
+      return productRecordSchema.parse({
+        ...record,
+        version: 1,
+        fields: { ...manifest.fields, contracts },
+      });
+    }
+    return decodeProduct(value, path);
+  }
+
+  async all(): Promise<ProductRecord[]> {
+    const records: ProductRecord[] = [];
+    for (const path of await this.sources()) {
+      const record = await this.decode(await readJson(path, 16 * 1024 * 1024), path);
+      const location = relative(this.root, path);
+      const allowed = [
+        `${record.id}.json`,
+        `${PRODUCT_DIRECTORIES[record.fields.kind]}/${record.id}.json`,
+        this.path(record),
+      ];
+      invariant(
+        record.productId === this.productId && allowed.includes(location),
+        "INVALID_DATA",
+        `Неверная принадлежность записи: ${path}`,
+        5,
+      );
+      invariant(
+        !records.some((entry) => entry.id === record.id),
+        "INVALID_DATA",
+        `Дублирующийся ID: ${path}`,
+        5,
+      );
+      records.push(record);
+    }
     return records.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   }
 
   private path(record: ProductRecord): string {
-    return join(this.root, PRODUCT_DIRECTORIES[record.fields.kind], `${record.id}.json`);
+    if (record.fields.kind === "application") return `applications/${record.id}/application.json`;
+    if (record.fields.kind === "scope")
+      return `applications/${record.fields.applicationId}/scope.json`;
+    return record.fields.kind === "passport"
+      ? `${record.id}.json`
+      : `${PRODUCT_DIRECTORIES[record.fields.kind]}/${record.id}.json`;
   }
 
-  /** Под общей блокировкой; каждый шаг возобновляем, требования и квитанции неизменны. */
-  async migrate(assertOwned: () => void): Promise<number> {
+  /** Однократное закрепление ключей на диске; техническая миграция не меняет требования. */
+  async ensureKeys(assertOwned: () => void): Promise<ProductRecord[]> {
     const records = await this.all();
+    const ordered = [...records].sort(
+      (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+    );
+    for (const record of ordered) {
+      const kind = record.fields.kind;
+      if (record.key || (kind !== "feature" && kind !== "scenario" && kind !== "application"))
+        continue;
+      record.key =
+        kind === "application" && record.fields.kind === "application"
+          ? (record.fields.prefix ?? defaultBoardPrefix(record.fields.slug))
+          : nextProductKey(kind as "feature" | "scenario", records);
+      await this.save(record, false, assertOwned);
+    }
+    const keys = new Set(
+      productAddresses(records).flatMap((entry) => (entry.key ? [entry.key] : [])),
+    );
+    if (
+      records.some(
+        (entry) =>
+          entry.fields.kind === "scope" && entry.fields.contracts.some((contract) => !contract.key),
+      )
+    ) {
+      for (const scope of records) {
+        if (scope.fields.kind !== "scope") continue;
+        for (const contract of scope.fields.contracts) {
+          const path = join(
+            this.root,
+            this.implementationPath(scope.fields.applicationId, contract),
+          );
+          if (!(await exists(path))) continue;
+          const previous = decodeImplementation(await readJson(path, 16 * 1024 * 1024));
+          previous.reservedKeys?.forEach((key) => keys.add(key));
+        }
+      }
+    }
+    for (const record of ordered) {
+      if (record.fields.kind !== "scope") continue;
+      const appId = record.fields.applicationId;
+      const app = records.find((entry) => entry.id === appId);
+      let changed = false;
+      for (const contract of record.fields.contracts) {
+        if (contract.key) continue;
+        const target = records.find(
+          (entry) => entry.id === (contract.scenarioId ?? contract.featureId),
+        );
+        invariant(app?.key && target?.key, "INVALID_REFERENCE", "Не найдена цель реализации", 5);
+        const prefix = `${app.key}-${contract.scenarioId === null ? "FI" : "SI"}`;
+        let number = Number(target.key.split("-").at(-1));
+        while (keys.has(`${prefix}-${number}`)) number++;
+        contract.key = `${prefix}-${number}`;
+        contract.revision ??= 1;
+        keys.add(contract.key);
+        changed = true;
+      }
+      if (changed || !(await exists(join(this.root, this.path(record)))))
+        await this.save(record, false, assertOwned);
+    }
+    return this.all();
+  }
+
+  /** Явная миграция переносит также старые записи, которым ключи уже назначены. */
+  async migrate(assertOwned: () => void): Promise<number> {
     let migrated = 0;
-    for (const record of records) {
-      const legacy = join(this.root, `${record.id}.json`);
-      const target = this.path(record);
-      const source = (await exists(legacy)) ? legacy : target;
-      const raw = await readJson(source, 16 * 1024 * 1024);
+    for (const path of await this.sources()) {
+      const raw = await readJson(path, 16 * 1024 * 1024);
+      const record = await this.decode(raw, path);
       if (
-        source === target &&
+        relative(this.root, path) === this.path(record) &&
         typeof raw === "object" &&
         raw !== null &&
         "version" in raw &&
-        raw.version === 2
+        raw.version === 3 &&
+        (record.fields.kind !== "scope" || "storage" in raw)
       )
         continue;
-      // Сначала атомарно меняем формат на месте, затем переносим файл: дублей никогда нет.
-      const encoded = encodeProduct(record);
-      invariant(
-        Buffer.byteLength(JSON.stringify(encoded, null, 2) + "\n") <= 16 * 1024 * 1024,
-        "RESPONSE_TOO_LARGE",
-        `Запись после преобразования превышает 16 МиБ: ${record.id}`,
-      );
-      await atomicJson(source, encoded, this.workspace.runtime, false, assertOwned);
-      if (source !== target) {
-        await mkdir(dirname(target), { recursive: true });
-        invariant(!(await exists(target)), "INVALID_DATA", `Путь миграции уже занят: ${target}`, 5);
-        assertOwned();
-        await rename(source, target);
-        await syncDirectory(dirname(target));
-        await syncDirectory(dirname(source));
-      }
+      await this.save(record, false, assertOwned);
       migrated++;
     }
+    await this.ensureKeys(assertOwned);
     return migrated;
   }
-  async save(record: ProductRecord, exclusive: boolean, assertOwned: () => void): Promise<void> {
-    const stored = encodeProduct(record);
+
+  async implementation(
+    applicationId: string,
+    id: string,
+    scenario: boolean,
+  ): Promise<ProductImplementation> {
+    const path = this.implementationPath(applicationId, {
+      id,
+      scenarioId: scenario ? "scenario" : null,
+    });
+    const record = decodeImplementation(await readJson(join(this.root, path), 16 * 1024 * 1024));
     invariant(
-      Buffer.byteLength(JSON.stringify(stored, null, 2) + "\n") <= 16 * 1024 * 1024,
-      "RESPONSE_TOO_LARGE",
-      "Продуктовая запись превышает 16 МиБ",
+      record.id === id &&
+        record.productId === this.productId &&
+        record.fields.applicationId === applicationId,
+      "INVALID_DATA",
+      "Неверная принадлежность реализации",
+      5,
     );
-    await mkdir(this.root, { recursive: true });
-    // Старые записи до явной миграции остаются по старому пути, но получают новый кодек.
-    const legacy = join(this.root, `${record.id}.json`);
-    await atomicJson(
-      (await exists(legacy)) ? legacy : this.path(record),
-      stored,
-      this.workspace.runtime,
-      exclusive,
+    return record;
+  }
+
+  /** Подпись файлов проверяет внешние правки без загрузки Markdown и историй. */
+  async fingerprint(): Promise<string> {
+    const paths = await this.sources();
+    for (const app of await directories(join(this.root, "applications"))) {
+      for (const kind of ["features", "scenarios"]) {
+        const directory = join(this.root, "applications", app, kind);
+        for (const filename of await jsonFiles(directory)) paths.push(join(directory, filename));
+      }
+    }
+    const stamps = await Promise.all(
+      paths.sort().map(async (path) => {
+        const info = await stat(path, { bigint: true });
+        return [
+          relative(this.root, path),
+          info.size.toString(),
+          info.mtimeNs.toString(),
+          info.ctimeNs.toString(),
+        ];
+      }),
+    );
+    return createHash("sha256").update(JSON.stringify(stamps)).digest("hex");
+  }
+
+  async entity(summary: ProductEntitySummary): Promise<ProductEntity> {
+    if (summary.kind === "implementation") {
+      invariant(summary.applicationId, "INVALID_DATA", "У реализации отсутствует приложение", 5);
+      const {
+        events: _events,
+        requests: _requests,
+        ...entity
+      } = await this.implementation(summary.applicationId, summary.id, summary.scenarioId !== null);
+      return entity;
+    }
+    const target =
+      summary.kind === "application"
+        ? `applications/${summary.id}/application.json`
+        : summary.kind === "passport"
+          ? `${summary.id}.json`
+          : `${PRODUCT_DIRECTORIES[summary.kind]}/${summary.id}.json`;
+    const choices = [
+      target,
+      `${PRODUCT_DIRECTORIES[summary.kind]}/${summary.id}.json`,
+      `${summary.id}.json`,
+    ];
+    for (const candidate of choices) {
+      const path = join(this.root, candidate);
+      if (!(await exists(path))) continue;
+      const {
+        events: _events,
+        requests: _requests,
+        ...entity
+      } = await this.decode(await readJson(path, 16 * 1024 * 1024), path);
+      invariant(
+        entity.id === summary.id &&
+          entity.productId === this.productId &&
+          entity.fields.kind === summary.kind,
+        "INVALID_DATA",
+        "Запись не соответствует индексу",
+        5,
+      );
+      return entity;
+    }
+    invariant(false, "PRODUCT_RECORD_NOT_FOUND", "Запись продукта не найдена", 3);
+  }
+
+  async saveImplementation(record: ProductImplementation, assertOwned: () => void): Promise<void> {
+    await new ProductTransaction(this.workspace).publish(
+      [
+        {
+          path: this.implementationPath(record.fields.applicationId, {
+            id: record.id,
+            scenarioId: record.fields.scenarioId,
+          }),
+          after: encodeImplementation(record),
+        },
+      ],
       assertOwned,
     );
+  }
+
+  async save(record: ProductRecord, exclusive: boolean, assertOwned: () => void): Promise<void> {
+    const target = this.path(record);
+    const oldPaths = [
+      ...new Set([
+        `${record.id}.json`,
+        `${PRODUCT_DIRECTORIES[record.fields.kind]}/${record.id}.json`,
+      ]),
+    ].filter((path) => path !== target && !path.startsWith("/"));
+    if (exclusive)
+      invariant(
+        !(await exists(join(this.root, target))) &&
+          !(await Promise.all(oldPaths.map((path) => exists(join(this.root, path))))).some(Boolean),
+        "ALREADY_EXISTS",
+        "Запись уже существует",
+        4,
+      );
+    const changes: { path: string; after: unknown }[] = [];
+    if (record.fields.kind === "scope") {
+      const { applicationId, contracts } = record.fields;
+      for (const contract of contracts) {
+        const path = this.implementationPath(applicationId, contract);
+        const previous = (await exists(join(this.root, path)))
+          ? decodeImplementation(await readJson(join(this.root, path), 16 * 1024 * 1024))
+          : undefined;
+        const { id, key, revision: _revision, ...fields } = contract;
+        const oldContract = previous
+          ? { ...previous.fields, id: previous.id, ...(previous.key ? { key: previous.key } : {}) }
+          : undefined;
+        const compared = { ...contract };
+        if (previous && !previous.key) delete compared.key;
+        const changed =
+          previous !== undefined && contractValue(compared) !== contractValue(oldContract!);
+        const revision = previous
+          ? previous.revision + (changed ? 1 : 0)
+          : (contract.revision ?? 1);
+        const implementation: ProductImplementation = {
+          version: 1,
+          productId: record.productId,
+          id,
+          ...(key ? { key } : {}),
+          revision,
+          fields: { ...fields, kind: "implementation", applicationId },
+          createdAt: previous?.createdAt ?? record.createdAt,
+          createdBy: previous?.createdBy ?? record.createdBy,
+          updatedAt: changed || !previous ? record.updatedAt : previous.updatedAt,
+          updatedBy: changed || !previous ? record.updatedBy : previous.updatedBy,
+          events: [
+            ...(previous?.events ?? []),
+            ...(changed ? [{ revision, at: record.updatedAt, actor: record.updatedBy }] : []),
+          ],
+          requests: previous?.requests ?? {},
+          ...(previous?.reservedKeys ? { reservedKeys: previous.reservedKeys } : {}),
+        };
+        changes.push({ path, after: encodeImplementation(implementation) });
+      }
+      changes.push({
+        path: target,
+        after: manifestSchema.parse({
+          ...record,
+          version: 3,
+          storage: "references",
+          fields: {
+            ...record.fields,
+            contracts: contracts.map((entry) => ({
+              id: entry.id,
+              directory: entry.scenarioId === null ? "features" : "scenarios",
+            })),
+          },
+        }),
+      });
+    } else changes.push({ path: target, after: encodeProduct(record) });
+    for (const path of oldPaths)
+      if (await exists(join(this.root, path))) changes.push({ path, after: null });
+    for (const change of changes)
+      invariant(
+        Buffer.byteLength(JSON.stringify(change.after, null, 2) + "\n") <= 16 * 1024 * 1024,
+        "RESPONSE_TOO_LARGE",
+        "Запись продукта превышает 16 МиБ",
+      );
+    await new ProductTransaction(this.workspace).publish(changes, assertOwned);
   }
 }

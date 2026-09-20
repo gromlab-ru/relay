@@ -8,6 +8,11 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import {
+  productEntitiesQuerySchema,
+  productEntityQuerySchema,
+  updateImplementationSchema,
+} from "@relay/core/domain/product-implementation";
 import manifest from "#manifest" with { type: "json" };
 import { asAppError, invariant } from "@relay/core/shared/errors";
 import { actorSchema, parse, taskIdSchema } from "@relay/core/domain/validation";
@@ -299,6 +304,42 @@ export function createTools(projects: Projects): Server {
     async (backend) => ({ data: await backend.product.overview() }),
   );
   projectTool(
+    "product_entities",
+    "Найти фичи, сценарии, приложения и реализации по ключу/названию. Краткие сведения без Markdown; ограниченная страница с nextOffset.",
+    { ...selector, ...productEntitiesQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.product.entities(productEntitiesQuerySchema.strip().parse(input)),
+    }),
+  );
+  projectTool(
+    "product_get",
+    "Прочитать одну продуктовую сущность по ключу или ID. Неоднозначный ключ требует выбора ID.",
+    { ...selector, ...productEntityQuerySchema.shape },
+    true,
+    async (backend, input) => ({ data: await backend.product.entity(input.ref) }),
+  );
+  projectTool(
+    "product_implementation_update",
+    "Изменить реализацию фичи или сценария по её собственной ревизии. При повторе передавайте тот же requestId; key меняет адрес, сохраняя ID и связи.",
+    {
+      ...selector,
+      ...updateImplementationSchema.shape,
+      actor: actorSchema.describe("Автор изменения реализации"),
+    },
+    false,
+    async (backend, input) => {
+      const result = await backend.product.updateImplementation(
+        updateImplementationSchema.strip().parse(input),
+        input.actor,
+      );
+      return {
+        data: { ...result, requestId: input.requestId },
+        text: `Реализация сохранена: ${result.key ?? result.id}\nID: ${result.id}\nРевизия: ${result.revision}\nКлюч повтора: ${input.requestId}`,
+      };
+    },
+  );
+  projectTool(
     "product_list",
     "Записи продукта с поиском по Markdown и пагинацией",
     { ...selector, ...productListQuerySchema.shape },
@@ -345,6 +386,7 @@ export function createTools(projects: Projects): Server {
           ifRevision,
           ifVersion,
           requestId,
+          key,
           ...values
         } = input;
         const command = productMutationSchema.parse({
@@ -353,6 +395,7 @@ export function createTools(projects: Projects): Server {
           ifRevision,
           ifVersion,
           requestId,
+          key,
           fields: { kind: tool.kind, ...values },
         });
         return saveProduct(backend, command, actor);
@@ -375,7 +418,6 @@ export function createTools(projects: Projects): Server {
         backend,
         productMutationSchema.parse({
           action: input.ifRevision === 0 ? "create" : "update",
-          id: input.applicationId.replace("application_", "scope_"),
           ifRevision: input.ifRevision,
           ifVersion: input.ifVersion,
           requestId: input.requestId,

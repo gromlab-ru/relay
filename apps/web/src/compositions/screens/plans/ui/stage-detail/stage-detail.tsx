@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Alert, Badge, Button, Group, Modal, MultiSelect, Stack, Text } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { CheckCircle2, Link2, Plus } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath, useProjectId } from "domains/project";
 import {
   isRecordOf,
   PROJECT_INPUT_SCHEMAS,
@@ -14,6 +14,8 @@ import {
 } from "domains/lifecycle";
 import { ProjectTasks } from "compositions/widgets/project-tasks";
 import { ProjectRecord } from "compositions/widgets/project-record";
+import { ProductLinks } from "compositions/widgets/product-links";
+import { isEmptyArray } from "shared/value-predicates";
 import { MarkdownView } from "ui/markdown-view";
 import type { StageDetailProps } from "./types/stage-detail-props.type";
 import styles from "./styles/stage-detail.module.css";
@@ -26,6 +28,7 @@ import styles from "./styles/stage-detail.module.css";
  */
 export const StageDetail = (props: StageDetailProps) => {
   const { stage, state, onEdit } = props;
+  const base = useProjectBasePath();
   const projectId = useProjectId();
   const lifecycle = useLifecycle();
   const [isLinking, setLinking] = useState(false);
@@ -48,9 +51,9 @@ export const StageDetail = (props: StageDetailProps) => {
   );
   const isAccepted = stage.fields.status === "accepted";
   const hasError = error !== null;
-  const base = `/projects/${encodeURIComponent(projectId)}`;
   const status = statusLabel(stage.fields.status);
   const color = statusColor(stage.fields.status);
+  const hasProductLinks = !isEmptyArray(stage.fields.productLinks);
 
   /**
    * Сохраняет явные связи, сохраняя остальные сведения о каждой задаче.
@@ -94,6 +97,7 @@ export const StageDetail = (props: StageDetailProps) => {
           Изменить этап
         </Button>
       </Group>
+      {hasProductLinks && <ProductLinks value={stage.fields.productLinks} />}
       <section className={styles.section}>
         <Text size="xs" c="dimmed" fw={600} mb="sm">
           ОЖИДАЕМЫЙ РЕЗУЛЬТАТ

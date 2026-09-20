@@ -1,0 +1,5 @@
+.root {
+  display: block;
+  min-width: 0;
+  margin-block: var(--mantine-spacing-md);
+}

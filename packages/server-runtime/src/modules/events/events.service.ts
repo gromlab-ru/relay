@@ -28,6 +28,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private storageRoot: string | undefined;
   private projectRoot: string | undefined;
   private productRoot: string | undefined;
+  private productPaths: string[] = [];
   private productVersion: string | undefined;
   private boardPaths: string[] = [];
   private boardsVersion: string | undefined;
@@ -105,6 +106,15 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       this.rebind();
       const { tasks, version } = await new TaskQueries(workspace).snapshot();
       const product = await new ProductService(workspace).state();
+      this.productPaths = product.records.flatMap((record) =>
+        record.fields.kind === "application"
+          ? [
+              join(this.productRoot!, "applications", record.id),
+              join(this.productRoot!, "applications", record.id, "features"),
+              join(this.productRoot!, "applications", record.id, "scenarios"),
+            ]
+          : [],
+      );
       const repository = new BoardRepository(workspace);
       const boards = await workspace.locked(() => repository.all());
       this.boardPaths = [
@@ -163,6 +173,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     const desired = new Set([
       configParent,
       ...this.boardPaths,
+      ...this.productPaths,
       ...(this.projectRoot ? [this.projectRoot] : []),
       ...(this.productRoot ? [this.productRoot] : []),
       ...(this.productRoot
@@ -186,6 +197,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
           if (
             name === undefined ||
             this.boardPaths.includes(path) ||
+            this.productPaths.includes(path) ||
             (path === configParent && name === "boards") ||
             path === this.projectRoot ||
             path === this.productRoot ||

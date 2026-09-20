@@ -6,6 +6,7 @@ import type { Workspace } from "@relay/core/storage/workspace";
 import { ProjectCatalog } from "./catalog.js";
 import type { ProjectContext, WorkspaceOptions } from "./catalog.js";
 import { PROJECT_SELECTOR } from "./routing.js";
+import type { SaveProjectSettings } from "@relay/core/domain/project-settings";
 
 export type { WorkspaceOptions } from "./catalog.js";
 
@@ -28,6 +29,11 @@ export class WorkspaceService {
 
   async open() {
     return (await this.resolve()).open();
+  }
+
+  /** Сохраняет имя и адрес выбранного проекта с проверкой каталога. */
+  async saveSettings(input: SaveProjectSettings) {
+    return this.catalog.saveSettings(await this.resolve(), input);
   }
 
   context(workspace: Workspace) {

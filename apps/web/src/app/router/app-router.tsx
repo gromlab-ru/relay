@@ -19,7 +19,20 @@ export const appRouter = createBrowserRouter([
         Component: ProjectLayout,
         children: [
           { index: true, Component: OverviewScreen },
+          { path: "settings", lazy: () => import("compositions/screens/project-settings/lazy") },
           { path: "passport", lazy: () => import("compositions/screens/passport/lazy") },
+          {
+            path: "product/scenarios/:entityRef",
+            lazy: () => import("compositions/screens/product-entity/lazy"),
+          },
+          {
+            path: "product/features/:featureRef/scenarios/:entityRef",
+            lazy: () => import("compositions/screens/product-entity/lazy"),
+          },
+          {
+            path: "product/implementations/:entityRef",
+            lazy: () => import("compositions/screens/product-entity/lazy"),
+          },
           {
             path: "product",
             lazy: () => import("compositions/layouts/product/lazy"),

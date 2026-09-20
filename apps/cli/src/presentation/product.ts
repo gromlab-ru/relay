@@ -14,8 +14,13 @@ import { palette } from "./theme.js";
 import { wrap, section } from "./layout.js";
 import { renderMarkdown } from "./markdown.js";
 import { safeText, previewText } from "./text.js";
+import type {
+  ProductEntity,
+  ProductEntitySummary,
+  ProductEntitiesQuery,
+} from "@relay/core/domain/product-implementation";
 
-type RecordView = ProductState["records"][number];
+type RecordView = ProductEntity;
 const kinds: Record<string, string> = {
   passport: "Паспорт",
   feature: "Фича",
@@ -24,10 +29,15 @@ const kinds: Record<string, string> = {
   document: "Документ",
   scope: "Состав реализации",
   contract: "Контракт",
+  implementation: "Реализация",
 };
 const statuses = { none: "Не реализовано", partial: "Частично", done: "Готово" };
 const nameOf = (record: RecordView) =>
-  "name" in record.fields ? record.fields.name : `Состав ${record.fields.applicationId}`;
+  "name" in record.fields
+    ? record.fields.name
+    : "title" in record.fields
+      ? record.fields.title
+      : `Состав ${record.fields.applicationId}`;
 
 /** Представление предметной записи: метаданные не смешиваются с Markdown-содержанием. */
 export function productRecordText(record: RecordView, options: TextOptions): string {
@@ -35,7 +45,7 @@ export function productRecordText(record: RecordView, options: TextOptions): str
   const head = section(
     wrap(`${kinds[fields.kind]} · ${safeText(nameOf(record))}`, options.width),
     wrap(
-      `ID: ${record.id}\nРевизия: ${record.revision}\nАвтор: ${safeText(record.updatedBy)}`,
+      `${record.key ? `Ключ: ${record.key}\n` : ""}ID: ${record.id}\nРевизия: ${record.revision}\nАвтор: ${safeText(record.updatedBy)}`,
       options.width,
     ),
     options,
@@ -45,6 +55,13 @@ export function productRecordText(record: RecordView, options: TextOptions): str
     parts.push(wrap(safeText(fields.summary), options.width));
   if (fields.kind === "scenario")
     parts.push(wrap(`Родительская фича: ${fields.featureId}`, options.width));
+  if (fields.kind === "implementation")
+    parts.push(
+      wrap(
+        `Приложение: ${fields.applicationId}\nФича: ${fields.featureId}\nСценарий: ${fields.scenarioId ?? "Общий вклад"}\n${fields.active ? statuses[fields.status] : "Участие снято"}`,
+        options.width,
+      ),
+    );
   if (fields.kind === "application")
     parts.push(
       `Тип: ${{ frontend: "Фронтенд", backend: "Бэкенд", internal: "Внутренний инструмент" }[fields.type]}`,
@@ -103,7 +120,7 @@ function listing(items: ProductOverview["items"], options: TextOptions): string 
         wrap(
           [
             `${kinds[item.kind] ?? item.kind} · ${safeText(item.name)}`,
-            `ID: ${item.id} · ревизия ${item.revision}`,
+            `${item.key ? `Ключ: ${item.key}\n` : ""}ID: ${item.id} · ревизия ${item.revision}`,
             safeText(previewText(item.summary, 120)),
           ]
             .filter(Boolean)
@@ -123,7 +140,7 @@ function listing(items: ProductOverview["items"], options: TextOptions): string 
     table.push([
       kinds[item.kind] ?? item.kind,
       safeText(item.name) + (item.summary ? `\n${safeText(previewText(item.summary, 120))}` : ""),
-      `${item.id}\nревизия ${item.revision}`,
+      `${item.key ? `${item.key}\n` : ""}${item.id}\nревизия ${item.revision}`,
     ]);
   return table.toString();
 }
@@ -135,6 +152,7 @@ export function productListText(
 ): string {
   const items = data.items.map((record) => ({
     id: record.id,
+    ...(record.key ? { key: record.key } : {}),
     revision: record.revision,
     kind: record.fields.kind,
     name: nameOf(record),
@@ -177,6 +195,46 @@ export function productOverviewText(data: ProductOverview, options: TextOptions)
     .join("\n\n");
 }
 
+/** Компактные цели для выбора связи; полное описание читается отдельной командой get. */
+export function productEntitiesText(
+  data: { items: ProductEntitySummary[]; total: number; nextOffset: number | null },
+  query: ProductEntitiesQuery,
+  options: TextOptions,
+): string {
+  const items = data.items.map((entry) => ({
+    id: entry.id,
+    ...(entry.key ? { key: entry.key } : {}),
+    revision: entry.revision,
+    kind: entry.kind,
+    name: entry.title,
+    summary: [
+      entry.applicationName,
+      entry.targetKey,
+      entry.targetName,
+      entry.summary,
+      entry.active ? "" : "Участие снято",
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  }));
+  const quote = (value: string) => `'${safeText(value).replaceAll("'", "'\\''")}'`;
+  return [
+    section(
+      `Продуктовые цели · ${items.length} из ${data.total}`,
+      listing(items, options),
+      options,
+    ),
+    data.nextOffset === null
+      ? ""
+      : wrap(
+          `Продолжение (с тем же --config/--project): product entities --offset ${data.nextOffset} --limit ${query.limit ?? 30}${query.q ? ` --q ${quote(query.q)}` : ""}${query.kind ? ` --kind ${query.kind}` : ""}${query.application ? ` --application ${quote(query.application)}` : ""}${query.active ? ` --active ${query.active}` : ""}`,
+          options.width,
+        ),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export function productContextText(data: ProductContext, options: TextOptions): string {
   const sections = [
     section("Контекст продукта", `Включено записей: ${data.records.length}`, options),
@@ -212,7 +270,7 @@ export function productStateText(data: ProductState, options: TextOptions): stri
 
 export function productSavedText(
   command: ProductMutation,
-  result: { id: string; revision: number },
+  result: { id: string; key?: string | undefined; revision: number },
   options: TextOptions,
 ): string {
   const fields = command.fields;
@@ -221,6 +279,7 @@ export function productSavedText(
     wrap(
       [
         `${kinds[fields.kind]}${"name" in fields ? ` · ${safeText(fields.name)}` : ""}`,
+        ...(result.key ? [`Ключ: ${result.key}`] : []),
         `ID: ${result.id}`,
         `Ревизия: ${result.revision}`,
         `Ключ повтора: ${safeText(command.requestId)}`,

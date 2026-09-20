@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ActionIcon, Badge, Button, Drawer, Group, Select, Text, Tooltip } from "@mantine/core";
-import { ClipboardList, Layers3, Menu, Moon, Plus, Sun } from "lucide-react";
-import { useGetProject, useProjectId } from "domains/project";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { ActionIcon, Badge, Drawer, Group, Select, Text, Tooltip } from "@mantine/core";
+import { ClipboardList, Layers3, Menu, Moon, Settings, Sun } from "lucide-react";
+import { useGetProject, useProjectId, useProjectBasePath } from "domains/project";
 import { useWorkspace } from "domains/workspace";
 import { useTaskConnection } from "domains/tasks";
-import { isRecordOf, useLifecycle } from "domains/lifecycle";
+import { useLifecycle } from "domains/lifecycle";
 import { useThemeColorScheme } from "ui/themes";
 import { ProjectNavigation } from "./ui/project-navigation";
 import styles from "./styles/project.module.css";
@@ -27,15 +27,21 @@ export const ProjectLayout = () => {
   const navigate = useNavigate();
   const [isNavigationOpen, setNavigationOpen] = useState(false);
   const { colorScheme, setColorScheme } = useThemeColorScheme();
-  const base = `/projects/${encodeURIComponent(projectId)}`;
-  const passport = lifecycle.data?.records.find((record) => isRecordOf(record, "passport"));
-  const projectName = passport?.fields.title || project.data?.name || "Проект";
-  const projectItems =
-    workspace.data?.projects.map((item) => ({
-      value: item.id,
-      label: item.key,
-      disabled: !item.available,
-    })) ?? [];
+  const base = useProjectBasePath();
+  const currentProject = workspace.data?.projects.find((item) => item.id === projectId);
+  const projectName = currentProject?.name ?? project.data?.name ?? "Проект";
+  const projectItems = [
+    ...new Map(
+      (workspace.data?.projects ?? []).map((item) => [
+        item.id,
+        {
+          value: item.slug ?? item.id,
+          label: item.name,
+          disabled: !item.available,
+        },
+      ]),
+    ).values(),
+  ];
   const isWorkspace = workspace.data?.mode === "workspace";
   const isDark = colorScheme === "dark";
   const ThemeIcon = isDark ? Sun : Moon;
@@ -50,21 +56,9 @@ export const ProjectLayout = () => {
   }[state];
   const attentionCount = lifecycle.data?.attention.length ?? 0;
   const hasAttention = attentionCount > 0;
-  const isTaskPage = location.pathname.startsWith(`${base}/tasks/`);
-  const isKanbanTask =
-    location.pathname.startsWith(`${base}/tasks/`) &&
-    /[A-Za-z]/.test(location.pathname.split("/").at(-1) ?? "");
-  const canCreateLegacyTask = !location.pathname.startsWith(`${base}/boards`) && !isKanbanTask;
-
-  /**
-   * Открывает создание, сохраняя выбранные на доске план, этап и группу.
-   */
-  const handleCreate = (): void => {
-    const isBoardScope = isTaskPage || location.pathname === `${base}/board`;
-    const params = new URLSearchParams(isBoardScope ? location.search : "");
-    params.set("new", "1");
-    navigate(`${base}/board?${params.toString()}`);
-  };
+  const isSettingsPage = location.pathname === `${base}/settings`;
+  const settingsVariant = isSettingsPage ? "light" : "subtle";
+  const settingsCurrent = isSettingsPage ? "page" : undefined;
   return (
     <div className={styles.root}>
       <header className={styles.header}>
@@ -97,7 +91,7 @@ export const ProjectLayout = () => {
               aria-label="Выбрать проект"
               size="xs"
               data={projectItems}
-              value={projectId}
+              value={currentProject?.slug ?? projectId}
               allowDeselect={false}
               onChange={(id) => {
                 if (id !== null) navigate(`/projects/${encodeURIComponent(id)}/`);
@@ -122,16 +116,18 @@ export const ProjectLayout = () => {
           >
             <ThemeIcon size={17} />
           </ActionIcon>
-          {canCreateLegacyTask && (
-            <Button
-              size="xs"
-              variant="default"
-              leftSection={<Plus size={14} />}
-              onClick={handleCreate}
+          <Tooltip label="Настройки проекта">
+            <ActionIcon
+              component={Link}
+              to={`${base}/settings`}
+              variant={settingsVariant}
+              color="gray"
+              aria-label="Настройки проекта"
+              aria-current={settingsCurrent}
             >
-              Задача
-            </Button>
-          )}
+              <Settings size={18} aria-hidden="true" />
+            </ActionIcon>
+          </Tooltip>
         </Group>
       </header>
       <div className={styles.workspace}>

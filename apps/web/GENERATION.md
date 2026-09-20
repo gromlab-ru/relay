@@ -1,5 +1,32 @@
 # Журнал создания TSX
 
+## Ключи продукта — 20 сентября 2026
+
+Выполнено из корня:
+
+```bash
+pnpm --filter @relay/web run create ui-component product-key src/domains/product/ui
+pnpm --filter @relay/web run create ui-unit product-entity src/compositions/screens
+pnpm --filter @relay/web run create ui-component implementation-editor src/compositions/screens/product-entity/ui
+pnpm --filter @relay/web run create ui-unit product-links src/compositions/widgets
+```
+
+ProductKey — внутренняя доменная проекция ключа и копирования. ProductEntity — адресный
+просмотр сценария/реализации с lazy-фасетом, без загрузки полного продуктового снимка.
+
+## Настройки проекта — 20 сентября 2026
+
+Из корня выполнены команды закреплённого генератора:
+
+```bash
+pnpm --filter @relay/web run create ui-unit project-settings src/compositions/screens
+pnpm --filter @relay/web run create ui-unit general-settings src/compositions/screens/project-settings/ui
+```
+
+Экран адаптирован в project-settings.screen.tsx с единственным lazy-фасетом.
+Вложенная форма general-settings получает подтверждённый снимок, владеет вводом
+и черновиком, вызывает публичные операции domains/project. Импортов родителя нет.
+
 ## Обратные задачи реализации — 19 сентября 2026
 
 Из apps/web: `pnpm run create ui-unit product-tasks src/compositions/widgets`.

@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 export type ProjectScopeParams = {
   /** Идентификатор выбранного проекта. */
   projectId: string;
+  /** Текущий адрес проекта; не используется как идентичность данных. */
+  slug?: string;
   /** Содержимое области. */
   children?: ReactNode;
 };

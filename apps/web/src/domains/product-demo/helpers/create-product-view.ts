@@ -39,7 +39,7 @@ export const createProductView = (
       kind: "Фича",
       group: "product",
       path: "Продукт",
-      href: `/features/${record.id}`,
+      href: `/features/${record.key ?? record.id}`,
     });
     const scenarios = state.records.flatMap((scenario) => {
       if (scenario.fields.kind !== "scenario" || scenario.fields.featureId !== record.id) return [];
@@ -49,11 +49,12 @@ export const createProductView = (
         kind: "Сценарий",
         group: "product",
         path: record.fields.kind === "feature" ? record.fields.name : "",
-        href: `/features/${record.id}#scenario-${scenario.id}`,
+        href: `/features/${record.key ?? record.id}/scenarios/${scenario.key ?? scenario.id}`,
       });
       return [
         {
           id: scenario.id,
+          key: scenario.key,
           name: scenario.fields.name,
           description: scenario.fields.description,
           status:
@@ -64,6 +65,7 @@ export const createProductView = (
     return [
       {
         id: record.id,
+        key: record.key,
         ...record.fields,
         scenarios,
         status:
@@ -80,11 +82,12 @@ export const createProductView = (
       group: "application",
       path: "Продукт",
       applicationId: record.id,
-      href: `/applications/${record.id}`,
+      href: `/applications/${record.key ?? record.id}`,
     });
     return [
       {
         id: record.id,
+        key: record.key,
         ...record.fields,
         prefix: record.fields.prefix ?? record.fields.slug.replaceAll("-", "").toUpperCase(),
         type: APPLICATION_LABELS[record.fields.type],
@@ -106,7 +109,7 @@ export const createProductView = (
         path: `${application?.name ?? applicationId}${scenario ? ` / ${feature?.name ?? ""}` : ""}`,
         applicationId,
         isActive: contract.active,
-        href: `/applications/${applicationId}/scope?feature=${contract.featureId}${contract.scenarioId ? `&scenario=${contract.scenarioId}` : ""}`,
+        href: `/implementations/${contract.key ?? contract.id}`,
       });
     }
     return contracts
@@ -115,6 +118,7 @@ export const createProductView = (
         applicationId,
         featureId: contract.featureId,
         contractId: contract.id,
+        key: contract.key,
         title: contract.title,
         description: contract.description,
         status: contract.status,
@@ -126,6 +130,7 @@ export const createProductView = (
           .map((entry) => ({
             scenarioId: entry.scenarioId ?? "",
             contractId: entry.id,
+            key: entry.key,
             title: entry.title,
             description: entry.description,
             status: entry.status,

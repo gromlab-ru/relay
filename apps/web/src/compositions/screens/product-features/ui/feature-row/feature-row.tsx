@@ -25,11 +25,16 @@ export const FeatureRow = (props: FeatureRowProps) => {
       : `Готово ${readyCount} из ${feature.scenarios.length}`
     : undefined;
   const summary = isFeature ? feature.summary : undefined;
-  const href = `${base}/features/${feature.id}${search}`;
-  const target = scenario === undefined ? href : `${href}#scenario-${scenario.id}`;
+  const href = `${base}/features/${feature.key ?? feature.id}${search}`;
+  const target =
+    scenario === undefined
+      ? href
+      : `${base}/features/${feature.key ?? feature.id}/scenarios/${scenario.key ?? scenario.id}${search}`;
+  const entityKey = scenario?.key ?? feature.key;
   return (
     <ProductTreeRow
       name={name}
+      entityKey={entityKey}
       summary={summary}
       href={target}
       status={status}

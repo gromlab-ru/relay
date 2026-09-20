@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { actorSchema, singleLine, taskIdSchema, timestampSchema, text } from "./validation.js";
+import { taskProductLinkSchema } from "./board-task.js";
 
 /** Проектные документы адресуются независимо от числовых задач. */
 export const projectRecordIdSchema = z
@@ -32,6 +33,11 @@ export const planFieldsSchema = z.strictObject({
   kind: z.literal("plan"),
   title,
   goal: paragraph,
+  productLinks: z
+    .array(taskProductLinkSchema)
+    .max(100)
+    .default([])
+    .describe("Продуктовые цели плана: на входе ID или ключ, в хранилище только ID"),
   scope: paragraph,
   summary: paragraph,
   nextStep: paragraph,
@@ -45,6 +51,11 @@ export const stageFieldsSchema = z.strictObject({
   title,
   planId: projectRecordIdSchema,
   outcome: paragraph,
+  productLinks: z
+    .array(taskProductLinkSchema)
+    .max(100)
+    .default([])
+    .describe("Продуктовые цели этапа: фичи, сценарии и реализации"),
   criteria: paragraph,
   acceptance: paragraph,
   status: z.enum(["planned", "active", "accepted"]).default("planned"),

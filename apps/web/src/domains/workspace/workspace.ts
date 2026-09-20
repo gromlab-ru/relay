@@ -11,6 +11,7 @@ const WORKSPACE_SCHEMA = z.object({
       key: z.string(),
       id: z.string(),
       name: z.string(),
+      slug: z.string().optional(),
       available: z.boolean(),
       error: z.string().optional(),
     }),

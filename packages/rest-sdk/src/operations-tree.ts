@@ -43,6 +43,10 @@ import { getOverviewForProject } from "./operations/get-overview-for-project.js"
 import { getOverview } from "./operations/get-overview.js";
 import { getProductContextForProject } from "./operations/get-product-context-for-project.js";
 import { getProductContext } from "./operations/get-product-context.js";
+import { getProductEntitiesForProject } from "./operations/get-product-entities-for-project.js";
+import { getProductEntities } from "./operations/get-product-entities.js";
+import { getProductEntityForProject } from "./operations/get-product-entity-for-project.js";
+import { getProductEntity } from "./operations/get-product-entity.js";
 import { getProductOverviewForProject } from "./operations/get-product-overview-for-project.js";
 import { getProductOverview } from "./operations/get-product-overview.js";
 import { getProductRecordsForProject } from "./operations/get-product-records-for-project.js";
@@ -51,6 +55,8 @@ import { getProductStateForProject } from "./operations/get-product-state-for-pr
 import { getProductState } from "./operations/get-product-state.js";
 import { getProjectContextForProject } from "./operations/get-project-context-for-project.js";
 import { getProjectContext } from "./operations/get-project-context.js";
+import { getProjectSettingsForProject } from "./operations/get-project-settings-for-project.js";
+import { getProjectSettings } from "./operations/get-project-settings.js";
 import { getProjectStateForProject } from "./operations/get-project-state-for-project.js";
 import { getProjectState } from "./operations/get-project-state.js";
 import { getProjects } from "./operations/get-projects.js";
@@ -88,9 +94,13 @@ import { releaseTaskForProject } from "./operations/release-task-for-project.js"
 import { releaseTask } from "./operations/release-task.js";
 import { saveProjectRecordForProject } from "./operations/save-project-record-for-project.js";
 import { saveProjectRecord } from "./operations/save-project-record.js";
+import { saveProjectSettingsForProject } from "./operations/save-project-settings-for-project.js";
+import { saveProjectSettings } from "./operations/save-project-settings.js";
 import { unregisterProject } from "./operations/unregister-project.js";
 import { updateBoardTaskForProject } from "./operations/update-board-task-for-project.js";
 import { updateBoardTask } from "./operations/update-board-task.js";
+import { updateProductImplementationForProject } from "./operations/update-product-implementation-for-project.js";
+import { updateProductImplementation } from "./operations/update-product-implementation.js";
 import { updateTaskForProject } from "./operations/update-task-for-project.js";
 import { updateTask } from "./operations/update-task.js";
 import { validateProjectForProject } from "./operations/validate-project-for-project.js";
@@ -112,7 +122,11 @@ export const operationsTree = {
   },
   context: {
     getContext: getContext,
+    getProjectSettings: getProjectSettings,
+    saveProjectSettings: saveProjectSettings,
     getContextForProject: getContextForProject,
+    getProjectSettingsForProject: getProjectSettingsForProject,
+    saveProjectSettingsForProject: saveProjectSettingsForProject,
   },
   board: {
     getBoard: getBoard,
@@ -167,11 +181,18 @@ export const operationsTree = {
     saveProjectRecordForProject: saveProjectRecordForProject,
   },
   product: {
+    getProductEntities: getProductEntities,
+    getProductEntity: getProductEntity,
+    updateProductImplementation: updateProductImplementation,
     getProductState: getProductState,
     getProductOverview: getProductOverview,
     getProductRecords: getProductRecords,
     mutateProduct: mutateProduct,
     getProductContext: getProductContext,
+    getProductEntitiesForProject: getProductEntitiesForProject,
+    getProductEntityForProject: getProductEntityForProject,
+    updateProductImplementationForProject:
+      updateProductImplementationForProject,
     getProductStateForProject: getProductStateForProject,
     getProductOverviewForProject: getProductOverviewForProject,
     getProductRecordsForProject: getProductRecordsForProject,

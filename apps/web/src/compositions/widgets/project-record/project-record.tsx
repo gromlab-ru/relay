@@ -4,6 +4,7 @@ import { ActionIcon, Badge, Button, Collapse, Group, Stack, Text, Tooltip } from
 import { Pencil, ChevronDown } from "lucide-react";
 import { KIND_LABELS, statusColor, statusLabel } from "domains/lifecycle";
 import { MarkdownView } from "ui/markdown-view";
+import { ProductLinks } from "compositions/widgets/product-links";
 import { formatDateTime } from "infra/date-time";
 import { recordContent } from "./helpers/record-content";
 import type { ProjectRecordProps } from "./types/project-record-props.type";
@@ -38,6 +39,8 @@ export const ProjectRecord = (props: ProjectRecordProps) => {
   const updatedLabel = formatDateTime(record.updatedAt);
   const expandLabel = isExpanded ? "Свернуть" : "Подробнее";
   const sourceLabel = "source" in fields ? `Источник: ${statusLabel(fields.source)}` : "";
+  const productLinks = fields.kind === "plan" || fields.kind === "stage" ? fields.productLinks : [];
+  const hasProductLinks = productLinks.length !== 0;
   return (
     <article {...rootAttrs} className={clsx(styles.root, className)} id={record.id}>
       <Group justify="space-between" align="flex-start">
@@ -68,6 +71,7 @@ export const ProjectRecord = (props: ProjectRecordProps) => {
         {summary}
       </Text>
       {children}
+      {hasProductLinks && <ProductLinks value={productLinks} />}
       <Collapse expanded={isExpanded}>
         <Stack gap="md" className={styles.details}>
           {sections.map((section) => (

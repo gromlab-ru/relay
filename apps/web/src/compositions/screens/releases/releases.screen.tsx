@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Badge, Button, Group, SimpleGrid, Stack, Text } from "@mantine/core";
 import { ArrowLeft, Layers3, Plus, Rocket } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectBasePath } from "domains/project";
 import { isRecordOf, statusColor, statusLabel, useLifecycle } from "domains/lifecycle";
 import { ProjectPage } from "compositions/widgets/project-page";
 import { ProjectEditor } from "compositions/widgets/project-editor";
@@ -21,12 +21,11 @@ import styles from "./styles/releases.module.css";
  */
 export const ReleasesScreen = () => {
   const lifecycle = useLifecycle();
-  const projectId = useProjectId();
+  const base = useProjectBasePath();
   const { releaseId } = useParams();
   const navigate = useNavigate();
   const [editor, setEditor] = useState<ProjectEdit | null>(null);
   const state = lifecycle.data;
-  const base = `/projects/${encodeURIComponent(projectId)}`;
   const records = state?.records.filter((record) => isRecordOf(record, "release")) ?? [];
   const release = records.find((record) => record.id === releaseId);
   const isEmpty = isEmptyArray(records);

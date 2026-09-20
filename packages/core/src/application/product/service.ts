@@ -15,26 +15,36 @@ import { BoardRepository } from "../../storage/boards.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
 import { contractBasis, productState, productVersion, validateProduct } from "./model.js";
+import {
+  assertProductKey,
+  nextProductKey,
+  normalizeProductMutation,
+} from "../../domain/product-addresses.js";
 
 /** Единая граница записи для Web, REST, CLI и MCP. */
 export class ProductService {
   constructor(readonly workspace: Workspace) {}
 
   async state(): Promise<ProductState> {
-    return this.workspace.locked(async () => {
+    return this.workspace.locked(async (assertOwned) => {
       const repository = new ProductRepository(this.workspace);
-      const records = await repository.all();
+      const records = await repository.ensureKeys(assertOwned);
       validateProduct(records);
       return productState(repository.productId, records);
     });
   }
 
   async mutate(input: ProductMutation, defaultActor: string): Promise<ProductSaved> {
-    const command = parse(productMutationSchema, input, "изменение продукта");
+    let command = parse(productMutationSchema, input, "изменение продукта");
+    invariant(
+      command.key === undefined || command.action === "update",
+      "INVALID_ARGUMENT",
+      "При создании ключ назначается автоматически",
+    );
     const actor = parse(actorSchema, command.actor ?? defaultActor, "автор");
     return this.workspace.locked(async (assertOwned) => {
       const repository = new ProductRepository(this.workspace);
-      const records = await repository.all();
+      const records = await repository.ensureKeys(assertOwned);
       validateProduct(records);
       const key = createHash("sha256").update(`${actor}/${command.requestId}`).digest("hex");
       const hash = createHash("sha256")
@@ -52,6 +62,7 @@ export class ProductService {
         );
         return receipt.result;
       }
+      command = normalizeProductMutation(command, records);
       invariant(
         command.ifVersion === undefined || command.ifVersion === productVersion(records),
         "REVISION_CONFLICT",
@@ -99,6 +110,7 @@ export class ProductService {
       invariant(
         command.action !== "update" ||
           command.id !== undefined ||
+          command.fields.kind === "scope" ||
           command.fields.kind === "contract",
         "INVALID_ARGUMENT",
         "Для обновления нужен ID",
@@ -169,24 +181,28 @@ export class ProductService {
           4,
         );
         const old = previous?.fields.kind === "scope" ? previous.fields.contracts : [];
-        const contracts: ProductContract[] = inputFields.contracts.map((entry) => {
-          const prior = old.find(
-            (contract) =>
-              contract.featureId === entry.featureId && contract.scenarioId === entry.scenarioId,
-          );
-          const preserveBasis =
-            command.fields.kind === "contract" &&
-            prior !== undefined &&
-            prior.id !== command.fields.contractId;
-          const contractId = prior?.id ?? shortId(occupied);
-          occupied.add(contractId);
-          return {
-            ...entry,
-            id: contractId,
-            active: true,
-            basis: preserveBasis ? prior.basis : contractBasis(entry, records),
-          };
-        });
+        const contracts: ProductContract[] = inputFields.contracts.map(
+          ({ key: _key, revision: _revision, ...entry }) => {
+            const prior = old.find(
+              (contract) =>
+                contract.featureId === entry.featureId && contract.scenarioId === entry.scenarioId,
+            );
+            const preserveBasis =
+              command.fields.kind === "contract" &&
+              prior !== undefined &&
+              prior.id !== command.fields.contractId;
+            const contractId = prior?.id ?? shortId(occupied);
+            occupied.add(contractId);
+            return {
+              ...entry,
+              id: contractId,
+              ...(prior?.key ? { key: prior.key } : {}),
+              revision: prior?.revision ?? 1,
+              active: true,
+              basis: preserveBasis ? prior.basis : contractBasis(entry, records),
+            };
+          },
+        );
         fields = {
           ...inputFields,
           contracts: [
@@ -275,13 +291,37 @@ export class ProductService {
         }
       }
       const now = new Date().toISOString();
-      const result = { id, revision: (previous?.revision ?? 0) + 1 };
+      const publicKey =
+        command.key ??
+        previous?.key ??
+        (fields.kind === "feature" || fields.kind === "scenario"
+          ? nextProductKey(fields.kind, records)
+          : fields.kind === "application"
+            ? (fields.prefix ?? defaultBoardPrefix(fields.slug))
+            : undefined);
+      if (publicKey && (command.key !== undefined || previous === undefined))
+        assertProductKey(publicKey, kind, id, records);
+      const result = {
+        id,
+        revision: (previous?.revision ?? 0) + 1,
+        ...(publicKey ? { key: publicKey } : {}),
+      };
       const record = parse(
         productRecordSchema,
         {
           version: 1,
           productId: repository.productId,
           ...result,
+          ...(previous?.reservedKeys || (previous?.key && previous.key !== publicKey)
+            ? {
+                reservedKeys: [
+                  ...new Set([
+                    ...(previous?.reservedKeys ?? []),
+                    ...(previous?.key && previous.key !== publicKey ? [previous.key] : []),
+                  ]),
+                ],
+              }
+            : {}),
           fields,
           createdAt: previous?.createdAt ?? now,
           createdBy: previous?.createdBy ?? actor,
@@ -297,6 +337,8 @@ export class ProductService {
       if (record.fields.kind === "application" && previous === undefined)
         await new BoardRepository(this.workspace).createApplication(record, assertOwned);
       else await repository.save(record, previous === undefined, assertOwned);
+      // Новые реализации получают постоянные ключи до освобождения общей блокировки.
+      if (record.fields.kind === "scope") await repository.ensureKeys(assertOwned);
       return result;
     });
   }

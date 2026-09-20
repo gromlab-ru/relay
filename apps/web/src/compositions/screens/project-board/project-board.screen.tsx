@@ -20,7 +20,7 @@ import { Plus, Search, SlidersHorizontal, MoreHorizontal, ExternalLink } from "l
 import { useBoard } from "domains/boards";
 import { BoardTaskError, useBoardTask, useBoardTaskCreation } from "domains/board-tasks";
 import type { TaskColumn, TaskFilters } from "domains/board-tasks";
-import { useProjectId } from "domains/project";
+import { useProjectId, useProjectBasePath } from "domains/project";
 import { TaskKanban } from "./ui/task-kanban";
 import { TaskModal } from "./ui/task-modal";
 import { BOARD_BACKGROUND_SCHEMA } from "./config/route.schema";
@@ -54,7 +54,7 @@ export const ProjectBoardScreen = () => {
       : (routeBoard ?? opened.data?.boardSlug ?? "");
   const query = useBoard(projectId, boardSlug);
   const params = new URLSearchParams(selected ? (backgroundData?.search ?? "") : location.search);
-  const base = `/projects/${encodeURIComponent(projectId)}`;
+  const base = useProjectBasePath();
   const [creatingColumn, setCreatingColumn] = useState<TaskColumn | null>(null);
   const [error, setError] = useState("");
   const [defect, setDefect] = useState<unknown>();
