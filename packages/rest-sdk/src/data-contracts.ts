@@ -4,6 +4,462 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface GraphPage {
+  /** Страница узлов, включая изолированные */
+  nodes: {
+    /** Адрес сущности */
+    ref: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Однострочное название сущности */
+    title: string;
+    /** Читаемый ключ или ID */
+    key: string;
+    /**
+     * Ревизия источника
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Состояние источника, пустая строка если не применимо */
+    status: string;
+  }[];
+  /** Страница рёбер */
+  edges: {
+    /**
+     * Постоянный ID отношения
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    id: string;
+    /**
+     * Расширяемый тип отношения, например references или contains
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    type: string;
+    /** Начало отношения */
+    from: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Конец отношения */
+    to: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Пояснение назначения связи в Markdown */
+    description: string;
+    /**
+     * Ревизия отношения
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** graph — редактируемое ребро; domain — проекция предметной записи */
+    source: GraphPageSourceEnum;
+    /**
+     * Автор создания или владелец предметной проекции
+     * @maxLength 128
+     */
+    createdBy: string;
+    /**
+     * Время создания отношения или источника
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    createdAt: string;
+  }[];
+  /** Карточки концов рёбер этой страницы для независимого рендера */
+  endpoints: {
+    /** Адрес сущности */
+    ref: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Однострочное название сущности */
+    title: string;
+    /** Читаемый ключ или ID */
+    key: string;
+    /**
+     * Ревизия источника
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Состояние источника, пустая строка если не применимо */
+    status: string;
+  }[];
+  /** Причины включения узлов в обход */
+  paths: {
+    /** Узел страницы */
+    target: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Один кратчайший объясняющий путь от корня */
+    nodes: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    }[];
+    /** ID отношений пути; не все возможные пути */
+    edges: string[];
+  }[];
+  /**
+   * Число узлов выбранной области
+   * @min 0
+   * @max 9007199254740991
+   */
+  totalNodes: number;
+  /**
+   * Число отношений выбранной области
+   * @min 0
+   * @max 9007199254740991
+   */
+  totalEdges: number;
+  /** Продолжение обеих выборок, null в конце */
+  nextOffset: number | null;
+  /** Узлы страницы с ещё не пройденными соседями из-за глубины */
+  boundary: {
+    /**
+     * Расширяемый вид сущности
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    kind: string;
+    /**
+     * Постоянный ID сущности в выбранном проекте
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    id: string;
+  }[];
+  /** Есть непройденные узлы за границей глубины */
+  depthLimited: boolean;
+  /** Версия всего согласованного графа и карточек */
+  version: string;
+}
+
+export interface GraphQuery {
+  /**
+   * Адрес kind:id для обхода; без него весь граф проекта
+   * @maxLength 257
+   */
+  root?: string;
+  /**
+   * Оставить только отношения выбранного типа
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+   */
+  type?: string;
+  /**
+   * Направление обхода относительно каждого узла
+   * @default "both"
+   */
+  direction?: GraphQueryDirectionEnum;
+  /**
+   * Глубина одного обхода 0–100; продолжайте от граничных узлов
+   * @min 0
+   * @max 100
+   * @default 3
+   */
+  depth?: number;
+  /**
+   * all — все пути; context — документы, доски и приложения не расширяют чужую область
+   * @default "all"
+   */
+  profile?: GraphQueryProfileEnum;
+  /**
+   * Поиск узлов по ключу, адресу и названию; рёбра только между найденными узлами
+   * @maxLength 1024
+   */
+  q?: string;
+  /**
+   * Смещение одновременно в списках узлов и рёбер
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер каждой страницы узлов и рёбер, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /**
+   * Версия первой страницы; изменение требует повторить чтение
+   * @maxLength 128
+   */
+  version?: string;
+}
+
+export interface GraphMutation {
+  /**
+   * Атомарный пакет до 100 явных изменений
+   * @maxItems 100
+   * @minItems 1
+   */
+  operations: (
+    | {
+        /** Создать отношение */
+        action: "add";
+        /**
+         * Тип создаваемого отношения; не ограничен предметными видами
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        type: string;
+        from: {
+          /**
+           * Расширяемый вид сущности
+           * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+           */
+          kind: string;
+          /**
+           * Постоянный ID сущности в выбранном проекте
+           * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+           */
+          id: string;
+        };
+        to: {
+          /**
+           * Расширяемый вид сущности
+           * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+           */
+          kind: string;
+          /**
+           * Постоянный ID сущности в выбранном проекте
+           * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+           */
+          id: string;
+        };
+        /**
+         * Необязательное пояснение в Markdown
+         * @default ""
+         */
+        description?: string;
+      }
+    | {
+        /** Изменить пояснение существующего отношения */
+        action: "update";
+        /**
+         * ID редактируемого отношения
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        id: string;
+        /** Новое пояснение в Markdown */
+        description: string;
+      }
+    | {
+        /** Отозвать отношение с сохранением истории */
+        action: "remove";
+        /**
+         * ID отзываемого отношения
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        id: string;
+      }
+  )[];
+  /**
+   * Версия прочитанного графа; конфликт не теряет изменения
+   * @minLength 1
+   * @maxLength 128
+   */
+  ifVersion: string;
+  /**
+   * Ключ безопасного повтора всего пакета
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /** Автор изменения */
+  actor?: string;
+}
+
+export interface GraphSaved {
+  /** ID созданных, изменённых и отозванных отношений в порядке операций */
+  ids: string[];
+  /**
+   * Ревизия хранилища отношений после пакета
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /** Версия графа после записи */
+  version: string;
+  /** Ключ повтора; повтор возвращает первоначальную квитанцию */
+  requestId: string;
+}
+
+export interface GraphHistory {
+  items: {
+    /** Выполненное действие */
+    action: GraphHistoryActionEnum;
+    /** Состояние связи после действия; для отзыва последнее сохранённое состояние */
+    edge: {
+      /**
+       * Постоянный ID отношения
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+      /**
+       * Расширяемый тип отношения, например references или contains
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      type: string;
+      /** Начало отношения */
+      from: {
+        /**
+         * Расширяемый вид сущности
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        kind: string;
+        /**
+         * Постоянный ID сущности в выбранном проекте
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        id: string;
+      };
+      /** Конец отношения */
+      to: {
+        /**
+         * Расширяемый вид сущности
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        kind: string;
+        /**
+         * Постоянный ID сущности в выбранном проекте
+         * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+         */
+        id: string;
+      };
+      /** Пояснение назначения связи в Markdown */
+      description: string;
+      /**
+       * Ревизия отношения
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      revision: number;
+      /** graph — редактируемое ребро; domain — проекция предметной записи */
+      source: GraphHistorySourceEnum;
+      /**
+       * Автор создания или владелец предметной проекции
+       * @maxLength 128
+       */
+      createdBy: string;
+      /**
+       * Время создания отношения или источника
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      createdAt: string;
+    };
+    /**
+     * Автор события
+     * @maxLength 128
+     */
+    actor: string;
+    /**
+     * Время события
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    at: string;
+    /**
+     * Ревизия пакета
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+  }[];
+  /**
+   * @min 0
+   * @max 9007199254740991
+   */
+  total: number;
+  nextOffset: number | null;
+  /**
+   * @min 0
+   * @max 9007199254740991
+   */
+  revision: number;
+}
+
+export interface GraphHistoryQuery {
+  /**
+   * История одного отношения; без ID весь журнал графа
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+   */
+  id?: string;
+  /**
+   * Смещение событий
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы событий
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /**
+   * Ревизия журнала первой страницы
+   * @min 0
+   * @max 9007199254740991
+   */
+  revision?: number;
+}
+
 export interface ProjectSettings {
   /**
    * Отображаемое имя проекта, от 1 до 120 символов без переносов строк
@@ -5184,6 +5640,27 @@ export interface ApiFailure {
   };
 }
 
+/** graph — редактируемое ребро; domain — проекция предметной записи */
+export type GraphPageSourceEnum = "graph" | "domain";
+
+/**
+ * Направление обхода относительно каждого узла
+ * @default "both"
+ */
+export type GraphQueryDirectionEnum = "both" | "outgoing" | "incoming";
+
+/**
+ * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * @default "all"
+ */
+export type GraphQueryProfileEnum = "all" | "context";
+
+/** Выполненное действие */
+export type GraphHistoryActionEnum = "add" | "update" | "remove";
+
+/** graph — редактируемое ребро; domain — проекция предметной записи */
+export type GraphHistorySourceEnum = "graph" | "domain";
+
 /** Цель реализации: общая фича, сценарий или контракт приложения */
 export type BoardTaskViewKindEnum = "feature" | "scenario" | "implementation";
 
@@ -6563,6 +7040,118 @@ export interface MoveBoardTaskParams {
   reference: any;
 }
 
+export type GetGraphOkEnum = true;
+
+export interface GetGraphParams {
+  /**
+   * Адрес kind:id для обхода; без него весь граф проекта
+   * @maxLength 257
+   */
+  root?: string;
+  /**
+   * Оставить только отношения выбранного типа
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+   */
+  type?: string;
+  /**
+   * Направление обхода относительно каждого узла
+   * @default "both"
+   */
+  direction?: DirectionEnum;
+  /**
+   * Глубина одного обхода 0–100; продолжайте от граничных узлов
+   * @min 0
+   * @max 100
+   * @default 3
+   */
+  depth?: number;
+  /**
+   * all — все пути; context — документы, доски и приложения не расширяют чужую область
+   * @default "all"
+   */
+  profile?: ProfileEnum;
+  /**
+   * Поиск узлов по ключу, адресу и названию; рёбра только между найденными узлами
+   * @maxLength 1024
+   */
+  q?: string;
+  /**
+   * Смещение одновременно в списках узлов и рёбер
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер каждой страницы узлов и рёбер, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /**
+   * Версия первой страницы; изменение требует повторить чтение
+   * @maxLength 128
+   */
+  version?: string;
+}
+
+/**
+ * Направление обхода относительно каждого узла
+ * @default "both"
+ */
+export type DirectionEnum = "both" | "outgoing" | "incoming";
+
+/**
+ * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * @default "all"
+ */
+export type ProfileEnum = "all" | "context";
+
+/**
+ * Направление обхода относительно каждого узла
+ * @default "both"
+ */
+export type GetGraphParams1DirectionEnum = "both" | "outgoing" | "incoming";
+
+/**
+ * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * @default "all"
+ */
+export type GetGraphParams1ProfileEnum = "all" | "context";
+
+export type MutateGraphOkEnum = true;
+
+export type GetGraphHistoryOkEnum = true;
+
+export interface GetGraphHistoryParams {
+  /**
+   * История одного отношения; без ID весь журнал графа
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+   */
+  id?: string;
+  /**
+   * Смещение событий
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы событий
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /**
+   * Ревизия журнала первой страницы
+   * @min 0
+   * @max 9007199254740991
+   */
+  revision?: number;
+}
+
 export type ListCommentsOkEnum = true;
 
 export interface ListCommentsParams {
@@ -7441,6 +8030,130 @@ export type MoveBoardTaskForProjectOkEnum = true;
 export interface MoveBoardTaskForProjectParams {
   /** ID или ключ перемещаемой задачи */
   reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetGraphForProjectOkEnum = true;
+
+export interface GetGraphForProjectParams {
+  /**
+   * Адрес kind:id для обхода; без него весь граф проекта
+   * @maxLength 257
+   */
+  root?: string;
+  /**
+   * Оставить только отношения выбранного типа
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+   */
+  type?: string;
+  /**
+   * Направление обхода относительно каждого узла
+   * @default "both"
+   */
+  direction?: DirectionEnum1;
+  /**
+   * Глубина одного обхода 0–100; продолжайте от граничных узлов
+   * @min 0
+   * @max 100
+   * @default 3
+   */
+  depth?: number;
+  /**
+   * all — все пути; context — документы, доски и приложения не расширяют чужую область
+   * @default "all"
+   */
+  profile?: ProfileEnum1;
+  /**
+   * Поиск узлов по ключу, адресу и названию; рёбра только между найденными узлами
+   * @maxLength 1024
+   */
+  q?: string;
+  /**
+   * Смещение одновременно в списках узлов и рёбер
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер каждой страницы узлов и рёбер, максимум 100
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /**
+   * Версия первой страницы; изменение требует повторить чтение
+   * @maxLength 128
+   */
+  version?: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+/**
+ * Направление обхода относительно каждого узла
+ * @default "both"
+ */
+export type DirectionEnum1 = "both" | "outgoing" | "incoming";
+
+/**
+ * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * @default "all"
+ */
+export type ProfileEnum1 = "all" | "context";
+
+/**
+ * Направление обхода относительно каждого узла
+ * @default "both"
+ */
+export type GetGraphForProjectParams1DirectionEnum =
+  | "both"
+  | "outgoing"
+  | "incoming";
+
+/**
+ * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * @default "all"
+ */
+export type GetGraphForProjectParams1ProfileEnum = "all" | "context";
+
+export type MutateGraphForProjectOkEnum = true;
+
+export interface MutateGraphForProjectParams {
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetGraphHistoryForProjectOkEnum = true;
+
+export interface GetGraphHistoryForProjectParams {
+  /**
+   * История одного отношения; без ID весь журнал графа
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+   */
+  id?: string;
+  /**
+   * Смещение событий
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы событий
+   * @min 1
+   * @max 100
+   * @default 40
+   */
+  limit?: number;
+  /**
+   * Ревизия журнала первой страницы
+   * @min 0
+   * @max 9007199254740991
+   */
+  revision?: number;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }

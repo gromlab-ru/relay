@@ -11,6 +11,8 @@ import { BoardRepository } from "./boards.js";
 import { BoardTaskRepository } from "./board-tasks.js";
 import { createProjectSlug, defaultProjectName } from "./project-settings.js";
 import { ProductTransaction } from "./product-transaction.js";
+import { GraphTransaction } from "./graph-transaction.js";
+import { recoverGraphMigration } from "./graph-migration.js";
 
 export const CONFIG_NAME = ".relay/config.json";
 export const MIGRATION_STATE = "migration-v2.json";
@@ -50,6 +52,8 @@ export class Workspace {
         4,
       );
       await new ProductTransaction(this).recover(assertOwned);
+      await new GraphTransaction(this).recover(assertOwned);
+      await recoverGraphMigration(this, assertOwned);
       await new BoardRepository(this).recover(assertOwned);
       await new BoardTaskRepository(this).recover(assertOwned);
       return operation(assertOwned);

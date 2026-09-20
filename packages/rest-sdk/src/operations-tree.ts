@@ -34,6 +34,10 @@ import { getCommentForProject } from "./operations/get-comment-for-project.js";
 import { getComment } from "./operations/get-comment.js";
 import { getContextForProject } from "./operations/get-context-for-project.js";
 import { getContext } from "./operations/get-context.js";
+import { getGraphForProject } from "./operations/get-graph-for-project.js";
+import { getGraphHistoryForProject } from "./operations/get-graph-history-for-project.js";
+import { getGraphHistory } from "./operations/get-graph-history.js";
+import { getGraph } from "./operations/get-graph.js";
 import { getGroupsForProject } from "./operations/get-groups-for-project.js";
 import { getGroups } from "./operations/get-groups.js";
 import { getHealth } from "./operations/get-health.js";
@@ -87,6 +91,8 @@ import { moveBoardTaskForProject } from "./operations/move-board-task-for-projec
 import { moveBoardTask } from "./operations/move-board-task.js";
 import { moveTaskForProject } from "./operations/move-task-for-project.js";
 import { moveTask } from "./operations/move-task.js";
+import { mutateGraphForProject } from "./operations/mutate-graph-for-project.js";
+import { mutateGraph } from "./operations/mutate-graph.js";
 import { mutateProductForProject } from "./operations/mutate-product-for-project.js";
 import { mutateProduct } from "./operations/mutate-product.js";
 import { registerProject } from "./operations/register-project.js";
@@ -220,6 +226,14 @@ export const operationsTree = {
     linkBoardTaskForProject: linkBoardTaskForProject,
     updateBoardTaskForProject: updateBoardTaskForProject,
     moveBoardTaskForProject: moveBoardTaskForProject,
+  },
+  graph: {
+    getGraph: getGraph,
+    mutateGraph: mutateGraph,
+    getGraphHistory: getGraphHistory,
+    getGraphForProject: getGraphForProject,
+    mutateGraphForProject: mutateGraphForProject,
+    getGraphHistoryForProject: getGraphHistoryForProject,
   },
   comments: {
     listComments: listComments,

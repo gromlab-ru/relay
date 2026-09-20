@@ -5,6 +5,10 @@ import type { ApiFailure } from "@relay/contracts";
 import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
+  "GRAPH_CHANGED",
+  "GRAPH_MIGRATION_REQUIRED",
+  "GRAPH_INDEX_STALE",
+  "GRAPH_RECOVERY_CONFLICT",
   "AMBIGUOUS_PRODUCT_KEY",
   "PRODUCT_RECOVERY_CONFLICT",
   "ALREADY_EXISTS",

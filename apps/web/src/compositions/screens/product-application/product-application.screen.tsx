@@ -2,6 +2,7 @@ import { Accordion, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { ProductKey } from "domains/product";
+import { useProjectBasePath } from "domains/project";
 import { useProductRoute } from "compositions/widgets/product-page";
 import { getRelatedDocuments, useProductDemo } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
@@ -21,6 +22,7 @@ export const ProductApplicationScreen = () => {
   const location = useLocation();
   const { snapshot, scopes } = useProductDemo();
   const base = useProductPath();
+  const projectBase = useProjectBasePath();
   const relatedScopeIds = scopes
     .filter((scope) => scope.applicationId === applicationId)
     .map((scope) => scope.id);
@@ -70,6 +72,14 @@ export const ProductApplicationScreen = () => {
       meta={
         <Group gap="md">
           <ProductKey value={applicationData.key} copyable />
+          <Button
+            component={Link}
+            variant="subtle"
+            size="xs"
+            to={`${projectBase}/relations?root=application:${applicationData.id}`}
+          >
+            Все связи и контекст
+          </Button>
           <Badge color="gray" variant="light">
             {applicationData.type}
           </Badge>

@@ -49,6 +49,9 @@ export function setupOpenApi(app: INestApplication): void {
         schema,
         [
           "SaveProjectRecord",
+          "GraphMutation",
+          "GraphQuery",
+          "GraphHistoryQuery",
           "CreateBoardTask",
           "UpdateBoardTask",
           "MoveBoardTask",

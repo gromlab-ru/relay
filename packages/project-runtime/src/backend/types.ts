@@ -13,6 +13,7 @@ import type { ProjectService } from "@relay/core/application/project/service";
 import type { ProductQueries } from "@relay/core/application/product/queries";
 import type { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import type { BoardsService } from "@relay/core/application/boards/service";
+import type { GraphService } from "@relay/core/application/graph/service";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -44,6 +45,7 @@ export interface TasksBackend {
 }
 
 export interface Backend {
+  graph: Pick<GraphService, "read" | "mutate" | "history">;
   boardTasks: Pick<
     BoardTasksService,
     "list" | "get" | "links" | "create" | "update" | "move" | "link"

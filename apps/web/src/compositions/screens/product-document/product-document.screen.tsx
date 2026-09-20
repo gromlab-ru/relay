@@ -2,6 +2,7 @@ import { Badge, Button, Group, Text } from "@mantine/core";
 import { Clock3, FileText, Link2, Pencil } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { DOCUMENTATION_KINDS, DocumentationScopes, useProductDemo } from "domains/product-demo";
+import { useProjectBasePath } from "domains/project";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
@@ -18,6 +19,7 @@ export const ProductDocumentScreen = () => {
   const { documentId } = useParams();
   const { snapshot } = useProductDemo();
   const base = useProductPath();
+  const projectBase = useProjectBasePath();
   const location = useLocation();
   const documentData = snapshot.documentation.find((entry) => entry.id === documentId);
   const backTo = getProductReturn(location.state, `${base}/documents`, base);
@@ -59,6 +61,14 @@ export const ProductDocumentScreen = () => {
       }
       meta={
         <Group gap="sm">
+          <Button
+            component={Link}
+            variant="subtle"
+            size="xs"
+            to={`${projectBase}/relations?root=document:${documentData.id}`}
+          >
+            Все связи и контекст
+          </Button>
           <Badge color="gray" variant="light" tt="none" fw={500}>
             {DOCUMENTATION_KINDS[documentData.kind]}
           </Badge>

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { ProductQueries } from "@relay/core/application/product/queries";
+import { GraphService } from "@relay/core/application/graph/service";
 import { test } from "node:test";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -31,6 +32,40 @@ test("SSE замечает прямую запись имени и slug чере
     await stream.close();
   }
 });
+
+test(
+  "SSE замечает новые отношения после прямой записи через Core",
+  { timeout: 10000 },
+  async (t) => {
+    const { app, workspace } = await fixture(t);
+    await app.listen(0, "127.0.0.1");
+    const stream = await connect(await app.getUrl());
+    try {
+      await stream.next();
+      const service = new GraphService(workspace);
+      const graph = await service.read();
+      await service.mutate(
+        {
+          ifVersion: graph.version,
+          requestId: "sse-graph",
+          operations: [
+            {
+              action: "add",
+              type: "references",
+              from: graph.nodes[0]!.ref,
+              to: graph.nodes[1]!.ref,
+            },
+          ],
+        },
+        "cli-agent",
+      );
+      await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+      assert.equal((await app.inject("/api/v1/graph")).json().data.totalEdges, 1);
+    } finally {
+      await stream.close();
+    }
+  },
+);
 
 async function connect(url: string, project?: string) {
   const controller = new AbortController();

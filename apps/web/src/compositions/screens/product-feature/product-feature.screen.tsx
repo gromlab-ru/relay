@@ -2,6 +2,7 @@ import { Anchor, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { ProductKey } from "domains/product";
+import { useProjectBasePath } from "domains/project";
 import { useProductRoute } from "compositions/widgets/product-page";
 import {
   getFeatureStatus,
@@ -29,6 +30,7 @@ export const ProductFeatureScreen = () => {
   const location = useLocation();
   const { snapshot } = useProductDemo();
   const base = useProductPath();
+  const projectBase = useProjectBasePath();
   const featureData = snapshot.features.find((feature) => feature.id === featureId);
   const relatedDocuments = getRelatedDocuments(snapshot, [
     JSON.stringify({ kind: "feature", id: featureId }),
@@ -75,6 +77,14 @@ export const ProductFeatureScreen = () => {
       meta={
         <Group gap="md">
           <ProductKey value={featureData.key} copyable />
+          <Button
+            component={Link}
+            variant="subtle"
+            size="xs"
+            to={`${projectBase}/relations?root=feature:${featureData.id}`}
+          >
+            Все связи и контекст
+          </Button>
           <ProductReadiness status={getFeatureStatus(featureData)} label={readinessLabel} />
           <Text size="xs" c="dimmed">
             Готовность по всем сценариям и контрактам приложений

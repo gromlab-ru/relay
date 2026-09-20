@@ -1,5 +1,19 @@
 # Журнал создания TSX
 
+## Универсальные связи
+
+Из корня выполнено:
+
+```bash
+pnpm --filter @relay/web run create ui-unit project-relations src/compositions/screens
+pnpm --filter @relay/web run create ui-component relation-editor src/compositions/screens/project-relations/ui
+pnpm --filter @relay/web run create ui-component entity-picker src/compositions/screens/project-relations/ui
+pnpm --filter @relay/web run create ui-component relation-card src/compositions/screens/project-relations/ui
+```
+
+Экран подключён через lazy-фасет. Внутренние формы, поле выбора и карточка принадлежат
+экрану; операции и кеш — `domains/relations`. Новый транспорт не создавался.
+
 ## Ключи продукта — 20 сентября 2026
 
 Выполнено из корня:

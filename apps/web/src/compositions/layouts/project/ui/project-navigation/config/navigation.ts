@@ -8,6 +8,7 @@ import {
   Layers3,
   LayoutDashboard,
   Radio,
+  Network,
   Sparkles,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ export const PRODUCT_NAVIGATION = [
 
 /** Рабочие разделы проекта после продуктового контекста. */
 export const PROJECT_NAVIGATION = [
+  { path: "relations", label: "Связи проекта", Icon: Network },
   { path: "plans", label: "Планы", Icon: Flag },
   { path: "board", label: "Прежняя доска", Icon: LayoutDashboard },
   // Временно скрыты только в сайдбаре; страницы доступны по прямым адресам.

@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 103);
+    assert.equal(operations.size, 109);
     for (const [name, schema] of Object.entries(document.components!.schemas!)) {
       ajv.compile({ ...schema, components: document.components });
       if (!("$ref" in schema) && Array.isArray(schema.examples))
@@ -88,6 +88,20 @@ for (const scoped of [false, true])
     await request("PUT", "/api/v1/projects/{project}", "/api/v1/projects/a", { path: "." }, 400);
     await request("DELETE", "/api/v1/projects/{project}", "/api/v1/projects/a", undefined, 400);
     await request("GET", "/api/v1/context");
+    const graph = await request("GET", "/api/v1/graph");
+    await request("POST", "/api/v1/graph", undefined, {
+      ifVersion: graph.data.version,
+      requestId: "openapi-graph",
+      operations: [
+        {
+          action: "add",
+          type: "references",
+          from: graph.data.nodes[0].ref,
+          to: graph.data.nodes[1].ref,
+        },
+      ],
+    });
+    await request("GET", "/api/v1/graph/history");
     const settings = await request("GET", "/api/v1/context/settings");
     await request("PUT", "/api/v1/context/settings", undefined, {
       name: "Проверка настроек",
@@ -235,7 +249,7 @@ for (const scoped of [false, true])
       { patch: { title: "Conflict" }, ifRevision: 1 },
       409,
     );
-    assert.equal(visited.size, 50);
+    assert.equal(visited.size, 53);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;

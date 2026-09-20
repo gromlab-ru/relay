@@ -16,6 +16,7 @@
     "docs/reference/PRODUCT.md": "references/PRODUCT.md",
     "docs/reference/BOARDS.md": "references/BOARDS.md",
     "docs/reference/KANBAN.md": "references/KANBAN.md",
+    "docs/reference/GRAPH.md": "references/GRAPH.md",
     "docs/reference/PRODUCT-CONTENT.md": "references/PRODUCT-CONTENT.md",
     "docs/guides/LIFECYCLE.md": "references/LIFECYCLE.md"
   },
@@ -45,6 +46,13 @@
     "packages/core/src/domain/product.ts",
     "packages/core/src/application/product",
     "packages/core/src/domain/config.ts",
+    "packages/core/src/domain/entity-graph.ts",
+    "packages/core/src/application/graph",
+    "packages/core/src/storage/graph.ts",
+    "packages/core/src/storage/graph-format.ts",
+    "packages/core/src/storage/graph-index.ts",
+    "packages/core/src/storage/graph-migration.ts",
+    "packages/core/src/storage/graph-transaction.ts",
     "packages/core/src/application/project"
   ]
 }

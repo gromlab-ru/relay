@@ -41,6 +41,7 @@
     "test:mcp": "turbo run test --filter=@gromlab/relay-mcp",
     "test:server": "turbo run test --filter=@gromlab/relay-server --filter=@relay/server-runtime",
     "test:core": "turbo run test --filter=@relay/core",
+    "bench:graph": "node --conditions=tasks-source --import tsx scripts/graph-storage-benchmark.mts",
     "test:contracts": "turbo run test --filter=@relay/contracts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

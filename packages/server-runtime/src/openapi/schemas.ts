@@ -1,5 +1,13 @@
 import { z } from "zod";
 import {
+  graphPageSchema,
+  graphQuerySchema,
+  graphMutationSchema,
+  graphSavedSchema,
+  graphHistorySchema,
+  graphHistoryQuerySchema,
+} from "@relay/core/domain/entity-graph";
+import {
   productEntitiesQuerySchema,
   productEntitiesSchema,
   productEntitySchema,
@@ -229,6 +237,12 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  GraphPage: graphPageSchema,
+  GraphQuery: graphQuerySchema,
+  GraphMutation: graphMutationSchema,
+  GraphSaved: graphSavedSchema,
+  GraphHistory: graphHistorySchema,
+  GraphHistoryQuery: graphHistoryQuerySchema,
   ProjectSettings: projectSettingsSchema,
   SaveProjectSettings: saveProjectSettingsSchema,
   BoardTaskView: boardTaskViewSchema,

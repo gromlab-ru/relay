@@ -1,6 +1,14 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import {
+  graphPageSchema,
+  graphQuerySchema,
+  graphMutationSchema,
+  graphSavedSchema,
+  graphHistorySchema,
+  graphHistoryQuerySchema,
+} from "@relay/core/domain/entity-graph";
+import {
   productEntitySchema,
   productEntitiesSchema,
   productEntitiesQuerySchema,
@@ -161,6 +169,33 @@ export async function createHttpBackend(url: string, project?: string): Promise<
     );
   return {
     kind: "http",
+    graph: {
+      read: async (input = {}) =>
+        decode(
+          graphPageSchema,
+          await call(() => api.graph.getGraph(defined(graphQuerySchema.parse(input)))),
+        ),
+      mutate: async (input, actor) =>
+        decode(
+          graphSavedSchema,
+          await call(
+            () =>
+              api.graph.mutateGraph({
+                ...graphMutationSchema.parse(input),
+                actor: input.actor ?? actor,
+              }),
+            "write",
+            input.requestId,
+          ),
+        ),
+      history: async (input = {}) =>
+        decode(
+          graphHistorySchema,
+          await call(() =>
+            api.graph.getGraphHistory(defined(graphHistoryQuerySchema.parse(input))),
+          ),
+        ),
+    },
     boards: {
       list: async (input = {}) =>
         decode(

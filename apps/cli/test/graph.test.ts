@@ -1,0 +1,101 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { GraphPage, GraphSaved } from "@relay/core/domain/entity-graph";
+import { fixture, successful, invokeRaw } from "./helpers/cli.js";
+
+test("CLI графа: контекстный документ, путь, безопасный повтор и читаемое продолжение", async (t) => {
+  const app = await fixture(t);
+  const task = successful(
+    await app.run<{ id: string }>([
+      "task",
+      "create",
+      "--board",
+      "product",
+      "--title",
+      "Подготовить сборку",
+    ]),
+  ).data;
+  const doc = successful(
+    await app.run<{ id: string }>([
+      "product",
+      "save",
+      "--json",
+      JSON.stringify({
+        action: "create",
+        requestId: "context-doc",
+        fields: {
+          kind: "document",
+          name: "Пример другого приложения",
+          summary: "",
+          body: "## Пример\nНастройка pipeline.",
+          documentKind: "description",
+          links: [],
+        },
+      }),
+    ]),
+  ).data;
+  const initial = successful(await app.run<GraphPage>(["graph", "list"])).data;
+  const link = [
+    "graph",
+    "link",
+    "--from",
+    `task:${task.id}`,
+    "--to",
+    `document:${doc.id}`,
+    "--type",
+    "example-for",
+    "--description",
+    "## Для контекста\nНе требование.",
+    "--if-version",
+    initial.version,
+    "--request-id",
+    "attach-doc",
+  ];
+  const receipt = successful(await app.run<GraphSaved>(link)).data;
+  assert.deepEqual(successful(await app.run<GraphSaved>(link)).data, receipt);
+  const context = successful(
+    await app.run<GraphPage>(["graph", "context", `task:${task.id}`]),
+  ).data;
+  assert.ok(context.nodes.some((node) => node.ref.id === doc.id));
+  assert.ok(
+    context.paths.some((path) => path.target.id === doc.id && path.edges.includes(receipt.ids[0]!)),
+  );
+  const human = await invokeRaw(app.root, ["graph", "context", `task:${task.id}`]);
+  assert.equal(human.code, 0, human.stderr);
+  assert.match(human.stdout, /Почему включено/);
+  assert.match(human.stdout, /Для контекста/);
+  assert.doesNotMatch(human.stdout, /"nodes":/);
+  const page = await invokeRaw(app.root, ["graph", "list", "--limit", "1"]);
+  assert.match(page.stdout, /Продолжение: relay-cli graph list .*--snapshot-version/);
+  const firstPage = successful(await app.run<GraphPage>(["graph", "list", "--limit", "1"])).data;
+  const nextPage = successful(
+    await app.run<GraphPage>([
+      "graph",
+      "list",
+      "--limit",
+      "1",
+      "--offset",
+      String(firstPage.nextOffset),
+      "--snapshot-version",
+      firstPage.version,
+    ]),
+  ).data;
+  assert.notDeepEqual(firstPage.nodes, nextPage.nodes);
+  const invalid = await app.run(["graph", "context", "неправильный-адрес"]);
+  assert.notEqual(invalid.code, 0);
+  const invalidJson = await app.run([
+    "graph",
+    "apply",
+    "--json",
+    "{",
+    "--if-version",
+    context.version,
+  ]);
+  assert.equal(invalidJson.code, 2);
+  assert.ok(!invalidJson.body.ok && invalidJson.body.error.code === "INVALID_JSON");
+  successful(await app.run(["graph", "unlink", receipt.ids[0]!, "--if-version", context.version]));
+  const history = successful(
+    await app.run<{ total: number }>(["graph", "history", "--id", receipt.ids[0]!]),
+  ).data;
+  assert.equal(history.total, 2);
+});

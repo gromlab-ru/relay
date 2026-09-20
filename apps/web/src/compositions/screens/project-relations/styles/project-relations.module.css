@@ -1,0 +1,35 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-lg);
+  max-width: 1440px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mantine-spacing-sm);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mantine-spacing-lg);
+}
+
+.node {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .filters {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 100px;
+  }
+  .columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  }
+}

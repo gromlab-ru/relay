@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Alert, Anchor, Button, Group, Stack, Text } from "@mantine/core";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { Pencil } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectId, useProjectBasePath } from "domains/project";
 import {
   ProductKey,
   productEntityPath,
@@ -27,6 +27,7 @@ import styles from "./styles/product-entity.module.css";
 export const ProductEntityScreen = () => {
   const { entityRef, featureRef } = useParams();
   const projectId = useProjectId();
+  const projectBase = useProjectBasePath();
   const base = useProductPath();
   const location = useLocation();
   const [isEditing, setEditing] = useState(false);
@@ -150,6 +151,13 @@ export const ProductEntityScreen = () => {
       }
       actions={
         <Group>
+          <Button
+            component={Link}
+            variant="default"
+            to={`${projectBase}/relations?root=${fields.kind}:${entity.id}`}
+          >
+            Все связи и контекст
+          </Button>
           {canEditImplementation && (
             <Button
               variant="default"

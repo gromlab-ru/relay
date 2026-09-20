@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useProjectBasePath } from "domains/project";
 import {
   Alert,
   Badge,
@@ -41,6 +43,7 @@ import styles from "./styles/task-editor.module.css";
  */
 export const TaskEditor = (props: TaskEditorProps) => {
   const { projectId, task, startEditing, onOpen } = props;
+  const projectBase = useProjectBasePath();
   const draftKey = `relay:kanban:${projectId}:${task.id}`;
   const [draft] = useState(() => TASK_DRAFT_SCHEMA.safeParse(readSessionStored(draftKey)));
   const [isEditing, setEditing] = useState(startEditing || draft.success);
@@ -333,6 +336,13 @@ export const TaskEditor = (props: TaskEditorProps) => {
               </form>
               <section className={styles.section}>
                 <TaskContext projectId={projectId} task={task} onOwnRevision={handleOwnRevision} />
+                <Button
+                  component={Link}
+                  variant="subtle"
+                  to={`${projectBase}/relations?root=task:${task.id}`}
+                >
+                  Все связи и контекст задачи
+                </Button>
               </section>
               <section className={styles.section}>
                 <TaskRelations

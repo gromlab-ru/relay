@@ -16,6 +16,7 @@ import { LifecycleModule } from "./modules/lifecycle/lifecycle.module.js";
 import { ProductModule } from "./modules/product/product.module.js";
 import { BoardsModule } from "./modules/boards/boards.module.js";
 import { BoardTasksModule } from "./modules/board-tasks/board-tasks.module.js";
+import { GraphModule } from "./modules/graph/graph.module.js";
 
 @Module({})
 export class AppModule {
@@ -42,6 +43,7 @@ export class AppModule {
         ProductModule,
         BoardsModule,
         BoardTasksModule,
+        GraphModule,
         CommentsModule,
         LogsModule,
         EventsModule,

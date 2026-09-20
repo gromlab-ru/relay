@@ -12,6 +12,7 @@ import { ProjectService } from "@relay/core/application/project/service";
 import { ProductQueries } from "@relay/core/application/product/queries";
 import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import { BoardsService } from "@relay/core/application/boards/service";
+import { GraphService } from "@relay/core/application/graph/service";
 
 export async function createLocalBackend(cwd: string, config?: string): Promise<Backend> {
   const workspace = await openWorkspace(cwd, config);
@@ -20,6 +21,7 @@ export async function createLocalBackend(cwd: string, config?: string): Promise<
   const lifecycle = new LifecycleQueries(workspace);
   return {
     kind: "local",
+    graph: new GraphService(workspace),
     boardTasks: new BoardTasksService(workspace),
     boards: new BoardsService(workspace),
     product: new ProductQueries(workspace),
