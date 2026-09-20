@@ -14,5 +14,3 @@ export function parse<T>(schema: z.ZodType<T>, input: unknown, context: string, 
       .map(({ path, message }) => ({ path: path.join("."), message })),
   );
 }
-
-export const taskIdSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);

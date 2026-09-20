@@ -104,9 +104,18 @@ export async function fixture(t: TestContext) {
     root,
     run: <T = unknown>(args: Array<string | number>, options?: RunOptions) =>
       invoke<T>(root, args, options),
-    async create(title: string, args: Array<string | number> = []): Promise<number> {
-      return successful(await invoke<{ id: number }>(root, ["create", "--title", title, ...args]))
-        .data.id;
+    async create(title: string, args: Array<string | number> = []): Promise<string> {
+      return successful(
+        await invoke<{ id: string }>(root, [
+          "task",
+          "create",
+          "--board",
+          "product",
+          "--title",
+          title,
+          ...args,
+        ]),
+      ).data.id;
     },
   };
 }

@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ActionIcon, Badge, Drawer, Group, Select, Text, Tooltip } from "@mantine/core";
+import { ActionIcon, Drawer, Group, Select, Text, Tooltip } from "@mantine/core";
 import { ClipboardList, Layers3, Menu, Moon, Settings, Sun } from "lucide-react";
-import { useGetProject, useProjectId, useProjectBasePath } from "domains/project";
+import {
+  useGetProject,
+  useProjectId,
+  useProjectBasePath,
+  useProjectConnection,
+} from "domains/project";
 import { useWorkspace } from "domains/workspace";
-import { useTaskConnection } from "domains/tasks";
-import { useLifecycle } from "domains/lifecycle";
 import { useThemeColorScheme } from "ui/themes";
 import { ProjectNavigation } from "./ui/project-navigation";
 import styles from "./styles/project.module.css";
@@ -21,8 +24,7 @@ export const ProjectLayout = () => {
   const projectId = useProjectId();
   const project = useGetProject();
   const workspace = useWorkspace();
-  const lifecycle = useLifecycle();
-  const connection = useTaskConnection();
+  const connection = useProjectConnection();
   const location = useLocation();
   const navigate = useNavigate();
   const [isNavigationOpen, setNavigationOpen] = useState(false);
@@ -54,8 +56,6 @@ export const ProjectLayout = () => {
     disconnected: "Нет соединения",
     "storage-error": "Ошибка хранилища",
   }[state];
-  const attentionCount = lifecycle.data?.attention.length ?? 0;
-  const hasAttention = attentionCount > 0;
   const isSettingsPage = location.pathname === `${base}/settings`;
   const settingsVariant = isSettingsPage ? "light" : "subtle";
   const settingsCurrent = isSettingsPage ? "page" : undefined;
@@ -144,14 +144,6 @@ export const ProjectLayout = () => {
           </div>
         </aside>
         <main className={styles.content}>
-          {hasAttention && (
-            <button className={styles.attention} onClick={() => navigate(`${base}/activity`)}>
-              <Badge color="orange" size="xs" variant="light">
-                {attentionCount}
-              </Badge>{" "}
-              Требует внимания: вопросы, проверки или состояние исполнений <span>Открыть →</span>
-            </button>
-          )}
           <Outlet />
         </main>
       </div>

@@ -53,7 +53,6 @@ export function setupOpenApi(app: INestApplication): void {
       jsonSchema(
         schema,
         [
-          "SaveProjectRecord",
           "EntityPageQuery",
           "EntitiesQuery",
           "EntityKeysQuery",

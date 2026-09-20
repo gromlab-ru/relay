@@ -336,66 +336,6 @@ test("продукт доступен агенту через API и изоли�
   assert.equal((await call(client, "product_list", { project: "b" })).data?.total, 0);
 });
 
-test("агентский контекст, поручения и проектные записи изолированы между проектами", async (t) => {
-  const app = await setup(t);
-  const { configPath } = await initializeRegistry(app.root);
-  await registerProject(configPath, "a", { path: "a" });
-  await registerProject(configPath, "b", { path: "b" });
-  const server = await app.start();
-  const client = await app.connect(server.url);
-  await call(client, "task_create", { project: "a", title: "API", actor: "orchestrator" });
-  const plan = await call(client, "project_record_save", {
-    project: "a",
-    actor: "orchestrator",
-    requestId: "plan-1",
-    fields: { kind: "plan", title: "MVP", goal: "Работающий продукт" },
-  });
-  assert.equal(plan.ok, true);
-  const stage = await call(client, "project_record_save", {
-    project: "a",
-    actor: "orchestrator",
-    fields: { kind: "stage", title: "API готов", planId: plan.data?.id },
-  });
-  await call(client, "project_record_save", {
-    project: "a",
-    actor: "orchestrator",
-    fields: { kind: "task", taskId: 1, stageId: stage.data?.id },
-  });
-  await call(client, "project_record_save", {
-    project: "a",
-    actor: "orchestrator",
-    fields: { kind: "passport", title: "A", focusPlanId: plan.data?.id },
-  });
-  assert.match(
-    String((await call(client, "task_briefing", { project: "a", id: 1 })).data?.markdown),
-    /Работающий продукт/,
-  );
-  assert.equal((await call(client, "project_context", { project: "a" })).ok, true);
-  assert.deepEqual((await call(client, "project_records", { project: "b" })).data?.items, []);
-  assert.equal(
-    (await call(client, "project_record_get", { project: "b", recordId: plan.data?.id })).error
-      ?.code,
-    "PROJECT_RECORD_NOT_FOUND",
-  );
-  const repeated = await call(client, "project_record_save", {
-    project: "a",
-    actor: "orchestrator",
-    requestId: "plan-1",
-    fields: { kind: "plan", title: "MVP", goal: "Работающий продукт" },
-  });
-  assert.equal(repeated.data?.id, plan.data?.id);
-  const checkpoint = await call(client, "project_record_save", {
-    project: "a",
-    actor: "orchestrator",
-    fields: { kind: "checkpoint", title: "Передача" },
-  });
-  const changes = await call(client, "checkpoint_changes", {
-    project: "a",
-    recordId: checkpoint.data?.id,
-  });
-  assert.deepEqual(changes.data?.tasks, []);
-});
-
 test("несколько MCP-клиентов, общий Relay Server, горячий реестр и изоляция задач/авторов", async (t) => {
   const app = await setup(t);
   const { configPath } = await initializeRegistry(app.root);
@@ -403,6 +343,22 @@ test("несколько MCP-клиентов, общий Relay Server, горя
   const server = await app.start();
   const [first, second] = await Promise.all([app.connect(server.url), app.connect(server.url)]);
   const toolsBefore = await first.listTools();
+  const removed = [
+    "project_context",
+    "project_records",
+    "project_record_get",
+    "project_record_save",
+    "task_briefing",
+    "checkpoint_changes",
+    "project_overview",
+    "project_groups",
+    "tasks_list",
+    "task_create",
+    "task_get",
+    "comment_add",
+    "log_add",
+  ];
+  assert.ok(toolsBefore.tools.every((tool) => !removed.includes(tool.name)));
   const documentation = await readFile(
     new URL("../../../docs/reference/MCP.md", import.meta.url),
     "utf8",
@@ -429,38 +385,65 @@ test("несколько MCP-клиентов, общий Relay Server, горя
     inspect(tool.inputSchema);
   }
   assert.equal(
-    (await call(first, "task_create", { project: "a", title: "Первая", actor: "agent-a" })).ok,
+    (
+      await call(first, "board_task_create", {
+        project: "a",
+        board: "product",
+        requestId: "first",
+        title: "Первая",
+        actor: "agent-a",
+      })
+    ).ok,
     true,
   );
   assert.equal((await call(second, "project_register", { project: "b", path: "b" })).ok, true);
   assert.equal(
-    (await call(second, "task_create", { project: "b", title: "Вторая", actor: "agent-b" })).ok,
+    (
+      await call(second, "board_task_create", {
+        project: "b",
+        board: "product",
+        requestId: "first",
+        title: "Вторая",
+        actor: "agent-b",
+      })
+    ).ok,
     true,
   );
   const [a, b] = await Promise.all([
-    call(first, "task_get", { project: "a", id: 1 }),
-    call(second, "task_get", { project: "b", id: 1 }),
+    call(first, "board_task_get", { project: "a", reference: "PRODUCT-1" }),
+    call(second, "board_task_get", { project: "b", reference: "PRODUCT-1" }),
   ]);
   assert.equal(a.data?.title, "Первая");
   assert.equal(b.data?.title, "Вторая");
   assert.equal(a.data?.createdBy, "agent-a");
   assert.equal(b.data?.createdBy, "agent-b");
   assert.equal(a.meta?.project, "a");
-  assert.equal((await call(first, "tasks_list")).error?.code, "PROJECT_REQUIRED");
-  const log = { project: "b", id: 1, actor: "agent-b", text: "Отчёт", requestId: "step-1" };
-  assert.deepEqual(await call(first, "log_add", log), await call(second, "log_add", log));
+  assert.equal((await call(first, "board_tasks_list")).error?.code, "PROJECT_REQUIRED");
+  const update = {
+    project: "b",
+    reference: "PRODUCT-1",
+    actor: "agent-b",
+    description: "Отчёт",
+    ifRevision: 1,
+    requestId: "step-1",
+  };
+  assert.deepEqual(
+    await call(first, "board_task_update", update),
+    await call(second, "board_task_update", update),
+  );
   assert.equal(
-    (await call(first, "log_add", { ...log, text: "Другое" })).error?.code,
+    (await call(first, "board_task_update", { ...update, description: "Другое" })).error?.code,
     "IDEMPOTENCY_CONFLICT",
   );
   assert.equal(
     (
-      await call(first, "task_update", {
+      await call(first, "board_task_update", {
         project: "b",
-        id: 1,
+        reference: "PRODUCT-1",
+        requestId: "conflict",
         actor: "orchestrator",
         ifRevision: 1,
-        patch: { title: "Конфликт" },
+        title: "Конфликт",
       })
     ).error?.code,
     "REVISION_CONFLICT",
@@ -470,19 +453,25 @@ test("несколько MCP-клиентов, общий Relay Server, горя
     JSON.stringify({ version: 1, projects: { a: { path: "b" } } }),
   );
   await rename(join(app.root, "next.json"), configPath);
-  assert.equal((await call(first, "task_get", { project: "a", id: 1 })).data?.title, "Вторая");
   assert.equal(
-    (await call(second, "task_get", { project: "b", id: 1 })).error?.code,
+    (await call(first, "board_task_get", { project: "a", reference: "PRODUCT-1" })).data?.title,
+    "Вторая",
+  );
+  assert.equal(
+    (await call(second, "board_task_get", { project: "b", reference: "PRODUCT-1" })).error?.code,
     "PROJECT_NOT_FOUND",
   );
   assert.deepEqual(await first.listTools(), toolsBefore);
   await writeFile(configPath, "{");
   assert.equal(
-    (await call(first, "task_get", { project: "a", id: 1 })).error?.code,
+    (await call(first, "board_task_get", { project: "a", reference: "PRODUCT-1" })).error?.code,
     "INVALID_DATA",
   );
   await writeFile(configPath, JSON.stringify({ version: 1, projects: { a: { path: "a" } } }));
-  assert.equal((await call(first, "task_get", { project: "a", id: 1 })).data?.title, "Первая");
+  assert.equal(
+    (await call(first, "board_task_get", { project: "a", reference: "PRODUCT-1" })).data?.title,
+    "Первая",
+  );
 });
 
 test("один проект по прямому конфигу и автоматическому поиску, ошибки HTTP и завершение", async (t) => {
@@ -492,16 +481,33 @@ test("один проект по прямому конфигу и автомат
   const client = await app.connect(server.url);
   assert.equal((await call(client, "projects_list")).meta?.mode, "local");
   assert.equal(
-    (await call(client, "task_create", { title: "Одна база", actor: "orchestrator" })).ok,
+    (
+      await call(client, "board_task_create", {
+        board: "product",
+        requestId: "single",
+        title: "Одна база",
+        actor: "orchestrator",
+      })
+    ).ok,
     true,
   );
-  assert.equal((await call(client, "task_get", { id: 1 })).data?.title, "Одна база");
   assert.equal(
-    (await call(client, "task_get", { project: "wrong", id: 1 })).error?.code,
+    (await call(client, "board_task_get", { reference: "PRODUCT-1" })).data?.title,
+    "Одна база",
+  );
+  assert.equal(
+    (await call(client, "board_task_get", { project: "wrong", reference: "PRODUCT-1" })).error
+      ?.code,
     "PROJECT_NOT_FOUND",
   );
   assert.equal(
-    (await call(client, "task_create", { title: "Без автора" })).error?.code,
+    (
+      await call(client, "board_task_create", {
+        board: "product",
+        requestId: "missing-actor",
+        title: "Без автора",
+      })
+    ).error?.code,
     "VALIDATION_ERROR",
   );
   assert.equal(
@@ -515,7 +521,10 @@ test("один проект по прямому конфигу и автомат
   const next = await startMcp({ cwd: join(app.root, "a"), port: 0, serverUrl: server.api.url });
   app.servers.push(next);
   const restored = await app.connect(next.url);
-  assert.equal((await call(restored, "task_get", { id: 1 })).data?.title, "Одна база");
+  assert.equal(
+    (await call(restored, "board_task_get", { reference: "PRODUCT-1" })).data?.title,
+    "Одна база",
+  );
 });
 
 test("явный REST URL, remote-only, пагинация и курсоры разных проектов", async (t) => {
@@ -529,45 +538,51 @@ test("явный REST URL, remote-only, пагинация и курсоры р�
   for (let i = 0; i < 3; i++)
     assert.equal(
       (
-        await call(client, "task_create", {
+        await call(client, "board_task_create", {
           project: "remote",
+          board: "product",
+          requestId: `create-${i}`,
           title: `Задача ${i}`,
           actor: "agent",
         })
       ).ok,
       true,
     );
-  const first = await call(client, "tasks_list", { project: "remote", limit: 1 });
-  assert.equal(first.meta?.hasMore, true);
-  const next = await call(client, "tasks_list", {
+  const first = await call(client, "board_tasks_list", { project: "remote", limit: 1 });
+  assert.equal(first.data?.nextOffset, 1);
+  const next = await call(client, "board_tasks_list", {
     project: "remote",
     limit: 1,
-    cursor: first.meta?.nextCursor,
+    offset: first.data?.nextOffset,
+    version: first.data?.version,
   });
   assert.notDeepEqual(first.data, next.data);
   assert.equal(
     (
-      await call(client, "tasks_list", {
+      await call(client, "board_tasks_list", {
         project: "other",
         limit: 1,
-        cursor: first.meta?.nextCursor,
+        offset: first.data?.nextOffset,
+        version: first.data?.version,
       })
     ).error?.code,
-    "INVALID_CURSOR",
+    "BOARD_CHANGED",
   );
-  const saved = JSON.parse(await readFile(join(app.root, "a/.relay/tasks/1.json"), "utf8"));
-  assert.equal(saved.createdBy, "agent");
+  const saved = await call(client, "board_task_get", { project: "remote", reference: "PRODUCT-1" });
+  assert.equal(saved.data?.createdBy, "agent");
   await writeFile(
     join(app.root, "b/.relay/config.json"),
     JSON.stringify({ ...defaultConfig, server: { port: 3000, url: api.url } }),
   );
   assert.equal(
-    (await call(client, "task_get", { project: "other", id: 1 })).error?.code,
-    "TASK_NOT_FOUND",
+    (await call(client, "board_task_get", { project: "other", reference: "PRODUCT-1" })).error
+      ?.code,
+    "NOT_FOUND",
   );
   await api.close();
   assert.equal(
-    (await call(client, "task_get", { project: "remote", id: 1 })).error?.code,
+    (await call(client, "board_task_get", { project: "remote", reference: "PRODUCT-1" })).error
+      ?.code,
     "SERVER_UNAVAILABLE",
   );
 });
@@ -580,8 +595,10 @@ test("параллельный первый доступ, размер отве�
   assert.equal((await call(a, "project_register", { project: "app", path: "a" })).ok, true);
   const created = await Promise.all(
     [a, b].map((client, index) =>
-      call(client, "task_create", {
+      call(client, "board_task_create", {
         project: "app",
+        board: "product",
+        requestId: `parallel-${index}`,
         title: `Работа ${index}`,
         actor: `agent-${index}`,
         description: "Контекст".repeat(1000),
@@ -589,14 +606,14 @@ test("параллельный первый доступ, размер отве�
     ),
   );
   for (const result of created) assert.equal(result.ok, true, JSON.stringify(result));
-  assert.deepEqual(created.map((item) => item.data?.id).sort(), [1, 2]);
+  assert.equal(new Set(created.map((item) => item.data?.id)).size, 2);
   assert.equal(
-    (await call(a, "task_get", { project: "app", id: 1, maxBytes: 1024 })).error?.code,
+    (await call(a, "board_task_get", { project: "app", reference: "PRODUCT-1", maxBytes: 1024 }))
+      .error?.code,
     "RESPONSE_TOO_LARGE",
   );
   assert.equal(
-    (await call(a, "task_get", { project: "app", id: 1, maxBytes: 1024, fields: ["id", "title"] }))
-      .ok,
+    (await call(a, "board_tasks_list", { project: "app", limit: 1, maxBytes: 4096 })).ok,
     true,
   );
   await Promise.all([a.close(), b.close()]);
@@ -604,7 +621,13 @@ test("параллельный первый доступ, размер отве�
   const restarted = await app.start();
   const next = await app.connect(restarted.url);
   assert.equal(
-    (await call(next, "task_get", { project: "app", id: 1, fields: ["id"] })).data?.id,
-    1,
+    (
+      await call(next, "board_task_get", {
+        project: "app",
+        reference: String(created[0]?.data?.id),
+        maxBytes: 65536,
+      })
+    ).data?.id,
+    created[0]?.data?.id,
   );
 });

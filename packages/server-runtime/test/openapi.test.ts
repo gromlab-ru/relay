@@ -39,12 +39,20 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 135);
+    assert.equal(operations.size, 81);
+    for (const path of [
+      "/api/v1/tasks",
+      "/api/v1/board",
+      "/api/v1/overview",
+      "/api/v1/project/state",
+      "/api/v1/project/records",
+    ])
+      assert.equal(document.paths[path], undefined, `Удалённый маршрут ${path}`);
     for (const [name, schema] of Object.entries(document.components!.schemas!)) {
       ajv.compile({ ...schema, components: document.components });
       if (!("$ref" in schema) && Array.isArray(schema.examples))
         for (const example of schema.examples) validate(schema, example);
-      assert(!["CreateTaskRequest", "UpdateTaskRequest"].includes(name) || !("$ref" in schema));
+      assert(!["CreateTaskRequest", "UpdateTaskRequest", "ProjectRecord"].includes(name));
     }
 
     const visited = new Set<string>();
@@ -200,107 +208,28 @@ for (const scoped of [false, true])
       ifRevision: 4,
       requestId: "entity-link",
     });
-    const created = await request(
-      "POST",
-      "/api/v1/tasks",
-      undefined,
-      { title: "OpenAPI Task", parentId: null, assignee: null },
-      201,
-    );
-    const base = `/api/v1/tasks/${created.data.id}`;
-    await request("GET", "/api/v1/board");
-    await request("GET", "/api/v1/tasks");
-    await request("GET", "/api/v1/tasks/{id}", base);
-    await request("POST", "/api/v1/tasks/{id}/claim", `${base}/claim`, { ifRevision: 1 });
-    await request("POST", "/api/v1/tasks/{id}/release", `${base}/release`, { ifRevision: 2 });
-    await request("PATCH", "/api/v1/tasks/{id}", base, {
-      patch: { summary: ["Ready"], group: null },
-      ifRevision: 3,
-    });
-    await request("POST", "/api/v1/tasks/{id}/move", `${base}/move`, {
-      status: "review",
-      beforeId: null,
-      ifRevision: 4,
-    });
-    const comment = await request(
-      "POST",
-      "/api/v1/tasks/{id}/comments",
-      `${base}/comments`,
-      { text: "Comment" },
-      201,
-    );
-    const log = await request(
-      "POST",
-      "/api/v1/tasks/{id}/logs",
-      `${base}/logs`,
-      { text: "Log" },
-      201,
-    );
-    await request("GET", "/api/v1/tasks/{id}/comments", `${base}/comments?limit=1`);
-    await request("GET", "/api/v1/tasks/{id}/logs", `${base}/logs?limit=1`);
-    await request(
-      "GET",
-      "/api/v1/tasks/{id}/comments/{commentId}",
-      `${base}/comments/${comment.data.id}`,
-    );
-    await request("GET", "/api/v1/tasks/{id}/logs/{logId}", `${base}/logs/${log.data.id}`);
-    await request("GET", "/api/v1/task-list");
-    await request("GET", "/api/v1/tasks/{id}/document", `${base}/document`);
-    await request("GET", "/api/v1/tasks/{id}/markdown", `${base}/markdown?field=summary`);
-    await request("GET", "/api/v1/tasks/{id}/links", `${base}/links`);
-    await request("GET", "/api/v1/tasks/{id}/tree", `${base}/tree?depth=2`);
-    await request("GET", "/api/v1/groups");
-    await request(
-      "GET",
-      "/api/v1/overview",
-      `/api/v1/overview?rootId=${created.data.id}&reviewStatuses=review`,
-    );
     await request("GET", "/api/v1/validation");
-    await request("GET", "/api/v1/project/state");
-    await request("GET", "/api/v1/project/context");
     await request(
       "GET",
-      "/api/v1/project/tasks/{id}/briefing",
-      `/api/v1/project/tasks/${created.data.id}/briefing`,
-    );
-    const checkpoint = await request("POST", "/api/v1/project/records", undefined, {
-      fields: { kind: "checkpoint", title: "Контрольная точка" },
-      actor: "orchestrator",
-    });
-    await request(
-      "GET",
-      "/api/v1/project/checkpoints/{recordId}/changes",
-      `/api/v1/project/checkpoints/${checkpoint.data.id}/changes`,
-    );
-    const dependency = await request(
-      "POST",
-      "/api/v1/tasks",
+      "/api/v1/board-tasks/{reference}",
+      "/api/v1/board-tasks/missing",
       undefined,
-      { title: "Зависимость", actor: "агент" },
-      201,
+      404,
     );
-    await request("POST", "/api/v1/tasks/{id}/dependencies", `${base}/dependencies`, {
-      dependencyId: dependency.data.id,
-      action: "add",
-      actor: "агент",
-    });
-    await request("GET", "/api/v1/tasks/{id}", "/api/v1/tasks/999", undefined, 404);
     await request(
-      "PATCH",
-      "/api/v1/tasks/{id}",
-      base,
-      { patch: { title: "Conflict" }, ifRevision: 1 },
+      "POST",
+      "/api/v1/board-tasks/{reference}/update",
+      `${cardBase}/update`,
+      { title: "Конфликт", ifRevision: 1, requestId: "stale" },
       409,
     );
-    assert.equal(visited.size, 66);
+    assert.equal(visited.size, 39);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
-    const updateSchema = document.components!.schemas!.UpdateTaskRequest as SchemaObject;
-    const patchSchema = updateSchema.properties!.patch as SchemaObject;
-    assert.equal(patchSchema.minProperties, 1);
+    const updateSchema = document.components!.schemas!.UpdateBoardTask as SchemaObject;
     assert.equal(updateSchema.additionalProperties, false);
-    assert(!updateSchema.required!.includes("ifRevision"));
-    const createSchema = document.components!.schemas!.CreateTaskRequest as SchemaObject;
-    assert.deepEqual(createSchema.required, ["title"]);
+    assert(updateSchema.required!.includes("ifRevision"));
+    const createSchema = document.components!.schemas!.CreateBoardTask as SchemaObject;
+    assert.deepEqual(new Set(createSchema.required), new Set(["board", "requestId"]));
     assert.equal(createSchema.properties!.rank, undefined);
   });

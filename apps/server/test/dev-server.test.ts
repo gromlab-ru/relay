@@ -106,7 +106,17 @@ for (const configuration of ["default", "relative"] as const)
         ].map((path) => pathToFileURL(join(root, path)).href),
       );
       const workspace = configuration === "default" ? "apps/playground/local" : "custom tasks";
-      await initialize(join(root, workspace), "tasks");
+      const initialized = await initialize(join(root, workspace), "tasks");
+      if (configuration === "default") {
+        await writeFile(
+          join(root, "apps/playground/relay.workspace.json"),
+          JSON.stringify({ version: 1, mode: "workspace", projects: { local: { path: "local" } } }),
+        );
+      }
+      const apiPrefix =
+        configuration === "default"
+          ? `/api/v1/projects/${initialized.config.projectId}`
+          : "/api/v1";
       const executable = process.env.npm_execpath;
       assert(executable, "Запускайте тест через pnpm run test:server");
       let pnpmCli = await realpath(executable);
@@ -193,7 +203,7 @@ for (const configuration of ["default", "relative"] as const)
 
       // Холодный запуск на общем CI-runner конкурирует с компиляцией и другими тестами.
       let url = await nextServer(30000);
-      const context = (await json(`${url}/api/v1/context`)).data;
+      const context = (await json(`${url}${apiPrefix}/context`)).data;
       assert.equal(context.actor, "dev-human");
       assert.equal(context.configPath, join(root, workspace, ".relay/config.json"));
       // Первая компиляция может завершиться позже HTTP-запуска на загруженном CI-runner.
@@ -227,19 +237,23 @@ for (const configuration of ["default", "relative"] as const)
       await mkdir(join(root, "apps/server/dist/web"), { recursive: true });
       const html = "<!doctype html><html>Built frontend fixture</html>";
       await writeFile(join(root, "apps/server/dist/web/index.html"), html);
-      const corePath = join(root, "packages/core/src/domain/task.ts");
+      const corePath = join(root, "packages/core/src/application/board-tasks/service.ts");
       const core = await readFile(corePath, "utf8");
-      assert(core.includes("summary: [],"));
-      await writeFile(corePath, core.replace("summary: [],", 'summary: ["core reload"],'));
+      assert(core.includes("title: command.title,"));
+      await writeFile(corePath, core.replace("title: command.title,", 'title: "core reload",'));
       url = await nextServer();
-      const created = await fetch(`${url}/api/v1/tasks`, {
+      const created = await fetch(`${url}${apiPrefix}/board-tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Source Core" }),
+        body: JSON.stringify({ board: "product", title: "Исходный Core", requestId: "reload" }),
         signal: AbortSignal.timeout(3000),
       });
-      assert.equal(created.status, 201);
-      assert.deepEqual((await created.json()).data.summary, ["core reload"]);
+      assert.equal(created.status, 200);
+      const taskId = (await created.json()).data.id;
+      assert.equal(
+        (await json(`${url}${apiPrefix}/board-tasks/${taskId}`)).data.title,
+        "core reload",
+      );
       assert.equal(await (await fetch(url, { signal: AbortSignal.timeout(3000) })).text(), html);
       assert.equal((await json(`${url}/api/openapi.json`)).openapi, "3.1.0");
       signal("SIGTERM");

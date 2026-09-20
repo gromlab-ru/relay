@@ -3,8 +3,6 @@ import { Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 import { Badge, Button, Group, Select, Text } from "@mantine/core";
 import { useWorkspace } from "domains/workspace";
 import { ProjectScope } from "domains/project";
-import { TasksSync } from "domains/tasks";
-import { LifecycleSync } from "domains/lifecycle";
 import { StatePanel } from "ui/state-panel";
 import styles from "./styles/relay.module.css";
 
@@ -132,8 +130,6 @@ export const RelayScreen = () => {
       )}
       {canOpenProject && (
         <ProjectScope key={projectData.id} projectId={projectData.id} slug={projectData.slug}>
-          <TasksSync />
-          <LifecycleSync />
           <Outlet />
         </ProjectScope>
       )}

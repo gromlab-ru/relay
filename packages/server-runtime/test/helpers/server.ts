@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TestContext } from "node:test";
 import { initialize } from "@relay/core/storage/workspace";
-import { TaskService } from "@relay/core/application/tasks/service";
+import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import { createServer } from "@relay/server-runtime";
 
 export async function fixture(t: TestContext, web = false) {
@@ -23,5 +23,5 @@ export async function fixture(t: TestContext, web = false) {
     await app.close();
     await rm(root, { recursive: true, force: true });
   });
-  return { root, workspace, app, tasks: new TaskService(workspace) };
+  return { root, workspace, app, tasks: new BoardTasksService(workspace) };
 }

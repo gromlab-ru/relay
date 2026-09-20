@@ -71,12 +71,10 @@ entity_context({project: "app", ref: "WEB-24", depth: 4, profile: "context"})
   необязательные title, description (Markdown), status и key для разрешения коллизии.
   Изменение ключа сохраняет ID и ссылки. Повтор запроса возвращает исходную квитанцию.
 
-Поля продуктовых ссылок принимают ID или ключ и сохраняются как ID. В планах и этапах
-`project_record_save.fields.productLinks` использует тот же набор kind/id, что задача.
+Поля продуктовых ссылок принимают ID или ключ и сохраняются как ID.
 Ревизия отдельной реализации не равна ревизии всего состава приложения.
 
-Новая модель использует `boards_list`, `board_tasks_list` и `board_task_*`.
-Прежние инструменты `task_*` относятся к числовым задачам старой доски.
+Канбан использует `boards_list`, `board_tasks_list` и `board_task_*`.
 `board_tasks_list` принимает `completion?: unfinished|finished` (незавершённые либо
 done/cancelled) и `searchIn?: title|all` (ключи/ID/название либо также Markdown).
 Без параметров прежний поиск и полный набор статусов сохраняются. Фильтры применяются
@@ -150,10 +148,9 @@ POST обрабатывает стандартные initialize, tools/list и t
 
 ```text
 projects_list({})
-task_create({ project: "backend", title: "Реализовать API", actor: "orchestrator" })
-task_update({ project: "backend", id: 1, actor: "orchestrator", patch: { assignee: "api-agent", status: "in_progress" } })
-task_get({ project: "backend", id: 1 })
-log_add({ project: "backend", id: 1, actor: "api-agent", requestId: "api-step-1", text: "Контракт проверен" })
+board_task_create({ project: "backend", board: "product", title: "Реализовать API", actor: "orchestrator", requestId: "api-task" })
+board_task_get({ project: "backend", reference: "PRODUCT-1" })
+board_task_update({ project: "backend", reference: "PRODUCT-1", actor: "api-agent", requestId: "api-step-1", ifRevision: 1, description: "## Результат\n\nКонтракт проверен" })
 ```
 
 ID берётся из ответа создания. Оркестратор передаёт субагенту проект, ID, автора и критерии;
@@ -232,86 +229,29 @@ MCP запоминает адрес сервера и читает его кон
 `product_lint` принимает `id?`, `offset?`, `limit?` и возвращает страницу `warnings`,
 общее число предупреждений `total` и `nextOffset`. Для продолжения сохраняйте фильтр `id`.
 
-У всех инструментов ниже есть `project?` и `maxBytes?`. Обязательность `project`
-определяется режимом. `id` — положительное число. Запись требует `actor`.
+## Проверка проекта
 
-| Инструмент         | Остальные параметры                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `project_config`   | Настройки, путь конфига и хранилища из REST API                                                                |
-| `project_validate` | Проверка схем и графа                                                                                          |
-| `project_overview` | `id?`, `limit?` (по умолчанию 5), `reviewStatuses?`                                                            |
-| `project_groups`   | `limit?`, `cursor?`                                                                                            |
-| `tasks_list`       | `status?`, `group?`, `assignee?`, `parent?`, `tag?`, `search?`, `ready?`, `all?`, `sort?`, `limit?`, `cursor?` |
-| `task_get`         | `id`, `full?`, `fields?`                                                                                       |
-| `task_markdown`    | `id`, `field`: `description` или `summary`                                                                     |
-| `task_links`       | `id`                                                                                                           |
-| `task_tree`        | `id`, `depth?` (по умолчанию 10, диапазон 0–100)                                                               |
-| `task_create`      | `title`, `actor`, остальные поля задачи необязательны                                                          |
-| `task_update`      | `id`, `actor`, `patch`, `ifRevision?`                                                                          |
-| `task_status`      | `id`, `actor`, `status`, `ifRevision?`                                                                         |
-| `task_claim`       | `id`, `actor`, `status?`, `ifRevision?`                                                                        |
-| `task_release`     | `id`, `actor`, `force?`, `ifRevision?`                                                                         |
-| `task_dependency`  | `id`, `actor`, `dependencyId`, `action`: `add` или `remove`, `ifRevision?`                                     |
+`project_config` читает настройки и пути. `project_validate` проверяет действующие
+сущности, задачи и граф; возвращает valid, entities, boards, tasks. Оба инструмента
+принимают `project?` и `maxBytes?` согласно выбранному режиму.
 
-Поля create/patch соответствуют модели задач: title, description, status, group, tags,
-parentId, dependsOn, assignee, summary и необязательный rank. Markdown передаётся строкой
-или массивом строк. Назначение — `task_update` с `patch.assignee`. Связи относятся к той же базе.
-
-## Жизненный цикл проекта
-
-Все операции ниже относятся к выбранному проекту; workspace только выбирает его.
-
-| Инструмент            | Назначение                                                                               |
-| --------------------- | ---------------------------------------------------------------------------------------- |
-| `project_context`     | Паспорт, цель, активные этапы, факты, внимание и следующий шаг                           |
-| `project_records`     | Краткие документы, фильтр `kind`, `limit`, `cursor`                                      |
-| `project_record_get`  | Полный документ по `recordId`, с ревизией и историей                                     |
-| `project_record_save` | Создание или замена `fields`; `actor` обязателен, обновление требует `id` и `ifRevision` |
-| `task_briefing`       | Готовое Markdown-поручение по числовому `id` задачи                                      |
-| `checkpoint_changes`  | Изменения после точки `recordId`                                                         |
-
-`fields.kind`: `passport`, `plan`, `stage`, `requirement`, `knowledge`, `task`, `run`,
-`check`, `review`, `question`, `release`, `deployment`, `checkpoint`.
-Для повторяемого создания используйте `requestId`. После неподтверждённого обновления
-перечитайте запись; автоматического повтора обновлений нет. Поля передаются целиком.
-Контрольные точки неизменяемы. Источник наблюдения исполнения задаётся в `source`;
-состояние задачи и состояние попытки независимы.
-
-Сценарии и правила: [жизненный цикл](LIFECYCLE.md).
-
-## Комментарии и отчёты
-
-| Инструмент      | Остальные параметры                                                             |
-| --------------- | ------------------------------------------------------------------------------- |
-| `comment_add`   | `id`, `actor`, `text`, `requestId`                                              |
-| `comment_get`   | `id`, `commentId`                                                               |
-| `comments_list` | `id`, `limit?`, `cursor?`                                                       |
-| `log_add`       | `id`, `actor`, `text`, `requestId`, `kind?`, `title?`, `summary?`, `sessionId?` |
-| `log_get`       | `id`, `logId`                                                                   |
-| `logs_list`     | `id`, `limit?`, `cursor?`, `actor?`, `kind?`, `sessionId?`, `search?`           |
-
-`logs_list` возвращает краткие отчёты, `search` ищет буквальную подстроку в теле.
-Списки записей идут от новых к старым. `log_add.kind` по умолчанию `progress`;
-допустимы также `decision`, `execution`, `error`, `summary`.
-
-`requestId` обязателен в добавлениях MCP, содержит 1–128 символов `[A-Za-z0-9._:-]`
-и начинается с буквы или цифры. Повторяйте неизменный ключ, автора и текст в той же
-задаче и проекте. Другой контекст с тем же ключом даёт `IDEMPOTENCY_CONFLICT`.
-SDK повторяет только чтения и добавления с ключом — до двух раз, тайм-аут попытки 15 секунд.
-Создание задачи и остальные мутации автоматически не повторяются.
+Записи с requestId повторяются с тем же автором и содержанием. Другой контекст с тем же
+ключом даёт `IDEMPOTENCY_CONFLICT`. HTTP-backend повторяет чтения и записи с ключом
+до двух раз; тайм-аут попытки — 15 секунд.
 
 ## Ответы и ошибки
 
 Успех: `{ ok: true, data, meta }`. Ответ находится в `structuredContent` и дублируется
 JSON-текстом в `content` для совместимости MCP-клиентов. `meta.project` — имя проекта
 или `null` для прямого конфига; `meta.configPath` показывает фактический проектный конфиг.
-Список содержит `data.items`, `meta.hasMore` и `meta.nextCursor`.
+Предметные списки содержат `data.items`, `data.total`, `data.nextOffset` и версию снимка;
+список проектов использует `meta.hasMore` и `meta.nextCursor`.
 
 `limit` страниц — 1–100, по умолчанию 20. `maxBytes` — 1024–16777216;
 по умолчанию `output.maxBytes` проекта, для списка проектов — 16384. Бюджет учитывает
 MCP-результат с текстовой и структурированной копиями; страница сокращается до бюджета.
-Неделимый большой ответ даёт `RESPONSE_TOO_LARGE`. Для карточек используйте `fields`,
-историю читайте отдельными инструментами. Курсор привязан к проекту, подключению,
+Неделимый большой ответ даёт `RESPONSE_TOO_LARGE`. Сузьте выборку или увеличьте бюджет,
+историю читайте отдельно. Курсор реестра привязан к проекту, подключению,
 хранилищу, инструменту и фильтрам; данные между страницами могут изменяться.
 
 Ошибки операций: `isError: true` и `{ ok: false, error: { code, message, details? } }`.

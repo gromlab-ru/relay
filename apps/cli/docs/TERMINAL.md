@@ -4,10 +4,10 @@
 
 ## Цвета
 
-[Правила цвета](../../../docs/reference/TERMINAL.md#цвета).
+[Правила цвета](../../../docs/reference/TERMINAL.md#цвет-и-ширина).
 
 ## Представления
 
-[Карточки, списки и Markdown](../../../docs/reference/TERMINAL.md#представления).
+[Карточки, списки и Markdown](../../../docs/reference/TERMINAL.md#чтение).
 
 См. также [JSON и пагинацию](../../../docs/reference/OUTPUT.md).

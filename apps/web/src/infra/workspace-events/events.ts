@@ -4,7 +4,6 @@ const ERROR_SCHEMA = z.object({ code: z.string(), message: z.string() });
 const CONNECTED_SCHEMA = z.object({ projectId: z.string() });
 const CHANGED_SCHEMA = z.object({
   source: z.enum(["api", "storage"]),
-  taskIds: z.array(z.number()).optional(),
   version: z.string().optional(),
 });
 

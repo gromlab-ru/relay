@@ -3,7 +3,7 @@ import type { Command } from "commander";
 import type { PageOptions } from "./queries/pagination.js";
 import type { CommandContext } from "./context.js";
 import { randomUUID } from "node:crypto";
-import { requestIdSchema } from "@relay/core/application/record-request";
+import { requestIdSchema } from "@relay/contracts/primitives";
 import { parse } from "@relay/core/domain/validation";
 
 export interface RequestOptions {
@@ -78,21 +78,4 @@ export function revisionOption(command: Command): Command {
     "Ожидаемая версия карточки",
     integer(1, Number.MAX_SAFE_INTEGER),
   );
-}
-
-export function logFilterOptions(command: Command): Command {
-  return command
-    .option("--author <actor>", "Автор записей")
-    .addOption(
-      new Option("--kind <kind>", "Тип лога").choices([
-        "progress",
-        "decision",
-        "execution",
-        "error",
-        "summary",
-      ]),
-    )
-    .option("--session-id <id>", "Сессия агента")
-    .option("--since <date>", "Создано не раньше даты ISO 8601")
-    .option("--until <date>", "Создано не позже даты ISO 8601");
 }

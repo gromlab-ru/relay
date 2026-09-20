@@ -6,7 +6,6 @@ import { ProductQueries } from "@relay/core/application/product/queries";
 import { ProductRepository } from "@relay/core/storage/product";
 import { ProductTransaction } from "@relay/core/storage/product-transaction";
 import { encodeProduct } from "@relay/core/storage/product-codec";
-import { ProjectService } from "@relay/core/application/project/service";
 import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import { fixture } from "./helpers/workspace.js";
 
@@ -157,19 +156,6 @@ test("реализации: ID-пути, отдельное чтение и ре
     { board: "web", requestId: "task", productLinks: [{ kind: "implementation", id: "WEB-SI-1" }] },
     "agent",
   );
-  const plan = await new ProjectService(app.workspace).save(
-    {
-      fields: {
-        kind: "plan",
-        title: "План",
-        productLinks: [{ kind: "implementation", id: "WEB-SI-1" }],
-      },
-      requestId: "plan",
-    },
-    "agent",
-  );
-  assert.ok(plan.fields.kind === "plan");
-  assert.equal(plan.fields.productLinks[0]?.id, scenarioImpl.id);
   const first = await service.updateImplementation(
     {
       ref: featureImpl.id,

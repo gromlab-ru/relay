@@ -15,10 +15,10 @@
 
 ## 2. Подключённый MCP
 
-1. Проверь список инструментов клиента. Нужны `projects_list`, `project_context`, `task_briefing`, `project_record_save` и операции задач.
+1. Проверь список инструментов клиента. Нужны `projects_list`, `entity_get`, `entity_context` и операции задач досок.
 2. Вызови `projects_list({})`, при необходимости дочитай страницы.
 3. Сверь режим, доступность и идентичность выданного проекта. В workspace передавай `project` в каждом вызове; выбор не сохраняется глобально.
-4. Оркестратор читает `project_context` и `project_config`; работник — `task_briefing` и `task_get` своей задачи.
+4. Оркестратор читает `product_context` и `project_config`; работник — `board_task_get` и `entity_context` своей задачи.
 
 Если нужного инструмента нет, сначала проверь подключённую версию. Скилл не устанавливает и не обновляет Relay. Команды и схемы установленного сервера должны поддерживать описанный жизненный цикл.
 
@@ -30,26 +30,26 @@ Local из каталога проекта:
 
 ```bash
 relay-cli config get --format json
-relay-cli project context --format json
+relay-cli product context --format json
 ```
 
 Явный конфиг, например из другого каталога:
 
 ```bash
-relay-cli --config /work/app/.relay/config.json project context --format json
+relay-cli --config /work/app/.relay/config.json product context --format json
 ```
 
 Workspace с работающим сервером:
 
 ```bash
 relay-cli --config /work/relay.workspace.json projects list --format json
-relay-cli --config /work/relay.workspace.json app project context --format json
+relay-cli --config /work/relay.workspace.json app product context --format json
 ```
 
 Только по HTTP, без локальных конфигов:
 
 ```bash
-relay-cli --server-url http://127.0.0.1:4700 --project app project briefing 12 --format json
+relay-cli --server-url http://127.0.0.1:4700 --project app task get PRODUCT-1 --format json
 ```
 
 Адрес и имя `app` — примеры. Возьми реальные значения из поручения и списка проектов. Сервер принимает ключ регистрации или ID проекта. Вызов с `--server-url` проверяет контекст сервера и закрепляет выбранную базу по её идентификатору.
@@ -90,7 +90,7 @@ npx @gromlab/relay-mcp --server-url http://127.0.0.1:4700
 
 Сверь фактические адреса запуска. При занятом порте выясни, относится ли слушающий процесс к нужному Relay. Используй существующий подходящий сервер либо согласованный другой порт. Останавливай только процесс, которым уполномочен управлять.
 
-После подготовки создай паспорт по фактам и начни планирование. Отсутствующий паспорт — нормальное начальное состояние; `project_context` может показать defaults, которые ещё не подтверждены пользователем.
+После подготовки создай паспорт продукта по фактам. Отсутствующий паспорт — нормальное начальное состояние; пустые значения не являются подтверждёнными требованиями.
 
 ## 5. Несколько проектов
 
@@ -107,10 +107,10 @@ relay-server
 relay-cli projects add api ./api
 relay-cli projects add web ./web
 relay-cli projects list --format json
-relay-cli api project context --format json
+relay-cli api product context --format json
 ```
 
-Реестр хранит регистрации. Паспорт, планы, задачи, релизы и checkpoint каждого проекта находятся в его собственной базе. Одинаковые числовые ID между проектами допустимы. Зависимости задач и ссылки документов задаются внутри выбранного проекта.
+Реестр хранит регистрации. Продукт, доски, задачи и связи каждого проекта находятся в его собственной базе. Одинаковые ключи между проектами допустимы. Зависимости задач и ссылки документов задаются внутри выбранного проекта.
 
 ## 6. Работник в worktree
 

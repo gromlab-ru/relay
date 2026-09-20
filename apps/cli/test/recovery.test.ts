@@ -4,12 +4,12 @@ import { once } from "node:events";
 import { readFile, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { binary, fixture, successful } from "./helpers/cli.js";
+import { fixture, successful } from "./helpers/cli.js";
 
 test("прерывание перед публикацией JSON оставляет предыдущую карточку целой", async (t) => {
   const app = await fixture(t);
   const id = await app.create("Исходная карточка");
-  const target = join(app.root, ".relay/tasks", `${id}.json`);
+  const target = join(app.root, ".relay/boards/product/tasks", `${id}.json`);
   const before = await readFile(target, "utf8");
   const moduleUrl = import.meta.resolve("@relay/core/storage/files");
   // Останавливаем настоящий процесс после fsync временного файла, до rename.
@@ -34,36 +34,17 @@ test("прерывание перед публикацией JSON оставля
   const [, signal] = await once(child, "exit");
   assert.equal(signal, "SIGKILL");
   assert.equal(await readFile(target, "utf8"), before);
-  successful(await app.run(["update", id, "--summary", "Работа продолжается"]));
-  successful(await app.run(["validate"]));
-});
-
-test("ожидание stdin отчёта не блокирует задачи и не оставляет частичную запись", async (t) => {
-  const app = await fixture(t);
-  const id = await app.create("Поток");
-  const child = spawn(
-    process.execPath,
-    [binary, "log", "add", String(id), "--file", "-", "--actor", "logger"],
-    {
-      cwd: app.root,
-      stdio: ["pipe", "pipe", "pipe"],
-    },
+  successful(
+    await app.run([
+      "task",
+      "update",
+      id,
+      "--description",
+      "Работа продолжается",
+      "--if-revision",
+      1,
+    ]),
   );
-  t.after(() => {
-    child.kill("SIGKILL");
-  });
-  child.stdin.on("error", () => {});
-  await new Promise<void>((resolve, reject) => {
-    child.stdin.write(Buffer.alloc(32 * 1024, "x"), (error) => (error ? reject(error) : resolve()));
-  });
-  await app.create("Параллельная задача");
-  assert.equal(child.exitCode, null);
-  const exit = once(child, "exit");
-  child.kill("SIGKILL");
-  await exit;
-  const logs = successful(await app.run<{ items: unknown[] }>(["log", "list", id]));
-  assert.deepEqual(logs.data.items, []);
-  successful(await app.run(["log", "add", id, "--text", "Завершённый лог"]));
   successful(await app.run(["validate"]));
 });
 

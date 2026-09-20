@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   ActionIcon,
@@ -26,10 +26,6 @@ import { TaskModal } from "./ui/task-modal";
 import { BOARD_BACKGROUND_SCHEMA } from "./config/route.schema";
 import styles from "./styles/project-board.module.css";
 
-const LegacyBoard = lazy(async () => ({
-  default: (await import("compositions/screens/board/lazy")).Component,
-}));
-
 /**
  * Показывает самостоятельную доску проекта по её slug.
  *
@@ -38,13 +34,12 @@ const LegacyBoard = lazy(async () => ({
  *  - канбана, поиска, междосочных связей и центрального редактора задачи
  */
 export const ProjectBoardScreen = () => {
-  const { boardSlug: routeBoard, id: legacyId, taskId: routeTask } = useParams();
-  const id = routeTask ?? legacyId;
+  const { boardSlug: routeBoard, id: taskReference, taskId: routeTask } = useParams();
+  const id = routeTask ?? taskReference;
   const projectId = useProjectId();
   const location = useLocation();
   const navigate = useNavigate();
-  const isLegacy = routeTask === undefined && id !== undefined && /^[1-9]\d*$/.test(id);
-  const selected = isLegacy ? null : (id ?? null);
+  const selected = id ?? null;
   const background = BOARD_BACKGROUND_SCHEMA.safeParse(location.state);
   const backgroundData = background.success ? background.data : undefined;
   const opened = useBoardTask(projectId, selected, backgroundData?.edit !== true);
@@ -150,12 +145,6 @@ export const ProjectBoardScreen = () => {
   const filterCount = Number(isBlockedOnly) + Number(showCancelled);
   const filterLabel = filterCount > 0 ? `Фильтры · ${filterCount}` : "Фильтры";
   if (defect !== undefined) throw defect;
-  if (isLegacy)
-    return (
-      <Suspense fallback={<Skeleton height={300} />}>
-        <LegacyBoard />
-      </Suspense>
-    );
   if (opened.error !== undefined && board === undefined)
     return (
       <Alert color="red" m="md" title="Задача недоступна">

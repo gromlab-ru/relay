@@ -21,7 +21,6 @@ export const appRouter = createBrowserRouter([
           { index: true, Component: OverviewScreen },
           { path: "settings", lazy: () => import("compositions/screens/project-settings/lazy") },
           { path: "relations", lazy: () => import("compositions/screens/project-relations/lazy") },
-          { path: "passport", lazy: () => import("compositions/screens/passport/lazy") },
           {
             path: "product/scenarios/:entityRef",
             lazy: () => import("compositions/screens/product-entity/lazy"),
@@ -110,8 +109,6 @@ export const appRouter = createBrowserRouter([
             ],
           },
           { path: "plans", lazy: () => import("compositions/screens/plans/lazy") },
-          { path: "plans/:planId", lazy: () => import("compositions/screens/plans/lazy") },
-          { path: "board", lazy: () => import("compositions/screens/board/lazy") },
           { path: "boards", element: <Navigate to="product" replace /> },
           {
             lazy: () => import("compositions/screens/project-board/lazy"),
@@ -121,12 +118,18 @@ export const appRouter = createBrowserRouter([
               { path: "tasks/:id", element: null },
             ],
           },
-          { path: "knowledge", lazy: () => import("compositions/screens/knowledge/lazy") },
-          { path: "activity", lazy: () => import("compositions/screens/activity/lazy") },
           { path: "releases", lazy: () => import("compositions/screens/releases/lazy") },
-          { path: "releases/:releaseId", lazy: () => import("compositions/screens/releases/lazy") },
           { path: "history", lazy: () => import("compositions/screens/history/lazy") },
-          { path: "*", lazy: () => import("compositions/screens/board/lazy") },
+          {
+            path: "*",
+            element: (
+              <StatePanel
+                title="Страница не найдена"
+                titleAs="h1"
+                description="Выберите раздел в навигации проекта."
+              />
+            ),
+          },
         ],
       },
       { path: "*", element: null },

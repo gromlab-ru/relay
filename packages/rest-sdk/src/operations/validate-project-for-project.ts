@@ -13,11 +13,11 @@ import type {
 import type { ApiRequestClient, RequestParams } from "../http-client.js";
 
 /**
- * @description Проверить документы и граф проекта
+ * @description Проверить продукт, доски, задачи и граф связей проекта
  *
  * @tags project
  * @name ValidateProjectForProject
- * @summary Проверить документы и граф проекта
+ * @summary Проверить продукт, доски, задачи и граф связей проекта
  * @request GET:/api/v1/projects/{project}/validation
  */
 export const validateProjectForProject = (

@@ -46,7 +46,6 @@ for (const required of [
   "docs/reference/CLI.md",
   "docs/reference/API.md",
   "docs/reference/FORMAT.md",
-  "docs/assets/board.png",
   "docs/CLI.md",
   "docs/TERMINAL.md",
   "docs/EXTENDING.md",

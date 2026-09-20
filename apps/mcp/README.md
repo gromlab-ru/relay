@@ -20,7 +20,7 @@ Relay Server должен уже работать.
 опустить. В workspace он обязателен для проектных операций даже при одной регистрации.
 
 ```text
-task_get({ project: "a", id: 1 })
+board_task_get({ project: "a", reference: "PRODUCT-1" })
 ```
 
 Порт MCP: `--port`, затем `RELAY_MCP_PORT`, конфиг и `4710`.

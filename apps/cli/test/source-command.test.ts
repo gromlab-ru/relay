@@ -13,14 +13,26 @@ test("исходный CLI сохраняет каталог вызова pnpm �
   const args = [pnpm, "--dir", repo, "--silent", "run", "dev:cli"];
   const { stdout, stderr } = await promisify(execFile)(
     process.execPath,
-    [...args, "create", "Source workspace", "--actor", "source-human", "--format", "json"],
+    [
+      ...args,
+      "task",
+      "create",
+      "--board",
+      "product",
+      "--title",
+      "Source workspace",
+      "--actor",
+      "source-human",
+      "--format",
+      "json",
+    ],
     { cwd: app.root },
   );
   assert.equal(stderr, "");
-  const created = JSON.parse(stdout) as { ok: boolean; data: { id: number } };
+  const created = JSON.parse(stdout) as { ok: boolean; data: { id: string } };
   assert.equal(created.ok, true);
   assert.equal(
-    successful(await app.run<{ title: string }>(["get", created.data.id])).data.title,
+    successful(await app.run<{ title: string }>(["task", "get", created.data.id])).data.title,
     "Source workspace",
   );
 });

@@ -15,8 +15,7 @@ import {
 } from "@relay/core/domain/product-implementation";
 import manifest from "#manifest" with { type: "json" };
 import { asAppError, invariant } from "@relay/core/shared/errors";
-import { actorSchema, parse, taskIdSchema } from "@relay/core/domain/validation";
-import { taskFieldsSchema } from "@relay/core/domain/task";
+import { actorSchema, parse } from "@relay/core/domain/validation";
 import { boardsQuerySchema } from "@relay/core/domain/board";
 import {
   boardTaskReferenceSchema,
@@ -27,11 +26,7 @@ import {
   linkBoardTaskSchema,
 } from "@relay/core/domain/board-task";
 import type { BoardTaskSaved } from "@relay/core/domain/board-task";
-import { logKindSchema, logBrief } from "@relay/core/domain/log";
-import { toLines, toText } from "@relay/core/domain/markdown";
-import { taskListQuerySchema } from "@relay/core/application/queries/project";
-import { overviewQuerySchema } from "@relay/core/application/queries/overview";
-import { requestIdSchema } from "@relay/core/application/record-request";
+import { requestIdSchema } from "@relay/contracts/primitives";
 import {
   productMutationSchema,
   productContextQuerySchema,
@@ -53,18 +48,6 @@ import {
   scopeRevision,
   saveProduct,
 } from "./product-tools.js";
-import {
-  projectFieldsSchema,
-  projectRecordIdSchema,
-  saveProjectRecordSchema,
-} from "@relay/core/domain/project";
-
-/** Ответ записи не зависит от размера уже сохранённого документа. */
-async function changed(operation: Promise<{ id: number; revision: number }>): Promise<Result> {
-  const { id, revision } = await operation;
-  return { data: { id, revision } };
-}
-
 const selector = {
   project: projectNameSchema
     .optional()
@@ -76,8 +59,6 @@ const selector = {
     .max(16 * 1024 * 1024)
     .optional(),
 };
-const revision = { actor: actorSchema, ifRevision: z.number().int().positive().optional() };
-const task = { id: taskIdSchema };
 const boardTask = { reference: boardTaskReferenceSchema };
 
 /** Квитанция нового канбана сохраняет первоначальный ключ даже после следующего переноса. */
@@ -88,15 +69,6 @@ async function changedBoardTask(operation: Promise<BoardTaskSaved>): Promise<Res
     text: `Задача ${data.key}: ${data.action}. ID: ${data.id}. Ревизия: ${data.revision}. Ключ повтора: ${data.requestId}.`,
   };
 }
-const taskInputSchema = taskFieldsSchema.extend({
-  description: z
-    .union([z.string().transform(toLines), taskFieldsSchema.shape.description])
-    .pipe(taskFieldsSchema.shape.description),
-  summary: z
-    .union([z.string().transform(toLines), taskFieldsSchema.shape.summary])
-    .pipe(taskFieldsSchema.shape.summary),
-});
-
 function defined<T extends object>(value: T): { [K in keyof T]: Exclude<T[K], undefined> } {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as {
     [K in keyof T]: Exclude<T[K], undefined>;
@@ -560,384 +532,12 @@ export function createTools(projects: Projects): Server {
     async (backend) => ({ data: { ...backend.workspace, storagePath: backend.workspace.root } }),
   );
   projectTool(
-    "project_context",
-    "Цель, паспорт, активные этапы, внимание и следующий шаг оркестратора",
-    selector,
-    true,
-    async (backend) => ({ data: await backend.lifecycle.context() }),
-  );
-  projectTool(
-    "project_records",
-    "Документы проекта: планы, этапы, требования, знания, исполнения, проверки, релизы и точки продолжения",
-    {
-      ...selector,
-      ...paging,
-      kind: z.enum(projectFieldsSchema.options.map((schema) => schema.shape.kind.value)).optional(),
-    },
-    true,
-    async (backend, input, scope, budget, meta) =>
-      page(
-        (await backend.lifecycle.state()).records
-          .filter((record) => !input.kind || record.fields.kind === input.kind)
-          .map(({ id, revision, fields, updatedAt }) => ({
-            id,
-            revision,
-            kind: fields.kind,
-            title: fields.title,
-            updatedAt,
-          })),
-        input,
-        scope,
-        budget,
-        meta,
-      ),
-  );
-  projectTool(
-    "project_record_get",
-    "Прочитать документ проекта с ревизией и историей",
-    { ...selector, recordId: projectRecordIdSchema },
-    true,
-    async (backend, input) => {
-      const record = (await backend.lifecycle.state()).records.find(
-        (item) => item.id === input.recordId,
-      );
-      invariant(record, "PROJECT_RECORD_NOT_FOUND", "Документ не найден", 3);
-      return { data: record };
-    },
-  );
-  projectTool(
-    "project_record_save",
-    "Создать или заменить поля документа. Обновление требует ifRevision; для создания используйте стабильный requestId. Контрольные точки неизменяемы. source в исполнении обозначает источник наблюдения",
-    {
-      ...selector,
-      ...saveProjectRecordSchema.shape,
-      actor: actorSchema,
-    },
-    false,
-    async (backend, input) => {
-      const { project: _project, maxBytes: _bytes, ...command } = input;
-      const saved = await backend.lifecycle.save(command, input.actor);
-      return { data: { id: saved.id, revision: saved.revision } };
-    },
-  );
-  projectTool(
-    "task_briefing",
-    "Готовое ограниченное поручение работнику: задача, цель, этап, требования, знания и критерии",
-    { ...selector, ...task },
-    true,
-    async (backend, input) => ({ data: await backend.lifecycle.briefing(input.id) }),
-  );
-  projectTool(
-    "checkpoint_changes",
-    "Изменения задач и проектных документов после контрольной точки",
-    { ...selector, recordId: projectRecordIdSchema },
-    true,
-    async (backend, input) => ({ data: await backend.lifecycle.changes(input.recordId) }),
-  );
-  projectTool(
     "project_validate",
-    "Проверить документы и граф задач проекта",
+    "Проверить продукт, доски, задачи и граф связей проекта",
     selector,
     true,
     async (backend) => ({ data: await backend.validate() }),
   );
-  projectTool(
-    "project_overview",
-    "Обзор прогресса, готовых задач, проверки и блокеров",
-    { ...selector, id: taskIdSchema.optional(), ...overviewQuerySchema.shape },
-    true,
-    async (backend, { id, limit, reviewStatuses }) => ({
-      data: await backend.tasks.overview(id, {
-        limit,
-        ...(reviewStatuses ? { reviewStatuses } : {}),
-      }),
-    }),
-  );
-  projectTool(
-    "project_groups",
-    "Группы задач и прогресс",
-    { ...selector, ...paging },
-    true,
-    async (backend, input, scope, budget, meta) =>
-      page(await backend.tasks.groups(), input, scope, budget, meta),
-  );
-  projectTool(
-    "tasks_list",
-    "Список задач; по умолчанию только незавершённые",
-    { ...selector, ...taskListQuerySchema.shape, ...paging },
-    true,
-    async (backend, input, scope, budget, meta) => {
-      const {
-        project: _project,
-        maxBytes: _bytes,
-        limit: _limit,
-        cursor: _cursor,
-        ...filters
-      } = input;
-      const data = await backend.tasks.list(filters);
-      return page(
-        data.items.map((item) => ({ ...item, ready: data.readyIds.includes(item.id) })),
-        input,
-        scope,
-        budget,
-        meta,
-      );
-    },
-  );
-  projectTool(
-    "task_get",
-    "Прочитать карточку; full включает историю, fields выбирает нужные поля",
-    {
-      ...selector,
-      ...task,
-      full: z.boolean().default(false),
-      fields: z.array(z.string()).min(1).optional(),
-    },
-    true,
-    async (backend, { id, full, fields }) => {
-      const { task: document, blockedBy, ready } = await backend.tasks.document(id);
-      const { comments, logs, ...card } = document;
-      const complete = {
-        ...document,
-        blockedBy,
-        ready,
-        commentCount: Object.keys(comments).length,
-        logCount: Object.keys(logs).length,
-      };
-      if (fields) {
-        for (const field of fields)
-          invariant(Object.hasOwn(complete, field), "UNKNOWN_FIELD", `Неизвестное поле ${field}`);
-        return {
-          data: Object.fromEntries(
-            fields.map((field) => [field, complete[field as keyof typeof complete]]),
-          ),
-        };
-      }
-      return {
-        data: full
-          ? complete
-          : {
-              ...card,
-              blockedBy,
-              ready,
-              commentCount: complete.commentCount,
-              logCount: complete.logCount,
-            },
-      };
-    },
-  );
-  projectTool(
-    "task_markdown",
-    "Прочитать описание или summary задачи",
-    { ...selector, ...task, field: z.enum(["description", "summary"]) },
-    true,
-    async (backend, { id, field }) => ({
-      data: { id, field, lines: await backend.tasks.markdown(id, field) },
-    }),
-  );
-  projectTool(
-    "task_links",
-    "Родитель, дети, зависимости и блокируемые задачи",
-    { ...selector, ...task },
-    true,
-    async (backend, { id }) => ({ data: await backend.tasks.links(id) }),
-  );
-  projectTool(
-    "task_tree",
-    "Дерево подзадач с ограничением глубины",
-    { ...selector, ...task, depth: z.number().int().min(0).max(100).default(10) },
-    true,
-    async (backend, { id, depth }) => ({ data: await backend.tasks.tree(id, depth) }),
-  );
-  projectTool(
-    "task_create",
-    "Создать задачу. После неподтверждённого ответа проверьте состояние перед повтором",
-    {
-      ...selector,
-      ...taskInputSchema.partial().shape,
-      title: taskFieldsSchema.shape.title,
-      actor: actorSchema,
-    },
-    false,
-    async (backend, input) => {
-      const { project: _project, maxBytes: _bytes, actor, ...fields } = input;
-      return changed(backend.tasks.create(defined(fields), actor));
-    },
-  );
-  projectTool(
-    "task_update",
-    "Атомарно изменить поля задачи; ifRevision проверяет прочитанную ревизию",
-    { ...selector, ...task, ...revision, patch: taskInputSchema.partial() },
-    false,
-    async (backend, { id, patch, actor, ifRevision }) =>
-      changed(
-        backend.tasks.update(id, defined(patch), {
-          actor,
-          ...(ifRevision === undefined ? {} : { ifRevision }),
-        }),
-      ),
-  );
-  projectTool(
-    "task_status",
-    "Изменить статус задачи",
-    { ...selector, ...task, ...revision, status: z.string().min(1) },
-    false,
-    async (backend, { id, status, actor, ifRevision }) =>
-      changed(
-        backend.tasks.update(
-          id,
-          { status },
-          { actor, ...(ifRevision === undefined ? {} : { ifRevision }) },
-        ),
-      ),
-  );
-  projectTool(
-    "task_claim",
-    "Оркестратор занимает свободную готовую задачу указанным автором",
-    { ...selector, ...task, ...revision, status: z.string().optional() },
-    false,
-    async (backend, { id, actor, ifRevision, status }) =>
-      changed(
-        backend.tasks.claim(
-          id,
-          { actor, ...(ifRevision === undefined ? {} : { ifRevision }) },
-          status,
-        ),
-      ),
-  );
-  projectTool(
-    "task_release",
-    "Оркестратор снимает назначение задачи",
-    { ...selector, ...task, ...revision, force: z.boolean().default(false) },
-    false,
-    async (backend, { id, actor, ifRevision, force }) =>
-      changed(
-        backend.tasks.release(
-          id,
-          { actor, ...(ifRevision === undefined ? {} : { ifRevision }) },
-          force,
-        ),
-      ),
-  );
-  projectTool(
-    "task_dependency",
-    "Добавить или удалить зависимость в пределах проекта",
-    {
-      ...selector,
-      ...task,
-      ...revision,
-      dependencyId: taskIdSchema,
-      action: z.enum(["add", "remove"]),
-    },
-    false,
-    async (backend, { id, dependencyId, action, actor, ifRevision }) =>
-      changed(
-        backend.tasks.dependency(id, dependencyId, action === "add", {
-          actor,
-          ...(ifRevision === undefined ? {} : { ifRevision }),
-        }),
-      ),
-  );
-
-  projectTool(
-    "comment_add",
-    "Добавить комментарий; повторяйте с тем же requestId, автором и текстом",
-    {
-      ...selector,
-      ...task,
-      actor: actorSchema,
-      text: z.string().min(1),
-      requestId: requestIdSchema,
-    },
-    false,
-    async (backend, { id, actor, text, requestId }) => {
-      const saved = await backend.comments.add(id, text, actor, requestId);
-      return { data: { id: saved.id, taskId: saved.taskId, requestId } };
-    },
-  );
-  projectTool(
-    "comment_get",
-    "Прочитать комментарий полностью",
-    { ...selector, ...task, commentId: z.string().regex(/^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$/) },
-    true,
-    async (backend, { id, commentId }) => ({ data: await backend.comments.get(id, commentId) }),
-  );
-  projectTool(
-    "comments_list",
-    "Комментарии задачи, от новых к старым",
-    { ...selector, ...task, ...paging },
-    true,
-    async (backend, input, scope, budget, meta) => {
-      const { comments } = await backend.comments.records(input.id);
-      comments.sort((a, b) => `${b.createdAt}/${b.id}`.localeCompare(`${a.createdAt}/${a.id}`));
-      return page(comments, input, scope, budget, meta);
-    },
-  );
-  projectTool(
-    "log_add",
-    "Записать отчёт агента; requestId обеспечивает повтор без дубликатов",
-    {
-      ...selector,
-      ...task,
-      actor: actorSchema,
-      text: z.string().min(1),
-      requestId: requestIdSchema,
-      kind: logKindSchema.default("progress"),
-      title: z.string().default(""),
-      summary: z.string().default(""),
-      sessionId: z.string().optional(),
-    },
-    false,
-    async (backend, { id, actor, text, requestId, kind, title, summary, sessionId }) => {
-      const saved = await backend.logs.add(
-        id,
-        {
-          body: toLines(text),
-          kind,
-          title,
-          summary: toLines(summary),
-          sessionId: sessionId ?? null,
-        },
-        actor,
-        requestId,
-      );
-      return { data: { id: saved.id, taskId: saved.taskId, requestId } };
-    },
-  );
-  projectTool(
-    "log_get",
-    "Прочитать отчёт полностью",
-    { ...selector, ...task, logId: z.string().regex(/^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$/) },
-    true,
-    async (backend, { id, logId }) => ({ data: await backend.logs.get(id, logId) }),
-  );
-  projectTool(
-    "logs_list",
-    "Краткие отчёты с фильтрами и поиском в тексте",
-    {
-      ...selector,
-      ...task,
-      ...paging,
-      actor: actorSchema.optional(),
-      kind: logKindSchema.optional(),
-      sessionId: z.string().optional(),
-      search: z.string().min(1).optional(),
-    },
-    true,
-    async (backend, input, scope, budget, meta) => {
-      const { logs } = await backend.logs.records(input.id);
-      const selected = logs.filter(
-        (log) =>
-          (!input.actor || log.actor === input.actor) &&
-          (!input.kind || log.kind === input.kind) &&
-          (!input.sessionId || log.sessionId === input.sessionId) &&
-          (!input.search || toText(log.body).includes(input.search)),
-      );
-      selected.sort((a, b) => `${b.createdAt}/${b.id}`.localeCompare(`${a.createdAt}/${a.id}`));
-      return page(selected.map(logBrief), input, scope, budget, meta);
-    },
-  );
-
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [...tools.values()].map((tool) => tool.definition),
   }));

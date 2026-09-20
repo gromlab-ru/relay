@@ -4,29 +4,8 @@ import type { EntityRef, GraphEdge, GraphNode } from "../../domain/entity-graph.
 import { ProductRepository } from "../../storage/product.js";
 import { BoardRepository } from "../../storage/boards.js";
 import { BoardTaskRepository } from "../../storage/board-tasks.js";
-import { ProjectRepository } from "../../storage/project.js";
-import { TaskRepository } from "../../storage/tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
-import { invariant } from "../../shared/errors.js";
 import { readEntityCatalog } from "../entities/catalog.js";
-
-const lifecycleReferences = new Set([
-  "focusPlanId",
-  "planId",
-  "dependsOn",
-  "supersededById",
-  "stageId",
-  "requirementIds",
-  "knowledgeIds",
-  "parentRunId",
-  "runId",
-  "releaseId",
-  "requirementId",
-  "checkIds",
-  "evidenceIds",
-  "taskId",
-  "taskIds",
-]);
 
 /** Адаптер проекта: графовый движок не знает видов продуктовых сущностей. */
 export type GraphCatalog = {
@@ -43,8 +22,6 @@ export async function projectGraphCatalog(workspace: Workspace): Promise<GraphCa
   const product = await new ProductRepository(workspace).all();
   const boards = await new BoardRepository(workspace).all();
   const tasks = await new BoardTaskRepository(workspace).all();
-  const records = await new ProjectRepository(workspace).all();
-  const legacy = await new TaskRepository(workspace).all();
   const nodes: GraphNode[] = entities.entries.map((entry) => ({
     ref: entry.ref,
     key: entry.key,
@@ -188,64 +165,6 @@ export async function projectGraphCatalog(workspace: Workspace): Promise<GraphCa
       addEdge(origin, ref("task", id), "related", task.revision, task.createdAt);
     for (const link of task.productLinks)
       addEdge(origin, ref(link.kind, link.id), "implements", task.revision, task.createdAt);
-  }
-  for (const task of legacy.values()) {
-    const origin = ref("legacy-task", String(task.id));
-    addNode(origin.kind, origin.id, task.title, String(task.id), task.revision, task.status);
-    if (task.parentId)
-      addEdge(
-        origin,
-        ref("legacy-task", String(task.parentId)),
-        "part-of",
-        task.revision,
-        task.createdAt,
-      );
-    for (const id of task.dependsOn)
-      addEdge(origin, ref("legacy-task", String(id)), "depends-on", task.revision, task.createdAt);
-  }
-  for (const record of records) {
-    const fields = record.fields;
-    const kind = `lifecycle-${fields.kind}`;
-    const origin = ref(kind, record.id);
-    addNode(
-      kind,
-      record.id,
-      fields.title || record.id,
-      record.id,
-      record.revision,
-      "status" in fields ? fields.status : "",
-    );
-    for (const [name, value] of Object.entries(fields)) {
-      if (name === "productLinks" && Array.isArray(value)) {
-        for (const link of fields.kind === "plan" || fields.kind === "stage"
-          ? fields.productLinks
-          : [])
-          addEdge(origin, ref(link.kind, link.id), "affects", record.revision, record.createdAt);
-        continue;
-      }
-      if (!lifecycleReferences.has(name)) continue;
-      for (const id of Array.isArray(value) ? value : [value]) {
-        if (id === null || id === undefined) continue;
-        if (typeof id === "number") {
-          addEdge(origin, ref("legacy-task", String(id)), name, record.revision, record.createdAt);
-        } else if (typeof id === "string") {
-          const target = records.find((entry) => entry.id === id);
-          invariant(
-            target,
-            "INVALID_REFERENCE",
-            `Поле ${name} записи ${record.id} ссылается на неизвестную запись ${id}`,
-            4,
-          );
-          addEdge(
-            origin,
-            ref(`lifecycle-${target.fields.kind}`, target.id),
-            name,
-            record.revision,
-            record.createdAt,
-          );
-        }
-      }
-    }
   }
   nodes.sort((a, b) => entityAddress(a.ref).localeCompare(entityAddress(b.ref)));
   return {

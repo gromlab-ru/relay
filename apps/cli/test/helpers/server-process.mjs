@@ -144,7 +144,7 @@ export async function checkServerSurface(url, { web = false } = {}) {
   const document = await spec.json();
   assert(document.paths["/api/v1/health"]);
   assert(document.paths["/api/v1/context"]);
-  assert(document.paths["/api/v1/tasks"].post);
+  assert(document.paths["/api/v1/board-tasks"].post);
   assert(document.paths["/api/v1/events"].get);
   for (const path of ["/api/docs", "/api/docs/swagger-ui-bundle.js"]) {
     const resource = await fetch(`${url}${path}`);

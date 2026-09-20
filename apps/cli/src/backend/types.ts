@@ -1,6 +1,1 @@
-export type {
-  Backend,
-  TasksBackend,
-  WorkspaceInfo,
-  SavedTask,
-} from "@relay/project-runtime/backend/types";
+export type { Backend, WorkspaceInfo } from "@relay/project-runtime/backend/types";

@@ -150,18 +150,3 @@
   flex: 1;
   min-width: 0;
 }
-.attention {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.6rem var(--tasks-page-gutter);
-  border: 0;
-  border-bottom: 1px solid var(--tasks-border);
-  background: var(--tasks-surface);
-  color: var(--tasks-muted);
-  font-size: 0.75rem;
-  text-align: left;
-  cursor: pointer;
-}

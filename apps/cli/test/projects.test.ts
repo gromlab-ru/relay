@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { startServer } from "@relay/server-runtime";
 import { successful, failed, invoke } from "./helpers/cli.js";
 
-test("local/workspace: автоматический контекст, единый сервер, ввод, курсоры и независимые базы", async (t) => {
+test("local/workspace: единый сервер, выбор проекта и независимые базы", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "relay-workspace-cli-"));
   let server: Awaited<ReturnType<typeof startServer>> | undefined;
   t.after(async () => {
@@ -23,45 +23,50 @@ test("local/workspace: автоматический контекст, едины
   const config = JSON.parse(await readFile(configPath, "utf8"));
   await writeFile(configPath, JSON.stringify({ ...config, server: { port: 0, url: server.url } }));
   for (const name of ["a", "b"]) successful(await invoke(root, ["projects", "add", name, name]));
-  successful(await invoke(root, ["projects", "add", "list", "a"]));
-  successful(await invoke(root, ["a", "create", "Первая"]));
-  await writeFile(join(root, "description.md"), "Текст из корня workspace");
-  successful(
-    await invoke(
+  successful(await invoke(root, ["projects", "add", "task", "a"]));
+  const create = ["task", "create", "--board", "product", "--title"];
+  const aId = successful(await invoke<{ id: string }>(root, ["a", ...create, "Первая"])).data.id;
+  const bId = successful(
+    await invoke<{ id: string }>(
       root,
-      ["--config", configPath, "b", "create", "Вторая", "--description-file", "description.md"],
+      [
+        "--config",
+        configPath,
+        "b",
+        ...create,
+        "Вторая",
+        "--description",
+        "## Текст\n\nИз workspace",
+      ],
       { env: { RELAY_CONFIG: join(root, "a/.relay/config.json") } },
     ),
+  ).data.id;
+  const a = successful(
+    await invoke<{ title: string }>(root, ["--project", "task", "task", "get", aId]),
   );
-  const a = successful(await invoke<{ title: string }>(root, ["--project", "list", "get", 1]));
   const b = successful(
-    await invoke<{ title: string; description: string[] }>(root, ["b", "get", 1]),
+    await invoke<{ title: string; description: string }>(root, ["b", "task", "get", bId]),
   );
   assert.equal(a.data.title, "Первая");
   assert.equal(b.data.title, "Вторая");
-  assert.deepEqual(b.data.description, ["Текст из корня workspace"]);
-  successful(await invoke(root, ["a", "create", "Продолжение"]));
-  const firstPage = successful(await invoke(root, ["a", "list", "--limit", 1]));
-  assert(firstPage.meta?.nextCursor);
-  failed(
-    await invoke(root, ["b", "list", "--limit", 1, "--cursor", firstPage.meta.nextCursor]),
-    "INVALID_CURSOR",
-  );
-  failed(await invoke(root, ["--local", "a", "list"]), "WORKSPACE_REQUIRES_SERVER");
-  failed(await invoke(join(root, "a"), ["b", "list"]), "REGISTRY_REQUIRED");
+  assert.equal(b.data.description, "## Текст\n\nИз workspace");
+  failed(await invoke(root, ["b", "task", "get", aId]), "NOT_FOUND", 3);
+  failed(await invoke(root, ["--local", "a", "task", "list"]), "WORKSPACE_REQUIRES_SERVER");
+  failed(await invoke(join(root, "a"), ["b", "task", "list"]), "REGISTRY_REQUIRED");
   assert.equal(
-    successful(await invoke<{ title: string }>(join(root, "a"), ["get", 1])).data.title,
+    successful(await invoke<{ title: string }>(join(root, "a"), ["task", "get", aId])).data.title,
     "Первая",
   );
-  failed(await invoke(root, ["list"]), "PROJECT_REQUIRED");
-  failed(await invoke(root, ["unknown", "get", 1]), "PROJECT_NOT_FOUND", 3);
-  const original = await readFile(join(root, "b/.relay/tasks/1.json"), "utf8");
+  failed(await invoke(root, ["task", "list"]), "PROJECT_REQUIRED");
+  failed(await invoke(root, ["unknown", "task", "get", aId]), "PROJECT_NOT_FOUND", 3);
+  const path = join(root, "b/.relay/boards/product/tasks", `${bId}.json`);
+  const original = await readFile(path, "utf8");
   successful(await invoke(root, ["projects", "remove", "b"]));
-  failed(await invoke(root, ["b", "get", 1]), "PROJECT_NOT_FOUND", 3);
-  assert.equal(await readFile(join(root, "b/.relay/tasks/1.json"), "utf8"), original);
+  failed(await invoke(root, ["b", "task", "get", bId]), "PROJECT_NOT_FOUND", 3);
+  assert.equal(await readFile(path, "utf8"), original);
   await server.close();
-  failed(await invoke(root, ["a", "list"]), "SERVER_UNAVAILABLE", 5);
-  successful(await invoke(join(root, "a"), ["list"]));
+  failed(await invoke(root, ["a", "task", "list"]), "SERVER_UNAVAILABLE", 5);
+  successful(await invoke(join(root, "a"), ["task", "list"]));
 });
 
 test("HTTP-клиент выбирает проект без локальных конфигов", async (t) => {
@@ -75,18 +80,22 @@ test("HTTP-клиент выбирает проект без локальных 
     await rm(empty, { recursive: true, force: true });
   });
   const context = await (await fetch(`${server.url}/api/v1/server`)).json();
-  successful(
-    await invoke(empty, [
+  const created = successful(
+    await invoke<{ id: string }>(empty, [
       "--server-url",
       server.url,
       "--project",
       context.data.defaultProject,
+      "task",
       "create",
+      "--board",
+      "product",
+      "--title",
       "Через URL",
     ]),
   );
   assert.equal(
-    successful(await invoke<{ title: string }>(root, ["get", 1])).data.title,
+    successful(await invoke<{ title: string }>(root, ["task", "get", created.data.id])).data.title,
     "Через URL",
   );
 });

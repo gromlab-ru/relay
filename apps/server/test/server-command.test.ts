@@ -27,29 +27,46 @@ test("server раздаёт React-статику, API и Swagger из чужог
   assert.equal(context.data.actor, "web-human");
   assert.equal(context.data.configPath, join(app.root, ".relay/config.json"));
   assert.equal(context.data.storagePath, join(app.root, ".relay/tasks"));
-  const created = await fetch(`${server.url}/api/v1/tasks`, {
+  const created = await fetch(`${server.url}/api/v1/board-tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: "Created through HTTP" }),
+    body: JSON.stringify({ board: "product", title: "Создана через HTTP", requestId: "http-task" }),
   });
-  assert.equal(created.status, 201);
-  const id = ((await created.json()) as { data: { id: number } }).data.id;
-  const changed = await app.run(["status", id, "review", "--actor", "cli-human"]);
+  assert.equal(created.status, 200);
+  const id = ((await created.json()) as { data: { id: string } }).data.id;
+  const changed = await app.run([
+    "task",
+    "move",
+    id,
+    "--column",
+    "review",
+    "--if-revision",
+    1,
+    "--actor",
+    "cli-human",
+  ]);
   assert.equal(changed.code, 0);
-  const task = (await (await fetch(`${server.url}/api/v1/tasks/${id}`)).json()) as {
-    data: { task: { status: string; updatedBy: string; revision: number } };
+  const task = (await (await fetch(`${server.url}/api/v1/board-tasks/${id}`)).json()) as {
+    data: { column: string; updatedBy: string; revision: number };
   };
-  assert.equal(task.data.task.status, "review");
-  assert.equal(task.data.task.updatedBy, "cli-human");
-  assert.equal(task.data.task.revision, 2);
-  const second = await app.create("Second", ["--status", "review"]);
-  const move = await fetch(`${server.url}/api/v1/tasks/${second}/move`, {
+  assert.equal(task.data.column, "review");
+  assert.equal(task.data.updatedBy, "cli-human");
+  assert.equal(task.data.revision, 2);
+  const second = await app.create("Вторая", ["--column", "review"]);
+  const move = await fetch(`${server.url}/api/v1/board-tasks/${second}/move`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status: "review", beforeId: id, ifRevision: 1 }),
+    body: JSON.stringify({ column: "review", beforeId: id, ifRevision: 1, requestId: "move" }),
   });
   assert.equal(move.status, 200);
-  const order = await app.run<{ items: { id: number }[] }>(["list", "--all", "--sort", "board"]);
+  const order = await app.run<{ items: { id: string }[] }>([
+    "task",
+    "list",
+    "--board",
+    "product",
+    "--column",
+    "review",
+  ]);
   assert(order.body.ok);
   assert.deepEqual(
     order.body.data.items.map((item) => item.id),

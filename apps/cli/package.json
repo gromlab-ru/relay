@@ -1,7 +1,7 @@
 {
   "name": "@gromlab/relay-cli",
   "version": "0.6.0",
-  "description": "Relay CLI: контекст, планы, задачи и жизненный цикл проектов для людей и AI-агентов",
+  "description": "Relay CLI: продукт, задачи досок и связи для людей и AI-агентов",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gromlab-ru/relay.git",

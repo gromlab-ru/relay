@@ -6,11 +6,10 @@ import type { FSWatcher } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { Observable, Subject } from "rxjs";
 import type { ServerEvent } from "@relay/contracts";
-import { TaskQueries } from "@relay/core/application/queries/tasks";
-import { ProjectRepository } from "@relay/core/storage/project";
 import { ProductRepository, PRODUCT_DIRECTORIES } from "@relay/core/storage/product";
 import { ProductService } from "@relay/core/application/product/service";
 import { BoardRepository } from "@relay/core/storage/boards";
+import { BoardTaskRepository } from "@relay/core/storage/board-tasks";
 import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import { GraphRepository } from "@relay/core/storage/graph";
 import { WorkspaceService } from "../workspace/workspace.module.js";
@@ -23,11 +22,8 @@ const HEARTBEAT_INTERVAL = 15_000;
 class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private readonly events = new Subject<ServerEvent>();
   private readonly watchers = new Map<string, FSWatcher>();
-  private fingerprints = new Map<number, string>();
-  private version: string | undefined;
   private lastError: { code: string; message: string } | undefined;
   private storageRoot: string | undefined;
-  private projectRoot: string | undefined;
   private productRoot: string | undefined;
   private productPaths: string[] = [];
   private productVersion: string | undefined;
@@ -61,11 +57,11 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  apiChanged(taskId?: number): void {
+  apiChanged(): void {
     if (this.stopped) return;
     this.events.next({
       type: "changed",
-      data: { source: "api", ...(taskId === undefined ? {} : { taskIds: [taskId] }) },
+      data: { source: "api" },
     });
     this.schedule();
   }
@@ -102,10 +98,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       const workspace = await this.workspace.open();
       if (this.stopped) return;
       this.storageRoot = workspace.root;
-      this.projectRoot = new ProjectRepository(workspace).root;
       this.productRoot = new ProductRepository(workspace).root;
       this.rebind();
-      const { tasks, version } = await new TaskQueries(workspace).snapshot();
       const product = await new ProductService(workspace).state();
       this.productPaths = product.records.flatMap((record) =>
         record.fields.kind === "application"
@@ -127,10 +121,13 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
         ]),
       ];
       this.rebind();
-      const kanban = await new BoardTasksService(workspace).list({ limit: 1 });
+      const kanban = await workspace.locked(async () => {
+        await new BoardTasksService(workspace).list({ limit: 1 });
+        return new BoardTaskRepository(workspace).all();
+      });
       const relations = await workspace.locked(() => new GraphRepository(workspace).signal());
       const boardsVersion = createHash("sha256")
-        .update(JSON.stringify([boards, kanban.version, relations]))
+        .update(JSON.stringify([workspace.config, boards, kanban, relations]))
         .digest("hex");
       if (this.boardsVersion !== undefined && this.boardsVersion !== boardsVersion)
         this.events.next({ type: "changed", data: { source: "storage" } });
@@ -139,27 +136,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
         this.events.next({ type: "changed", data: { source: "storage" } });
       this.productVersion = product.version;
       if (this.stopped) return;
-      const fingerprints = new Map(
-        [...tasks].map(([id, task]) => [
-          id,
-          createHash("sha256").update(JSON.stringify(task)).digest("hex"),
-        ]),
-      );
-      if ((this.version !== undefined && this.version !== version) || this.lastError) {
-        const ids = [...new Set([...this.fingerprints.keys(), ...fingerprints.keys()])]
-          .filter((id) => this.fingerprints.get(id) !== fingerprints.get(id))
-          .sort((a, b) => a - b);
-        this.events.next({
-          type: "changed",
-          data: {
-            source: "storage",
-            version,
-            ...(ids.length ? { taskIds: ids } : {}),
-          },
-        });
-      }
-      this.version = version;
-      this.fingerprints = fingerprints;
+      if (this.lastError) this.events.next({ type: "changed", data: { source: "storage" } });
       this.lastError = undefined;
     } catch (error) {
       if (this.stopped) return;
@@ -177,7 +154,6 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       configParent,
       ...this.boardPaths,
       ...this.productPaths,
-      ...(this.projectRoot ? [this.projectRoot] : []),
       ...(this.productRoot ? [this.productRoot] : []),
       ...(this.productRoot
         ? Object.values(PRODUCT_DIRECTORIES)
@@ -203,11 +179,9 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
             this.productPaths.includes(path) ||
             (path === configParent && name === "boards") ||
             (path === configParent && (name === "relations.json" || name === "relations")) ||
-            path === this.projectRoot ||
             path === this.productRoot ||
             (this.productRoot !== undefined && dirname(path) === this.productRoot) ||
             (path === configParent && name === "product") ||
-            (path === configParent && name === "project") ||
             (path === configParent && name === basename(this.workspace.options.configPath)) ||
             (path === this.storageRoot && (name.endsWith(".json") || name === basename(path))) ||
             (this.storageRoot &&
@@ -309,8 +283,8 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     return (await this.acquire(await workspace.resolve())).stream();
   }
 
-  async apiChanged(project: string | undefined, id?: number) {
-    if (!this.stopped) (await this.acquire(await this.catalog.select(project))).apiChanged(id);
+  async apiChanged(project: string | undefined) {
+    if (!this.stopped) (await this.acquire(await this.catalog.select(project))).apiChanged();
   }
 
   async onModuleDestroy() {

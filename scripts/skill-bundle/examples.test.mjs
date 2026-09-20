@@ -17,12 +17,7 @@ import { startMcp } from "../../apps/mcp/src/server.ts";
 
 const DATA = z.object({ ok: z.literal(true), data: z.record(z.string(), z.unknown()) });
 const IDS = z.object({
-  plan: z.object({ id: z.string() }),
-  stage: z.object({ id: z.string() }),
-  task: z.object({ id: z.number() }),
-  run: z.object({ id: z.string() }),
-  check: z.object({ id: z.string() }),
-  checkpoint: z.object({ id: z.string() }).optional(),
+  task: z.object({ id: z.string() }),
 });
 const OBSERVED = {
   sessionId: "fixture-session",
@@ -90,7 +85,7 @@ for (const passed of [true, false])
       new URL("../../skills/relay/references/EXAMPLES.md", import.meta.url),
       "utf8",
     );
-    const code = /```javascript\n(\/\/ relay-example: lifecycle[\s\S]*?)\n```/.exec(markdown)?.[1];
+    const code = /```javascript\n(\/\/ relay-example: kanban[\s\S]*?)\n```/.exec(markdown)?.[1];
     assert(code, "В собранном руководстве отсутствует проверяемый сценарий");
     // Выполняется ровно опубликованный алгоритм; внешняя работа и установка представлены фикстурой.
     const execute = new Function(
@@ -101,26 +96,9 @@ for (const passed of [true, false])
       `return (async () => {${code}\n})();`,
     );
     const result = IDS.parse(await execute(relay, "demo", "example-1", { ...OBSERVED, passed }));
-    const task = await relay("task_get", { project: "demo", id: result.task.id });
-    assert.equal(task.status, passed ? "done" : "in_progress");
-    const run = await relay("project_record_get", { project: "demo", recordId: result.run.id });
-    assert.equal(
-      z.object({ status: z.string() }).parse(run.fields).status,
-      passed ? "succeeded" : "failed",
-    );
-    if (passed) {
-      assert(result.checkpoint);
-      const state = await relay("project_context", { project: "demo" });
-      assert.equal(z.object({ id: z.string() }).parse(state.focusPlan).id, result.plan.id);
-      const changes = await relay("checkpoint_changes", {
-        project: "demo",
-        recordId: result.checkpoint.id,
-      });
-      assert.deepEqual(changes.tasks, []);
-      assert.deepEqual(changes.records, []);
-    } else {
-      assert.equal(result.checkpoint, undefined);
-      const reviews = await relay("project_records", { project: "demo", kind: "review" });
-      assert.deepEqual(reviews.items, []);
-    }
+    const task = await relay("board_task_get", { project: "demo", reference: result.task.id });
+    assert.equal(task.column, passed ? "review" : "in-progress");
+    assert.equal(task.revision, 3);
+    assert.ok(task.description.includes(OBSERVED.result));
+    assert.ok(task.description.includes(OBSERVED.nextStep));
   });

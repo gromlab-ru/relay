@@ -1,984 +1,310 @@
 # Справочник CLI
 
-[Документация](../README.md) → Справочники → CLI
-
-Все команды запускаются как `npx @gromlab/relay-cli <команда>`.
-В workspace: `npx @gromlab/relay-cli <проект> <команда>` или
-`npx @gromlab/relay-cli --project <проект> <команда>`. Имя требуется и для реестра
-с одной записью. `--config` принимает проектный конфиг либо реестр; правила поиска
-описаны в [конфигурации](CONFIGURATION.md).
-В синтаксисе прежних корневых команд `<id>` — числовой ID из ответа; группа `task`
-использует короткие ID и ключи досок. Квадратные скобки обозначают
-необязательную часть. Чтение не требует автора; запись требует `--actor` или `RELAY_ACTOR`.
-Примеры используют оркестратора для постановки и приёмки, субагента — для выполнения.
-
-Основной процесс использует явное назначение оркестратором. Субагент читает выданный ID
-и пишет отчёты/summary; задачи, статусы и зависимости он самостоятельно не меняет.
-`claim` остаётся технической возможностью CLI, но не шагом штатного процесса субагента.
-
-## Карта команд
-
-### graph
-
-Универсальные отношения: `graph list`, `context <kind:id>`, `link`, `update <id>`,
-`unlink <id>`, `apply`, `history`. Чтение возвращает страницы и объясняющие пути;
-запись требует `--if-version` и автора, поддерживает `--request-id`.
-Параметры, примеры, происхождение прежних связей и границы хранения —
-[справочник графа](GRAPH.md). Для восстановления агентом используйте `--format json`.
-
-### graph list
-
-`graph list [--root kind:id] [--type type] [--direction both|outgoing|incoming]
-[--profile all|context] [--depth 0..100] [--q text] [--offset n] [--limit 1..100] [--snapshot-version version]`.
-Без корня читает проект, включая изолированные сущности. Продолжение — nextOffset
-той же версии. При GRAPH_CHANGED начните заново; пустые узлы и отсутствие рёбер различаются.
-
-### graph context
-
-`graph context <kind:id>` принимает те же параметры, кроме `--root`, и по умолчанию
-использует профиль context. Возвращает пути включения. nextOffset продолжает страницу,
-depthLimited и boundary объясняют непрочитанную глубину. Полные тексты читаются адресно.
-
-### graph link
-
-`graph link --from kind:id --to kind:id --type type [--description markdown]
---if-version version [--request-id id]`. Требуется автор. Новая связь произвольного
-типа не меняет предметные статусы. При неизвестной цели пакет не сохраняется.
-
-### graph update
-
-`graph update <id> --description markdown --if-version version [--request-id id]`.
-Изменяет пояснение явно установленной связи; отсутствие description очищает пояснение.
-Концы и тип меняются атомарным пакетом удаления/добавления через graph apply.
-
-### graph unlink
-
-`graph unlink <id> --if-version version [--request-id id]`. Отзывает явную связь,
-сохраняя её события. Предметные проекции изменяются прежними предметными командами.
-
-### graph apply
-
-`graph apply --json '<массив add/update/remove>' --if-version version [--request-id id]`.
-Пакет содержит 1–100 операций и публикуется атомарно. Повтор после потери ответа
-использует того же автора, requestId, исходную версию и неизменное содержимое.
-
-### graph history
-
-`graph history [--id id] [--offset n] [--limit 1..100] [--revision n]`.
-Читает историю явных отношений с автором и состоянием связи. revision защищает
-продолжение журнала; это история связей, а не редакций требований.
-
-### graph migrate
-
-`--local --config <проект/.relay/config.json> graph migrate` переносит v1 в раздельное
-хранилище v2. Старые клиенты нужно остановить. ID, ревизии, тексты, события и квитанции
-сохраняются; исходник остаётся резервной копией. Прерванная миграция возобновляется.
-В новой или уже перенесённой базе команда сообщает текущее покрытие без повторного переноса.
-
-### graph reindex
-
-`--local --config <проект/.relay/config.json> graph reindex` восстанавливает индексы связей
-и адресной истории, в том числе после ручной правки. Принимает новый отпечаток текущих
-записей, не меняет ID и пользовательские ревизии. Повреждение постоянных данных не
-маскируется пустой выборкой. Результат содержит число связей, событий и ревизию.
-
-Новый канбан использует группу `task` и ключи `WEB-24`/`PRODUCT-1` либо постоянные
-ID из 8 символов. Прежние команды `create`, `get`, `list` относятся к числовым задачам.
-
-### boards
-
-Каталог досок с префиксами. Параметры: `--offset`, `--limit` (1–100), `--version`.
-Продолжение приходит в `nextOffset`; при `BOARD_CHANGED` начните заново.
-
-### task create
-
-`task create --board <slug|prefix|id> [--title <title>] [--description <markdown>] [--column <column>] [--request-id <id>]`.
-Заголовок и Markdown необязательны, по умолчанию пустые. Агент может заполнить оба поля
-одним запросом создания. Колонка — `inbox`.
-Ответ: ID, ключ, ревизия и requestId. После неясного ответа повторите тот же запрос с тем
-же ключом. Для задания префикса приложения используйте `product application create --prefix WEB`.
-Без `--prefix` префикс создаётся из slug; `PRODUCT` и `INFRA` зарезервированы.
-`--parent-id <id>` создаёт подзадачу атомарно. Продуктовые цели передаются как
-`--feature <ids...>`, `--scenario <ids...>`, `--implementation <ids...>`.
-
-### task get
-
-`task get <reference>` читает ID или текущий/старый ключ задачи: метаданные, Markdown
-и ID блокеров. Текст форматируется для терминала; `--format json` возвращает полный DTO.
-
-### task list
-
-`task list [--board <board>] [--column <column>] [--q <text>] [--readiness <ready|blocked>] [--offset <n>] [--limit <n>] [--version <version>]`.
-По умолчанию 40 карточек, максимум 100. Полные Markdown-тексты читаются отдельно.
-`ready` — колонка «К выполнению» без блокеров; `blocked` — невыполненные зависимости.
-Продолжение содержит версию, следующий offset и сохраняет фильтры.
-`--product-target <id>` возвращает задачи с явной связью реализации выбранной цели.
-`--completion unfinished|finished` выбирает незавершённые либо done/cancelled до пагинации.
-`--search-in title|all` ограничивает q ключами/ID/названием либо добавляет Markdown
-(по умолчанию all). Без completion список включает все статусы.
-
-### task update
-
-`task update <reference> --if-revision <n> [--title <title>] [--description <markdown>] [--request-id <id>]`.
-Меняет только переданные поля. Устаревшая ревизия даёт конфликт без потери данных.
-`--feature <ids...>`, `--scenario <ids...>`, `--implementation <ids...>` вместе
-заменяют весь набор продуктовых связей (максимум 100). `--clear-product-links`
-очищает набор и не совмещается с целями. Отсутствие этих опций сохраняет связи.
-Пример: `task update WEB-1 --scenario Abcd1234 --implementation Efgh5678 --if-revision 2`.
-Поле типа задачи отсутствует; крупная работа организуется подзадачами.
-
-### task move
-
-`task move <reference> --column <column> --if-revision <n> [--board <board>] [--before-id <id>] [--if-version <version>] [--request-id <id>]`.
-Колонки: `inbox`, `ready`, `in-progress`, `review`, `done`, `cancelled`.
-Без `--before-id` вставляет в конец полной колонки. При смене доски ключ меняется,
-ID и связи остаются. В `done` нельзя перейти с невыполненными зависимостями.
-
-### task links
-
-`task links <reference> [--offset <n>] [--limit <n>] [--version <version>]`.
-Показывает зависимости, блокируемые задачи, обычные связи, родителя и подзадачи,
-их текущие ключи и состояния. Список постраничный, максимум 100 связей.
-
-### task link
-
-`task link <reference> --target <reference> --relation <depends-on|related|parent> --if-revision <n> [--remove] [--request-id <id>]`.
-Добавляет либо удаляет связь. Вторая задача может находиться на другой доске этого
-проекта. Циклы и ссылки на себя запрещены. Отмена не выполняет зависимость.
-
-Пример: `relay-cli --actor orchestrator task link WEB-1 --target API-1 --relation depends-on --if-revision 1`.
-Все записи требуют автора, локальный и HTTP-режимы используют один Core.
-Полный контракт: [задачи досок](KANBAN.md).
-
-| Область    | Команды                                                                                                                                   |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Проект     | [init](#init), [config get](#config-get), [group list](#group-list), [validate](#validate), [migrate](#migrate), [server](#server)        |
-| Реестр     | [projects init](#projects-init), [projects list](#projects-list), [projects add](#projects-add), [projects remove](#projects-remove)      |
-| Задачи     | [create](#create), [list](#list), [get](#get), [update](#update), [description](#description), [summary](#summary), [overview](#overview) |
-| Назначения | [status](#status), [assign](#assign), [claim](#claim), [release](#release)                                                                |
-| Связи      | [deps add](#deps-add), [deps remove](#deps-remove), [links](#links), [tree](#tree)                                                        |
-| Обсуждение | [comment add](#comment-add), [comment list](#comment-list), [comment get](#comment-get)                                                   |
-| Отчёты     | [log add](#log-add), [log list](#log-list), [log get](#log-get), [log search](#log-search)                                                |
-
-Дополнительно: [общие параметры](#общие-параметры), [поля create/update](#поля-create-и-update),
-[HTTP-режим](#http-режим-и-local), [вывод](OUTPUT.md), [ошибки](ERRORS.md).
+`relay-cli` означает установленную команду или `npx @gromlab/relay-cli`.
+В workspace передавайте проект префиксом или `--project`; в local можно работать
+через Core либо HTTP. [Конфигурация](CONFIGURATION.md) определяет поиск и приоритеты.
+Чтение не требует автора; запись требует `--actor` или `RELAY_ACTOR`.
 
 ## Общие параметры
 
-| Параметр              | Значение                                                         |
-| --------------------- | ---------------------------------------------------------------- |
-| `--config <path>`     | Явный конфиг; приоритет над `RELAY_CONFIG` и поиском вверх       |
-| `--project <name>`    | Имя проекта из реестра; альтернатива префиксу перед командой     |
-| `--server-url <url>`  | HTTP(S) origin без пути; приоритет над окружением и `server.url` |
-| `--local`             | Прямой Core с игнорированием HTTP-настроек                       |
-| `--actor <id>`        | Автор записи; приоритет над `RELAY_ACTOR`                        |
-| `--format <format>`   | `text` или `json`; по умолчанию `output.format`                  |
-| `--color <mode>`      | `auto`, `always`, `never`; по умолчанию `auto`                   |
-| `--max-bytes <bytes>` | `1024–16777216`; по умолчанию `output.maxBytes`, обычно 16384    |
-| `-h, --help`          | Справка, аргументы, параметры и примеры                          |
-| `-V, --version`       | Версия CLI                                                       |
+| Параметр                      | Назначение                                    |
+| ----------------------------- | --------------------------------------------- |
+| `--config <path>`             | Явный проектный конфиг или реестр             |
+| `--project <name>`            | Проект из workspace                           |
+| `--server-url <url>`          | URL Relay Server                              |
+| `--local`                     | Прямой доступ Core в local                    |
+| `--actor <id>`                | Автор записи                                  |
+| `--format json\|text`         | Машинный ответ или человеческое представление |
+| `--color auto\|always\|never` | Подсветка терминала                           |
+| `--max-bytes <n>`             | Бюджет ответа                                 |
+| `--help`, `--version`         | Справка и версия                              |
 
-Общие параметры можно указывать вместе с вложенной командой.
-`--help` работает без конфига. CLI без аргументов и группы `config`, `group`, `deps`,
-`comment`, `log` показывают справку. Справка и версия всегда текстовые.
+Справка конкретной команды: `relay-cli <команда> --help`. Полный автоматически
+сформированный перечень аргументов — [команды распространяемого скилла](../../skills/relay/references/CLI-COMMANDS.md).
+Ниже перечислены все действующие команды. Прежние корневые команды числовой доски
+и группа документов жизненного цикла удалены.
 
-```bash
-npx @gromlab/relay-cli --help
-npx @gromlab/relay-cli create --help
-npx @gromlab/relay-cli log add --help
-```
-
-<a id="http-режим-и-local"></a>
-
-### HTTP-режим и --local
-
-В local: `--local` → `--server-url` → `RELAY_SERVER_URL` → `server.url` → Core.
-В workspace используется только общий сервер; `--local` возвращает
-`WORKSPACE_REQUIRES_SERVER`. URL берётся из флага, окружения или workspace-конфига.
-В HTTP настройки проекта определяет сервер; файлы ввода читает вызывающий агент.
-Сервер запускается отдельной командой `relay-server`;
-`init` и `migrate` при настроенном HTTP требуют явного локального режима.
-Подробности: [конфигурация](CONFIGURATION.md), [оркестрация](../guides/ORCHESTRATION.md).
-
-## Проект
-
-### project
-
-Работа с жизненным циклом выбранного проекта:
-
-| Команда                           | Назначение                                  |
-| --------------------------------- | ------------------------------------------- |
-| `project context`                 | Компактный контекст оркестратора            |
-| `project state`                   | Полный снимок проекта                       |
-| `project records [--kind <kind>]` | Краткий список документов                   |
-| `project get <id>`                | Документ с полями, авторством и ревизией    |
-| `project briefing <task-id>`      | Готовое поручение работнику                 |
-| `project changes <checkpoint-id>` | Изменения после точки продолжения           |
-| `project save --json <json>`      | Создать или обновить проектный документ     |
-| `project save --file <path>`      | Прочитать JSON из файла; `-` означает stdin |
-
-Для записи нужен автор. JSON имеет вид `{ "fields": { "kind": "plan", "title": "MVP" } }`.
-При обновлении добавляются `id` и `ifRevision`. Поля заменяются целиком; предварительно
-прочитайте актуальный документ. Для повторяемого создания задайте `requestId`.
-
-`list` дополнительно принимает `--plan-id`, `--stage-id`, `--type` (`task`, `feature`,
-`bug`, `research`, `debt`). Подзадачи наследуют этап до явной настройки своего контекста.
-Подробные сценарии: [жизненный цикл](../guides/LIFECYCLE.md).
-
-### project context
-
-**Синтаксис:** `project context`. Возвращает компактный паспорт, план в фокусе,
-активные этапы, внимание и следующий шаг. Длинные тексты сокращаются с отметкой;
-полные документы читаются по ID. Счётчики охватывают весь соответствующий набор.
-
-### project state
-
-**Синтаксис:** `project state`. Полный согласованный снимок проектных документов,
-задач, прогресса и сигналов внимания. Для большой базы увеличьте `--max-bytes`
-или используйте выборочное чтение через `project records` и `project get`.
-
-### project records
-
-**Синтаксис:** `project records [--kind <kind>]`. Краткие записи с ID, видом,
-названием, ревизией и временем обновления. `--kind plan` выбирает планы.
-
-### project get
-
-**Синтаксис:** `project get <id>`. Полный документ, включая `fields`, авторство,
-ревизию и историю изменений. Например: `project get passport`.
-
-### project briefing
-
-**Синтаксис:** `project briefing <id>`. Собирает поручение для числового ID задачи:
-описание, цель, этап, связанные требования, знания, границы и критерии. В текстовом
-режиме выводит Markdown, в JSON — текст и версию снимка.
-
-### project changes
-
-**Синтаксис:** `project changes <id>`. Сравнивает текущие ревизии с контрольной
-точкой: новые, изменённые и удалённые документы и задачи. Чтение ничего не изменяет.
-
-### project save
-
-**Синтаксис:** `project save --json <json>` или `project save --file <path>`.
-Для stdin используйте `--file -`. JSON содержит `fields`; обновление также требует
-`id` и `ifRevision`. Автор задаётся через `--actor` или `RELAY_ACTOR`.
-`requestId` в JSON защищает повторяемое создание обычных документов от дубликатов.
-После неподтверждённого обновления перечитайте запись перед новой попыткой.
-
-### projects init
-
-**Синтаксис:** `projects init`. Создаёт `relay.workspace.json` с пустым реестром,
-`server.port: 4700` и `mcp.port: 4710`. `--config` или `RELAY_CONFIG` задаёт путь нового файла.
-Существующий файл не заменяется. Автор не требуется.
-
-### projects list
-
-**Синтаксис:** `projects list`. Читает общий сервер и возвращает `data.mode`,
-`data.projects`, `data.defaultProject` и путь конфигурации.
-
-### projects add
-
-**Синтаксис:** `projects add <name> [path] [--project-config <path>] [--server-url <url>] [--replace]`.
-`path` относительно реестра; `--project-config` относительно каталога проекта.
-`--server-url` задаёт адрес общего сервера workspace. Повтор той же записи идемпотентен;
-замена требует `--replace`. Сначала выполните `relay-cli init` в каталоге проекта.
-Пример регистрации: `relay-cli projects add backend ../backend`.
-
-### projects remove
-
-**Синтаксис:** `projects remove <name>`. Удаляет регистрацию, сохраняя файлы и задачи.
-Возвращает актуальный контекст сервера, повторное удаление идемпотентно.
-Все команды `projects` выбирают реестр через `--config`, окружение или поиск вверх.
+## Проект и реестр
 
 ### init
 
-**Синтаксис:** `init [--storage <path>]`.
-
-Создаёт `.relay/config.json` и базу `.relay/tasks`. `--storage` по умолчанию `tasks`, путь разрешается
-относительно конфига. `--config` задаёт место нового конфига. Автор не требуется.
-Результат: `{ configPath, storageDir }`; существующий конфиг даёт `ALREADY_INITIALIZED`.
-При явном HTTP в аргументах/окружении используйте `--local`.
-
-```bash
-npx @gromlab/relay-cli init
-npx @gromlab/relay-cli --local init --config /work/project/.relay/config.json --storage tasks
-```
-
-Примеры показывают разные способы инициализации. Далее: [create](#create), [первый проект](../GETTING_STARTED.md).
+`init [--storage <path>]` создаёт конфиг и системные доски. Существующие данные не заменяет.
+Путь storage разрешается относительно конфига. Пример: `relay-cli init`.
 
 ### config get
 
-**Синтаксис:** `config get`. Собственных параметров нет.
-
-Возвращает конфигурацию в `data` и пути в `meta.configPath`, `meta.storagePath`.
-В HTTP это конфигурация сервера. Ошибки: `CONFIG_NOT_FOUND`, ошибки схемы и IO.
-Изменения настроек выполняются в `.relay/config.json`.
-
-```bash
-npx @gromlab/relay-cli config get --format json
-```
-
-См. [полную конфигурацию](CONFIGURATION.md).
-
-### group list
-
-**Синтаксис:** `group list [--limit <count>] [--cursor <cursor>] [--all]`.
-
-Группы возникают из поля `group`. Возвращает страницу групп со счётчиками `total`,
-успешных `completed` и всех конечных `terminal`; порядок — по имени.
-Лимит `1–100`, по умолчанию `output.defaultLimit`. `--all` требует полный ответ
-в бюджете и несовместим с `--limit`/`--cursor`.
-Ошибки: `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli group list --all
-```
-
-См. [list](#list) для задач группы.
+Читает конфигурацию и пути. `relay-cli config get --format json` возвращает исходные настройки.
 
 ### validate
 
-**Синтаксис:** `validate`. Собственных параметров нет.
-
-Проверяет схемы всех документов, ID, имена файлов, вложенные записи, статусы, ссылки
-и циклы. Успех содержит счётчики `tasks`, `comments`, `logs`.
-Нарушения дают `VALIDATION_FAILED` или ошибку чтения; диагностика содержит детали.
-
-```bash
-npx @gromlab/relay-cli validate --format json
-```
-
-См. [Git и слияние](../guides/GIT.md).
-
-### migrate
-
-**Синтаксис:** `migrate`. Нужен автор; при HTTP нужен `--local`.
-
-Переводит UUID-документы v1 в v2 и старую вложенную структуру в выбранном каталоге задач.
-Возвращает `migrated`, `total`, при переносе — `backupPath`, `mappingPath`,
-а при изменении структуры — `flattened`. Повтор на актуальной базе не меняет данные.
-Прерванный перенос продолжается повтором команды. Ошибка состояния — `MIGRATION_CONFLICT`.
+Проверяет каталог сущностей, продукт, задачи и граф. Ответ: valid, entities, boards, tasks.
+При нарушении целостности код процесса 5; список причин находится в error.details.
 
-```bash
-npx @gromlab/relay-cli --local migrate --actor orchestrator
-```
+### projects init
 
-См. [порядок миграции и резервную копию](../guides/MIGRATION.md).
+Создаёт `relay.workspace.json`; существующий реестр не заменяет.
 
-### server
+### projects list
 
-Сервер поставляется отдельно: `relay-server [--port <number>] [--open]`.
+Показывает регистрации. `--limit`, `--cursor`, `--all` управляют страницами и бюджетом.
 
-Запускает UI, REST, Swagger и SSE на `127.0.0.1`. `--port`: `0–65535`; приоритет
-над `RELAY_PORT`, `server.port`, затем `4700`. `0` выбирает свободный порт.
-`--open` открывает доску в браузере. Команда работает до `Ctrl+C`.
-С `--format json` первое сообщение содержит `{ url, pid }`.
-Автор сервера подписывает дополнения из UI; CLI-агенты передают собственных авторов.
-При занятом порте выберите другой порт и обновите URL клиентов.
+### projects add
 
-```bash
-npx @gromlab/relay-server --actor human --open
-```
+`projects add <name> <path> [--project-config <path>] [--replace]` регистрирует проект.
+Пути разрешаются относительно реестра. Замена существующего подключения явная.
 
-См. [веб-доску](../guides/WEB.md), [оркестрацию](../guides/ORCHESTRATION.md), [API](API.md).
+### projects remove
 
-## Задачи
+`projects remove <name>` удаляет регистрацию, сохраняя файлы проекта.
 
-### Поля create и update
+## Доски и задачи
 
-| Параметр                    | Поведение                                                            |
-| --------------------------- | -------------------------------------------------------------------- |
-| `--title <text>`            | Однострочное название; у `create` альтернатива позиционному названию |
-| `--description <text>`      | Markdown-описание; пустая строка очищает                             |
-| `--description-file <path>` | UTF-8 файл описания; `-` означает stdin                              |
-| `--stdin`                   | Прочитать описание из stdin                                          |
-| `--summary <text>`          | Актуальное состояние задачи; пустая строка очищает                   |
-| `--summary-file <path>`     | UTF-8 файл саммари; `-` означает stdin                               |
-| `--status <status>`         | Ключ статуса из конфига                                              |
-| `--group <name>`            | Основная группа                                                      |
-| `--clear-group`             | Снять группу; несовместим с `--group`                                |
-| `--parent <id>`             | ID родителя                                                          |
-| `--clear-parent`            | Снять родителя; несовместим с `--parent`                             |
-| `--tags <tags>`             | Заменить набор тегов, значения через запятую; `""` очищает           |
-| `--depends-on <ids>`        | Заменить набор зависимостей; ID через запятую; `""` очищает          |
-| `--assignee <actor>`        | Назначить исполнителя                                                |
+### boards
 
-Для каждого текста выбирается один источник. Один stdin нельзя использовать
-для нескольких полей. Ввод проверяется как UTF-8; CRLF/CR нормализуются в LF.
-Неуказанные поля при `update` сохраняются. Для снятия исполнителя используйте `release`.
-Лимиты полей — в [выводе и размерах](OUTPUT.md#ограничения-хранения).
+Каталог досок: `--offset`, `--limit` (1–100), `--version`. Продолжение — nextOffset.
 
-### create
+### task create
 
-**Синтаксис:** `create [title] [поля]`. Нужен автор.
+`task create --board <slug|prefix|id> [--title <text>] [--description <markdown>] [--column <column>]`.
+Пустые поля допустимы. `--parent-id` создаёт подзадачу; `--feature`, `--scenario`,
+`--implementation` задают продуктовые цели. `--request-id` фиксирует ключ безопасного повтора.
 
-Обязательно название: позиционно или `--title`, одновременно оба нельзя.
-По умолчанию статус — `defaultStatus`; описание и summary пусты, ссылки/теги
-пусты, группа/родитель/исполнитель — `null`. Новый ID равен `max(id) + 1`.
-Результат: `{ id, revision: 1 }`. Создание не имеет ключа идемпотентности.
-Ошибки: `TITLE_REQUIRED`, `CONFLICTING_OPTIONS`, `VALIDATION_ERROR`, ошибки графа.
+### task get
 
-```bash
-npx @gromlab/relay-cli create "API пользователей" --group backend --actor orchestrator
-```
+`task get <reference>` читает полную задачу по ID или текущему/прежнему ключу.
+Например: `relay-cli task get PRODUCT-1`.
 
-Далее: [get](#get), [claim](#claim), [сквозной сценарий](../guides/WORKFLOW.md).
+### task list
 
-### list
+Фильтры: `--board`, `--column`, `--q`, `--readiness ready|blocked`,
+`--completion unfinished|finished`, `--search-in title|all`, `--product-target`.
+Страницы: `--offset`, `--limit`, `--version`; по умолчанию 40, максимум 100.
+Фильтрация выполняется до пагинации. `nextOffset: null` означает конец.
 
-**Синтаксис:** `list [фильтры] [--limit <count>] [--cursor <cursor>]`.
+### task update
 
-| Параметр             | Поведение                                                              |
-| -------------------- | ---------------------------------------------------------------------- |
-| `--all`              | Включить конечные статусы; совместим с лимитом и курсором              |
-| `--status <status>`  | Точный статус; переопределяет фильтр незавершённых                     |
-| `--group <name>`     | Точная группа                                                          |
-| `--assignee <actor>` | Точный исполнитель                                                     |
-| `--parent <id>`      | Непосредственные дети                                                  |
-| `--tag <tag>`        | Наличие тега                                                           |
-| `--sort <order>`     | `id` (по умолчанию) или `board`                                        |
-| `--search <text>`    | Название, описание и summary без учёта регистра                        |
-| `--ready`            | Только свободные задачи в `readyStatuses` с выполненными зависимостями |
-| `--limit <count>`    | Максимум задач `1–100`; без флага число ограничено байтовым бюджетом   |
-| `--cursor <cursor>`  | Продолжение с теми же фильтрами                                        |
+`task update <reference> --if-revision <n> [--title <text>] [--description <markdown>]`.
+Переданные `--feature`, `--scenario`, `--implementation` заменяют набор продуктовых целей;
+`--clear-product-links` очищает его. Неуказанные поля сохраняются.
 
-По умолчанию выбираются неконечные статусы, включая заблокированные задачи.
-Фильтры объединяются через И. JSON возвращает плоский `data.items`; текст группирует
-страницу по группам. `--sort board` использует порядок колонок и карточек.
-Ошибки: `UNKNOWN_STATUS`, `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
+### task move
 
-```bash
-npx @gromlab/relay-cli list --ready --group backend --format json
-npx @gromlab/relay-cli list --all --limit 20
-```
+`task move <reference> --column <column> --if-revision <n> [--board <board>] [--before-id <id>] [--if-version <version>]`.
+Колонки: inbox, ready, in-progress, review, done, cancelled. Перенос сохраняет ID и связи.
+Без before-id вставляет в конец. Невыполненные зависимости блокируют переход в done.
 
-См. [пагинацию](OUTPUT.md#страницы) и [claim](#claim).
+### task links
 
-### get
+`task links <reference> [--offset <n>] [--limit <n>] [--version <version>]` читает
+прямые и обратные связи с состояниями связанных задач.
 
-**Синтаксис:** `get <id> [--full] [--fields <fields>]`.
+### task link
 
-Возвращает сохранённые поля и вычисляемые `blockedBy`, `ready`, `commentCount`,
-`logCount`. Без `--full` словари `comments` и `logs` исключены. `--fields` выбирает
-поля через запятую, в том числе сами словари, независимо от `--full`.
-Ошибки: `TASK_NOT_FOUND`, `UNKNOWN_FIELD`, `RESPONSE_TOO_LARGE`.
+`task link <reference> --target <reference> --relation depends-on|related|parent --if-revision <n> [--remove]`.
+Изменяет связь между задачами одного проекта. Все записи канбана принимают `--request-id`.
+[Контракт канбана](KANBAN.md).
 
-```bash
-npx @gromlab/relay-cli get 1 --fields id,status,summary,revision --format json
-npx @gromlab/relay-cli get 1 --full --max-bytes 262144
-```
+## Граф
 
-См. [формат задачи](FORMAT.md), [description](#description), [summary](#summary).
+### graph list
 
-### update
+`graph list [--root <ref>]` читает проектный граф. Параметры: `--type`, `--direction`,
+`--profile all|context`, `--depth`, `--q`, `--offset`, `--limit`, `--snapshot-version`.
 
-**Синтаксис:** `update <id> [поля] [--if-revision <revision>]`. Нужен автор.
+### graph context
 
-Применяет только переданные [поля](#поля-create-и-update). Нужно хотя бы одно изменение.
-`--if-revision` — положительное безопасное целое; при отсутствии используется актуальный
-документ под блокировкой. Результат: `{ id, revision }`; неизменённый документ сохраняет ревизию.
-Ошибки: `EMPTY_UPDATE`, `REVISION_CONFLICT`, ошибки ввода, схемы и графа.
+`graph context <ref>` использует те же параметры и профиль context по умолчанию.
+Пути объясняют включение сущностей; boundary и depthLimited показывают границы обхода.
 
-```bash
-npx @gromlab/relay-cli update 1 --summary "Контракт готов" --actor backend-agent
-```
+### graph link
 
-См. [конкурентность](../concepts/TASKS.md#ревизии-и-параллельные-изменения).
+`graph link --from <ref> --to <ref> --type <type> [--description <markdown>] --if-version <version>`.
+Произвольная связь не меняет статусы задач автоматически.
 
-### description
+### graph update
 
-**Синтаксис:** `description <id>`. Собственных параметров нет.
+`graph update <id> --description <markdown> --if-version <version>` меняет пояснение.
 
-Читает только описание. JSON: `{ id, description: string[] }`, текст: Markdown.
-Ошибки: `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
+### graph unlink
 
-```bash
-npx @gromlab/relay-cli description 1
-```
+`graph unlink <id> --if-version <version>` отзывает явную связь с сохранением событий.
 
-Изменение: [update](#update) с `--description` или файловым источником.
+### graph apply
 
-### summary
+`graph apply --json '<массив операций>' --if-version <version>` атомарно выполняет пакет.
+Все записи графа принимают автора и `--request-id`.
 
-**Синтаксис:** `summary <id>`. Собственных параметров нет.
+### graph history
 
-Читает актуальное саммари задачи. JSON: `{ id, summary: string[] }`, текст: Markdown.
-Ошибки: `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
+`graph history [--id <id>] [--offset <n>] [--limit <n>] [--revision <n>]` читает события связей.
 
-```bash
-npx @gromlab/relay-cli summary 1
-```
+### graph migrate
 
-Изменение: [update](#update) с `--summary`; история: [log list](#log-list).
+`--local graph migrate` переносит v1 в раздельное хранение v2 с сохранением ID, текстов,
+ревизий и квитанций. [Гарантии и восстановление](GRAPH.md#переход-с-v1-и-обслуживание).
 
-### overview
+### graph reindex
 
-**Синтаксис:** `overview [id] [--limit <count>] [--review-status <statuses>]`.
+`--local graph reindex` восстанавливает производные индексы и адресную историю.
 
-Сводка одного снимка: весь проект или задача и её потомки.
-`--limit` — до `1–100` строк каждого раздела, по умолчанию `5`.
-`--review-status` — неконечные статусы проверки через запятую; по умолчанию `review`,
-если он определён и неконечный. Курсора нет, полные счётчики сохраняются.
-Результат включает `counts`, `leafCounts`, `progress`, `ready`, `review`, `blockers`.
-Ошибки: `INVALID_REVIEW_STATUS`, `UNKNOWN_STATUS`, `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli overview --format json
-npx @gromlab/relay-cli overview 1 --limit 10
-```
-
-Полный контракт и расчёты — [обзор проекта](OVERVIEW.md).
-
-## Назначения
-
-Эти команды возвращают `{ id, revision }`, требуют автора и поддерживают
-`--if-revision <revision>`. Автор описывает, кто сделал запись; исполнитель хранится отдельно.
-
-### status
-
-**Синтаксис:** `status <id> <status> [--if-revision <revision>]`.
-
-Меняет статус, сохраняя исполнителя. Успешное завершение требует удовлетворённых
-зависимостей. Ошибки: `UNKNOWN_STATUS`, `TASK_BLOCKED`, `REVISION_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli status 1 done --actor orchestrator
-```
-
-См. [семантику статусов](../concepts/TASKS.md#статусы).
-
-### assign
-
-**Синтаксис:** `assign <id> <assignee> [--if-revision <revision>]`.
-
-Явное назначение оркестратором, включая замену исполнителя и заблокированные задачи.
-Статус сохраняется. Для конкурентного захвата свободной работы используйте `claim`.
-Ошибки: `TASK_NOT_FOUND`, `VALIDATION_ERROR`, `REVISION_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli assign 1 backend-agent --actor orchestrator
-```
-
-### claim
-
-**Синтаксис:** `claim <id> [--status <status>] [--if-revision <revision>]`.
-
-Атомарно назначает свободную доступную задачу автору. Без `--status` сохраняет статус;
-с ним назначение и переход выполняются вместе. Успешен только один конкурентный захват.
-Ошибки: `TASK_ASSIGNED`, `TASK_BLOCKED`, `TASK_NOT_READY`, `REVISION_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli claim 1 --status in_progress --actor backend-agent
-```
-
-См. [list --ready](#list). В основном процессе используйте
-[назначение оркестратором](../guides/ORCHESTRATION.md#назначение-задач).
-
-### release
-
-**Синтаксис:** `release <id> [--force] [--if-revision <revision>]`.
-
-Снимает исполнителя и сохраняет статус. `--force` разрешает снять чужое назначение.
-Ошибки: `ASSIGNEE_MISMATCH`, `REVISION_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli release 1 --force --actor orchestrator
-```
-
-См. [передачу работы](../guides/WORKFLOW.md#продолжение-и-передача-работы).
-
-## Связи
-
-### deps add
-
-**Синтаксис:** `deps add <id> <dependency> [--if-revision <revision>]`. Нужен автор.
-
-Первый ID — зависимая задача, второй — ожидаемая. Атомарно добавляет одну связь,
-сохраняя остальные. Результат: `{ id, revision }`.
-Ошибки: `TASK_NOT_FOUND`, `DEPENDENCY_CYCLE`, `TASK_BLOCKED`, `REVISION_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli deps add 3 2 --actor orchestrator
-```
-
-Здесь задача `3` ждёт задачу `2`. См. [links](#links).
-
-### deps remove
-
-**Синтаксис:** `deps remove <id> <dependency> [--if-revision <revision>]`. Нужен автор.
-
-Удаляет одну зависимость, сохраняя остальные. Результат: `{ id, revision }`.
-Ошибки: `TASK_NOT_FOUND`, `REVISION_CONFLICT`, нарушения оставшегося графа.
-
-```bash
-npx @gromlab/relay-cli deps remove 3 2 --actor orchestrator
-```
-
-### links
-
-**Синтаксис:** `links <id>`. Собственных параметров нет.
-
-Возвращает родителя, детей, прямые зависимости, обратные зависимости и текущие блокеры.
-Ошибка: `TASK_NOT_FOUND`; для большого ответа возможен `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli links 3
-```
-
-См. [разницу связей](../concepts/TASKS.md#связи-и-готовность).
-
-### tree
-
-**Синтаксис:** `tree <id> [--depth <depth>]`.
-
-Дерево подзадач: корень на глубине `0`, `--depth` от `0` до `100`, по умолчанию `3`.
-JSON содержит плоский список с глубиной; при отсечении дерева есть `meta.truncated`.
-Ошибки: `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli tree 1 --depth 2
-```
-
-См. [overview](#overview) для сводки дерева.
-
-## Комментарии
-
-### comment add
-
-**Синтаксис:** `comment add <task-id> (--text <text> | --stdin | --file <path>) [--request-id <id>]`.
-
-Нужен автор и ровно один источник непустого тела. `--file -` читает stdin.
-Добавляет Markdown-комментарий до 64 КиБ; результат `{ id, taskId }`.
-Ревизия задачи увеличивается, кроме повтора существующей записи с тем же ключом.
-Ключ: `1–128` ASCII-символов, начинается с буквы/цифры, далее разрешены также `.`, `_`, `:`, `-`.
-Без флага CLI генерирует UUID. Ошибки: `INPUT_SOURCE_REQUIRED`, `CONFLICTING_OPTIONS`,
-`INPUT_TOO_LARGE`, `TASK_NOT_FOUND`, `IDEMPOTENCY_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli comment add 1 --text "Добавьте проверку ошибок" --actor orchestrator
-```
-
-См. [повтор записи](../guides/ORCHESTRATION.md#повтор-отчёта).
-
-### comment list
-
-**Синтаксис:** `comment list <task-id> [--author <actor>] [--limit <count>] [--cursor <cursor>] [--all]`.
-
-Страница кратких комментариев от новых к старым, с полными ID для чтения.
-Автор сравнивается точно. Лимит `1–100`, по умолчанию `output.defaultLimit`.
-`--all` требует полный ответ и несовместим с `--limit`/`--cursor`.
-Ошибки: `TASK_NOT_FOUND`, `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli comment list 1 --author orchestrator --limit 5
-```
-
-### comment get
-
-**Синтаксис:** `comment get <task-id> <comment-id>`.
-
-Полная запись с Markdown-телом. ID вида `cmt_…` берётся из ответа добавления или списка
-и должен принадлежать указанной задаче. Ошибки: `COMMENT_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli comment get 1 "<comment-id>"
-```
-
-## Отчёты
-
-### log add
-
-**Синтаксис:** `log add <task-id> (--text <text> | --stdin | --file <path>) [параметры]`.
-
-Нужен автор и ровно один источник непустого тела до 256 КиБ. `--file -` читает stdin.
-
-| Параметр            | Значение по умолчанию / поведение                             |
-| ------------------- | ------------------------------------------------------------- |
-| `--kind <kind>`     | `progress`; также `decision`, `execution`, `error`, `summary` |
-| `--title <text>`    | Пустая строка; однострочный заголовок                         |
-| `--summary <text>`  | Пустой текст; краткое содержание отчёта                       |
-| `--session-id <id>` | `null`; связь записей сессии                                  |
-| `--request-id <id>` | UUID на вызов; стабильный ключ повторяемой записи             |
-
-Результат `{ id, taskId }`. Запись увеличивает ревизию задачи; повтор с прежним ключом,
-автором и содержимым возвращает исходную запись. Правила ключа такие же, как у `comment add`.
-Ошибки: ошибки ввода, `TASK_NOT_FOUND`, `IDEMPOTENCY_CONFLICT`.
-
-```bash
-npx @gromlab/relay-cli log add 1 --kind progress --session-id wave-1 \
-  --request-id backend-step-1 --text "Контракт готов" --actor backend-agent
-```
-
-### log list
-
-**Синтаксис:** `log list <task-id> [фильтры] [--limit <count>] [--cursor <cursor>] [--all]`.
-
-| Параметр            | Значение                  |
-| ------------------- | ------------------------- |
-| `--author <actor>`  | Точный автор              |
-| `--kind <kind>`     | Один из пяти типов отчёта |
-| `--session-id <id>` | Сессия агента             |
-| `--since <date>`    | Создано не раньше даты    |
-| `--until <date>`    | Создано не позже даты     |
-
-Даты: `YYYY-MM-DD` или ISO 8601 с часовым поясом. Фильтры объединяются через И.
-Возвращает страницу кратких отчётов от новых к старым. Лимит `1–100`, по умолчанию
-`output.defaultLimit`. `--all` — полный ответ, несовместим с лимитом и курсором.
-Ошибки: `INVALID_DATE`, `INVALID_CURSOR`, `TASK_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli log list 1 --kind summary --limit 5
-```
-
-### log get
-
-**Синтаксис:** `log get <task-id> <log-id>`.
-
-Полный отчёт с заголовком, автором и Markdown. ID вида `log_…` берётся из добавления,
-списка или поиска. Ошибки: `LOG_NOT_FOUND`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli log get 1 "<log-id>" --max-bytes 524288
-```
-
-### log search
-
-**Синтаксис:** `log search <task-id> --query <text> [фильтры и страницы log list]`.
-
-Буквальный поиск в теле с учётом регистра; `--query` обязателен. Возвращает страницу
-совпавших отчётов с ID, номером первой подходящей строки, числом подходящих строк
-и фрагментом. Поддерживает все фильтры и страницы `log list`.
-Ошибки: `INVALID_ARGUMENT`, `INVALID_DATE`, `INVALID_CURSOR`, `RESPONSE_TOO_LARGE`.
-
-```bash
-npx @gromlab/relay-cli log search 1 --query "Контракт" --kind progress
-```
-
-Далее: [вывод](OUTPUT.md), [ошибки](ERRORS.md), [сценарии оркестрации](../guides/ORCHESTRATION.md).
-
-## Движок основных сущностей
-
-[Общий контракт](ENTITIES.md) описывает девять видов, единый резолвер и правила ключей.
-Везде допустим ключ или ID, включая доску, цель реализации и зависимости. По умолчанию
-человек и агент используют читаемые ключи. Полные описания передаются Markdown-строками.
-
-| Команда                             | Назначение                           |
-| ----------------------------------- | ------------------------------------ |
-| `entities types`                    | Виды, назначение, фильтры и действия |
-| `entities type <kind>`              | Поля и схемы вида                    |
-| `entities list`                     | Поиск и фильтрация кратких карточек  |
-| `entities get <ref>`                | Полное содержание сущности           |
-| `entities resolve <ref>`            | Постоянный адрес и текущий ключ      |
-| `entities keys <ref>`               | Текущий и прежние ключи              |
-| `entities key-spaces <kind>`        | Префиксы и владельцы нумерации       |
-| `entities history <ref>`            | Сохранённые события ревизий          |
-| `entities create <kind>`            | Создание с обязательными отношениями |
-| `entities update <ref>`             | Выбранные поля с --if-revision       |
-| `entities rename <ref> <key>`       | Смена ключа с сохранением ID/алиасов |
-| `entities move-task <ref>`          | Колонка и доска задачи               |
-| `entities link-task <ref> <target>` | Предметная связь задач               |
-
-Общие параметры списков: --limit 1–100, --offset, --snapshot-version. List также принимает
---kind, --q, --refs и объявленные фильтры --board, --application, --feature, --scenario,
---target, --parent, --status, --active, --sort. Текстовый ответ содержит команду продолжения.
-Создание и изменение имеют явные параметры содержания и ссылок; --json добавляет поля
-типизированного объекта. --request-id сохраняется при повторе после потери ответа.
-
-```bash
-relay-cli entities list --kind task --board BOARD-WEB
-relay-cli entities get WEB-24 --format json
-relay-cli --actor agent entities create task --board BOARD-WEB --title 'Сделать форму' --targets WEB-SI-8
-relay-cli --actor agent entities rename WEB-24 TASK-WEB-23 --if-revision 2
-relay-cli graph context TASK-WEB-23 --depth 4
-```
-
-### entities types
-
-Каталог видов с назначением и действиями, включая виды без записей. Параметры страницы общие.
-
-### entities type
-
-`entities type <kind>` описывает поля вида. В JSON доступны схемы чтения, создания и изменения.
-
-### entities list
-
-Краткие карточки по поиску и фильтрам. --refs принимает несколько ключей/ID;
---snapshot-version сохраняет согласованность продолжения. Полный Markdown читается через get.
-
-### entities get
-
-`entities get <ref>` читает полное содержание. --kind уточняет вид; ключи прямых ссылок
-показываются вместе с данными. Поиск ключа выполняется в выбранном проекте.
-
-### entities resolve
-
-`entities resolve <ref>` возвращает краткую карточку и постоянный адрес. --kind уточняет вид.
-Это вспомогательное чтение: остальные операции сами разрешают переданные ключи и ID.
-
-### entities keys
-
-`entities keys <ref>` показывает текущий и прежние ключи с пагинацией.
-
-### entities key-spaces
-
-`entities key-spaces <kind>` показывает актуальные области нумерации: для задач — доски,
-для реализаций — приложения. Новый префикс появляется в данных без изменения контракта вида.
-
-### entities history
-
-`entities history <ref>` читает сохранённые события ревизий с продолжением. Старые операции
-без журнала не восстанавливаются вымышленными событиями.
-
-### entities create
-
-`entities create <kind>` принимает явные поля: --name, --title, --summary, --description,
---body, --feature, --application, --target, --board, --slug, --prefix, --type, --document-kind,
---status, --column, --parent, --targets, --dependencies, --related. Допустимые поля зависят
-от вида; их объясняет entities type. --json дополняет объект полей. --request-id защищает повтор.
-
-### entities update
-
-`entities update <ref>` принимает те же применимые параметры содержания и обязательную
---if-revision. Отсутствующее поле сохраняется. Смена доски/колонки выполняется через move-task.
-
-### entities rename
-
-`entities rename <ref> <key> --if-revision N` меняет читаемый ключ; прежний остаётся алиасом.
-ID, отношения и данные сохраняются. --request-id возвращает первоначальную квитанцию повтора.
-
-### entities move-task
-
-`entities move-task <ref> --column COLUMN --if-revision N` меняет положение задачи.
---board задаёт доску, --before — следующую задачу; оба параметра принимают ключ/ID.
-При переносе между досками новый ключ назначает Core; --request-id обеспечивает повтор.
-
-### entities link-task
-
-`entities link-task <ref> <target> --relation TYPE --if-revision N` задаёт предметную связь
-depends-on, related или parent. --remove снимает её. --request-id защищает повтор.
-
-## Продуктовые команды
-
-Новый домен описан в [справочнике продукта](PRODUCT.md). Markdown передаётся напрямую:
-`--description <markdown>` и `--body <markdown>` принимают многострочные строки, не пути.
-Для JSON-операции используется `--json`. Параметры `--name`, `--summary`, `--type`,
-`--feature`, `--links`, `--document-kind` задают содержание. `--if-revision` защищает запись,
-`--if-version` — прочитанный граф, `--request-id` — безопасный повтор.
+## Продукт
 
 ### product state
 
-Полный снимок, реальные ссылки и вычисленная готовность.
+Полный снимок продуктовых записей и готовности; при большом объёме используйте адресное чтение.
 
 ### product overview
 
-Компактная карта без полных Markdown.
+Компактный обзор паспорта, состава и готовности продукта.
 
 ### product list
 
-Поиск записей: `--kind`, `--q`, `--offset`, `--limit`. Ответ содержит `nextOffset`.
+Каталог: `--kind`, `--q`, `--offset`, `--limit`.
 
 ### product get
 
-`product get <id>` принимает постоянный ID или ключ (FEATURE-12, SCENARIO-37, WEB-FI-12)
-и читает одну запись с ревизией. Реализации читаются независимо от всего состава.
+`product get <id>` читает запись по ID или ключу.
 
 ### product entities
 
-Компактные цели для связей: `product entities --q WEB-SI --kind implementation`.
-Параметры: `--q`, `--kind`, `--application <ключ|ID>`, `--active true|false`,
-`--offset`, `--limit` (1–100). Полные Markdown не загружаются. JSON содержит total/nextOffset,
-текст — таблицу или карточки и точную команду продолжения с фильтрами.
-
-### product implementation update
-
-`product implementation update <ключ|ID> --if-revision N --actor agent` изменяет отдельный
-вклад. Поля: `--title`, `--description` (Markdown), `--status none|partial|done`,
-`--key` (свободный ключ для исправления конфликта), `--request-id` (повтор записи).
-Используется ревизия самой реализации из product get, не ревизия состава.
-ID и ссылки сохраняются при смене ключа. Неоднозначный ключ требует обращения по ID.
-Статус done подтверждает актуальные требования; после потери ответа повторяйте тот же запрос.
+Компактные цели: `--q`, `--kind`, `--application`, `--active`, `--offset`, `--limit`.
 
 ### product context
 
-`--id` выбирает фичу/сценарий, `--application` ограничивает реализацию приложением.
+`product context [--id <id>] [--application <id>]` читает требования и связанные материалы.
 
 ### product validate
 
-Проверяет схемы и целостность продуктовых связей.
+Проверяет продуктовые инварианты.
 
 ### product lint
 
-Структурные предупреждения о Markdown и проверяемых результатах без изменения записей.
-Человеческий вывод перечисляет проблемные записи, JSON возвращает `records` и `warnings`.
-`--id` ограничивает проверку записью; `--offset`, `--limit` листают предупреждения.
-`total` сообщает общее число предупреждений, `nextOffset` — продолжение.
-Предупреждение не означает повреждение базы; отсутствие предупреждений не доказывает полноту ТЗ.
+Проверяет структуру содержания: `--id`, `--offset`, `--limit`. Предупреждение не означает
+неверного требования; отсутствие предупреждений не доказывает полноту.
 
 ### product migrate
 
-Перенос продукта в каталоги типов и дисковую схему v2 с массивами строк Markdown.
-Только локально: `relay-cli --local --config .relay/config.json product migrate`.
-Сохраните копию `product` и остановите старые клиенты. Повтор команды возобновляет перенос.
-Содержание, ID, ревизии, история и квитанции повторов сохраняются.
+Локальная миграция продуктового хранения; [гарантии](PRODUCT.md#json-хранилище).
 
 ### product save
 
-`--json` содержит операцию. `--description`/`--body` могут передать текст отдельно напрямую.
+`product save --json '<операция>' [--description <markdown>] [--body <markdown>]`.
+Предметные команды ниже предпочтительнее для обычного ввода.
 
 ### product passport create
 
-Создать паспорт: `--name`, `--summary`, `--description`.
+Создаёт паспорт: `--name`, `--summary`, `--description`.
 
 ### product passport update
 
-Изменить паспорт: `passport` как ID, полное содержание и `--if-revision`.
+`product passport update <id>` заменяет паспорт с `--if-revision`.
 
 ### product feature create
 
-Создать фичу: `--name`, `--summary`, `--description`.
+Создаёт фичу: `--name`, `--summary`, `--description`.
 
 ### product feature update
 
-Изменить фичу по ID и ревизии; изменение требований требует переподтверждения реализации.
+`product feature update <id>` заменяет содержание с `--if-revision`.
 
 ### product scenario create
 
-Создать сценарий: `--feature`, `--name`, `--description`. Ручного статуса нет.
+Создаёт сценарий: `--name`, `--feature`, `--description`.
 
 ### product scenario update
 
-Изменить сценарий по ID и ревизии, сохранив его родительскую фичу.
+`product scenario update <id>` сохраняет сценарий с `--if-revision`.
 
 ### product application create
 
-Создать приложение: название, описание, `--type frontend|backend|internal` и обязательный
-`--slug <slug>`. Slug — уникальный неизменяемый адрес приложения и доски: 1–64 символа,
-строчные латинские буквы, цифры и дефисы. `product`, `infrastructure`, `new` зарезервированы.
-Создание приложения одновременно создаёт его доску; повторяйте прежний `--request-id`
-при потере ответа. Формат хранения: [доски](BOARDS.md).
+Создаёт приложение и доску: `--name`, `--slug`, `--prefix`, `--type`, `--summary`, `--description`.
 
 ### product application update
 
-Изменить общие сведения приложения; состав реализации остаётся отдельной операцией.
-Передайте существующий `--slug`, полный набор полей и `--if-revision`; изменение slug
-отклоняется. Название можно изменить без смены адреса доски.
+`product application update <id>` изменяет содержание; slug и prefix неизменяемы.
 
 ### product document create
 
-Создать документ: `--name`, `--body`, `--document-kind`, необязательные `--summary`, `--links`.
+Создаёт материал: `--name`, `--summary`, `--body`, `--document-kind`, `--links '<JSON>'`.
 
 ### product document update
 
-Изменить документ и полный набор ссылок одной записью с проверкой ревизии.
+`product document update <id>` заменяет материал и связи с `--if-revision`.
+Предметные create/update принимают `--request-id`; состав полей уточняйте через --help.
 
 ### product scope replace
 
-`<applicationId> --json '<массив контрактов>' --if-revision N --if-version VERSION`.
-Для нового состава ревизия 0, для существующего — прочитанная ревизия.
+`product scope replace <applicationId> --json '<контракты>' --if-revision <n> --if-version <version>`.
+Снимает отсутствующие вклады, сохраняя их идентичность.
 
 ### product contract update
 
-`<contractId> --application <id> --status none|partial|done --if-revision N --if-version VERSION`.
-Необязательные `--title` и `--description` меняют собственное описание контракта.
-Отметка `done` подтверждает актуальные требования только этого контракта.
+`product contract update <id> --application <id> --status <status> --if-revision <n> --if-version <version>`.
+Допустимы `--title`, `--description`, `--request-id`.
+
+### product implementation update
+
+`product implementation update <ref> --if-revision <n>` меняет отдельную реализацию:
+`--title`, `--description`, `--status`, `--key`, `--request-id`. [Модель продукта](PRODUCT.md).
+
+## Движок сущностей
+
+Общие страницы: `--limit`, `--offset`, `--snapshot-version`.
+
+### entities types
+
+Каталог девяти видов и операций.
+
+### entities type
+
+`entities type <kind>` — схема данных, создания, изменения и фильтров.
+
+### entities list
+
+Фильтры: `--kind`, `--q`, `--refs`, `--board`, `--application`, `--feature`, `--scenario`,
+`--target`, `--parent`, `--status`, `--active`, `--sort key|title`.
+
+### entities get
+
+`entities get <ref> [--kind <kind>]` — полное содержание.
+
+### entities resolve
+
+`entities resolve <ref> [--kind <kind>]` — постоянный адрес и ключ.
+
+### entities keys
+
+`entities keys <ref>` — текущий ключ и алиасы.
+
+### entities key-spaces
+
+`entities key-spaces <kind>` — владельцы нумерации.
+
+### entities history
+
+`entities history <ref>` — сохранённые события ревизий; общая механика истории действующих сущностей.
+
+### entities create
+
+`entities create <kind>` принимает предметные поля: `--name`, `--title`, `--summary`,
+`--description`, `--body`, `--feature`, `--application`, `--target`, `--board`, `--slug`,
+`--prefix`, `--type`, `--document-kind`, `--status`, `--column`, `--parent`, `--targets`,
+`--dependencies`, `--related`, `--json`, `--request-id`. Допустимость определяет вид.
+
+### entities update
+
+`entities update <ref> --if-revision <n>` меняет переданные поля из того же набора;
+вид определяется по выбранной сущности.
+
+### entities rename
+
+`entities rename <ref> <key> --if-revision <n>` меняет ключ с сохранением ID и алиасов.
+
+### entities move-task
+
+`entities move-task <ref> --column <column> --if-revision <n>`; необязательные `--board`, `--before`.
+
+### entities link-task
+
+`entities link-task <ref> --target <ref> --relation <relation> --if-revision <n> [--remove]`.
+Все записи требуют автора и поддерживают `--request-id`. [Контракт](ENTITIES.md).

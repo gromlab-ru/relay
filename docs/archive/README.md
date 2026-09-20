@@ -8,8 +8,6 @@
 | [Прежнее видение Relay](PRODUCT-VISION.md)                        | [Концепция Relay](../product/README.md)                                                                   |
 | [Спецификация продуктового прототипа](entities/product/README.md) | [Предметная модель](../product/entities/product/README.md), [Web](../product/applications/web/PRODUCT.md) |
 | [Заметки о фичах и сценариях](FEATURE_SCENARIOS_NOTES.md)         | [Модель](../product/entities/product/MODEL.md)                                                            |
-| [Первоначальная спецификация задач](../SPEC.md)                   | [Формат](../reference/FORMAT.md), [задачи](../concepts/TASKS.md)                                          |
-| [Первоначальный план Tasks](../PLAN.md)                           | [Архитектура](../engineering/ARCHITECTURE.md), [развитие](../product/DIRECTION.md)                        |
 | [ТЗ Web](../../apps/web/UI_SPEC.md)                               | [Контракт Web](../product/applications/web/README.md)                                                     |
 
 История выполненных работ хранится в [work](../work/README.md), включая первое внедрение

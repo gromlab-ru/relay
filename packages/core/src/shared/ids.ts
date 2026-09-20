@@ -1,8 +1,4 @@
 import { createHash, randomInt } from "node:crypto";
-import { invariant } from "./errors.js";
-
-export type EntityPrefix = "cmt" | "log";
-export type TaskReference = string | number;
 
 const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 export const SHORT_ID_PATTERN = /^[A-Za-z0-9]{8}$/;
@@ -25,29 +21,5 @@ export function derivedId(source: string): string {
     id += alphabet[Number(value % 62n)];
     value /= 62n;
   }
-  return id;
-}
-
-/** Комментарии и отчёты адресуются независимо внутри документа задачи. */
-export function newId(_prefix: EntityPrefix, occupied: Iterable<string> = []): string {
-  return shortId(occupied);
-}
-
-export function assertId(id: string, prefix: EntityPrefix): void {
-  invariant(
-    SHORT_ID_PATTERN.test(id) || new RegExp(`^${prefix}_[a-f0-9]{32}$`).test(id),
-    "INVALID_ID",
-    "Ожидается ID из 8 символов или прежний полный ID",
-  );
-}
-
-export function parseTaskId(reference: TaskReference): number {
-  const source = String(reference);
-  const id = Number(source.replace(/^#/, ""));
-  invariant(
-    /^#?[1-9]\d*$/.test(source) && Number.isSafeInteger(id),
-    "INVALID_ID",
-    "ID задачи — целое число от 1. Пример: tasks-cli get 3",
-  );
   return id;
 }

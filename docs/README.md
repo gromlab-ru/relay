@@ -38,8 +38,8 @@ Relay — рабочая память проекта и сопровождени
   контракты участия и библиотека документов.
 - [Проекты](product/entities/projects/README.md): local, workspace и изоляция данных.
 - [Задачи](product/entities/tasks/README.md): поручения, иерархия, зависимости и контекст.
-- [Работа и результаты](product/LIFECYCLE.md): планы, этапы, исполнения, проверки,
-  приёмка, релизы и контрольные точки.
+- [Доски](product/entities/boards/README.md) и [связи](product/RELATIONS.md): организация
+  работы, зависимости и восстановление продуктового контекста.
 - [Сквозные процессы](product/workflows/README.md) и [направление развития](product/DIRECTION.md).
 
 ## Частые вопросы

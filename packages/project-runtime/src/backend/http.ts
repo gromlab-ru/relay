@@ -47,22 +47,8 @@ import { createApiClient } from "@relay/rest-sdk/create-api-client";
 import { operationsTree } from "@relay/rest-sdk/operations-tree";
 import { configSchema } from "@relay/core/domain/config";
 import { parse } from "@relay/core/domain/validation";
-import { toText } from "@relay/core/domain/markdown";
-import { parseTaskId } from "@relay/core/shared/ids";
 import { AppError } from "@relay/core/shared/errors";
-import {
-  taskDocumentDataSchema,
-  taskTreeDataSchema,
-} from "@relay/core/application/queries/project";
-import { overviewDataSchema } from "@relay/core/application/queries/overview";
 import type { Backend, WorkspaceInfo } from "./types.js";
-import {
-  projectStateSchema,
-  contextSchema as lifecycleContextSchema,
-  briefingSchema,
-  changesSchema,
-} from "@relay/core/application/project/queries";
-import { projectRecordSchema, saveProjectRecordSchema } from "@relay/core/domain/project";
 import {
   productStateSchema,
   productSavedSchema,
@@ -183,11 +169,6 @@ export async function createHttpBackend(url: string, project?: string): Promise<
     configPath: context.configPath,
     root: context.storagePath,
   };
-  const document = async (id: string | number) =>
-    decode(
-      taskDocumentDataSchema,
-      await call(() => api.project.getTaskDocument({ id: parseTaskId(id) })),
-    );
   return {
     kind: "http",
     entities: {
@@ -463,127 +444,6 @@ export async function createHttpBackend(url: string, project?: string): Promise<
         ),
     },
     workspace,
-    lifecycle: {
-      state: async () =>
-        decode(projectStateSchema, await call(() => api.lifecycle.getProjectState())),
-      context: async () =>
-        decode(lifecycleContextSchema, await call(() => api.lifecycle.getProjectContext())),
-      briefing: async (id) =>
-        decode(briefingSchema, await call(() => api.lifecycle.getTaskBriefing({ id }))),
-      changes: async (recordId) =>
-        decode(changesSchema, await call(() => api.lifecycle.getCheckpointChanges({ recordId }))),
-      save: async (input, actor) => {
-        const command = saveProjectRecordSchema.parse({ ...input, actor: input.actor ?? actor });
-        return decode(
-          projectRecordSchema,
-          await call(
-            () =>
-              api.lifecycle.saveProjectRecord({
-                ...defined(command),
-                fields: defined(command.fields),
-              }),
-            "write",
-          ),
-        );
-      },
-    },
-    tasks: {
-      workspace,
-      list: (filters) => call(() => api.project.getTaskList(defined(filters ?? {}))),
-      document,
-      links: (id) => call(() => api.project.getTaskLinks({ id: parseTaskId(id) })),
-      tree: async (id, depth) =>
-        decode(
-          taskTreeDataSchema,
-          await call(() => api.project.getTaskTree({ id: parseTaskId(id), depth })),
-        ),
-      groups: () => call(() => api.project.getGroups()),
-      overview: async (id, input) =>
-        decode(
-          overviewDataSchema,
-          await call(() =>
-            api.project.getOverview(
-              defined({ ...input, ...(id === undefined ? {} : { rootId: parseTaskId(id) }) }),
-            ),
-          ),
-        ),
-      markdown: async (id, field) =>
-        (await call(() => api.project.getTaskMarkdown({ id: parseTaskId(id), field }))).lines,
-      create: (input, actor) => call(() => api.tasks.createTask({ ...input, actor }), "write"),
-      update: (id, patch, options) =>
-        call(() => api.tasks.updateTask({ id: parseTaskId(id) }, { patch, ...options }), "write"),
-      claim: (id, options, status) =>
-        call(
-          () =>
-            api.tasks.claimTask(
-              { id: parseTaskId(id) },
-              { ...options, ...(status === undefined ? {} : { status }) },
-            ),
-          "write",
-        ),
-      release: (id, options, force) =>
-        call(() => api.tasks.releaseTask({ id: parseTaskId(id) }, { ...options, force }), "write"),
-      dependency: (id, dependency, add, options) =>
-        call(
-          () =>
-            api.project.changeDependency(
-              { id: parseTaskId(id) },
-              {
-                ...options,
-                dependencyId: parseTaskId(dependency),
-                action: add ? "add" : "remove",
-              },
-            ),
-          "write",
-        ),
-    },
-    comments: {
-      add: (id, text, actor, requestId) =>
-        call(
-          () =>
-            api.comments.addComment(
-              { id: parseTaskId(id) },
-              {
-                text,
-                actor,
-                ...(requestId === undefined ? {} : { requestId }),
-              },
-            ),
-          "write",
-          requestId,
-        ),
-      get: (id, commentId) =>
-        call(() => api.comments.getComment({ id: parseTaskId(id), commentId })),
-      records: async (id) => {
-        const { task } = await document(id);
-        return { taskId: task.id, comments: Object.values(task.comments) };
-      },
-    },
-    logs: {
-      add: (id, input, actor, requestId) =>
-        call(
-          () =>
-            api.logs.addLog(
-              { id: parseTaskId(id) },
-              {
-                actor,
-                text: toText(input.body),
-                ...(input.kind === undefined ? {} : { kind: input.kind }),
-                ...(input.title === undefined ? {} : { title: input.title }),
-                ...(input.summary === undefined ? {} : { summary: toText(input.summary) }),
-                ...(input.sessionId == null ? {} : { sessionId: input.sessionId }),
-                ...(requestId === undefined ? {} : { requestId }),
-              },
-            ),
-          "write",
-          requestId,
-        ),
-      get: (id, logId) => call(() => api.logs.getLog({ id: parseTaskId(id), logId })),
-      records: async (id) => {
-        const { task } = await document(id);
-        return { taskId: task.id, logs: Object.values(task.logs) };
-      },
-    },
     validate: () => call(() => api.project.validateProject()),
   };
 }

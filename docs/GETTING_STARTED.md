@@ -8,11 +8,11 @@
 
 ```bash
 npx @gromlab/relay-cli init
-npx @gromlab/relay-cli create "Первая задача" --actor human
-npx @gromlab/relay-cli list
+npx @gromlab/relay-cli task create --board product --title "Первая задача" --actor human
+npx @gromlab/relay-cli task list
 ```
 
-Создаются `.relay/config.json`, UUID проекта и база `.relay/tasks`.
+Создаются `.relay/config.json`, постоянный ID проекта и системные доски в `.relay/boards`.
 Для интерфейса и общего API запустите отдельный процесс:
 
 ```bash
@@ -23,7 +23,7 @@ Web доступен на `http://127.0.0.1:4700`, Swagger — на `/api/docs`.
 Без URL CLI использует прямой Core; для HTTP:
 
 ```bash
-npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 get 1
+npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 task get PRODUCT-1
 ```
 
 Постоянное подключение задаётся `server.url` в `.relay/config.json`.
@@ -46,8 +46,8 @@ npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 get 1
 
 ```bash
 npx @gromlab/relay-server --open
-npx @gromlab/relay-cli a list
-npx @gromlab/relay-cli b create "Задача Б" --actor human
+npx @gromlab/relay-cli a task list
+npx @gromlab/relay-cli b task create --board product --title "Задача Б" --actor human
 ```
 
 Один сервер работает с обеими базами, во фронтенде доступен переключатель проектов.

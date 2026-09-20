@@ -1,7 +1,7 @@
 {
   "name": "@gromlab/relay-mcp",
   "version": "0.6.0",
-  "description": "Relay MCP: проектный контекст, планы, поручения, исполнения и проверки для AI-агентов",
+  "description": "Relay MCP: продукт, задачи досок, сущности и контекст для AI-агентов",
   "type": "module",
   "imports": {
     "#manifest": "./package.json"

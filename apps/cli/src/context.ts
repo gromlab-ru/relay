@@ -1,17 +1,15 @@
 import type { Command } from "commander";
 import type { Readable, Writable } from "node:stream";
-import type { MutationOptions } from "@relay/core/application/tasks/service";
 import type { Result, OutputFormat } from "./queries/result.js";
 import { actorSchema, parse } from "@relay/core/domain/validation";
 import { invariant } from "@relay/core/shared/errors";
 import { connectBackend } from "./backend/connect.js";
-import type { Backend, TasksBackend, WorkspaceInfo } from "./backend/types.js";
+import type { Backend, WorkspaceInfo } from "./backend/types.js";
 import { InputReader } from "./input.js";
 import { printResult } from "./output.js";
 import type { OutputOptions } from "./output.js";
 import { terminalOptions } from "./terminal.js";
 import type { ColorMode } from "./terminal.js";
-import { palette } from "./presentation/theme.js";
 
 export interface GlobalOptions {
   config?: string;
@@ -33,7 +31,6 @@ export interface Runtime {
 }
 export interface CommandContext {
   workspace: WorkspaceInfo;
-  tasks: TasksBackend;
   backend: Backend;
   runtime: Runtime;
   output: OutputOptions;
@@ -76,7 +73,6 @@ export function action(
     runtime.output = output;
     const context: CommandContext = {
       workspace,
-      tasks: backend.tasks,
       backend,
       globals,
       output,
@@ -92,20 +88,4 @@ export function author(context: CommandContext): string {
   const value = context.globals.actor ?? context.runtime.env.RELAY_ACTOR;
   invariant(value, "ACTOR_REQUIRED", "Для записи укажите --actor или RELAY_ACTOR");
   return parse(actorSchema, value, "автор");
-}
-
-export function mutation(
-  context: CommandContext,
-  { ifRevision }: { ifRevision?: number },
-): MutationOptions {
-  return { actor: author(context), ...(ifRevision !== undefined ? { ifRevision } : {}) };
-}
-
-/** Ответ записи мал и не зависит от размера описания уже сохранённой карточки. */
-export function changed(task: { id: number; revision: number }): Result {
-  return {
-    data: { id: task.id, revision: task.revision },
-    text: (options) =>
-      `${palette(options).green("✓")} Сохранена задача #${task.id} ${palette(options).dim(`· версия ${task.revision}`)}`,
-  };
 }

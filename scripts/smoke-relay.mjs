@@ -81,8 +81,25 @@ try {
     await mkdir(join(workspace, name));
     await invoke(join(workspace, name), ["init"]);
   }
-  await invoke(join(workspace, "a"), ["create", "Локальная задача А", "--actor", "smoke"]);
-  assert.equal(JSON.parse(await readFile(join(workspace, "a/.relay/tasks/1.json"), "utf8")).id, 1);
+  const localTask = await invoke(join(workspace, "a"), [
+    "task",
+    "create",
+    "--board",
+    "product",
+    "--title",
+    "Локальная задача А",
+    "--actor",
+    "smoke",
+  ]);
+  assert.equal(
+    JSON.parse(
+      await readFile(
+        join(workspace, "a/.relay/boards/product/tasks", `${localTask.id}.json`),
+        "utf8",
+      ),
+    ).id,
+    localTask.id,
+  );
   const local = await startServerProcess(
     [installations.server.binary, "--port", "0", "--format", "json"],
     join(workspace, "a"),
@@ -90,7 +107,7 @@ try {
   processes.push(local);
   await checkServerSurface(local.url, { web: true });
   assert.equal(
-    (await invoke(remote, ["--server-url", local.url, "get", "1"])).title,
+    (await invoke(remote, ["--server-url", local.url, "task", "get", localTask.id])).title,
     "Локальная задача А",
   );
   assert.deepEqual(await readdir(remote), []);
@@ -109,10 +126,20 @@ try {
     JSON.stringify({ ...configuration, server: { port: 0, url: shared.url } }),
   );
   for (const name of ["a", "b"]) await invoke(workspace, ["projects", "add", name, name]);
-  await invoke(workspace, ["b", "create", "Задача Б через workspace", "--actor", "smoke"]);
+  const remoteTask = await invoke(workspace, [
+    "b",
+    "task",
+    "create",
+    "--board",
+    "product",
+    "--title",
+    "Задача Б через workspace",
+    "--actor",
+    "smoke",
+  ]);
   const [a, b] = await Promise.all([
-    invoke(workspace, ["a", "get", "1"]),
-    invoke(workspace, ["b", "get", "1"]),
+    invoke(workspace, ["a", "task", "get", localTask.id]),
+    invoke(workspace, ["b", "task", "get", remoteTask.id]),
   ]);
   assert.equal(a.title, "Локальная задача А");
   assert.equal(b.title, "Задача Б через workspace");
@@ -135,14 +162,23 @@ try {
   );
   client = new Client({ name: "relay-package-check", version: "1.0.0" });
   await client.connect(new StreamableHTTPClientTransport(new URL(mcp.url)));
-  const task = await client.callTool({ name: "task_get", arguments: { project: "b", id: 1 } });
+  const task = await client.callTool({
+    name: "board_task_get",
+    arguments: { project: "b", reference: remoteTask.id },
+  });
   assert.equal(task.structuredContent.data.title, b.title);
-  const missing = await client.callTool({ name: "task_get", arguments: { id: 1 } });
+  const missing = await client.callTool({
+    name: "board_task_get",
+    arguments: { reference: localTask.id },
+  });
   assert.equal(missing.structuredContent.error.code, "PROJECT_REQUIRED");
   await shared.close();
-  const stopped = await client.callTool({ name: "task_get", arguments: { project: "a", id: 1 } });
+  const stopped = await client.callTool({
+    name: "board_task_get",
+    arguments: { project: "a", reference: localTask.id },
+  });
   assert.equal(stopped.structuredContent.error.code, "SERVER_UNAVAILABLE");
-  assert.equal((await invoke(join(workspace, "a"), ["get", "1"])).title, a.title);
+  assert.equal((await invoke(join(workspace, "a"), ["task", "get", localTask.id])).title, a.title);
   console.log(
     "Проверены три независимые npm-установки: local, workspace A/B, CLI, Web и MCP, остановка общего сервера.",
   );

@@ -1,7 +1,6 @@
 import type { PipeTransform } from "@nestjs/common";
 import type { z } from "zod";
 import { parse } from "@relay/core/domain/validation";
-import { parseTaskId } from "@relay/core/shared/ids";
 
 /** HTTP-преобразования выполняются до проверки общих схем, без truthy-coercion. */
 export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
@@ -30,11 +29,5 @@ export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
       );
     }
     return parse(this.schema, value, this.query ? "параметры запроса" : "тело запроса");
-  }
-}
-
-export class TaskIdPipe implements PipeTransform<string, number> {
-  transform(value: string): number {
-    return parseTaskId(value);
   }
 }

@@ -9,17 +9,17 @@
 
 ```bash
 npx @gromlab/relay-cli init
-npx @gromlab/relay-cli create "Первая задача" --actor human
-npx @gromlab/relay-cli list
+npx @gromlab/relay-cli task create --board product --title "Первая задача" --actor human
+npx @gromlab/relay-cli task list
 ```
 
 `.relay/config.json` выбирает local: прямой Core либо HTTP по `server.url`.
 `relay.workspace.json` выбирает workspace: общий сервер и явный проект.
 
 ```bash
-npx @gromlab/relay-cli a list
-npx @gromlab/relay-cli --project b get 1
-npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 --project a get 1
+npx @gromlab/relay-cli a task list
+npx @gromlab/relay-cli --project b task get PRODUCT-1
+npx @gromlab/relay-cli --server-url http://127.0.0.1:4700 --project a task get PRODUCT-1
 ```
 
 `--config` переопределяет `RELAY_CONFIG` и поиск вверх. `--server-url` переопределяет

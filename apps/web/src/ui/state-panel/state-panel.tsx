@@ -11,14 +11,22 @@ import styles from "./styles/state-panel.module.css";
  *  - загрузки проекта, пустой доски и ошибок чтения
  */
 export const StatePanel = (props: StatePanelProps) => {
-  const { title, description, action, isLoading = false, className, ...rootAttrs } = props;
+  const {
+    title,
+    titleAs: Heading = "h2",
+    description,
+    action,
+    isLoading = false,
+    className,
+    ...rootAttrs
+  } = props;
   const StatusIcon = isLoading ? Loader : Layers3;
   return (
     <div {...rootAttrs} className={clsx(styles.root, className)} role="status">
       <div className={styles.icon}>
         <StatusIcon size={24} />
       </div>
-      <h2 className={styles.title}>{title}</h2>
+      <Heading className={styles.title}>{title}</Heading>
       <p className={styles.description}>{description}</p>
       {action}
     </div>

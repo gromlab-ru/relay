@@ -45,7 +45,7 @@ type WriteOptions = {
   parentId?: string;
 };
 
-/** Предметные команды новых досок; прежние числовые задачи сохраняют старые команды. */
+/** Предметные команды досок и задач канбана. */
 export function registerBoardTasks(program: Command, runtime: Runtime): void {
   registerCommand<BoardsQuery>(program, runtime, {
     name: "boards",

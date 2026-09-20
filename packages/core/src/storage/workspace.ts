@@ -22,7 +22,6 @@ const lockContext = new AsyncLocalStorage<{
 }>();
 
 export const CONFIG_NAME = ".relay/config.json";
-export const MIGRATION_STATE = "migration-v2.json";
 
 export class Workspace {
   readonly runtime: string;
@@ -36,33 +35,13 @@ export class Workspace {
   path(...parts: string[]): string {
     return join(this.root, ...parts);
   }
-  locked<T>(
-    operation: (assertOwned: () => void) => Promise<T>,
-    mode: "normal" | "migration" = "normal",
-  ): Promise<T> {
+  locked<T>(operation: (assertOwned: () => void) => Promise<T>): Promise<T> {
     const context = lockContext.getStore();
     if (context?.active && context.root === this.root) {
       context.assertOwned();
       return operation(context.assertOwned);
     }
     return withStorageLock(this.root, async (assertOwned) => {
-      invariant(
-        mode === "migration" ||
-          (!(await exists(join(this.runtime, MIGRATION_STATE))) &&
-            !(await exists(this.path(".runtime", MIGRATION_STATE)))),
-        "MIGRATION_IN_PROGRESS",
-        "Миграция прервана. Продолжите: relay-cli migrate --actor <автор>",
-        4,
-      );
-      invariant(
-        mode === "migration" ||
-          (!(await exists(this.path("tasks"))) &&
-            !(await exists(this.path(".runtime"))) &&
-            !(await exists(this.path(".gitignore")))),
-        "MIGRATION_REQUIRED",
-        "Обновите структуру хранилища: npx @gromlab/relay-cli migrate --actor <автор>",
-        4,
-      );
       await new ProductTransaction(this).recover(assertOwned);
       await new GraphTransaction(this).recover(assertOwned);
       await recoverGraphMigration(this, assertOwned);
@@ -111,9 +90,9 @@ export async function openWorkspace(cwd: string, explicit?: string): Promise<Wor
   const root = (await exists(storage))
     ? await realpath(storage)
     : join(await realpath(dirname(storage)), basename(storage));
-  const runtime = await prepareRuntime(root);
-  // Git не хранит пустые каталоги. Во время миграции место для нового каталога оставляем свободным.
-  if (!(await exists(root)) && !(await exists(join(runtime, MIGRATION_STATE))))
+  await prepareRuntime(root);
+  // Git не хранит пустые каталоги.
+  if (!(await exists(root)))
     // Несколько запросов и наблюдатель могут впервые открыть один каталог одновременно.
     await mkdir(root, { recursive: true });
   return new Workspace(configPath, root, config);

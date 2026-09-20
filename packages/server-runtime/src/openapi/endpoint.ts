@@ -1,5 +1,5 @@
 import { applyDecorators } from "@nestjs/common";
-import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse } from "@nestjs/swagger";
+import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from "@nestjs/swagger";
 import type { SchemaObject } from "@nestjs/swagger";
 import { z } from "zod";
 import { schemas } from "./schemas.js";
@@ -21,8 +21,6 @@ export function ApiEndpoint(options: {
   body?: SchemaName;
   query?: SchemaName;
   paged?: boolean;
-  taskId?: boolean;
-  record?: "commentId" | "logId";
 }) {
   const decorators = [
     ApiOperation({
@@ -49,27 +47,6 @@ export function ApiEndpoint(options: {
     ),
   ];
   if (options.body) decorators.push(ApiBody({ required: true, schema: ref(options.body) }));
-  if (options.taskId)
-    decorators.push(
-      ApiParam({
-        name: "id",
-        description: "Положительный безопасный целочисленный ID задачи",
-        schema: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER },
-      }),
-    );
-  if (options.record)
-    decorators.push(
-      ApiParam({
-        name: options.record,
-        schema: {
-          type: "string",
-          pattern:
-            options.record === "commentId"
-              ? "^(?:[A-Za-z0-9]{8}|cmt_[a-f0-9]{32})$"
-              : "^(?:[A-Za-z0-9]{8}|log_[a-f0-9]{32})$",
-        },
-      }),
-    );
   if (options.query) {
     const query = jsonSchema(schemas[options.query], "input");
     for (const [name, schema] of Object.entries(query.properties ?? {}))

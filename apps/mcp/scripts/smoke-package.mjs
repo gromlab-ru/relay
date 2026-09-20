@@ -78,11 +78,29 @@ export async function smokePackage(archive, manifest) {
       assert.equal(result.isError, undefined, JSON.stringify(result));
       return result.structuredContent;
     };
-    await call("task_create", { project: "a", title: "Архив", actor: "orchestrator" });
+    await call("board_task_create", {
+      project: "a",
+      board: "product",
+      requestId: "first",
+      title: "Архив",
+      actor: "orchestrator",
+    });
     await call("project_register", { project: "b", path: "b" });
-    await call("task_create", { project: "b", title: "Второй проект", actor: "agent" });
-    assert.equal((await call("task_get", { project: "a", id: 1 })).data.title, "Архив");
-    assert.equal((await call("task_get", { project: "b", id: 1 })).data.createdBy, "agent");
+    await call("board_task_create", {
+      project: "b",
+      board: "product",
+      requestId: "first",
+      title: "Второй проект",
+      actor: "agent",
+    });
+    assert.equal(
+      (await call("board_task_get", { project: "a", reference: "PRODUCT-1" })).data.title,
+      "Архив",
+    );
+    assert.equal(
+      (await call("board_task_get", { project: "b", reference: "PRODUCT-1" })).data.createdBy,
+      "agent",
+    );
     assert.equal(
       JSON.parse(await readFile(join(directory, "tasks.orchestrator.json"), "utf8")).projects.b
         .path,

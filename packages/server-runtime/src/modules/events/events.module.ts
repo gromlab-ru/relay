@@ -1,8 +1,6 @@
 import { Controller, Inject, Module, Sse } from "@nestjs/common";
-import { APP_INTERCEPTOR } from "@nestjs/core";
 import { ApiExtension, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { EventsService } from "./events.service.js";
-import { MutationEventsInterceptor } from "./mutation-events.interceptor.js";
 import { ref } from "../../openapi/endpoint.js";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 
@@ -28,7 +26,7 @@ class EventsController {
     content: {
       "text/event-stream": {
         schema: { type: "string" },
-        example: 'event: changed\ndata: {"source":"storage","taskIds":[12]}\n\n',
+        example: 'event: changed\ndata: {"source":"storage"}\n\n',
       },
     },
   })
@@ -44,7 +42,7 @@ class EventsController {
 
 @Module({
   controllers: [EventsController],
-  providers: [EventsService, { provide: APP_INTERCEPTOR, useClass: MutationEventsInterceptor }],
+  providers: [EventsService],
   exports: [EventsService],
 })
 export class EventsModule {}

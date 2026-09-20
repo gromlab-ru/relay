@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { initialize } from "@relay/core/storage/workspace";
-import { TaskService } from "@relay/core/application/tasks/service";
+import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import {
   initializeRegistry,
   registerProject,
@@ -28,14 +28,23 @@ test("подключённый клиент закрепляет базу при
   });
   const backend = await createHttpBackend(server.url, "current");
   await registerProject(registry.configPath, "current", { path: "b" }, true);
-  await backend.tasks.create({ title: "Именно А" }, "test");
-  assert.equal((await new TaskService(a).repository.resolve(1)).title, "Именно А");
-  assert.equal((await new TaskService(b).repository.snapshot()).size, 0);
+  const created = await backend.boardTasks.create(
+    { board: "product", title: "Именно А", requestId: "original" },
+    "test",
+  );
+  assert.equal((await new BoardTasksService(a).get(created.id)).title, "Именно А");
+  assert.equal((await new BoardTasksService(b).list()).total, 0);
   await unregisterProject(registry.configPath, "original");
-  await assert.rejects(backend.tasks.create({ title: "Не переносить в Б" }, "test"), {
-    code: "PROJECT_NOT_FOUND",
-  });
-  assert.equal((await new TaskService(b).repository.snapshot()).size, 0);
+  await assert.rejects(
+    backend.boardTasks.create(
+      { board: "product", title: "Не переносить в Б", requestId: "rebound" },
+      "test",
+    ),
+    {
+      code: "PROJECT_NOT_FOUND",
+    },
+  );
+  assert.equal((await new BoardTasksService(b).list()).total, 0);
 });
 
 test("разные базы с одинаковым projectId отклоняются при регистрации и ручной правке workspace", async (t) => {
@@ -61,5 +70,5 @@ test("разные базы с одинаковым projectId отклоняют
   );
   const context = (await api.server.getServerContext()).data;
   assert(context.projects.every((project) => !project.available));
-  assert.equal((await server.app.inject("/api/v1/projects/b/tasks")).statusCode, 409);
+  assert.equal((await server.app.inject("/api/v1/projects/b/board-tasks")).statusCode, 409);
 });

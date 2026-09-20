@@ -4,38 +4,22 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
-import { addCommentForProject } from "./operations/add-comment-for-project.js";
-import { addComment } from "./operations/add-comment.js";
-import { addLogForProject } from "./operations/add-log-for-project.js";
-import { addLog } from "./operations/add-log.js";
-import { changeDependencyForProject } from "./operations/change-dependency-for-project.js";
-import { changeDependency } from "./operations/change-dependency.js";
-import { claimTaskForProject } from "./operations/claim-task-for-project.js";
-import { claimTask } from "./operations/claim-task.js";
 import { createBoardTaskForProject } from "./operations/create-board-task-for-project.js";
 import { createBoardTask } from "./operations/create-board-task.js";
 import { createEntityForProject } from "./operations/create-entity-for-project.js";
 import { createEntity } from "./operations/create-entity.js";
-import { createTaskForProject } from "./operations/create-task-for-project.js";
-import { createTask } from "./operations/create-task.js";
 import { describeEntityTypeForProject } from "./operations/describe-entity-type-for-project.js";
 import { describeEntityType } from "./operations/describe-entity-type.js";
 import { getBoardBySlugForProject } from "./operations/get-board-by-slug-for-project.js";
 import { getBoardBySlug } from "./operations/get-board-by-slug.js";
-import { getBoardForProject } from "./operations/get-board-for-project.js";
 import { getBoardTaskForProject } from "./operations/get-board-task-for-project.js";
 import { getBoardTaskLinksForProject } from "./operations/get-board-task-links-for-project.js";
 import { getBoardTaskLinks } from "./operations/get-board-task-links.js";
 import { getBoardTask } from "./operations/get-board-task.js";
 import { getBoardTasksForProject } from "./operations/get-board-tasks-for-project.js";
 import { getBoardTasks } from "./operations/get-board-tasks.js";
-import { getBoard } from "./operations/get-board.js";
 import { getBoardsForProject } from "./operations/get-boards-for-project.js";
 import { getBoards } from "./operations/get-boards.js";
-import { getCheckpointChangesForProject } from "./operations/get-checkpoint-changes-for-project.js";
-import { getCheckpointChanges } from "./operations/get-checkpoint-changes.js";
-import { getCommentForProject } from "./operations/get-comment-for-project.js";
-import { getComment } from "./operations/get-comment.js";
 import { getContextForProject } from "./operations/get-context-for-project.js";
 import { getContext } from "./operations/get-context.js";
 import { getEntityForProject } from "./operations/get-entity-for-project.js";
@@ -50,13 +34,7 @@ import { getGraphForProject } from "./operations/get-graph-for-project.js";
 import { getGraphHistoryForProject } from "./operations/get-graph-history-for-project.js";
 import { getGraphHistory } from "./operations/get-graph-history.js";
 import { getGraph } from "./operations/get-graph.js";
-import { getGroupsForProject } from "./operations/get-groups-for-project.js";
-import { getGroups } from "./operations/get-groups.js";
 import { getHealth } from "./operations/get-health.js";
-import { getLogForProject } from "./operations/get-log-for-project.js";
-import { getLog } from "./operations/get-log.js";
-import { getOverviewForProject } from "./operations/get-overview-for-project.js";
-import { getOverview } from "./operations/get-overview.js";
 import { getProductContextForProject } from "./operations/get-product-context-for-project.js";
 import { getProductContext } from "./operations/get-product-context.js";
 import { getProductEntitiesForProject } from "./operations/get-product-entities-for-project.js";
@@ -69,61 +47,31 @@ import { getProductRecordsForProject } from "./operations/get-product-records-fo
 import { getProductRecords } from "./operations/get-product-records.js";
 import { getProductStateForProject } from "./operations/get-product-state-for-project.js";
 import { getProductState } from "./operations/get-product-state.js";
-import { getProjectContextForProject } from "./operations/get-project-context-for-project.js";
-import { getProjectContext } from "./operations/get-project-context.js";
 import { getProjectSettingsForProject } from "./operations/get-project-settings-for-project.js";
 import { getProjectSettings } from "./operations/get-project-settings.js";
-import { getProjectStateForProject } from "./operations/get-project-state-for-project.js";
-import { getProjectState } from "./operations/get-project-state.js";
 import { getProjects } from "./operations/get-projects.js";
 import { getServerContext } from "./operations/get-server-context.js";
-import { getTaskBriefingForProject } from "./operations/get-task-briefing-for-project.js";
-import { getTaskBriefing } from "./operations/get-task-briefing.js";
-import { getTaskDocumentForProject } from "./operations/get-task-document-for-project.js";
-import { getTaskDocument } from "./operations/get-task-document.js";
-import { getTaskForProject } from "./operations/get-task-for-project.js";
-import { getTaskLinksForProject } from "./operations/get-task-links-for-project.js";
-import { getTaskLinks } from "./operations/get-task-links.js";
-import { getTaskListForProject } from "./operations/get-task-list-for-project.js";
-import { getTaskList } from "./operations/get-task-list.js";
-import { getTaskMarkdownForProject } from "./operations/get-task-markdown-for-project.js";
-import { getTaskMarkdown } from "./operations/get-task-markdown.js";
-import { getTaskTreeForProject } from "./operations/get-task-tree-for-project.js";
-import { getTaskTree } from "./operations/get-task-tree.js";
-import { getTask } from "./operations/get-task.js";
 import { linkBoardTaskForProject } from "./operations/link-board-task-for-project.js";
 import { linkBoardTask } from "./operations/link-board-task.js";
 import { linkEntityTaskForProject } from "./operations/link-entity-task-for-project.js";
 import { linkEntityTask } from "./operations/link-entity-task.js";
-import { listCommentsForProject } from "./operations/list-comments-for-project.js";
-import { listComments } from "./operations/list-comments.js";
 import { listEntitiesForProject } from "./operations/list-entities-for-project.js";
 import { listEntities } from "./operations/list-entities.js";
 import { listEntityTypesForProject } from "./operations/list-entity-types-for-project.js";
 import { listEntityTypes } from "./operations/list-entity-types.js";
-import { listLogsForProject } from "./operations/list-logs-for-project.js";
-import { listLogs } from "./operations/list-logs.js";
-import { listTasksForProject } from "./operations/list-tasks-for-project.js";
-import { listTasks } from "./operations/list-tasks.js";
 import { moveBoardTaskForProject } from "./operations/move-board-task-for-project.js";
 import { moveBoardTask } from "./operations/move-board-task.js";
 import { moveEntityTaskForProject } from "./operations/move-entity-task-for-project.js";
 import { moveEntityTask } from "./operations/move-entity-task.js";
-import { moveTaskForProject } from "./operations/move-task-for-project.js";
-import { moveTask } from "./operations/move-task.js";
 import { mutateGraphForProject } from "./operations/mutate-graph-for-project.js";
 import { mutateGraph } from "./operations/mutate-graph.js";
 import { mutateProductForProject } from "./operations/mutate-product-for-project.js";
 import { mutateProduct } from "./operations/mutate-product.js";
 import { registerProject } from "./operations/register-project.js";
-import { releaseTaskForProject } from "./operations/release-task-for-project.js";
-import { releaseTask } from "./operations/release-task.js";
 import { renameEntityKeyForProject } from "./operations/rename-entity-key-for-project.js";
 import { renameEntityKey } from "./operations/rename-entity-key.js";
 import { resolveEntityForProject } from "./operations/resolve-entity-for-project.js";
 import { resolveEntity } from "./operations/resolve-entity.js";
-import { saveProjectRecordForProject } from "./operations/save-project-record-for-project.js";
-import { saveProjectRecord } from "./operations/save-project-record.js";
 import { saveProjectSettingsForProject } from "./operations/save-project-settings-for-project.js";
 import { saveProjectSettings } from "./operations/save-project-settings.js";
 import { unregisterProject } from "./operations/unregister-project.js";
@@ -133,8 +81,6 @@ import { updateEntityForProject } from "./operations/update-entity-for-project.j
 import { updateEntity } from "./operations/update-entity.js";
 import { updateProductImplementationForProject } from "./operations/update-product-implementation-for-project.js";
 import { updateProductImplementation } from "./operations/update-product-implementation.js";
-import { updateTaskForProject } from "./operations/update-task-for-project.js";
-import { updateTask } from "./operations/update-task.js";
 import { validateProjectForProject } from "./operations/validate-project-for-project.js";
 import { validateProject } from "./operations/validate-project.js";
 import { watchEventsForProject } from "./operations/watch-events-for-project.js";
@@ -160,57 +106,9 @@ export const operationsTree = {
     getProjectSettingsForProject: getProjectSettingsForProject,
     saveProjectSettingsForProject: saveProjectSettingsForProject,
   },
-  board: {
-    getBoard: getBoard,
-    getBoardForProject: getBoardForProject,
-  },
-  tasks: {
-    listTasks: listTasks,
-    createTask: createTask,
-    getTask: getTask,
-    updateTask: updateTask,
-    moveTask: moveTask,
-    claimTask: claimTask,
-    releaseTask: releaseTask,
-    listTasksForProject: listTasksForProject,
-    createTaskForProject: createTaskForProject,
-    getTaskForProject: getTaskForProject,
-    updateTaskForProject: updateTaskForProject,
-    moveTaskForProject: moveTaskForProject,
-    claimTaskForProject: claimTaskForProject,
-    releaseTaskForProject: releaseTaskForProject,
-  },
   project: {
-    getTaskList: getTaskList,
-    getTaskDocument: getTaskDocument,
-    getTaskMarkdown: getTaskMarkdown,
-    getTaskLinks: getTaskLinks,
-    getTaskTree: getTaskTree,
-    getGroups: getGroups,
-    getOverview: getOverview,
     validateProject: validateProject,
-    changeDependency: changeDependency,
-    getTaskListForProject: getTaskListForProject,
-    getTaskDocumentForProject: getTaskDocumentForProject,
-    getTaskMarkdownForProject: getTaskMarkdownForProject,
-    getTaskLinksForProject: getTaskLinksForProject,
-    getTaskTreeForProject: getTaskTreeForProject,
-    getGroupsForProject: getGroupsForProject,
-    getOverviewForProject: getOverviewForProject,
     validateProjectForProject: validateProjectForProject,
-    changeDependencyForProject: changeDependencyForProject,
-  },
-  lifecycle: {
-    getProjectState: getProjectState,
-    getProjectContext: getProjectContext,
-    getTaskBriefing: getTaskBriefing,
-    getCheckpointChanges: getCheckpointChanges,
-    saveProjectRecord: saveProjectRecord,
-    getProjectStateForProject: getProjectStateForProject,
-    getProjectContextForProject: getProjectContextForProject,
-    getTaskBriefingForProject: getTaskBriefingForProject,
-    getCheckpointChangesForProject: getCheckpointChangesForProject,
-    saveProjectRecordForProject: saveProjectRecordForProject,
   },
   product: {
     getProductEntities: getProductEntities,
@@ -288,22 +186,6 @@ export const operationsTree = {
     renameEntityKeyForProject: renameEntityKeyForProject,
     moveEntityTaskForProject: moveEntityTaskForProject,
     linkEntityTaskForProject: linkEntityTaskForProject,
-  },
-  comments: {
-    listComments: listComments,
-    addComment: addComment,
-    getComment: getComment,
-    listCommentsForProject: listCommentsForProject,
-    addCommentForProject: addCommentForProject,
-    getCommentForProject: getCommentForProject,
-  },
-  logs: {
-    listLogs: listLogs,
-    addLog: addLog,
-    getLog: getLog,
-    listLogsForProject: listLogsForProject,
-    addLogForProject: addLogForProject,
-    getLogForProject: getLogForProject,
   },
   events: {
     watchEvents: watchEvents,

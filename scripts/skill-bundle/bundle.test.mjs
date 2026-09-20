@@ -102,6 +102,8 @@ test("сборщик отклоняет выход за каталог, конф
   await writeFile(join(app.root, "skills/relay-cli/SKILL.md"), ENTRY);
   await assert.rejects(checkSkillSet(app.root, ["relay"]), /лишний/);
   await rm(join(app.root, "skills/relay-cli"), { recursive: true });
+  // На файловой системе без учёта регистра простая запись сохранила бы имя skill.md.
+  await rm(join(app.source, "skill.md"));
   await writeFile(join(app.source, "SKILL.md"), ENTRY);
   await assert.rejects(checkSkillSet(app.root, ["relay"]), /только в skills/);
 });

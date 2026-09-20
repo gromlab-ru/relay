@@ -2,19 +2,13 @@ import type { Command } from "commander";
 import { AppError, invariant } from "@relay/core/shared/errors";
 import { selectProject } from "@relay/project-runtime/config";
 import { cliConfiguration } from "../configuration.js";
-import { listGroups } from "../queries/groups.js";
-import { migrateTasks } from "@relay/core/application/tasks/migrate";
 import { initialize } from "@relay/core/storage/workspace";
-import { author, outputOptions } from "../context.js";
+import { outputOptions } from "../context.js";
 import type { GlobalOptions, Runtime } from "../context.js";
 import { printResult } from "../output.js";
-import { pageFrom, pageOptions } from "../options.js";
-import type { PagingOptions } from "../options.js";
 import { createCommand, commandGroup, registerCommand } from "../command.js";
 import { configText, initializedText } from "../presentation/project.js";
 import { palette } from "../presentation/theme.js";
-import { safeText } from "../presentation/safe.js";
-import { wrap } from "../presentation/layout.js";
 
 export function registerProject(program: Command, runtime: Runtime): void {
   // init — единственная операция, которой ещё не нужен открытый Workspace.
@@ -77,9 +71,9 @@ export function registerProject(program: Command, runtime: Runtime): void {
 
   registerCommand(program, runtime, {
     name: "validate",
-    description: "Проверить документы и связи задач",
+    description: "Проверить продукт, доски, задачи и связи",
     details:
-      "Проверяет схемы, ID и имена файлов, принадлежность комментариев и отчётов, статусы,\nссылки и циклы. Выполняйте после ручного редактирования JSON и Git-слияния.\nОшибка целостности возвращает код завершения 5 и список нарушений.",
+      "Проверяет схемы и каталог действующих сущностей, связи задач и граф проекта.\nВыполняйте после ручного редактирования JSON и Git-слияния.\nОшибка целостности возвращает код завершения 5 и список нарушений.",
     examples: [
       ["relay-cli validate", "Проверить проект"],
       ["relay-cli validate --format json", "Получить диагностику для автоматизации"],
@@ -89,52 +83,10 @@ export function registerProject(program: Command, runtime: Runtime): void {
       return {
         data,
         text: (options) =>
-          `${palette(options).green("✓ Хранилище корректно")}\nЗадач: ${data.tasks} · Комментариев: ${data.comments} · Отчётов: ${data.logs}`,
+          `${palette(options).green("✓ Хранилище корректно")}\nСущностей: ${data.entities} · Досок: ${data.boards} · Задач: ${data.tasks}`,
       };
     },
   });
-  registerCommand(program, runtime, {
-    name: "migrate",
-    description: "Обновить формат и перенести задачи в корень хранилища",
-    details:
-      "Переносит задачи из .tasks/tasks/ в .tasks/*.json; также переводит UUID-документы в v2.\nСсылки и контекст сохраняются. Исходники и журнал находятся в соседнем служебном каталоге.\nПрерванный запуск продолжается повторной командой. Актуальное хранилище не изменяется.",
-    examples: [
-      ["relay-cli migrate --actor human", "Мигрировать данные и получить путь к резервной копии"],
-      ["relay-cli validate", "Проверить результат"],
-    ],
-    async run(context) {
-      invariant(
-        context.backend.localWorkspace,
-        "LOCAL_ONLY",
-        "Миграция выполняется с --local в хранилище оркестратора.",
-      );
-      const data = await migrateTasks(context.backend.localWorkspace, author(context));
-      return {
-        data,
-        text: (options) =>
-          wrap(
-            [
-              palette(options).green(
-                data.flattened
-                  ? `✓ Задачи перенесены в корень хранилища: ${data.total}`
-                  : data.migrated
-                    ? `✓ Перенесено задач: ${data.migrated}`
-                    : "✓ Структура и формат задач актуальны",
-              ),
-              `Всего задач: ${data.total}`,
-              ...("backupPath" in data
-                ? [
-                    `Исходные данные: ${safeText(data.backupPath)}`,
-                    `Соответствие ID: ${safeText(data.mappingPath)}`,
-                  ]
-                : []),
-            ].join("\n"),
-            options.width,
-          ),
-      };
-    },
-  });
-
   const config = commandGroup(program, {
     name: "config",
     description: "Настройки проекта и статусов",
@@ -170,27 +122,5 @@ export function registerProject(program: Command, runtime: Runtime): void {
           ),
       };
     },
-  });
-  const group = commandGroup(program, {
-    name: "group",
-    description: "Прогресс по группам задач",
-    details:
-      "Группы возникают из поля group у задач. Задать группу: create/update --group <имя>.\ngroup list показывает сводку; list --group <имя> — сами задачи.",
-    examples: [
-      ["relay-cli group list", "Сравнить прогресс групп"],
-      ["relay-cli list --group backend", "Развернуть текущие задачи группы"],
-    ],
-  });
-  registerCommand<PagingOptions>(group, runtime, {
-    name: "list",
-    description: "Показать группы и прогресс выполнения",
-    details:
-      "Для каждой группы: total — все задачи, completed — успешно выполненные,\nterminal — все конечные, включая отменённые. Группы упорядочены по имени.",
-    examples: [
-      ["relay-cli group list --all", "Сводка всех групп"],
-      ["relay-cli group list --format json", "Получить счётчики в JSON"],
-    ],
-    configure: pageOptions,
-    run: (context, input) => listGroups(context.tasks, pageFrom(context, input.options)),
   });
 }

@@ -40,16 +40,14 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
   const [isProductOpened, setProductOpened] = useState(true);
   const productPath = `${basePath}/product`;
   const isProductRoute = pathname === productPath || pathname.startsWith(`${productPath}/`);
-  const isTaskRoute = pathname.startsWith(`${basePath}/tasks/`) && !isKanbanTask;
   const overviewPath = `${basePath}/`;
   const productItems = PRODUCT_NAVIGATION.map((entry) => ({
     ...entry,
     href: `${productPath}/${entry.path}`,
   }));
-  const projectItems = PROJECT_NAVIGATION.filter((entry) => !entry.isHidden).map((entry) => ({
+  const projectItems = PROJECT_NAVIGATION.map((entry) => ({
     ...entry,
     href: `${basePath}/${entry.path}`,
-    isTaskBoard: entry.path === "board" && isTaskRoute,
   }));
 
   useEffect(() => {
@@ -183,7 +181,6 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
           leftSection={<entry.Icon size={17} aria-hidden="true" />}
           className={styles.link}
           classNames={LINK_CLASSES}
-          active={entry.isTaskBoard}
           onClick={onNavigate}
         />
       ))}

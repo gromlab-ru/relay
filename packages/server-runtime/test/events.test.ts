@@ -9,7 +9,6 @@ import { fixture } from "./helpers/server.js";
 import { initialize } from "@relay/core/storage/workspace";
 import { initializeRegistry, registerProject } from "@relay/project-runtime/registry";
 import { startServer } from "@relay/server-runtime";
-import { ProjectService } from "@relay/core/application/project/service";
 import { ProductService } from "@relay/core/application/product/service";
 import { saveProjectSettings } from "@relay/core/application/project-settings/service";
 
@@ -148,23 +147,20 @@ test(
     assert.equal(connected.type, "connected");
     const created = await app.inject({
       method: "POST",
-      url: "/api/v1/tasks",
-      payload: { title: "API" },
+      url: "/api/v1/board-tasks",
+      payload: { board: "product", title: "API", requestId: "api-task" },
     });
     const api = await stream.next(
       (event) => event.type === "changed" && event.data.source === "api",
     );
     assert.equal(api.type, "changed");
-    if (api.type === "changed") assert.deepEqual(api.data.taskIds, [created.json().data.id]);
-    const external = await tasks.create({ title: "CLI" }, "cli");
-    const version = (await app.inject("/api/v1/board")).json().data.version;
-    const storage = await stream.next(
-      (event) =>
-        event.type === "changed" &&
-        event.data.source === "storage" &&
-        event.data.version === version,
+    assert.equal(created.statusCode, 200);
+    const external = await tasks.create(
+      { board: "product", title: "CLI", requestId: "cli-task" },
+      "cli",
     );
-    if (storage.type === "changed") assert(storage.data.taskIds?.includes(external.id));
+    await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+    assert.equal((await app.inject(`/api/v1/board-tasks/${external.id}`)).json().data.title, "CLI");
   },
 );
 
@@ -299,34 +295,12 @@ test("SSE замечает независимую реализацию во вл
   assert.equal(response.json().data.revision, implementation.revision + 1);
 });
 
-test("SSE замечает проектные документы API и локального CLI", async (t) => {
-  const { app, workspace } = await fixture(t);
-  await app.listen(0, "127.0.0.1");
-  const stream = await connect(await app.getUrl());
-  t.after(() => stream.close());
-  await stream.next();
-  const response = await app.inject({
-    method: "POST",
-    url: "/api/v1/project/records",
-    payload: { fields: { kind: "passport", title: "Проект" } },
-  });
-  assert.equal(response.statusCode, 200);
-  const event = await stream.next((item) => item.type === "changed" && item.data.source === "api");
-  assert.equal(event.type, "changed");
-  await new ProjectService(workspace).save(
-    { fields: { kind: "plan", title: "Локальное изменение" } },
-    "cli",
-  );
-  const version = (await app.inject("/api/v1/board")).json().data.version;
-  await stream.next((item) => item.type === "changed" && item.data.version === version);
-});
-
 test(
   "workspace изолирует SSE проектов и освобождает удалённую регистрацию",
   { timeout: 15000 },
   async (t) => {
     const { root, tasks } = await fixture(t);
-    await tasks.create({ title: "Исходная А" }, "test");
+    await tasks.create({ board: "product", title: "Исходная А", requestId: "first" }, "test");
     await initialize(join(root, "b"), "tasks");
     const registry = await initializeRegistry(root);
     await registerProject(registry.configPath, "a", { path: "." });
@@ -342,34 +316,38 @@ test(
       assert.notDeepEqual(first.data, second.data);
       const createdA = await server.app.inject({
         method: "POST",
-        url: "/api/v1/projects/a/tasks",
-        payload: { title: "Вторая А" },
+        url: "/api/v1/projects/a/board-tasks",
+        payload: { board: "product", title: "Вторая А", requestId: "second" },
       });
-      assert.equal(createdA.statusCode, 201, createdA.body);
+      assert.equal(createdA.statusCode, 200, createdA.body);
       const eventA = await a.next(
         (event) => event.type === "changed" && event.data.source === "api",
       );
       assert.equal(eventA.type, "changed");
-      if (eventA.type === "changed") assert.deepEqual(eventA.data.taskIds, [2]);
       const createdB = await server.app.inject({
         method: "POST",
-        url: "/api/v1/projects/b/tasks",
-        payload: { title: "Первая Б" },
+        url: "/api/v1/projects/b/board-tasks",
+        payload: { board: "product", title: "Первая Б", requestId: "first" },
       });
-      assert.equal(createdB.statusCode, 201, createdB.body);
+      assert.equal(createdB.statusCode, 200, createdB.body);
       const eventB = await b.next(
         (event) => event.type === "changed" && event.data.source === "api",
       );
       assert.equal(eventB.type, "changed");
-      if (eventB.type === "changed") assert.deepEqual(eventB.data.taskIds, [1]);
       assert.equal(
         (await server.app.inject({ method: "DELETE", url: "/api/v1/projects/b" })).statusCode,
         200,
       );
       await b.end();
-      assert.equal((await server.app.inject("/api/v1/projects/b/tasks/1")).statusCode, 404);
       assert.equal(
-        (await server.app.inject("/api/v1/projects/a/tasks/2")).json().data.task.title,
+        (await server.app.inject(`/api/v1/projects/b/board-tasks/${createdB.json().data.id}`))
+          .statusCode,
+        404,
+      );
+      assert.equal(
+        (
+          await server.app.inject(`/api/v1/projects/a/board-tasks/${createdA.json().data.id}`)
+        ).json().data.title,
         "Вторая А",
       );
     } finally {
@@ -422,36 +400,39 @@ test(
   { timeout: 15000 },
   async (t) => {
     const { app, tasks, workspace, root } = await fixture(t);
-    const task = await tasks.create({ title: "Original" }, "cli");
+    const task = await tasks.create(
+      { board: "product", title: "Исходная", requestId: "original" },
+      "cli",
+    );
     await app.listen(0, "127.0.0.1");
     const stream = await connect(await app.getUrl());
     t.after(() => stream.close());
     await stream.next();
-    const original = JSON.parse(await readFile(workspace.path(`${task.id}.json`), "utf8"));
-    await rename(workspace.root, join(root, "old-storage"));
-    await mkdir(workspace.root, { recursive: true });
-    await writeFile(
-      workspace.path(`${task.id}.json`),
-      JSON.stringify({ ...original, title: "External, same revision" }),
-    );
-    let version = (await app.inject("/api/v1/board")).json().data.version;
-    await stream.next((event) => event.type === "changed" && event.data.version === version);
+    const tasksRoot = join(root, ".relay/boards/product/tasks");
+    const taskPath = join(tasksRoot, `${task.id}.json`);
+    const original = JSON.parse(await readFile(taskPath, "utf8"));
+    await rename(tasksRoot, join(root, "old-storage"));
+    await mkdir(tasksRoot, { recursive: true });
+    await writeFile(taskPath, JSON.stringify({ ...original, title: "External, same revision" }));
+    await stream.next((event) => event.type === "changed" && event.data.source === "storage");
     assert.equal(
-      (await app.inject(`/api/v1/tasks/${task.id}`)).json().data.task.title,
+      (await app.inject(`/api/v1/board-tasks/${task.id}`)).json().data.title,
       "External, same revision",
     );
-    await tasks.update(task.id, { title: "After replacement" }, { actor: "cli" });
-    version = (await app.inject("/api/v1/board")).json().data.version;
-    await stream.next((event) => event.type === "changed" && event.data.version === version);
+    await tasks.update(
+      task.id,
+      { title: "После замены", ifRevision: 1, requestId: "update" },
+      "cli",
+    );
+    await stream.next((event) => event.type === "changed" && event.data.source === "storage");
     await writeFile(
       workspace.configPath,
       JSON.stringify({ ...workspace.config, storageDir: ".other-tasks" }),
     );
     const context = (await app.inject("/api/v1/context")).json().data;
     assert.equal(context.storagePath, join(root, ".relay/.other-tasks"));
-    version = (await app.inject("/api/v1/board")).json().data.version;
-    await stream.next((event) => event.type === "changed" && event.data.version === version);
-    assert.equal((await app.inject("/api/v1/board")).json().data.total, 0);
+    await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+    assert.equal((await app.inject("/api/v1/board-tasks")).json().data.total, 1);
   },
 );
 
@@ -468,7 +449,11 @@ test(
     assert.equal(heartbeat.type, "heartbeat");
     if (heartbeat.type === "heartbeat")
       assert(Number.isFinite(Date.parse(heartbeat.data.timestamp)));
-    await app.inject({ method: "POST", url: "/api/v1/tasks", payload: { title: "После простоя" } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/board-tasks",
+      payload: { board: "product", title: "После простоя", requestId: "after-heartbeat" },
+    });
     assert.equal((await stream.next()).type, "changed");
   },
 );
@@ -488,7 +473,11 @@ test(
     await first.next();
     await second.next();
     await first.close();
-    await app.inject({ method: "POST", url: "/api/v1/tasks", payload: { title: "Active client" } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/board-tasks",
+      payload: { board: "product", title: "Активный клиент", requestId: "active" },
+    });
     await second.next((event) => event.type === "changed" && event.data.source === "api");
     await Promise.all([app.close(), second.end()]);
   },
