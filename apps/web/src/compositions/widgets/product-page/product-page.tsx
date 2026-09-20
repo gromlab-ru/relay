@@ -20,6 +20,7 @@ export const ProductPage = (props: ProductPageProps) => {
     description,
     eyebrow = "ПРОДУКТ",
     backTo,
+    backState,
     backLabel = "Назад",
     actions,
     meta,
@@ -41,7 +42,7 @@ export const ProductPage = (props: ProductPageProps) => {
   return (
     <section {...rootAttrs} className={clsx(styles.root, className)}>
       {hasBack && (
-        <Link to={backTo} className={styles.back}>
+        <Link to={backTo} state={backState} className={styles.back}>
           <ArrowLeft size={14} aria-hidden="true" />
           {backLabel}
         </Link>

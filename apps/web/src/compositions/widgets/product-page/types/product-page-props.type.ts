@@ -10,6 +10,8 @@ export type ProductPageParams = {
   eyebrow?: string;
   /** Адрес возврата. */
   backTo?: string;
+  /** Контекст страницы просмотра при возврате из редактора. */
+  backState?: unknown;
   /** Подпись возврата. */
   backLabel?: string;
   /** Основные действия. */

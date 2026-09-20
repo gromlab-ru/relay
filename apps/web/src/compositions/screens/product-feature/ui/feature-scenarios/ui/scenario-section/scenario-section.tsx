@@ -39,6 +39,7 @@ export const ScenarioSection = (props: ScenarioSectionProps) => {
           <ActionIcon
             component={Link}
             to={`${featurePath}/scenarios/${scenario.key ?? scenario.id}${search}`}
+            state={{ returnTo: `${featurePath}${search}#scenarios` }}
             variant="subtle"
             color="gray"
             aria-label={`Ссылка на сценарий: ${scenario.name}`}
@@ -49,6 +50,7 @@ export const ScenarioSection = (props: ScenarioSectionProps) => {
           <ActionIcon
             component={Link}
             to={`${featurePath}/scenarios/${scenario.key ?? scenario.id}/edit${search}`}
+            state={{ editorReturnTo: `${featurePath}${search}#scenarios` }}
             variant="subtle"
             color="gray"
             aria-label={`Редактировать сценарий: ${scenario.name}`}

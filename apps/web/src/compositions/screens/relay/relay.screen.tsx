@@ -4,6 +4,8 @@ import { Badge, Button, Group, Select, Text } from "@mantine/core";
 import { useWorkspace } from "domains/workspace";
 import { ProjectScope } from "domains/project";
 import { StatePanel } from "ui/state-panel";
+import { MarkdownLinkProvider } from "ui/markdown-link";
+import { RelayMarkdownLink } from "./ui/relay-markdown-link/relay-markdown-link";
 import styles from "./styles/relay.module.css";
 
 /**
@@ -74,8 +76,8 @@ export const RelayScreen = () => {
   useEffect(() => {
     if (workspaceData?.mode === "local" && defaultProject && selectedId === undefined) {
       navigate(
-        `/projects/${encodeURIComponent(defaultProject)}${location.pathname}${location.search}`,
-        { replace: true },
+        `/projects/${encodeURIComponent(defaultProject)}${location.pathname}${location.search}${location.hash}`,
+        { replace: true, state: location.state },
       );
     }
   }, [
@@ -85,6 +87,8 @@ export const RelayScreen = () => {
     navigate,
     location.pathname,
     location.search,
+    location.hash,
+    location.state,
   ]);
 
   if (workspaceData === undefined) {
@@ -130,7 +134,9 @@ export const RelayScreen = () => {
       )}
       {canOpenProject && (
         <ProjectScope key={projectData.id} projectId={projectData.id} slug={projectData.slug}>
-          <Outlet />
+          <MarkdownLinkProvider component={RelayMarkdownLink}>
+            <Outlet />
+          </MarkdownLinkProvider>
         </ProjectScope>
       )}
       {!canOpenProject && (

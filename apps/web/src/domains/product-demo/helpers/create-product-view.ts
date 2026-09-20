@@ -109,7 +109,7 @@ export const createProductView = (
         path: `${application?.name ?? applicationId}${scenario ? ` / ${feature?.name ?? ""}` : ""}`,
         applicationId,
         isActive: contract.active,
-        href: `/implementations/${contract.key ?? contract.id}`,
+        href: `/applications/${application?.key ?? applicationId}/implementations/${contract.key ?? contract.id}`,
       });
     }
     return contracts

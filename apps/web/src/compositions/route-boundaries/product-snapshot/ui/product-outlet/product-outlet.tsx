@@ -2,6 +2,7 @@ import { Alert, Button } from "@mantine/core";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useProductDemo } from "domains/product-demo";
 import { findProductEntry } from "domains/product";
+import { useProjectBasePath } from "domains/project";
 import { StatePanel } from "ui/state-panel";
 
 /**
@@ -13,6 +14,7 @@ import { StatePanel } from "ui/state-panel";
 export const ProductOutlet = () => {
   const { mode, notice, setMode, snapshot } = useProductDemo();
   const location = useLocation();
+  const base = `${useProjectBasePath()}/product`;
   const hasNotice = notice !== "";
   if (mode === "loading")
     return (
@@ -30,9 +32,7 @@ export const ProductOutlet = () => {
         action={<Button onClick={() => setMode("filled")}>Повторить загрузку</Button>}
       />
     );
-  const separator = location.pathname.indexOf("/product/");
-  const base = location.pathname.slice(0, separator + "/product".length);
-  const parts = location.pathname.slice(separator + "/product/".length).split("/");
+  const parts = location.pathname.slice(base.length + 1).split("/");
   const collection = parts[0];
   const targets =
     collection === "features"

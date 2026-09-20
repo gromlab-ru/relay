@@ -1,5 +1,19 @@
 # Журнал создания TSX
 
+## Последовательные маршруты — 20 сентября 2026
+
+Из корня выполнено:
+
+```bash
+pnpm --filter @relay/web run create ui-unit product-snapshot src/compositions/route-boundaries
+pnpm --filter @relay/web run create ui-component relay-markdown-link src/compositions/screens/relay/ui
+```
+
+`product-snapshot` адаптирован в маршрутную границу с единственным lazy-фасетом.
+Внутрь перенесён существующий `product-outlet` вместе с его фасетом; общий ProductLayout
+отвечает только за маршрутную область и прокрутку. `relay-markdown-link` — внутренний
+адаптер UI-провайдера к React Router. Неиспользуемые заготовки props и CSS удалены.
+
 ## Универсальные связи
 
 Из корня выполнено:

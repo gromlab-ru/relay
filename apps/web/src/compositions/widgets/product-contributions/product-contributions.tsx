@@ -33,7 +33,7 @@ export const ProductContributions = (props: ProductContributionsProps) => {
           id: targetData.id,
           name: targetData.name,
           typeLabel: targetData.type,
-          href: `${base}/implementations/${link.key ?? link.contractId}`,
+          href: `${base}/applications/${targetData.key ?? targetData.id}/implementations/${link.key ?? link.contractId}`,
         },
       ];
     });

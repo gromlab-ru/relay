@@ -63,6 +63,7 @@ export const ProductApplicationScreen = () => {
         <Button
           component={Link}
           to={`${base}/applications/${applicationData.key ?? applicationData.id}/edit`}
+          state={location.state}
           variant="default"
           leftSection={<Pencil size={14} aria-hidden="true" />}
         >

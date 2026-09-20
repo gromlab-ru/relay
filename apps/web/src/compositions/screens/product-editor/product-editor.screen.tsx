@@ -2,7 +2,7 @@ import { Button } from "@mantine/core";
 import { Link, useLocation, useMatch } from "react-router-dom";
 import { useProductRoute } from "compositions/widgets/product-page";
 import { useProductDemo } from "domains/product-demo";
-import { ProductPage, useProductPath } from "compositions/widgets/product-page";
+import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { StatePanel } from "ui/state-panel";
 import { getEditorInput } from "./helpers/get-editor-input";
 import { DocumentForm } from "./ui/document-form";
@@ -53,12 +53,18 @@ export const ProductEditorScreen = () => {
           ]
         : `Редактирование: ${initialData.name}`;
   const suffix = isNew ? "" : `/${initialData.id}`;
-  const backTo =
+  const feature = snapshot.features.find((entry) => entry.id === featureId);
+  const scenario = feature?.scenarios.find((entry) => entry.id === initialData.id);
+  const featurePath = `${base}/features/${feature?.key ?? featureId}`;
+  const fallback =
     kind === "scenarios"
-      ? `${base}/features/${featureId}${location.search}#${isNew ? "scenarios" : `scenario-${initialData.id}`}`
+      ? isNew
+        ? `${featurePath}${location.search}#scenarios`
+        : `${featurePath}/scenarios/${scenario?.key ?? initialData.id}${location.search}`
       : kind === "passport"
         ? `${base}/passport`
         : `${base}/${kind}${suffix}${location.search}`;
+  const backTo = getProductReturn(location.state, fallback, base, "editorReturnTo");
   const draftEntity =
     kind === "scenarios" ? `${featureId}:${initialData.id || "new"}` : initialData.id || "new";
   const draftScope = `${snapshot.epoch}:${kind}:${draftEntity}`;
@@ -73,6 +79,7 @@ export const ProductEditorScreen = () => {
       description={description}
       eyebrow="ПРОДУКТ / РЕДАКТОР"
       backTo={backTo}
+      backState={location.state}
       backLabel="Вернуться к просмотру"
     >
       <DocumentForm

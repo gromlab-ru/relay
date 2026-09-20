@@ -4,6 +4,8 @@
 [Состояние реализации](../../docs/engineering/implementation/applications.md) ·
 [Протокол](../../docs/development/PROTOCOL.md).
 
+[Карта страниц и маршрутов](ROUTING.md) — действующие URL, переходы, совместимость и контекст.
+
 React SPA на TypeScript/Vite: Mantine, SWR, dnd-kit, Markdown и CodeMirror.
 Действующие разделы — продукт, доски и задачи, связи, настройки проекта.
 Обзор, планы, релизы и история показывают «В разработке».

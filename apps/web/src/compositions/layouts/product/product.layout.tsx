@@ -1,23 +1,32 @@
-import { ScrollRestoration } from "react-router-dom";
-import { useProjectId } from "domains/project";
-import { ProductDemoProvider } from "domains/product-demo";
-import { ProductOutlet } from "./ui/product-outlet";
+import { Navigate, Outlet, ScrollRestoration, useLocation } from "react-router-dom";
+import { useProjectBasePath, useProjectId } from "domains/project";
 
 /**
- * Подключает продуктовый прототип внутри общего каркаса выбранного проекта.
+ * Сохраняет общую маршрутную область продукта независимо от способа чтения данных.
  *
  * Используется для:
- *  - общей модели и навигации между паспортом, фичами и приложениями
+ *  - входа на паспорт и восстановления прокрутки всех продуктовых страниц
  */
 export const ProductLayout = () => {
   const projectId = useProjectId();
+  const base = `${useProjectBasePath()}/product`;
+  const location = useLocation();
+  const isIndex = location.pathname.replace(/\/+$/, "") === base;
+  if (isIndex)
+    return (
+      <Navigate
+        to={`${base}/passport${location.search}${location.hash}`}
+        state={location.state}
+        replace
+      />
+    );
   return (
-    <ProductDemoProvider key={projectId} scopeId={projectId}>
-      <ProductOutlet />
+    <>
+      <Outlet />
       <ScrollRestoration
         getKey={(location) => location.pathname + location.search}
         storageKey={`relay:product-scroll:${projectId}`}
       />
-    </ProductDemoProvider>
+    </>
   );
 };

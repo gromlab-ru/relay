@@ -46,9 +46,11 @@ export const ProjectBoardScreen = () => {
   const boardSlug =
     selected !== null && backgroundData?.boardSlug !== undefined
       ? backgroundData.boardSlug
-      : (routeBoard ?? opened.data?.boardSlug ?? "");
+      : (routeBoard ?? opened.data?.boardSlug ?? (selected === null ? "product" : ""));
   const query = useBoard(projectId, boardSlug);
-  const params = new URLSearchParams(selected ? (backgroundData?.search ?? "") : location.search);
+  const params = new URLSearchParams(
+    location.search || (selected !== null ? (backgroundData?.search ?? "") : ""),
+  );
   const base = useProjectBasePath();
   const [creatingColumn, setCreatingColumn] = useState<TaskColumn | null>(null);
   const [error, setError] = useState("");
@@ -66,15 +68,19 @@ export const ProjectBoardScreen = () => {
     ...(isBlockedOnly ? { readiness: "blocked" } : {}),
   };
   const handleOpen = (taskId: string, targetBoard = boardSlug, edit = false): void => {
-    navigate(`${base}/boards/${encodeURIComponent(targetBoard)}/${encodeURIComponent(taskId)}`, {
-      replace: selected !== null,
-      state: {
-        boardSlug,
-        search: params.toString(),
-        edit,
-        canGoBack: selected === null || backgroundData?.canGoBack === true,
+    const filterSearch = params.size === 0 ? "" : `?${params.toString()}`;
+    navigate(
+      `${base}/boards/${encodeURIComponent(targetBoard)}/${encodeURIComponent(taskId)}${filterSearch}`,
+      {
+        replace: selected !== null,
+        state: {
+          boardSlug,
+          search: params.toString(),
+          edit,
+          canGoBack: selected === null || backgroundData?.canGoBack === true,
+        },
       },
-    });
+    );
   };
   const handleCreate = async (target: TaskColumn): Promise<void> => {
     if (isCreatingRef.current) return;
@@ -102,9 +108,12 @@ export const ProjectBoardScreen = () => {
   const handleClose = (): void => {
     if (backgroundData?.canGoBack === true) navigate(-1);
     else
-      navigate(`${base}/boards/${opened.data?.boardSlug ?? (boardSlug || "product")}`, {
-        replace: true,
-      });
+      navigate(
+        `${base}/boards/${opened.data?.boardSlug ?? (boardSlug || "product")}${location.search}${location.hash}`,
+        {
+          replace: true,
+        },
+      );
   };
   const handleFilter = (name: string, value: string): void => {
     const next = new URLSearchParams(params);
@@ -129,17 +138,40 @@ export const ProjectBoardScreen = () => {
     const search = new URLSearchParams(location.search);
     search.delete("task");
     search.delete("column");
-    navigate(`${base}/boards/${encodeURIComponent(routeBoard)}/${encodeURIComponent(legacyTask)}`, {
+    const filterSearch = search.size === 0 ? "" : `?${search.toString()}`;
+    navigate(
+      `${base}/boards/${encodeURIComponent(routeBoard)}/${encodeURIComponent(legacyTask)}${filterSearch}${location.hash}`,
+      {
+        replace: true,
+        state: { boardSlug: routeBoard, search: search.toString() },
+      },
+    );
+  }, [routeBoard, legacyTask, location.search, location.hash, navigate, base]);
+  useEffect(() => {
+    if (selected !== null || routeBoard !== undefined) return;
+    navigate(`${base}/boards/product${location.search}${location.hash}`, {
       replace: true,
-      state: { boardSlug: routeBoard, search: search.toString() },
+      state: location.state,
     });
-  }, [routeBoard, legacyTask, location.search, navigate, base]);
+  }, [selected, routeBoard, base, location.search, location.hash, location.state, navigate]);
   useEffect(() => {
     if (selected === null || opened.data === undefined) return;
     const canonical = `${base}/boards/${encodeURIComponent(opened.data.boardSlug)}/${encodeURIComponent(opened.data.id)}`;
     if (location.pathname !== canonical)
-      navigate(canonical, { replace: true, state: location.state });
-  }, [selected, opened.data, base, location.pathname, location.state, navigate]);
+      navigate(`${canonical}${location.search}${location.hash}`, {
+        replace: true,
+        state: location.state,
+      });
+  }, [
+    selected,
+    opened.data,
+    base,
+    location.pathname,
+    location.search,
+    location.hash,
+    location.state,
+    navigate,
+  ]);
   const board = query.data;
   const hasError = error !== "";
   const filterCount = Number(isBlockedOnly) + Number(showCancelled);

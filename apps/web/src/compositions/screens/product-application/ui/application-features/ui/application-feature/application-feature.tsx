@@ -23,7 +23,8 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
       ? `application-feature-${feature.id}`
       : `application-feature-${feature.id}-${scenario.scenarioId}`;
   const returnTo = `${location.pathname}${location.search}#${anchor}`;
-  const href = `${base}/implementations/${selected.key ?? selected.contractId}`;
+  const applicationPath = location.pathname.replace(/\/+$/, "");
+  const href = `${applicationPath}/implementations/${selected.key ?? selected.contractId}`;
   const featurePath = `${base}/features/${feature.key ?? feature.id}`;
   const sourceScenario = feature.scenarios.find((entry) => entry.id === scenario?.scenarioId);
   const sourceHref =

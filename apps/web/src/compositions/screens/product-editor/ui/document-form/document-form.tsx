@@ -122,11 +122,14 @@ export const DocumentForm = (props: DocumentFormProps) => {
       removeSessionStored(draftKey);
       setRestoredDraft(false);
       form.resetDirty(values);
-      const nextPath = isScenario
-        ? `${base}/features/${initial.featureId}${location.search}#scenario-${saveResult.id}`
-        : initial.kind === "passport"
-          ? `${base}/passport`
-          : `${base}/${initial.kind}/${saveResult.id}${location.search}`;
+      const nextPath =
+        initial.id !== ""
+          ? backTo
+          : isScenario
+            ? `${base}/features/${initial.featureId}/scenarios/${saveResult.id}${location.search}`
+            : initial.kind === "passport"
+              ? `${base}/passport`
+              : `${base}/${initial.kind}/${saveResult.id}${location.search}`;
       notifications.show({
         position: "top-center",
         autoClose: 2500,
@@ -137,7 +140,7 @@ export const DocumentForm = (props: DocumentFormProps) => {
         color: "teal",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
       });
-      navigate(nextPath, { replace: true });
+      navigate(nextPath, { replace: true, state: location.state });
     } catch {
       setDefect(new Error("Неожиданный сбой редактора продукта"));
     }
@@ -158,7 +161,7 @@ export const DocumentForm = (props: DocumentFormProps) => {
   const handleDiscard = (): void => {
     canLeaveRef.current = true;
     removeSessionStored(draftKey);
-    navigate(backTo);
+    navigate(backTo, { state: location.state });
   };
   /**
    * Подтверждает отмену изменённого ввода.

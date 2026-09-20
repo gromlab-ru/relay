@@ -68,6 +68,7 @@ export const ProductFeatureScreen = () => {
         <Button
           component={Link}
           to={`${base}/features/${featureData.key ?? featureData.id}/edit${location.search}`}
+          state={location.state}
           variant="default"
           leftSection={<Pencil size={14} aria-hidden="true" />}
         >

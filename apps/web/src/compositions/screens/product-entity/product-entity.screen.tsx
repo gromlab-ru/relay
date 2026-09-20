@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Alert, Anchor, Button, Group, Stack, Text } from "@mantine/core";
-import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
 import { Pencil } from "lucide-react";
 import { useProjectId, useProjectBasePath } from "domains/project";
 import {
@@ -11,7 +10,7 @@ import {
   useProductEntity,
 } from "domains/product";
 import { ProductReadiness } from "domains/product-demo";
-import { ProductPage, useProductPath } from "compositions/widgets/product-page";
+import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductTasks } from "compositions/widgets/product-tasks";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
@@ -25,12 +24,17 @@ import styles from "./styles/product-entity.module.css";
  *  - чтения одной записи без загрузки всего продукта и независимого редактирования вклада
  */
 export const ProductEntityScreen = () => {
-  const { entityRef, featureRef } = useParams();
+  const { entityRef, featureRef, applicationRef } = useParams();
   const projectId = useProjectId();
   const projectBase = useProjectBasePath();
   const base = useProductPath();
   const location = useLocation();
-  const [isEditing, setEditing] = useState(false);
+  const navigate = useNavigate();
+  const editorMatch = useMatch(
+    "/projects/:project/product/applications/:applicationRef/implementations/:entityRef/edit",
+  );
+  const legacyEditorMatch = useMatch("/projects/:project/product/implementations/:entityRef/edit");
+  const isEditing = editorMatch !== null || legacyEditorMatch !== null;
   const query = useProductEntity(projectId, entityRef ?? null);
   const entity = query.data;
   const summary = useProductEntities(
@@ -51,6 +55,7 @@ export const ProductEntityScreen = () => {
   const parentItems = (parents.data?.items ?? []).map((entry) => ({
     ...entry,
     href: `${base}${productEntityPath(entry)}`,
+    contextHref: `${base}${productEntityPath(entry)}${location.search}`,
   }));
   if (query.error !== undefined && entity === undefined)
     return (
@@ -83,12 +88,40 @@ export const ProductEntityScreen = () => {
       <StatePanel title="Неверный тип записи" description="Ключ не соответствует разделу адреса." />
     );
   const featureParent = parentItems.find((entry) => entry.kind === "feature");
-  if (!isImplementation && (meta === undefined || featureParent === undefined))
+  const applicationParent = parentItems.find((entry) => entry.kind === "application");
+  const parent = isImplementation ? applicationParent : featureParent;
+  const hasParentError = summary.error !== undefined || parents.error !== undefined;
+  const parentTitle = hasParentError ? "Не удалось открыть контекст" : "Открываем запись";
+  if (meta === undefined || parent === undefined)
     return (
       <StatePanel
-        isLoading={summary.error === undefined && parents.error === undefined}
-        title="Открываем сценарий"
-        description="Уточняем родительскую фичу."
+        isLoading={!hasParentError}
+        title={parentTitle}
+        description="Уточняем родительскую запись."
+        action={
+          hasParentError && (
+            <Button
+              onClick={() => {
+                void summary.mutate();
+                void parents.mutate();
+              }}
+            >
+              Повторить
+            </Button>
+          )
+        }
+      />
+    );
+  if (
+    isImplementation &&
+    applicationRef !== undefined &&
+    applicationRef !== applicationParent?.id &&
+    applicationRef !== applicationParent?.key
+  )
+    return (
+      <StatePanel
+        title="Реализация не принадлежит этому приложению"
+        description="Проверьте адрес или откройте реализацию из состава приложения."
       />
     );
   if (
@@ -104,9 +137,10 @@ export const ProductEntityScreen = () => {
       />
     );
   const entityAddress = entity.canonicalRef ?? entity.key ?? entity.id;
-  const canonical = isImplementation
-    ? `${base}/implementations/${entityAddress}`
+  const viewPath = isImplementation
+    ? `${applicationParent?.href}/implementations/${encodeURIComponent(entityAddress)}`
     : `${featureParent?.href}/scenarios/${entityAddress}`;
+  const canonical = `${viewPath}${isEditing ? "/edit" : ""}`;
   if (canonical !== location.pathname)
     return (
       <Navigate
@@ -121,8 +155,26 @@ export const ProductEntityScreen = () => {
     ? "Вклад приложения в общее требование продукта."
     : "Ожидаемое поведение и проверяемый результат.";
   const isInactive = fields.kind === "implementation" && !fields.active;
+  if (isInactive && isEditing)
+    return (
+      <StatePanel
+        title="Реализация неактивна"
+        description="Участие приложения снято. Описание доступно для чтения."
+        action={
+          <Button component={Link} to={`${viewPath}${location.search}${location.hash}`}>
+            К просмотру
+          </Button>
+        }
+      />
+    );
   const canEditImplementation = isImplementation && !isInactive && !isEditing;
-  const editHref = `${featureParent?.href ?? `${base}/features/${meta?.featureId}`}/scenarios/${entity.key ?? entity.id}/edit`;
+  const viewHref = `${viewPath}${location.search}${location.hash}`;
+  const editHref = `${viewPath}/edit${location.search}${location.hash}`;
+  const contextReturn = getProductReturn(location.state, `${parent.href}${location.search}`, base);
+  const backTo = isEditing ? viewHref : contextReturn;
+  const backState = isEditing ? location.state : undefined;
+  const backLabel = isEditing ? "К просмотру реализации" : "Назад к контексту";
+  const editorState = { returnTo: contextReturn, editorReturnTo: viewHref };
   const hasParents = parentItems.length !== 0;
   const hasStatus = meta?.status !== null && meta?.status !== undefined;
   const hasReadError = query.error !== undefined;
@@ -141,8 +193,9 @@ export const ProductEntityScreen = () => {
       title={title}
       description={description}
       eyebrow={eyebrow}
-      backTo={featureParent?.href ?? `${base}/features`}
-      backLabel="К фиче"
+      backTo={backTo}
+      backState={backState}
+      backLabel={backLabel}
       meta={
         <Group gap="md">
           <ProductKey value={entity.key} copyable />
@@ -160,9 +213,11 @@ export const ProductEntityScreen = () => {
           </Button>
           {canEditImplementation && (
             <Button
+              component={Link}
+              to={editHref}
+              state={editorState}
               variant="default"
               leftSection={<Pencil size={14} />}
-              onClick={() => setEditing(!isEditing)}
             >
               Редактировать вклад
             </Button>
@@ -171,6 +226,7 @@ export const ProductEntityScreen = () => {
             <Button
               component={Link}
               to={editHref}
+              state={editorState}
               variant="default"
               leftSection={<Pencil size={14} />}
             >
@@ -197,7 +253,7 @@ export const ProductEntityScreen = () => {
             {parentItems.map((entry) => (
               <Anchor
                 component={Link}
-                to={entry.href}
+                to={entry.contextHref}
                 key={entry.id}
                 c="var(--mantine-color-text)"
                 size="sm"
@@ -212,11 +268,11 @@ export const ProductEntityScreen = () => {
             key={entity.id}
             projectId={projectId}
             initial={editorData}
-            onClose={() => setEditing(false)}
+            onClose={() => navigate(viewHref, { replace: true, state: location.state })}
             onSaved={async () => {
               await query.mutate();
               await summary.mutate();
-              setEditing(false);
+              navigate(viewHref, { replace: true, state: location.state });
             }}
           />
         )}

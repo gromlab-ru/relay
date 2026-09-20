@@ -37,6 +37,7 @@ export const FeatureRow = (props: FeatureRowProps) => {
       entityKey={entityKey}
       summary={summary}
       href={target}
+      returnTo={`${base}/features${search}`}
       status={status}
       readinessLabel={readinessLabel}
       countLabel={countLabel}

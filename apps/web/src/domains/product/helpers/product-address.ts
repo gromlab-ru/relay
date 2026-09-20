@@ -17,10 +17,15 @@ export const productEntityPath = (entity: {
   featureId?: string | null;
   featureKey?: string | null;
   targetKey?: string | null;
+  applicationId?: string | null;
+  applicationKey?: string | null;
 }): string => {
   const parent = entity.featureKey ?? entity.targetKey ?? entity.featureId;
   if (entity.kind === "scenario" && parent !== undefined && parent !== null)
     return `/features/${encodeURIComponent(parent)}/scenarios/${encodeURIComponent(entity.key ?? entity.id)}`;
+  const application = entity.applicationKey ?? entity.applicationId;
+  if (entity.kind === "implementation" && application !== undefined && application !== null)
+    return `/applications/${encodeURIComponent(application)}/implementations/${encodeURIComponent(entity.key ?? entity.id)}`;
   const collection = {
     feature: "features",
     scenario: "scenarios",
