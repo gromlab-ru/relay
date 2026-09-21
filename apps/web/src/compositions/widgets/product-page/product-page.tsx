@@ -1,8 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { isDefined } from "shared/value-predicates";
+import { useLocation } from "react-router-dom";
 import type { ProductPageProps } from "./types/product-page-props.type";
 import styles from "./styles/product-page.module.css";
 
@@ -13,22 +11,14 @@ import styles from "./styles/product-page.module.css";
  *  - размещения восстановленных экранов внутри общего каркаса Relay
  */
 export const ProductPage = (props: ProductPageProps) => {
-  const {
-    children,
-    className,
-    title,
-    description,
-    eyebrow = "ПРОДУКТ",
-    backTo,
-    backState,
-    backLabel = "Назад",
-    actions,
-    meta,
-    ...rootAttrs
-  } = props;
+  const { children, className, title, description, actions, meta, ...rootAttrs } = props;
+  // Совместимые прежние параметры не являются атрибутами DOM.
+  delete rootAttrs.eyebrow;
+  delete rootAttrs.backTo;
+  delete rootAttrs.backState;
+  delete rootAttrs.backLabel;
   const headingRef = useRef<HTMLHeadingElement>(null);
   const location = useLocation();
-  const hasBack = isDefined(backTo);
   useEffect(() => {
     document.title = `${title} · Продукт · Relay`;
     const target = document.getElementById(location.hash.slice(1));

@@ -42,6 +42,9 @@ export interface Backend {
     | "listCriteria"
     | "getCriterion"
     | "changeCriterion"
+    | "listActivity"
+    | "getActivity"
+    | "publishComment"
   >;
   boards: Pick<BoardsService, "list" | "get">;
   product: Pick<

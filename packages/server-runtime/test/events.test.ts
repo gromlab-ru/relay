@@ -33,6 +33,37 @@ test("SSE замечает прямую запись имени и slug чере
 });
 
 test(
+  "SSE замечает локальную публикацию без изменения ревизии карточки",
+  { timeout: 10000 },
+  async (t) => {
+    const { app, tasks } = await fixture(t);
+    await app.listen(0, "127.0.0.1");
+    const stream = await connect(await app.getUrl());
+    try {
+      await stream.next();
+      const task = await tasks.create({ board: "product", requestId: "task" }, "worker");
+      await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+      const before = await tasks.get(task.id);
+      await tasks.publishComment(task.id, {
+        title: "Локальный отчёт",
+        description: "Проверено",
+        actor: "worker",
+        actorRole: "worker",
+        requestId: "local-report",
+      });
+      await stream.next((event) => event.type === "changed" && event.data.source === "storage");
+      assert.deepEqual(await tasks.get(task.id), before);
+      assert.equal(
+        (await app.inject(`/api/v1/board-tasks/${task.id}/comments`)).json().data.items[0].title,
+        "Локальный отчёт",
+      );
+    } finally {
+      await stream.close();
+    }
+  },
+);
+
+test(
   "SSE замечает новые отношения после прямой записи через Core",
   { timeout: 10000 },
   async (t) => {

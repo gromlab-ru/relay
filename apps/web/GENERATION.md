@@ -1,5 +1,31 @@
 # Журнал создания TSX
 
+## Обсуждения и история — 21 сентября 2026
+
+При доработке визуального представления по пользовательским скриншотам дополнительно выполнены:
+
+```bash
+pnpm --filter @relay/web run create ui-component activity-feed src/compositions/screens/project-board/ui/task-modal/ui/task-activity/ui
+pnpm --filter @relay/web run create ui-component discussion-message src/compositions/screens/project-board/ui/task-modal/ui/task-activity/ui
+```
+
+ActivityFeed владеет группировкой по дням и общим Mantine Timeline; DiscussionMessage —
+текстовым сообщением. Оба — внутренние компоненты TaskActivity без фасетов.
+
+Из корня выполнены:
+
+```bash
+pnpm --filter @relay/web run create ui-unit task-activity src/compositions/screens/project-board/ui/task-modal/ui
+pnpm --filter @relay/web run create ui-component comment-form src/compositions/screens/project-board/ui/task-modal/ui/task-activity/ui
+pnpm --filter @relay/web run create ui-component activity-entry src/compositions/screens/project-board/ui/task-modal/ui/task-activity/ui
+pnpm --filter @relay/web run create ui-component activity-change src/compositions/screens/project-board/ui/task-modal/ui/task-activity/ui
+pnpm --filter @relay/web run create ui-component activity-value src/compositions/screens/project-board/ui/task-modal/ui/task-activity/ui
+```
+
+TaskModal координирует заголовок и три таба. TaskActivity владеет лентой обсуждений/истории,
+форма и представления записей — внутренние компоненты без фасетов. Данные, кеш и SSE
+принадлежат существующему domains/board-tasks; Markdown — общему UI.
+
 ## Критерии приёмки — 21 сентября 2026
 
 Из корня выполнены:

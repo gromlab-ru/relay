@@ -13,15 +13,16 @@ import styles from "./styles/markdown-view.module.css";
  *  - безопасного просмотра Markdown со списками, кодом и таблицами
  */
 export const MarkdownView = (props: MarkdownViewProps) => {
-  const { text, emptyText = "Пока не заполнено", className, ...rootAttrs } = props;
+  const { text, compact = false, emptyText = "Пока не заполнено", className, ...rootAttrs } = props;
+  const rootClassName = clsx(styles.root, compact && styles._compact, className);
   if (text.trim() === "")
     return (
-      <div {...rootAttrs} className={clsx(styles.root, styles._empty, className)}>
+      <div {...rootAttrs} className={clsx(rootClassName, styles._empty)}>
         {emptyText}
       </div>
     );
   return (
-    <div {...rootAttrs} className={clsx(styles.root, className)}>
+    <div {...rootAttrs} className={rootClassName}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{ input: MarkdownCheckbox, a: MarkdownLink }}

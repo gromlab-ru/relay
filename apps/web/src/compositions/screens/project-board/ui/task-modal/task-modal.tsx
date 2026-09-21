@@ -1,9 +1,22 @@
 import { useState } from "react";
-import { ActionIcon, Alert, Button, Group, Modal, Skeleton, Tooltip } from "@mantine/core";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { useMediaQuery } from "@mantine/hooks";
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  Group,
+  Modal,
+  Skeleton,
+  Tooltip,
+  Tabs,
+  Title,
+  Badge,
+  Text,
+} from "@mantine/core";
+import { Maximize2, Minimize2, Link2, Check } from "lucide-react";
+import { useMediaQuery, useClipboard } from "@mantine/hooks";
 import { useBoardTask } from "domains/board-tasks";
 import { TaskEditor } from "./ui/task-editor";
+import { TaskActivity } from "./ui/task-activity";
 import type { TaskModalProps } from "./types/task-modal-props.type";
 import styles from "./styles/task-modal.module.css";
 
@@ -17,6 +30,8 @@ export const TaskModal = (props: TaskModalProps) => {
   const { projectId, reference, startEditing, onClose, onOpen } = props;
   const query = useBoardTask(projectId, reference, !startEditing);
   const [isExpanded, setExpanded] = useState(false);
+  const [tab, setTab] = useState<string | null>("task");
+  const clipboard = useClipboard({ timeout: 2000 });
   const isMobile = useMediaQuery("(max-width: 48em)");
   const hasError = query.error !== undefined;
   const task = query.data;
@@ -25,6 +40,12 @@ export const TaskModal = (props: TaskModalProps) => {
   const expandLabel = isExpanded ? "Обычный размер" : "Развернуть задачу";
   const SizeIcon = isExpanded ? Minimize2 : Maximize2;
   const offset = isExpanded ? 16 : 24;
+  const taskTitle = task?.title || "Без названия";
+  const copyLabel = clipboard.copied ? "Ссылка скопирована" : "Копировать ссылку";
+  const CopyIcon = clipboard.copied ? Check : Link2;
+  const taskUrl = task
+    ? `${window.location.origin}/projects/${encodeURIComponent(projectId)}/boards/${encodeURIComponent(task.boardSlug)}/${task.id}`
+    : "";
   return (
     <Modal.Root
       opened
@@ -74,14 +95,66 @@ export const TaskModal = (props: TaskModalProps) => {
             </Alert>
           )}
           {task !== undefined && (
-            <TaskEditor
-              key={task.id}
-              projectId={projectId}
-              task={task}
-              startEditing={startEditing}
-              onOpen={onOpen}
-              onClose={onClose}
-            />
+            <Tabs value={tab} onChange={setTab} keepMounted key={task.id} className={styles.tabs}>
+              <div className={styles.heading}>
+                <Group justify="space-between" wrap="nowrap" align="flex-start">
+                  <Title order={2} className={styles.taskTitle}>
+                    {taskTitle}
+                  </Title>
+                  <Tooltip label={copyLabel}>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      aria-label={copyLabel}
+                      onClick={() => clipboard.copy(taskUrl)}
+                    >
+                      <CopyIcon size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+                {task.blocked && (
+                  <Badge color="red" variant="light" mt="sm">
+                    Есть блокеры
+                  </Badge>
+                )}
+                {clipboard.error && (
+                  <Text size="xs" c="red" role="alert">
+                    Не удалось скопировать ссылку. Используйте адресную строку.
+                  </Text>
+                )}
+              </div>
+              <Tabs.List aria-label="Разделы карточки" className={styles.tabList}>
+                <Tabs.Tab value="task">Задача</Tabs.Tab>
+                <Tabs.Tab value="comments">Обсуждения</Tabs.Tab>
+                <Tabs.Tab value="history">История</Tabs.Tab>
+              </Tabs.List>
+              <Tabs.Panel value="task" className={styles.tabPanel}>
+                <TaskEditor
+                  key={task.id}
+                  projectId={projectId}
+                  task={task}
+                  startEditing={startEditing}
+                  onOpen={onOpen}
+                  onClose={onClose}
+                />
+              </Tabs.Panel>
+              <Tabs.Panel value="comments" className={styles.tabPanel}>
+                <TaskActivity
+                  projectId={projectId}
+                  taskId={task.id}
+                  comments
+                  active={tab === "comments"}
+                />
+              </Tabs.Panel>
+              <Tabs.Panel value="history" className={styles.tabPanel}>
+                <TaskActivity
+                  projectId={projectId}
+                  taskId={task.id}
+                  comments={false}
+                  active={tab === "history"}
+                />
+              </Tabs.Panel>
+            </Tabs>
           )}
         </Modal.Body>
       </Modal.Content>

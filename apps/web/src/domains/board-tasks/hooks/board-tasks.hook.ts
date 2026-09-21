@@ -10,10 +10,13 @@ import {
   createBoardTask,
   getTaskCriteria,
   getTaskCriterion,
+  getTaskActivity,
+  getTaskActivityEvent,
 } from "../adapters/board-tasks.adapter";
 import type { CreateTaskInput } from "../types/board-tasks.type";
 import type { BoardTask, TaskFilters, TasksPage, TaskLinksPage } from "../types/board-tasks.type";
 import type { CriteriaPage, CriterionView } from "../types/acceptance.type";
+import type { ActivityPage, ActivityEvent } from "../types/activity.type";
 
 /** Объединяет соседние уведомления; первичная загрузка принадлежит SWR, а не подписке. */
 const useKanbanSync = (project: string, refresh: () => Promise<unknown>): void => {
@@ -35,6 +38,56 @@ const useKanbanSync = (project: string, refresh: () => Promise<unknown>): void =
     };
   }, [project, refresh]);
 };
+
+/**
+ * Сохраняет страницы прочитанного снимка; SSE обновляет только сигнал новых записей.
+ */
+export const useTaskActivity = (
+  project: string,
+  reference: string,
+  comments: boolean,
+  enabled: boolean,
+) => {
+  const query = useSWRInfinite<ActivityPage, Error>(
+    (index: number, previous: ActivityPage | null) => {
+      if (!enabled || previous?.nextCursor === null) return null;
+      return [
+        "task-activity",
+        project,
+        reference,
+        comments,
+        index === 0 ? undefined : previous?.nextCursor,
+      ];
+    },
+    ([, scope, id, isDiscussion, cursor]: [string, string, string, boolean, string | undefined]) =>
+      getTaskActivity(scope, id, isDiscussion, cursor),
+    {
+      revalidateFirstPage: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      persistSize: false,
+    },
+  );
+  const latest = useSWR<ActivityPage, Error>(
+    enabled ? ["task-activity-latest", project, reference, comments] : null,
+    () => getTaskActivity(project, reference, comments),
+  );
+  useKanbanSync(project, latest.mutate);
+  return { query, latest };
+};
+
+/**
+ * Полные неизменяемые подробности загружаются при раскрытии записи.
+ */
+export const useTaskActivityEvent = (project: string, reference: string, entryId: string | null) =>
+  useSWR<ActivityEvent, Error>(
+    entryId === null ? null : ["task-activity-event", project, reference, entryId],
+    () => {
+      if (entryId === null) throw new Error("Запись ленты не выбрана");
+      return getTaskActivityEvent(project, reference, entryId);
+    },
+    { revalidateOnFocus: false },
+  );
 
 /**
  * Сохраняет загруженный объём критериев при SSE и подгрузке.

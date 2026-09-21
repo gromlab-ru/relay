@@ -61,6 +61,24 @@ entity_context({project: "app", ref: "WEB-24", depth: 4, profile: "context"})
 
 ## Канбан отдельных досок
 
+### Обсуждения и история
+
+| Инструмент             | Аргументы и назначение                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `task_comment_publish` | reference, title, description (Markdown), actor, actorRole, requestId: опубликовать сообщение |
+| `task_comments_list`   | reference, limit?, cursor?, after?, actor?, action?: компактные сообщения                     |
+| `task_comment_get`     | reference, entryId: полный Markdown одного сообщения                                          |
+| `task_history_list`    | reference, limit?, cursor?, after?, actor?, action?: хронология изменений                     |
+| `task_history_get`     | reference, entryId: полные значения до/после события                                          |
+
+Общие project/maxBytes сохраняются. Actor — собственное имя агента, actorRole —
+operator/orchestrator/worker. Web подписывается «Оператор». Публикация не требует
+ifRevision и не меняет ревизию содержания. Повторяйте тот же requestId после потери ответа.
+Проверяйте nextCursor даже у пустой страницы; snapshot можно использовать как after
+для последующего чтения новых записей. Полный Markdown читается адресно; превышение
+бюджета возвращает ошибку, не обрезанный успешный ответ.
+[Точные поля, ограничения и совместимость](TASK-ACTIVITY.md).
+
 ### Критерии приёмки задач
 
 Все инструменты принимают project?, reference (ключ/ID задачи), maxBytes?.

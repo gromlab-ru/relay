@@ -7,6 +7,8 @@ export {
   useBoardTaskCreation,
   useTaskCriteria,
   useTaskCriterion,
+  useTaskActivity,
+  useTaskActivityEvent,
 } from "./hooks/board-tasks.hook";
 export {
   createBoardTask,
@@ -17,6 +19,7 @@ export {
   BoardTaskError,
   getTaskCriterion,
   changeTaskCriterion,
+  publishTaskComment,
 } from "./adapters/board-tasks.adapter";
 export {
   KANBAN_COLUMNS,
@@ -46,3 +49,10 @@ export type {
   CriterionContent,
   ChangeCriterionInput,
 } from "./types/acceptance.type";
+export type {
+  ActivitySummary,
+  ActivityChange,
+  ActivityEvent,
+  ActivityPage,
+  PublishCommentInput,
+} from "./types/activity.type";

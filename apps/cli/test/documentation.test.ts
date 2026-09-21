@@ -161,7 +161,8 @@ test("скилл relay сохраняет все локальные ссылки
   assert(paths.includes("SKILL.md"));
   assert(paths.includes("references/ORCHESTRATOR.md"));
   assert(paths.includes("references/WORKER.md"));
-  assert(paths.includes("references/RECORDS.md"));
+  assert(paths.includes("references/KANBAN.md"));
+  assert(paths.includes("references/TASK-ACTIVITY.md"));
   assert(paths.includes("references/CLI-COMMANDS.md"));
   await checkDocumentation(installed, paths);
   const markdown = await readFile(join(installed, "SKILL.md"), "utf8");

@@ -45,6 +45,11 @@ import {
   criteriaQuerySchema,
   criterionViewSchema,
   createBoardTaskSchema,
+  taskActivityQuerySchema,
+  taskActivityPageSchema,
+  taskHistoryEventSchema,
+  taskCommentSavedSchema,
+  publishTaskCommentSchema,
 } from "@relay/core/domain/board-task";
 import { HttpClient, ApiError } from "@relay/rest-sdk/http-client";
 import { createApiClient } from "@relay/rest-sdk/create-api-client";
@@ -325,6 +330,36 @@ export async function createHttpBackend(url: string, project?: string): Promise<
         decode(boardViewSchema, await call(() => api.boards.getBoardBySlug({ slug }))),
     },
     boardTasks: {
+      listActivity: async (reference, input = {}, comments = false) =>
+        decode(
+          taskActivityPageSchema,
+          await call(() =>
+            (comments ? api.kanban.getTaskComments : api.kanban.getTaskHistory)({
+              reference,
+              ...defined(taskActivityQuerySchema.parse(input)),
+            }),
+          ),
+        ),
+      getActivity: async (reference, entryId, comments = false) =>
+        decode(
+          taskHistoryEventSchema,
+          await call(() =>
+            (comments ? api.kanban.getTaskComment : api.kanban.getTaskHistoryEvent)({
+              reference,
+              entryId,
+            }),
+          ),
+        ),
+      publishComment: async (reference, input) =>
+        decode(
+          taskCommentSavedSchema,
+          await call(
+            () =>
+              api.kanban.publishTaskComment({ reference }, publishTaskCommentSchema.parse(input)),
+            "write",
+            input.requestId,
+          ),
+        ),
       listCriteria: async (reference, input = {}) =>
         decode(
           criteriaPageSchema,

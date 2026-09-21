@@ -28,6 +28,7 @@ import { GraphIndex, openGraphIndex, rebuildGraphIndex, forgetGraphIndex } from 
 import { readLegacyGraph, legacyRecords, migrateGraph } from "./graph-migration.js";
 import { GraphTransaction, graphParallel, publishGraphJson } from "./graph-transaction.js";
 import type { GraphFileChange } from "./graph-transaction.js";
+import type { ActivityFile } from "./task-activity.js";
 
 const historyPointerSchema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -155,6 +156,7 @@ export class GraphRepository {
     requestHash: string,
     saved: (fingerprint: string, revision: number) => GraphSaved,
     assertOwned: () => void,
+    activity: ActivityFile[] = [],
   ): Promise<GraphSaved> {
     invariant(
       !snapshot.legacy,
@@ -196,7 +198,7 @@ export class GraphRepository {
       ...index.changes,
       { path: "meta.json", after: meta },
     );
-    await new GraphTransaction(this.workspace).publish(changes, assertOwned);
+    await new GraphTransaction(this.workspace).publish(changes, assertOwned, activity);
     index.publish();
     return result;
   }

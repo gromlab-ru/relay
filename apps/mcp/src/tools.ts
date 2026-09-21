@@ -30,6 +30,9 @@ import {
   editCriterionSchema,
   completeCriterionSchema,
   removeCriterionSchema,
+  taskActivityQuerySchema,
+  taskActivityIdSchema,
+  publishTaskCommentSchema,
 } from "@relay/core/domain/board-task";
 import type { BoardTaskSaved } from "@relay/core/domain/board-task";
 import { requestIdSchema } from "@relay/contracts/primitives";
@@ -229,6 +232,50 @@ export function createTools(projects: Projects): Server {
         backend.boardTasks.create(createBoardTaskSchema.strip().parse(input), input.actor),
       ),
   );
+  projectTool(
+    "task_comment_publish",
+    "Опубликовать сообщение обсуждения: обязательные заголовок и Markdown, своё имя и роль. Не меняет ревизию задачи; повтор requestId безопасен",
+    { ...selector, ...boardTask, ...publishTaskCommentSchema.shape },
+    false,
+    async (backend, input) => {
+      const data = await backend.boardTasks.publishComment(
+        input.reference,
+        publishTaskCommentSchema.strip().parse(input),
+      );
+      return {
+        data,
+        text: `Сообщение ${data.commentId} опубликовано в задаче ${data.id}. Ревизия ленты: ${data.revision}. Ключ повтора: ${data.requestId}.`,
+      };
+    },
+  );
+  for (const comments of [true, false]) {
+    projectTool(
+      comments ? "task_comments_list" : "task_history_list",
+      comments
+        ? "Сообщения задачи без полного Markdown: по 20, продолжение nextCursor; after читает новые записи"
+        : "Хронология всех изменений задачи: автор, время и поля; по 20, продолжение nextCursor, фильтры автора и действия",
+      { ...selector, ...boardTask, ...taskActivityQuerySchema.shape },
+      true,
+      async (backend, input) => ({
+        data: await backend.boardTasks.listActivity(
+          input.reference,
+          taskActivityQuerySchema.strip().parse(input),
+          comments,
+        ),
+      }),
+    );
+    projectTool(
+      comments ? "task_comment_get" : "task_history_get",
+      comments
+        ? "Прочитать полный Markdown сообщения с автором и временем публикации"
+        : "Прочитать подробное событие: значения до/после, Markdown и идентификатор общей операции",
+      { ...selector, ...boardTask, entryId: taskActivityIdSchema },
+      true,
+      async (backend, input) => ({
+        data: await backend.boardTasks.getActivity(input.reference, input.entryId, comments),
+      }),
+    );
+  }
   projectTool(
     "task_criteria_list",
     "Список критериев приёмки задачи: заголовки, краткие описания и выполнение; по 20 с продолжением",

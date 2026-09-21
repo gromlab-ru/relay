@@ -31,7 +31,10 @@ export function boardTaskText(task: BoardTaskView, options: TextOptions): string
     `ID: ${task.id}\nДоска: ${task.boardSlug}\nКолонка: ${columns[task.column]}\nРевизия: ${task.revision}`,
     task.blocked ? `Блокеры: ${task.blockers.join(", ")}` : "Невыполненных зависимостей нет.",
     task.description ? renderMarkdown(task.description, options) : "Описание пока не заполнено.",
-    `Критерии приёмки: выполнено ${task.acceptance?.completed ?? 0} из ${task.acceptance?.total ?? 0}.\nСписок: relay-cli task criterion list ${task.key}`,
+    wrap(
+      `Критерии приёмки: выполнено ${task.acceptance?.completed ?? 0} из ${task.acceptance?.total ?? 0}.\nСписок: relay-cli task criterion list ${task.key}`,
+      options.width,
+    ),
     task.productLinks.length === 0
       ? "Продуктовых связей нет."
       : "Реализует:\n" +

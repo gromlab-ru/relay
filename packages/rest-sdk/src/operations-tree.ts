@@ -53,10 +53,18 @@ import { getProjectSettingsForProject } from "./operations/get-project-settings-
 import { getProjectSettings } from "./operations/get-project-settings.js";
 import { getProjects } from "./operations/get-projects.js";
 import { getServerContext } from "./operations/get-server-context.js";
+import { getTaskCommentForProject } from "./operations/get-task-comment-for-project.js";
+import { getTaskComment } from "./operations/get-task-comment.js";
+import { getTaskCommentsForProject } from "./operations/get-task-comments-for-project.js";
+import { getTaskComments } from "./operations/get-task-comments.js";
 import { getTaskCriteriaForProject } from "./operations/get-task-criteria-for-project.js";
 import { getTaskCriteria } from "./operations/get-task-criteria.js";
 import { getTaskCriterionForProject } from "./operations/get-task-criterion-for-project.js";
 import { getTaskCriterion } from "./operations/get-task-criterion.js";
+import { getTaskHistoryEventForProject } from "./operations/get-task-history-event-for-project.js";
+import { getTaskHistoryEvent } from "./operations/get-task-history-event.js";
+import { getTaskHistoryForProject } from "./operations/get-task-history-for-project.js";
+import { getTaskHistory } from "./operations/get-task-history.js";
 import { linkBoardTaskForProject } from "./operations/link-board-task-for-project.js";
 import { linkBoardTask } from "./operations/link-board-task.js";
 import { linkEntityTaskForProject } from "./operations/link-entity-task-for-project.js";
@@ -73,6 +81,8 @@ import { mutateGraphForProject } from "./operations/mutate-graph-for-project.js"
 import { mutateGraph } from "./operations/mutate-graph.js";
 import { mutateProductForProject } from "./operations/mutate-product-for-project.js";
 import { mutateProduct } from "./operations/mutate-product.js";
+import { publishTaskCommentForProject } from "./operations/publish-task-comment-for-project.js";
+import { publishTaskComment } from "./operations/publish-task-comment.js";
 import { registerProject } from "./operations/register-project.js";
 import { renameEntityKeyForProject } from "./operations/rename-entity-key-for-project.js";
 import { renameEntityKey } from "./operations/rename-entity-key.js";
@@ -149,6 +159,11 @@ export const operationsTree = {
     linkBoardTask: linkBoardTask,
     getTaskCriteria: getTaskCriteria,
     changeTaskCriterion: changeTaskCriterion,
+    getTaskComments: getTaskComments,
+    publishTaskComment: publishTaskComment,
+    getTaskComment: getTaskComment,
+    getTaskHistory: getTaskHistory,
+    getTaskHistoryEvent: getTaskHistoryEvent,
     getTaskCriterion: getTaskCriterion,
     updateBoardTask: updateBoardTask,
     moveBoardTask: moveBoardTask,
@@ -159,6 +174,11 @@ export const operationsTree = {
     linkBoardTaskForProject: linkBoardTaskForProject,
     getTaskCriteriaForProject: getTaskCriteriaForProject,
     changeTaskCriterionForProject: changeTaskCriterionForProject,
+    getTaskCommentsForProject: getTaskCommentsForProject,
+    publishTaskCommentForProject: publishTaskCommentForProject,
+    getTaskCommentForProject: getTaskCommentForProject,
+    getTaskHistoryForProject: getTaskHistoryForProject,
+    getTaskHistoryEventForProject: getTaskHistoryEventForProject,
     getTaskCriterionForProject: getTaskCriterionForProject,
     updateBoardTaskForProject: updateBoardTaskForProject,
     moveBoardTaskForProject: moveBoardTaskForProject,

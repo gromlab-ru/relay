@@ -16,6 +16,7 @@ import { commandGroup, registerCommand } from "../command.js";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
 import { integer } from "../options.js";
+import { registerTaskActivity } from "./task-activity.js";
 import {
   boardTaskText,
   boardTaskSavedText,
@@ -85,6 +86,7 @@ export function registerBoardTasks(program: Command, runtime: Runtime): void {
       "ID задачи постоянный, ключ с префиксом меняется при переносе. Markdown передаётся напрямую. Запись требует автора; изменение — прочитанной ревизии. Повторите тот же request-id после потери ответа.",
     examples: [["relay-cli task list --readiness ready", "Работа без блокеров для оркестратора"]],
   });
+  registerTaskActivity(group, runtime);
   const criteria = commandGroup(group, {
     name: "criterion",
     description: "Критерии приёмки: условия завершения задачи",

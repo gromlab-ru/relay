@@ -12,6 +12,7 @@ import { BoardRepository } from "@relay/core/storage/boards";
 import { BoardTaskRepository } from "@relay/core/storage/board-tasks";
 import { BoardTasksService } from "@relay/core/application/board-tasks/service";
 import { GraphRepository } from "@relay/core/storage/graph";
+import { TaskActivityRepository } from "@relay/core/storage/task-activity";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
@@ -115,6 +116,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       this.boardPaths = [
         repository.root,
         new GraphRepository(workspace).root,
+        new TaskActivityRepository(workspace).root,
         ...boards.flatMap((board) => [
           join(repository.root, board.slug),
           join(repository.root, board.slug, "tasks"),
@@ -126,8 +128,9 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
         return new BoardTaskRepository(workspace).all();
       });
       const relations = await workspace.locked(() => new GraphRepository(workspace).signal());
+      const activity = await workspace.locked(() => new TaskActivityRepository(workspace).signal());
       const boardsVersion = createHash("sha256")
-        .update(JSON.stringify([workspace.config, boards, kanban, relations]))
+        .update(JSON.stringify([workspace.config, boards, kanban, relations, activity]))
         .digest("hex");
       if (this.boardsVersion !== undefined && this.boardsVersion !== boardsVersion)
         this.events.next({ type: "changed", data: { source: "storage" } });
@@ -178,6 +181,7 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
             this.boardPaths.includes(path) ||
             this.productPaths.includes(path) ||
             (path === configParent && name === "boards") ||
+            (path === configParent && name === "task-activity") ||
             (path === configParent && (name === "relations.json" || name === "relations")) ||
             path === this.productRoot ||
             (this.productRoot !== undefined && dirname(path) === this.productRoot) ||

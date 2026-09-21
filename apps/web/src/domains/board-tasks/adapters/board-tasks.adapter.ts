@@ -1,6 +1,17 @@
 import { z } from "zod";
 import { getProjectApi, ApiError } from "infra/tasks-api";
 import { CRITERIA_PAGE_SCHEMA, CRITERION_VIEW_SCHEMA } from "../config/acceptance.schema";
+import {
+  ACTIVITY_PAGE_SCHEMA,
+  ACTIVITY_EVENT_SCHEMA,
+  COMMENT_SAVED_SCHEMA,
+} from "../config/activity.schema";
+import type {
+  ActivityPage,
+  ActivityEvent,
+  CommentSaved,
+  PublishCommentInput,
+} from "../types/activity.type";
 import type { CriteriaPage, CriterionView, ChangeCriterionInput } from "../types/acceptance.type";
 import {
   BOARD_TASK_SCHEMA,
@@ -30,6 +41,49 @@ export class BoardTaskError extends Error {
   }
 }
 const failure = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+/**
+ * Читает страницу стабильной ленты задачи.
+ */
+export const getTaskActivity = (
+  project: string,
+  reference: string,
+  comments: boolean,
+  cursor?: string,
+): Promise<ActivityPage> => {
+  const api = getProjectApi(project).kanban;
+  return request(
+    () => (comments ? api.getTaskComments : api.getTaskHistory)({ reference, cursor, limit: 20 }),
+    ACTIVITY_PAGE_SCHEMA,
+  );
+};
+/**
+ * Читает подробности одного события, не загружая всю историю.
+ */
+export const getTaskActivityEvent = (
+  project: string,
+  reference: string,
+  entryId: string,
+): Promise<ActivityEvent> =>
+  request(
+    () => getProjectApi(project).kanban.getTaskHistoryEvent({ reference, entryId }),
+    ACTIVITY_EVENT_SCHEMA,
+  );
+/**
+ * Публикует сообщение Web только от имени Оператор.
+ */
+export const publishTaskComment = (
+  project: string,
+  reference: string,
+  input: PublishCommentInput,
+): Promise<CommentSaved> =>
+  request(
+    () =>
+      getProjectApi(project).kanban.publishTaskComment(
+        { reference },
+        { ...input, actor: "Оператор", actorRole: "operator" },
+      ),
+    COMMENT_SAVED_SCHEMA,
+  );
 /**
  * Читает текущий ограниченный объём списка без Markdown.
  */
@@ -63,7 +117,11 @@ export const changeTaskCriterion = (
   input: ChangeCriterionInput,
 ): Promise<TaskSaved> =>
   request(
-    () => getProjectApi(project).kanban.changeTaskCriterion({ reference }, input),
+    () =>
+      getProjectApi(project).kanban.changeTaskCriterion(
+        { reference },
+        { ...input, actor: "Оператор" },
+      ),
     TASK_SAVED_SCHEMA,
   );
 async function request<T>(
@@ -147,7 +205,12 @@ export const getTaskLinks = (
   );
 export const createBoardTask = (project: string, input: CreateTaskInput): Promise<TaskSaved> =>
   request(
-    () => getProjectApi(project).kanban.createBoardTask({ ...input, includeTask: true }),
+    () =>
+      getProjectApi(project).kanban.createBoardTask({
+        ...input,
+        includeTask: true,
+        actor: "Оператор",
+      }),
     TASK_SAVED_SCHEMA,
   );
 export const updateBoardTask = (
@@ -156,7 +219,8 @@ export const updateBoardTask = (
   input: EditTaskInput,
 ): Promise<TaskSaved> =>
   request(
-    () => getProjectApi(project).kanban.updateBoardTask({ reference }, input),
+    () =>
+      getProjectApi(project).kanban.updateBoardTask({ reference }, { ...input, actor: "Оператор" }),
     TASK_SAVED_SCHEMA,
   );
 export const moveBoardTask = (
@@ -165,7 +229,8 @@ export const moveBoardTask = (
   input: MoveTaskInput,
 ): Promise<TaskSaved> =>
   request(
-    () => getProjectApi(project).kanban.moveBoardTask({ reference }, input),
+    () =>
+      getProjectApi(project).kanban.moveBoardTask({ reference }, { ...input, actor: "Оператор" }),
     TASK_SAVED_SCHEMA,
   );
 export const linkBoardTask = (
@@ -174,6 +239,7 @@ export const linkBoardTask = (
   input: LinkTaskInput,
 ): Promise<TaskSaved> =>
   request(
-    () => getProjectApi(project).kanban.linkBoardTask({ reference }, input),
+    () =>
+      getProjectApi(project).kanban.linkBoardTask({ reference }, { ...input, actor: "Оператор" }),
     TASK_SAVED_SCHEMA,
   );

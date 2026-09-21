@@ -9,9 +9,8 @@ import {
   Stack,
   Text,
   TextInput,
-  Title,
 } from "@mantine/core";
-import { Pencil, Link2, ChevronDown, Check, Columns3, Circle } from "lucide-react";
+import { Pencil, ChevronDown, Check, Columns3, Circle } from "lucide-react";
 import { useForm } from "@mantine/form";
 import { useHotkeys } from "@mantine/hooks";
 import { useBoard, useBoards } from "domains/boards";
@@ -95,7 +94,6 @@ export const TaskEditor = (props: TaskEditorProps) => {
   const hasError = error !== "";
   const hasNotice = notice !== "";
   const hasNewerRevision = isEditing && task.revision > baseRevision;
-  const title = task.title || "Без названия";
   const isBusy = form.submitting || isPlacementSaving;
   const hasPlacementError = placementError !== "";
   const statusData = TASK_COLUMNS.find((entry) => entry.value === task.column);
@@ -207,47 +205,9 @@ export const TaskEditor = (props: TaskEditorProps) => {
     handleUseCurrent();
     setEditing(false);
   };
-  const handleCopyLink = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/projects/${encodeURIComponent(projectId)}/boards/${encodeURIComponent(task.boardSlug)}/${task.id}`,
-      );
-      setNotice("Ссылка скопирована");
-    } catch {
-      setError("Не удалось скопировать ссылку. Адрес задачи доступен в адресной строке.");
-    }
-  };
   if (defect !== undefined) throw defect;
   return (
     <div className={styles.workspace}>
-      <div className={styles.heading}>
-        <Group justify="space-between" wrap="nowrap">
-          <Title order={2} className={styles.taskTitle}>
-            {title}
-          </Title>
-          <Button
-            variant="subtle"
-            color="gray"
-            size="xs"
-            aria-label="Копировать ссылку"
-            onClick={() => void handleCopyLink()}
-          >
-            <Link2 size={16} />
-          </Button>
-        </Group>
-        <Group gap="xs" mt="sm">
-          {task.blocked && (
-            <Badge color="red" variant="light">
-              Есть блокеры
-            </Badge>
-          )}
-          {isEditing && (
-            <Text size="xs" c="dimmed">
-              Редактирование · черновик в этой вкладке
-            </Text>
-          )}
-        </Group>
-      </div>
       <div className={styles.panel}>
         <Stack gap="lg">
           {hasNewerRevision && (

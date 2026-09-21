@@ -42,6 +42,11 @@ import {
   criteriaQuerySchema,
   criterionViewSchema,
   changeCriterionSchema,
+  taskActivityQuerySchema,
+  taskActivityPageSchema,
+  taskHistoryEventSchema,
+  taskCommentSavedSchema,
+  publishTaskCommentSchema,
   boardTaskSavedSchema,
   boardTasksPageSchema,
   boardTaskLinksPageSchema,
@@ -92,6 +97,11 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  TaskActivityQuery: taskActivityQuerySchema,
+  TaskActivityPage: taskActivityPageSchema,
+  TaskHistoryEvent: taskHistoryEventSchema,
+  TaskCommentSaved: taskCommentSavedSchema,
+  PublishTaskComment: publishTaskCommentSchema,
   EntityPageQuery: entityPageQuerySchema,
   EntityTypeQuery: entityTypeQuerySchema,
   EntityTypes: entityTypesSchema,

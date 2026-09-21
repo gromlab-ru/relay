@@ -6,6 +6,7 @@ import {
   criterionIdSchema,
 } from "./task-acceptance.js";
 export * from "./task-acceptance.js";
+export * from "./task-activity.js";
 import {
   actorSchema,
   singleLine,
@@ -141,7 +142,7 @@ export const boardTaskSavedSchema = z.strictObject({
     ),
 });
 export const boardTaskRecordSchema = boardTaskSchema.extend({
-  version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+  version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   acceptanceCriteria: z
     .array(acceptanceCriterionSchema)
     .max(100)

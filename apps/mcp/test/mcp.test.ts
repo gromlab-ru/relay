@@ -76,6 +76,8 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   ) {
     assert.match(content, /Задача .*Ревизия/);
     assert.ok(content.includes(String(body.data?.id)));
+  } else if (body.ok && name === "task_comment_publish") {
+    assert.match(content, /Сообщение .*Ревизия ленты/);
   } else if (
     body.ok &&
     ["product_application_save", "product_scope_replace", "product_implementation_update"].includes(
@@ -92,6 +94,71 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   } else assert.deepEqual(JSON.parse(content), result.structuredContent);
   return { ...body, isError: result.isError };
 }
+
+test("MCP обсуждений: discovery, имена агентов, повтор, история, бюджет и изоляция", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const tools = (await client.listTools()).tools;
+  const publish = tools.find((tool) => tool.name === "task_comment_publish");
+  assert.ok(publish?.inputSchema.required?.includes("actor"));
+  assert.ok(publish?.inputSchema.required?.includes("actorRole"));
+  const created = await call(client, "board_task_create", {
+    board: "product",
+    actor: "operator",
+    requestId: "create",
+  });
+  const reference = created.data?.id;
+  const input = {
+    reference,
+    title: "Отчёт",
+    description: "## Проверено\n\nТочное содержание\n",
+    actor: "worker-api",
+    actorRole: "worker",
+    requestId: "message",
+  };
+  const saved = await call(client, "task_comment_publish", input);
+  assert.equal(saved.ok, true);
+  assert.deepEqual((await call(client, "task_comment_publish", input)).data, saved.data);
+  const read = await call(client, "task_comment_get", {
+    reference,
+    entryId: saved.data?.commentId,
+  });
+  assert.equal(read.data?.description, input.description);
+  assert.equal(read.data?.actor, "worker-api");
+  assert.equal(
+    (
+      await call(client, "task_comment_publish", {
+        ...input,
+        actor: "planner",
+        actorRole: "orchestrator",
+      })
+    ).ok,
+    true,
+  );
+  const page = await call(client, "task_comments_list", { reference, limit: 1 });
+  assert.equal(page.ok, true);
+  assert.equal((await call(client, "task_history_list", { reference, after: 0 })).ok, true);
+  const otherServer = await app.start(join(app.root, "b/.relay/config.json"));
+  const other = await app.connect(otherServer.url);
+  assert.equal(
+    (await call(other, "task_comment_get", { reference, entryId: saved.data?.commentId })).ok,
+    false,
+  );
+  await call(client, "task_comment_publish", {
+    ...input,
+    description: "Большой текст ".repeat(1000),
+    requestId: "large",
+  });
+  const latest = await call(client, "task_comments_list", { reference, limit: 1 });
+  const entries = latest.data?.items as { id: string }[];
+  const tooLarge = await call(client, "task_comment_get", {
+    reference,
+    entryId: entries[0]?.id,
+    maxBytes: 1024,
+  });
+  assert.equal(tooLarge.ok, false);
+});
 
 test("MCP движка: discovery из контрактов, публичные ключи, история адресов и контекст", async (t) => {
   const app = await setup(t);

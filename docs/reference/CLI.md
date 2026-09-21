@@ -106,6 +106,37 @@
 Изменяет связь между задачами одного проекта. Все записи канбана принимают `--request-id`.
 [Контракт канбана](KANBAN.md).
 
+## Обсуждения и история задачи
+
+### task comment publish
+
+`task comment publish <reference> --title <text> --description <markdown> --role <role> [--request-id <id>]`.
+Глобальный `--actor` задаёт имя, role — operator/orchestrator/worker. Публикация не требует
+ревизии карточки и допустима в любой колонке. После потери ответа повторите исходные
+аргументы с прежним request-id. Ответ содержит ID сообщения и ревизию ленты.
+
+### task comment list
+
+`task comment list <reference> [--limit <n>] [--cursor <cursor>] [--after <n>] [--by <name>] [--action <action>]`.
+Компактная лента от новых сообщений к старым. По умолчанию 20, максимум 100; команда
+продолжения сохраняет фильтры. By — точное имя автора, after — последовательный номер.
+
+### task comment get
+
+`task comment get <reference> <entryId>` показывает автора, время и полный Markdown.
+`--format json` возвращает точное содержание без терминального оформления.
+
+### task history list
+
+`task history list <reference>` принимает те же параметры страницы и фильтров, что
+comment list. Возвращает события всех сохранённых действий с границей snapshot/nextCursor.
+
+### task history get
+
+`task history get <reference> <entryId>` показывает полные значения до/после, а старые
+события явно отмечает как не содержащие подробностей. Markdown рендерится отдельно от
+обычного текста. [Контракт](TASK-ACTIVITY.md).
+
 ## Критерии приёмки задачи
 
 ### task criterion list

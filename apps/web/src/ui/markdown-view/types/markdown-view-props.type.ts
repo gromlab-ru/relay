@@ -4,6 +4,8 @@ import type { ComponentPropsWithoutRef } from "react";
 export type MarkdownViewParams = {
   /** Безопасно отображаемый Markdown. */
   text: string;
+  /** Компактная типографика для сообщений и раскрываемых подробностей. */
+  compact?: boolean;
   /** Подсказка для незаполненного раздела. */
   emptyText?: string;
 };

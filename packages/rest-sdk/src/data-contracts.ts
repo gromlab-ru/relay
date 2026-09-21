@@ -4,6 +4,201 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface TaskActivityQuery {
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit: number;
+  /**
+   * Непрозрачный курсор следующей страницы; сохраняйте фильтры
+   * @maxLength 2048
+   */
+  cursor?: string;
+  /**
+   * Только события после известного последовательного номера
+   * @min 0
+   * @max 9007199254740991
+   */
+  after?: number;
+  /**
+   * Точное имя автора для фильтрации
+   * @maxLength 128
+   */
+  actor?: string;
+  /**
+   * Тип действия, например update или comment-publish
+   * @minLength 1
+   */
+  action?: string;
+}
+
+export interface TaskActivityPage {
+  items: {
+    /**
+     * Постоянный номер записи в ленте задачи
+     * @pattern ^[1-9]\d{0,14}$
+     */
+    id: string;
+    /** Постоянный ID задачи */
+    taskId: string;
+    /**
+     * Последовательный номер в ленте задачи
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    sequence: number;
+    /**
+     * Момент времени в UTC
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    at: string;
+    /**
+     * Автор операции
+     * @maxLength 128
+     */
+    actor: string;
+    /** Роль автора: оператор, оркестратор или воркер */
+    actorRole?: TaskActivityPageActorRoleEnum;
+    /** Сохранённое действие */
+    action: string;
+    /** Читаемое название события или заголовок сообщения */
+    title: string;
+    /** Общий идентификатор составной операции */
+    operationId: string;
+    /**
+     * Ревизия содержания задачи на момент события
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** У старой записи отсутствуют подробности изменений */
+    legacy: boolean;
+    /** Названия изменённых полей без полных значений */
+    fields: string[];
+  }[];
+  /** Курсор продолжения или null */
+  nextCursor: string | null;
+  /**
+   * Верхняя граница снимка; новые события читаются через after
+   * @min 0
+   * @max 9007199254740991
+   */
+  snapshot: number;
+}
+
+export interface TaskHistoryEvent {
+  /**
+   * Постоянный номер записи в ленте задачи
+   * @pattern ^[1-9]\d{0,14}$
+   */
+  id: string;
+  /** Постоянный ID задачи */
+  taskId: string;
+  /**
+   * Последовательный номер в ленте задачи
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  sequence: number;
+  /**
+   * Момент времени в UTC
+   * @format date-time
+   * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+   */
+  at: string;
+  /**
+   * Автор операции
+   * @maxLength 128
+   */
+  actor: string;
+  /** Роль автора: оператор, оркестратор или воркер */
+  actorRole?: TaskHistoryEventActorRoleEnum;
+  /** Сохранённое действие */
+  action: string;
+  /** Читаемое название события или заголовок сообщения */
+  title: string;
+  /** Общий идентификатор составной операции */
+  operationId: string;
+  /**
+   * Ревизия содержания задачи на момент события
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /** У старой записи отсутствуют подробности изменений */
+  legacy: boolean;
+  /** Названия изменённых полей без полных значений */
+  fields: string[];
+  /** Полные изменения до и после */
+  changes: {
+    /** Постоянный адрес изменённого поля */
+    field: string;
+    /** Русское название изменения */
+    label: string;
+    /** Обычный текст или Markdown */
+    format: TaskHistoryEventFormatEnum;
+    /** Прежнее полное значение; null при добавлении */
+    before: string | null;
+    /** Новое полное значение; null при удалении */
+    after: string | null;
+  }[];
+  /** Полный Markdown опубликованного сообщения */
+  description?: string;
+}
+
+export interface TaskCommentSaved {
+  /** Постоянный ID задачи */
+  id: string;
+  /**
+   * Постоянный номер записи в ленте задачи
+   * @pattern ^[1-9]\d{0,14}$
+   */
+  commentId: string;
+  /** Сообщение опубликовано */
+  action: "comment-publish";
+  /**
+   * Ревизия ленты, не содержания задачи
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+  /**
+   * Ключ безопасного повтора операции
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+}
+
+export interface PublishTaskComment {
+  /**
+   * Обязательный однострочный заголовок сообщения
+   * @minLength 1
+   */
+  title: string;
+  /** Полное сообщение в Markdown, до 256 КиБ */
+  description: string;
+  /**
+   * Имя автора; Web передаёт Оператор, агент задаёт своё имя
+   * @maxLength 128
+   */
+  actor: string;
+  /** Роль автора: оператор, оркестратор или воркер */
+  actorRole: PublishTaskCommentActorRoleEnum;
+  /**
+   * Ключ безопасного повтора операции
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+}
+
 export interface EntityPageQuery {
   /**
    * Смещение страницы
@@ -4333,6 +4528,27 @@ export interface ApiFailure {
   };
 }
 
+/** Роль автора: оператор, оркестратор или воркер */
+export type TaskActivityPageActorRoleEnum =
+  | "operator"
+  | "orchestrator"
+  | "worker";
+
+/** Роль автора: оператор, оркестратор или воркер */
+export type TaskHistoryEventActorRoleEnum =
+  | "operator"
+  | "orchestrator"
+  | "worker";
+
+/** Обычный текст или Markdown */
+export type TaskHistoryEventFormatEnum = "text" | "markdown";
+
+/** Роль автора: оператор, оркестратор или воркер */
+export type PublishTaskCommentActorRoleEnum =
+  | "operator"
+  | "orchestrator"
+  | "worker";
+
 /** Вид основной сущности */
 export type EntityTypeQueryKindEnum =
   | "project"
@@ -5323,6 +5539,89 @@ export interface GetTaskCriteriaParams {
 export type ChangeTaskCriterionOkEnum = true;
 
 export interface ChangeTaskCriterionParams {
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type GetTaskCommentsOkEnum = true;
+
+export interface GetTaskCommentsParams {
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /**
+   * Непрозрачный курсор следующей страницы; сохраняйте фильтры
+   * @maxLength 2048
+   */
+  cursor?: string;
+  /**
+   * Только события после известного последовательного номера
+   * @min 0
+   * @max 9007199254740991
+   */
+  after?: number;
+  /** Точное имя автора для фильтрации */
+  actor?: string;
+  /** Тип действия, например update или comment-publish */
+  action?: string;
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type PublishTaskCommentOkEnum = true;
+
+export interface PublishTaskCommentParams {
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type GetTaskCommentOkEnum = true;
+
+export interface GetTaskCommentParams {
+  /** Постоянный номер сообщения в ленте задачи */
+  entryId: any;
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type GetTaskHistoryOkEnum = true;
+
+export interface GetTaskHistoryParams {
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /**
+   * Непрозрачный курсор следующей страницы; сохраняйте фильтры
+   * @maxLength 2048
+   */
+  cursor?: string;
+  /**
+   * Только события после известного последовательного номера
+   * @min 0
+   * @max 9007199254740991
+   */
+  after?: number;
+  /** Точное имя автора для фильтрации */
+  actor?: string;
+  /** Тип действия, например update или comment-publish */
+  action?: string;
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type GetTaskHistoryEventOkEnum = true;
+
+export interface GetTaskHistoryEventParams {
+  /** Постоянный номер события в ленте задачи */
+  entryId: any;
   /** ID или ключ задачи */
   reference: any;
 }
@@ -6390,6 +6689,99 @@ export interface GetTaskCriteriaForProjectParams {
 export type ChangeTaskCriterionForProjectOkEnum = true;
 
 export interface ChangeTaskCriterionForProjectParams {
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskCommentsForProjectOkEnum = true;
+
+export interface GetTaskCommentsForProjectParams {
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /**
+   * Непрозрачный курсор следующей страницы; сохраняйте фильтры
+   * @maxLength 2048
+   */
+  cursor?: string;
+  /**
+   * Только события после известного последовательного номера
+   * @min 0
+   * @max 9007199254740991
+   */
+  after?: number;
+  /** Точное имя автора для фильтрации */
+  actor?: string;
+  /** Тип действия, например update или comment-publish */
+  action?: string;
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type PublishTaskCommentForProjectOkEnum = true;
+
+export interface PublishTaskCommentForProjectParams {
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskCommentForProjectOkEnum = true;
+
+export interface GetTaskCommentForProjectParams {
+  /** Постоянный номер сообщения в ленте задачи */
+  entryId: any;
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskHistoryForProjectOkEnum = true;
+
+export interface GetTaskHistoryForProjectParams {
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /**
+   * Непрозрачный курсор следующей страницы; сохраняйте фильтры
+   * @maxLength 2048
+   */
+  cursor?: string;
+  /**
+   * Только события после известного последовательного номера
+   * @min 0
+   * @max 9007199254740991
+   */
+  after?: number;
+  /** Точное имя автора для фильтрации */
+  actor?: string;
+  /** Тип действия, например update или comment-publish */
+  action?: string;
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskHistoryEventForProjectOkEnum = true;
+
+export interface GetTaskHistoryEventForProjectParams {
+  /** Постоянный номер события в ленте задачи */
+  entryId: any;
   /** ID или ключ задачи */
   reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */

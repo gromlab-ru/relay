@@ -15,6 +15,8 @@ import { invariant, isErrno } from "../shared/errors.js";
 import { BoardRepository } from "./boards.js";
 import { atomicJson, exists, jsonFiles, readJson, syncDirectory } from "./files.js";
 import type { Workspace } from "./workspace.js";
+import { activityFileSchema, TaskActivityRepository } from "./task-activity.js";
+import type { ActivityFile } from "./task-activity.js";
 
 const storedSavedSchema = boardTaskSavedSchema.extend({
   task: z
@@ -37,7 +39,7 @@ const currentStoredSchema = boardTaskRecordSchema.extend({
     .max(100),
   requests: z.record(z.string(), z.strictObject({ hash: z.string(), result: storedSavedSchema })),
 });
-// Старые версии читаются без изменения файла; следующая предметная запись публикует v4.
+// Старые версии читаются без изменения файла; следующая предметная запись публикует v5.
 const storedSchema = z.preprocess((value) => {
   // Совместимость с промежуточной локальной итерацией; классификация задач отменена пользователем.
   if (typeof value === "object" && value !== null && "kind" in value) {
@@ -54,9 +56,10 @@ const storedSchema = z.preprocess((value) => {
   return value;
 }, currentStoredSchema);
 const transactionSchema = z.strictObject({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   writes: z.array(z.strictObject({ slug: boardSlugSchema, task: storedSchema })),
   removes: z.array(z.strictObject({ slug: boardSlugSchema, id: boardTaskIdSchema })),
+  activity: z.array(activityFileSchema).default([]),
 });
 
 /** Задачи живут в каталогах досок; одно долговечное намерение завершает составную запись. */
@@ -132,11 +135,13 @@ export class BoardTaskRepository {
     writes: { slug: string; task: BoardTaskRecord }[],
     removes: { slug: string; id: string }[],
     assertOwned: () => void,
+    activity: ActivityFile[] = [],
   ) {
+    new TaskActivityRepository(this.workspace).validate(activity);
     const transaction = parse(
       transactionSchema,
       {
-        version: 1,
+        version: 2,
         writes: writes.map(({ slug, task }) => ({
           slug,
           task: {
@@ -168,6 +173,7 @@ export class BoardTaskRepository {
           },
         })),
         removes,
+        activity,
       },
       "запись канбана",
     );
@@ -198,6 +204,9 @@ export class BoardTaskRepository {
       true,
     );
     const boards = await this.boards.all();
+    const activity = new TaskActivityRepository(this.workspace);
+    activity.validate(transaction.activity);
+    await activity.publish(transaction.activity, assertOwned);
     for (const { slug, task } of transaction.writes) {
       invariant(
         boards.some((board) => board.slug === slug && board.id === task.boardId),

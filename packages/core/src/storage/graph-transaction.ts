@@ -7,6 +7,8 @@ import { GRAPH_INDEX_BYTES, GRAPH_RECORD_BYTES, graphDigest } from "./graph-form
 import { invariant } from "../shared/errors.js";
 import { parse } from "../domain/validation.js";
 import type { Workspace } from "./workspace.js";
+import { activityFileSchema, TaskActivityRepository } from "./task-activity.js";
+import type { ActivityFile } from "./task-activity.js";
 
 const pathSchema = z
   .string()
@@ -18,8 +20,9 @@ const changeSchema = z.strictObject({
   after: z.unknown(),
 });
 const pendingSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]),
   changes: z.array(changeSchema),
+  activity: z.array(activityFileSchema).default([]),
 });
 export type GraphFileChange = { path: string; after: unknown };
 const MAX_TRANSACTION_BYTES = 128 * 1024 * 1024;
@@ -67,7 +70,12 @@ export class GraphTransaction {
     this.root = join(dirname(workspace.configPath), "relations");
     this.pending = join(this.root, "transactions", "pending.json");
   }
-  async publish(changes: GraphFileChange[], assertOwned: () => void): Promise<void> {
+  async publish(
+    changes: GraphFileChange[],
+    assertOwned: () => void,
+    activity: ActivityFile[] = [],
+  ): Promise<void> {
+    new TaskActivityRepository(this.workspace).validate(activity);
     invariant(
       !(await exists(this.pending)),
       "INVALID_DATA",
@@ -102,7 +110,7 @@ export class GraphTransaction {
       prepared.push({ ...change, before });
     }
     // Канонические файлы проверяются полностью до первой публикации. Индексы производны.
-    const transaction = pendingSchema.parse({ schemaVersion: 1, changes: prepared });
+    const transaction = pendingSchema.parse({ schemaVersion: 2, changes: prepared, activity });
     invariant(
       Buffer.byteLength(JSON.stringify(transaction, null, 2) + "\n") <= MAX_TRANSACTION_BYTES,
       "RESPONSE_TOO_LARGE",
@@ -169,6 +177,7 @@ export class GraphTransaction {
     );
     for (const change of transaction.changes.filter((entry) => entry.path === "meta.json"))
       await apply(change);
+    await new TaskActivityRepository(this.workspace).publish(transaction.activity, assertOwned);
     // WAL остаётся до fsync всех канонических файлов и каталогов, включая уже опубликованные
     // до прерывания. Кеши можно потерять: их контрольные суммы/счётчики запускают восстановление.
     const canonical = transaction.changes.filter((change) => !change.path.startsWith(".indexes/"));

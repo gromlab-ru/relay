@@ -82,7 +82,7 @@ test("критерии: готовность к работе, завершени
   assert.deepEqual(await service.create(command, "orchestrator"), task);
   const path = join(dirname(workspace.configPath), "boards/product/tasks", `${task.id}.json`);
   const stored = JSON.parse(await readFile(path, "utf8"));
-  assert.equal(stored.version, 4);
+  assert.equal(stored.version, 5);
   assert.deepEqual(
     stored.acceptanceCriteria[0].description,
     command.acceptanceCriteria[0]!.description.split("\n"),
@@ -189,5 +189,5 @@ test("критерии: v3 читается без записи, миграци�
   assert.ok(added.criterionId);
   assert.deepEqual(await service.create(command, "agent"), task);
   assert.equal((await service.get(task.id)).description, command.description);
-  assert.equal(JSON.parse(await readFile(path, "utf8")).version, 4);
+  assert.equal(JSON.parse(await readFile(path, "utf8")).version, 5);
 });

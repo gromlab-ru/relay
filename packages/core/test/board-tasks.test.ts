@@ -347,7 +347,7 @@ test("продуктовые связи: постоянные цели, обра
   );
 });
 
-test("версия 1 читается без записи и обновляется до 4 с сохранением Markdown и квитанций", async (t) => {
+test("версия 1 читается без записи и обновляется до 5 с сохранением Markdown и квитанций", async (t) => {
   const { workspace } = await fixture(t);
   const service = new BoardTasksService(workspace);
   const command = { board: "product", description: "## Текст\n\n  код  \n", requestId: "old" };
@@ -370,7 +370,7 @@ test("версия 1 читается без записи и обновляет�
     "agent",
   );
   const stored = JSON.parse(await readFile(path, "utf8"));
-  assert.equal(stored.version, 4);
+  assert.equal(stored.version, 5);
   assert.equal((await service.get(created.id)).description, command.description);
   for (const [key, receipt] of Object.entries(legacy.requests))
     assert.deepEqual(stored.requests[key], receipt);
