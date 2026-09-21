@@ -99,13 +99,19 @@ async function storedProductCatalog(workspace: Workspace, assertOwned: () => voi
 export async function productCatalog(workspace: Workspace, assertOwned: () => void) {
   const catalog = await storedProductCatalog(workspace, assertOwned);
   const implementations = catalog.items.flatMap((entry) =>
-    entry.kind === "implementation" && entry.featureId !== null
-      ? [{ ...entry, featureId: entry.featureId }]
+    entry.kind === "implementation" && entry.featureId !== null && entry.applicationId !== null
+      ? [{ ...entry, featureId: entry.featureId, applicationId: entry.applicationId }]
+      : [],
+  );
+  const scenarios = catalog.items.flatMap((entry) =>
+    entry.kind === "scenario" && entry.featureId !== null
+      ? [{ id: entry.id, featureId: entry.featureId }]
       : [],
   );
   const statusesById = productTaskStatuses(
     await new BoardTaskRepository(workspace).all(),
     implementations,
+    scenarios,
   );
   return {
     ...catalog,

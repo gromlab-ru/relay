@@ -97,7 +97,7 @@ test("страница, снимок и оба каталога согласов
       "agent",
     );
   }
-  const implementation = await product.entity("WEB-FI-1");
+  const implementation = await product.entity("WEB-SI-1");
   const initialStored = await new ProductRepository(workspace).all();
   const versionsByStatus = new Map<ProductStatus, string>();
   /** Проверяет все машинные пути, в том числе повторное чтение прогретого индекса. */
@@ -119,14 +119,17 @@ test("страница, снимок и оба каталога согласов
       catalog.entries.find((entry) => entry.ref.id === implementation.id)?.status,
       expected,
     );
-    // Другие реализации и общий контракт проекта не подменяются статусом этой цели.
+    // Соседнее приложение не получает готовность от задач Web.
     assert.equal(
-      (await product.entities({ refs: ["WEB-SI-1", "MOBILE-FI-1"] })).items.every(
+      (await product.entities({ refs: ["MOBILE-SI-1", "MOBILE-FI-1"] })).items.every(
         (entry) => entry.status === "none",
       ),
       true,
     );
-    assert.equal(state.readiness.find((entry) => entry.id === scenario.id)?.status, "none");
+    assert.equal(
+      state.readiness.find((entry) => entry.id === scenario.id)?.status,
+      expected === "none" ? "none" : "partial",
+    );
   };
   await check("none");
   const first = await tasks.create(

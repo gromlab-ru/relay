@@ -266,7 +266,12 @@ export class BoardTasksService {
           const implementations = catalog.entries.flatMap((entry) =>
             entry.data.kind === "implementation" ? [{ id: entry.ref.id, ...entry.data }] : [],
           );
-          targetAddresses = productTaskTargets(target, implementations);
+          const scenarios = catalog.entries.flatMap((entry) =>
+            entry.data.kind === "scenario"
+              ? [{ id: entry.ref.id, featureId: entry.data.featureId }]
+              : [],
+          );
+          targetAddresses = productTaskTargets(target, implementations, scenarios);
           pageVersion = hash([pageVersion, [...targetAddresses].sort()]);
         } catch (error) {
           // Совместимый список канбана возвращает пустую выборку для отсутствующей цели.

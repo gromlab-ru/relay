@@ -81,7 +81,7 @@ for (const kind of ["feature", "scenario"] as const) {
       assert.equal(catalog.entries.find((entry) => entry.ref.id === target.id)?.status, expected);
       assert.deepEqual(await product.entity(target.id), original);
       if (kind === "scenario")
-        assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "none");
+        assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, expected);
     };
     await check("none");
     const completed = await tasks.create(

@@ -3,7 +3,18 @@ import type { ProductContract, ProductStatus } from "../../domain/product.js";
 import type { EntityRef } from "../../domain/entity-graph.js";
 
 /** Минимальные сведения для подъёма готовности от реализации к её требованию. */
-type ImplementationTarget = Pick<ProductContract, "id" | "featureId" | "scenarioId" | "active">;
+type ImplementationTarget = Pick<ProductContract, "id" | "featureId" | "scenarioId" | "active"> & {
+  /** Приложение-владелец: сценарии соседних приложений не входят в эту FI. */
+  applicationId: string;
+};
+
+/** Принадлежность проектного сценария, в том числе ещё не выбранного приложениями. */
+type ScenarioTarget = {
+  /** Постоянный ID сценария. */
+  id: string;
+  /** Постоянный ID родительской фичи. */
+  featureId: string;
+};
 
 /** Возвращает типизированную проектную цель реализации. */
 function requirementAddress(implementation: ImplementationTarget): string {
@@ -12,18 +23,56 @@ function requirementAddress(implementation: ImplementationTarget): string {
     : `scenario:${implementation.scenarioId}`;
 }
 
-/** Цели задач каскада; снятые реализации не участвуют, прямой адрес сохраняется всегда. */
+/**
+ * Строит предметный граф готовности. Направление рёбер — от родителя к обязательной части.
+ * Все пути ограничены иерархией сущностей; произвольные отношения графа здесь не используются.
+ */
+function readinessGraph(
+  implementations: ImplementationTarget[],
+  scenarios: ScenarioTarget[],
+): Map<string, Set<string>> {
+  const graph = new Map<string, Set<string>>();
+  const featureImplementations = new Map<string, string>();
+  /** Добавляет обязательную часть без дублирования путей. */
+  const addChild = (parent: string, child: string): void => {
+    const children = graph.get(parent) ?? new Set<string>();
+    children.add(child);
+    graph.set(parent, children);
+  };
+  for (const entry of implementations) {
+    if (entry.active && entry.scenarioId === null)
+      featureImplementations.set(
+        `${entry.applicationId}:${entry.featureId}`,
+        `implementation:${entry.id}`,
+      );
+  }
+  for (const entry of implementations) {
+    if (!entry.active) continue;
+    const implementation = `implementation:${entry.id}`;
+    addChild(requirementAddress(entry), implementation);
+    if (entry.scenarioId === null) continue;
+    const parent = featureImplementations.get(`${entry.applicationId}:${entry.featureId}`);
+    if (parent !== undefined) addChild(parent, implementation);
+    addChild(`feature:${entry.featureId}`, `scenario:${entry.scenarioId}`);
+  }
+  for (const scenario of scenarios)
+    addChild(`feature:${scenario.featureId}`, `scenario:${scenario.id}`);
+  return graph;
+}
+
+/** Цели задач каскада, включая дочерние сценарии; снятые реализации не расширяют выборку. */
 export function productTaskTargets(
   target: EntityRef,
   implementations: ImplementationTarget[],
+  scenarios: ScenarioTarget[] = [],
 ): Set<string> {
   const address = `${target.kind}:${target.id}`;
-  return new Set([
-    address,
-    ...implementations
-      .filter((entry) => entry.active && requirementAddress(entry) === address)
-      .map((entry) => `implementation:${entry.id}`),
-  ]);
+  const graph = readinessGraph(implementations, scenarios);
+  const targets = new Set([address]);
+  for (const parent of targets) {
+    for (const child of graph.get(parent) ?? []) targets.add(child);
+  }
+  return targets;
 }
 
 /**
@@ -33,34 +82,37 @@ export function productTaskTargets(
 export function productTaskStatuses(
   tasks: Pick<BoardTaskRecord, "column" | "productLinks">[],
   implementations: ImplementationTarget[] = [],
+  scenarios: ScenarioTarget[] = [],
 ): Map<string, ProductStatus> {
-  const statuses = new Map<string, ProductStatus>();
+  const directStatuses = new Map<string, ProductStatus>();
   for (const task of tasks) {
     for (const link of task.productLinks) {
       const address = `${link.kind}:${link.id}`;
-      const previous = statuses.get(address);
-      statuses.set(address, task.column === "done" && previous !== "partial" ? "done" : "partial");
+      const previous = directStatuses.get(address);
+      directStatuses.set(
+        address,
+        task.column === "done" && previous !== "partial" ? "done" : "partial",
+      );
     }
   }
-  const branchesByTarget = new Map<string, ProductStatus[]>();
-  for (const implementation of implementations) {
-    if (!implementation.active) continue;
-    const address = requirementAddress(implementation);
-    const branches = branchesByTarget.get(address) ?? [];
-    branches.push(statuses.get(`implementation:${implementation.id}`) ?? "none");
-    branchesByTarget.set(address, branches);
-  }
-  for (const [address, branches] of branchesByTarget) {
-    const direct = statuses.get(address);
+  const graph = readinessGraph(implementations, scenarios);
+  const resolved = new Map<string, ProductStatus>();
+  /** Сначала разрешает обязательные части, затем добавляет существующие прямые задачи. */
+  const resolve = (address: string): ProductStatus => {
+    const known = resolved.get(address);
+    if (known !== undefined) return known;
+    const branches = [...(graph.get(address) ?? [])].map(resolve);
+    const direct = directStatuses.get(address);
     if (direct !== undefined) branches.push(direct);
-    statuses.set(
-      address,
-      branches.every((status) => status === "done")
+    const status =
+      branches.length !== 0 && branches.every((entry) => entry === "done")
         ? "done"
-        : branches.some((status) => status !== "none")
+        : branches.some((entry) => entry !== "none")
           ? "partial"
-          : "none",
-    );
-  }
-  return statuses;
+          : "none";
+    resolved.set(address, status);
+    return status;
+  };
+  for (const address of graph.keys()) resolve(address);
+  return new Map([...directStatuses, ...resolved]);
 }

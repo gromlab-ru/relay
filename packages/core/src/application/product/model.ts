@@ -158,10 +158,19 @@ export function productState(
   records: ProductRecord[],
   tasks: Pick<BoardTaskRecord, "column" | "productLinks">[] = [],
 ): ProductState {
-  const contracts = records.flatMap((record) =>
-    record.fields.kind === "scope" ? record.fields.contracts.filter((entry) => entry.active) : [],
+  const contracts = records.flatMap((record) => {
+    const fields = record.fields;
+    if (fields.kind !== "scope") return [];
+    return fields.contracts
+      .filter((entry) => entry.active)
+      .map((entry) => ({ ...entry, applicationId: fields.applicationId }));
+  });
+  const scenarios = records.flatMap((record) =>
+    record.fields.kind === "scenario"
+      ? [{ id: record.id, featureId: record.fields.featureId }]
+      : [],
   );
-  const statusesById = productTaskStatuses(tasks, contracts);
+  const statusesById = productTaskStatuses(tasks, contracts, scenarios);
   const readiness = records
     .filter((record) => record.fields.kind === "scenario" || record.fields.kind === "feature")
     .map((record) => {
