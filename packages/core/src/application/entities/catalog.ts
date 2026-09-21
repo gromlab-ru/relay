@@ -17,6 +17,7 @@ import { parse } from "../../domain/validation.js";
 import { invariant } from "../../shared/errors.js";
 import { productState, validateProduct } from "../product/model.js";
 import { resolveAddress } from "./resolver.js";
+import { EntityDeletionRepository } from "../../storage/entity-deletion.js";
 
 export type EntityEvent = { revision: number; actor: string; at: string; action: string };
 export type EntityEntry = Omit<EntityDetail, "references"> & {
@@ -25,7 +26,7 @@ export type EntityEntry = Omit<EntityDetail, "references"> & {
   filters: Record<string, string | string[] | null>;
   events: EntityEvent[];
 };
-export type EntityCatalog = { entries: EntityEntry[]; version: string };
+export type EntityCatalog = { entries: EntityEntry[]; version: string; reservedKeys: string[] };
 export const entityAddress = (ref: { kind: string; id: string }) => `${ref.kind}:${ref.id}`;
 export const entityDigest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -55,11 +56,12 @@ export function assertEntityKeyAvailable(
   own?: { kind: string; id: string },
 ) {
   invariant(
-    !catalog.entries.some(
-      (entry) =>
-        (!own || entityAddress(entry.ref) !== entityAddress(own)) &&
-        (entry.key === key || entry.aliases.includes(key) || entry.ref.id === key),
-    ),
+    !catalog.reservedKeys.includes(key) &&
+      !catalog.entries.some(
+        (entry) =>
+          (!own || entityAddress(entry.ref) !== entityAddress(own)) &&
+          (entry.key === key || entry.aliases.includes(key) || entry.ref.id === key),
+      ),
     "ENTITY_KEY_CONFLICT",
     "Ключ занят или сохранён как прежний адрес другой сущности",
     4,
@@ -272,5 +274,6 @@ export async function readEntityCatalog(
     );
   }
   entries.sort((a, b) => entityAddress(a.ref).localeCompare(entityAddress(b.ref)));
-  return { entries, version: entityDigest(entries) };
+  const reservedKeys = await new EntityDeletionRepository(workspace).reservedKeys();
+  return { entries, reservedKeys, version: entityDigest([entries, reservedKeys]) };
 }

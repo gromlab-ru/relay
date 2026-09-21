@@ -22,7 +22,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
  */
 export const getTaskHistoryEventForProject = (
   http: ApiRequestClient,
-  { entryId, reference, project }: GetTaskHistoryEventForProjectParams,
+  { reference, entryId, project }: GetTaskHistoryEventForProjectParams,
   params: RequestParams = {},
 ) =>
   http.request<

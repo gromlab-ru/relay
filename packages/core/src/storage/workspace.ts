@@ -14,6 +14,7 @@ import { ProductTransaction } from "./product-transaction.js";
 import { GraphTransaction } from "./graph-transaction.js";
 import { recoverGraphMigration } from "./graph-migration.js";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { EntityDeletionRepository } from "./entity-deletion.js";
 
 const lockContext = new AsyncLocalStorage<{
   root: string;
@@ -42,6 +43,7 @@ export class Workspace {
       return operation(context.assertOwned);
     }
     return withStorageLock(this.root, async (assertOwned) => {
+      await new EntityDeletionRepository(this).recover(assertOwned);
       await new ProductTransaction(this).recover(assertOwned);
       await new GraphTransaction(this).recover(assertOwned);
       await recoverGraphMigration(this, assertOwned);

@@ -4,6 +4,194 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface EntityDeletionQuery {
+  /**
+   * Ключ или постоянный адрес удаляемой сущности
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+  kind: EntityDeletionQueryKindEnum;
+}
+
+export interface EntityDeletionPreview {
+  /** Выбранная сущность */
+  target: {
+    /** Постоянный адрес в выбранном проекте */
+    ref: {
+      /** Вид основной сущности */
+      kind: EntityDeletionPreviewKindEnum;
+      /**
+       * Постоянный ID; внутренние отношения сохраняют только этот адрес
+       * @minLength 1
+       * @maxLength 128
+       */
+      id: string;
+    };
+    /** Текущий читаемый ключ для человека и агента */
+    key: string;
+    /** Однострочное название */
+    title: string;
+    /** Краткое обычное описание без полного Markdown */
+    summary: string;
+    /**
+     * Ревизия записи для следующего изменения
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Текущее предметное состояние; null, когда неприменимо */
+    status: string | null;
+    /** Активная запись; снятая реализация сохраняет адрес */
+    active: boolean;
+  };
+  /** Версия состава удаления и связей для подтверждения */
+  version: string;
+  /**
+   * Полный состав удаления, не более 1000 сущностей
+   * @maxItems 1000
+   */
+  deleted: {
+    /** Постоянный адрес в выбранном проекте */
+    ref: {
+      /** Вид основной сущности */
+      kind: EntityDeletionPreviewKindEnum1;
+      /**
+       * Постоянный ID; внутренние отношения сохраняют только этот адрес
+       * @minLength 1
+       * @maxLength 128
+       */
+      id: string;
+    };
+    /** Текущий читаемый ключ для человека и агента */
+    key: string;
+    /** Однострочное название */
+    title: string;
+    /** Краткое обычное описание без полного Markdown */
+    summary: string;
+    /**
+     * Ревизия записи для следующего изменения
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Текущее предметное состояние; null, когда неприменимо */
+    status: string | null;
+    /** Активная запись; снятая реализация сохраняет адрес */
+    active: boolean;
+  }[];
+  /**
+   * Сохраняемые сущности, у которых снимаются ссылки
+   * @maxItems 1000
+   */
+  detached: {
+    /** Постоянный адрес в выбранном проекте */
+    ref: {
+      /** Вид основной сущности */
+      kind: EntityDeletionPreviewKindEnum2;
+      /**
+       * Постоянный ID; внутренние отношения сохраняют только этот адрес
+       * @minLength 1
+       * @maxLength 128
+       */
+      id: string;
+    };
+    /** Текущий читаемый ключ для человека и агента */
+    key: string;
+    /** Однострочное название */
+    title: string;
+    /** Краткое обычное описание без полного Markdown */
+    summary: string;
+    /**
+     * Ревизия записи для следующего изменения
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Текущее предметное состояние; null, когда неприменимо */
+    status: string | null;
+    /** Активная запись; снятая реализация сохраняет адрес */
+    active: boolean;
+  }[];
+  /**
+   * Количество отзываемых активных связей графа
+   * @min 0
+   * @max 9007199254740991
+   */
+  relations: number;
+}
+
+export interface DeleteEntity {
+  /**
+   * Ключ или постоянный адрес удаляемой сущности
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+  kind: DeleteEntityKindEnum;
+  /**
+   * Версия просмотренного состава удаления
+   * @minLength 1
+   */
+  ifVersion: string;
+  /**
+   * Ключ безопасного повтора операции
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /**
+   * Автор удаления; по умолчанию автор сервера
+   * @maxLength 128
+   */
+  actor?: string;
+}
+
+export interface EntityDeleted {
+  /** Каскадное удаление завершено */
+  action: "delete";
+  ref: {
+    /** Вид основной сущности */
+    kind: EntityDeletedKindEnum;
+    /**
+     * Постоянный ID; внутренние отношения сохраняют только этот адрес
+     * @minLength 1
+     * @maxLength 128
+     */
+    id: string;
+  };
+  /**
+   * Ключ безопасного повтора операции
+   * @minLength 1
+   * @maxLength 128
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  requestId: string;
+  /**
+   * Количество удалённых сущностей
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  deleted: number;
+  /**
+   * Количество сохранённых сущностей со снятыми ссылками
+   * @min 0
+   * @max 9007199254740991
+   */
+  detached: number;
+  /**
+   * Количество отозванных связей графа
+   * @min 0
+   * @max 9007199254740991
+   */
+  relations: number;
+}
+
 export interface TaskActivityQuery {
   /**
    * Размер страницы, по умолчанию 20, максимум 100
@@ -4528,6 +4716,72 @@ export interface ApiFailure {
   };
 }
 
+/** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+export type EntityDeletionQueryKindEnum =
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "task"
+  | "document";
+
+/** Вид основной сущности */
+export type EntityDeletionPreviewKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** Вид основной сущности */
+export type EntityDeletionPreviewKindEnum1 =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** Вид основной сущности */
+export type EntityDeletionPreviewKindEnum2 =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+export type DeleteEntityKindEnum =
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "task"
+  | "document";
+
+/** Вид основной сущности */
+export type EntityDeletedKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
 /** Роль автора: оператор, оркестратор или воркер */
 export type TaskActivityPageActorRoleEnum =
   | "operator"
@@ -5412,7 +5666,7 @@ export type GetBoardTaskOkEnum = true;
 
 export interface GetBoardTaskParams {
   /** Постоянный ID или текущий/прежний ключ задачи */
-  reference: any;
+  reference: string;
 }
 
 export type GetBoardTaskLinksOkEnum = true;
@@ -5467,7 +5721,7 @@ export interface GetBoardTaskLinksParams {
   /** Версия первой страницы; изменение требует начать чтение заново */
   version?: string;
   /** ID или ключ задачи для чтения графа */
-  reference: any;
+  reference: string;
 }
 
 /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
@@ -5510,7 +5764,7 @@ export type LinkBoardTaskOkEnum = true;
 
 export interface LinkBoardTaskParams {
   /** ID или ключ исходной задачи */
-  reference: any;
+  reference: string;
 }
 
 export type GetTaskCriteriaOkEnum = true;
@@ -5533,14 +5787,14 @@ export interface GetTaskCriteriaParams {
   /** Версия первой страницы; после изменения перечитайте список */
   version?: string;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
 }
 
 export type ChangeTaskCriterionOkEnum = true;
 
 export interface ChangeTaskCriterionParams {
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
 }
 
 export type GetTaskCommentsOkEnum = true;
@@ -5569,23 +5823,23 @@ export interface GetTaskCommentsParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
 }
 
 export type PublishTaskCommentOkEnum = true;
 
 export interface PublishTaskCommentParams {
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
 }
 
 export type GetTaskCommentOkEnum = true;
 
 export interface GetTaskCommentParams {
-  /** Постоянный номер сообщения в ленте задачи */
-  entryId: any;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
+  /** Постоянный номер сообщения в ленте задачи */
+  entryId: string;
 }
 
 export type GetTaskHistoryOkEnum = true;
@@ -5614,39 +5868,39 @@ export interface GetTaskHistoryParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
 }
 
 export type GetTaskHistoryEventOkEnum = true;
 
 export interface GetTaskHistoryEventParams {
-  /** Постоянный номер события в ленте задачи */
-  entryId: any;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
+  /** Постоянный номер события в ленте задачи */
+  entryId: string;
 }
 
 export type GetTaskCriterionOkEnum = true;
 
 export interface GetTaskCriterionParams {
-  /** Постоянный ID критерия приёмки */
-  criterionId: any;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
+  /** Постоянный ID критерия приёмки */
+  criterionId: string;
 }
 
 export type UpdateBoardTaskOkEnum = true;
 
 export interface UpdateBoardTaskParams {
   /** ID или ключ редактируемой задачи */
-  reference: any;
+  reference: string;
 }
 
 export type MoveBoardTaskOkEnum = true;
 
 export interface MoveBoardTaskParams {
   /** ID или ключ перемещаемой задачи */
-  reference: any;
+  reference: string;
 }
 
 export type GetGraphOkEnum = true;
@@ -5785,15 +6039,49 @@ export interface ListEntityTypesParams {
   version?: string;
 }
 
+export type PreviewEntityDeletionOkEnum = true;
+
+export interface PreviewEntityDeletionParams {
+  /**
+   * Ключ или постоянный адрес удаляемой сущности
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+  kind: KindEnum2;
+}
+
+/** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+export type KindEnum2 =
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "task"
+  | "document";
+
+/** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+export type PreviewEntityDeletionParams1KindEnum =
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "task"
+  | "document";
+
+export type DeleteEntityOkEnum = true;
+
 export type DescribeEntityTypeOkEnum = true;
 
 export interface DescribeEntityTypeParams {
   /** Вид основной сущности */
-  kind: KindEnum2;
+  kind: KindEnum3;
 }
 
 /** Вид основной сущности */
-export type KindEnum2 =
+export type KindEnum3 =
   | "project"
   | "product"
   | "feature"
@@ -5839,7 +6127,7 @@ export interface ListEntitiesParams {
    */
   version?: string;
   /** Вид основной сущности */
-  kind?: KindEnum3;
+  kind?: KindEnum4;
   /**
    * Поиск по ключам, ID, названию и краткому описанию
    * @maxLength 4096
@@ -5907,7 +6195,7 @@ export interface ListEntitiesParams {
 }
 
 /** Вид основной сущности */
-export type KindEnum3 =
+export type KindEnum4 =
   | "project"
   | "product"
   | "feature"
@@ -5961,11 +6249,11 @@ export interface GetEntityParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum4;
+  kind?: KindEnum5;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum4 =
+export type KindEnum5 =
   | "project"
   | "product"
   | "feature"
@@ -5999,11 +6287,11 @@ export interface ResolveEntityParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum5;
+  kind?: KindEnum6;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum5 =
+export type KindEnum6 =
   | "project"
   | "product"
   | "feature"
@@ -6056,11 +6344,11 @@ export interface GetEntityKeysParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum6;
+  kind?: KindEnum7;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum6 =
+export type KindEnum7 =
   | "project"
   | "product"
   | "feature"
@@ -6106,11 +6394,11 @@ export interface GetEntityKeySpacesParams {
    */
   version?: string;
   /** Вид основной сущности */
-  kind: KindEnum7;
+  kind: KindEnum8;
 }
 
 /** Вид основной сущности */
-export type KindEnum7 =
+export type KindEnum8 =
   | "project"
   | "product"
   | "feature"
@@ -6163,11 +6451,11 @@ export interface GetEntityHistoryParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum8;
+  kind?: KindEnum9;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum8 =
+export type KindEnum9 =
   | "project"
   | "product"
   | "feature"
@@ -6235,7 +6523,7 @@ export interface GetProductEntitiesForProjectParams {
    */
   q?: string;
   /** Тип цели */
-  kind?: KindEnum9;
+  kind?: KindEnum10;
   /**
    * ID или ключ приложения
    * @minLength 1
@@ -6271,7 +6559,7 @@ export interface GetProductEntitiesForProjectParams {
 }
 
 /** Тип цели */
-export type KindEnum9 =
+export type KindEnum10 =
   | "passport"
   | "feature"
   | "scenario"
@@ -6340,7 +6628,7 @@ export interface GetProductOverviewForProjectParams {
 export type GetProductRecordsForProjectOkEnum = true;
 
 export interface GetProductRecordsForProjectParams {
-  kind?: KindEnum10;
+  kind?: KindEnum11;
   /** @maxLength 4096 */
   q?: string;
   /**
@@ -6366,7 +6654,7 @@ export interface GetProductRecordsForProjectParams {
   project: string;
 }
 
-export type KindEnum10 =
+export type KindEnum11 =
   | "passport"
   | "feature"
   | "scenario"
@@ -6550,7 +6838,7 @@ export type GetBoardTaskForProjectOkEnum = true;
 
 export interface GetBoardTaskForProjectParams {
   /** Постоянный ID или текущий/прежний ключ задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6607,7 +6895,7 @@ export interface GetBoardTaskLinksForProjectParams {
   /** Версия первой страницы; изменение требует начать чтение заново */
   version?: string;
   /** ID или ключ задачи для чтения графа */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6656,7 +6944,7 @@ export type LinkBoardTaskForProjectOkEnum = true;
 
 export interface LinkBoardTaskForProjectParams {
   /** ID или ключ исходной задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6681,7 +6969,7 @@ export interface GetTaskCriteriaForProjectParams {
   /** Версия первой страницы; после изменения перечитайте список */
   version?: string;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6690,7 +6978,7 @@ export type ChangeTaskCriterionForProjectOkEnum = true;
 
 export interface ChangeTaskCriterionForProjectParams {
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6721,7 +7009,7 @@ export interface GetTaskCommentsForProjectParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6730,7 +7018,7 @@ export type PublishTaskCommentForProjectOkEnum = true;
 
 export interface PublishTaskCommentForProjectParams {
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6738,10 +7026,10 @@ export interface PublishTaskCommentForProjectParams {
 export type GetTaskCommentForProjectOkEnum = true;
 
 export interface GetTaskCommentForProjectParams {
-  /** Постоянный номер сообщения в ленте задачи */
-  entryId: any;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
+  /** Постоянный номер сообщения в ленте задачи */
+  entryId: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6772,7 +7060,7 @@ export interface GetTaskHistoryForProjectParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6780,10 +7068,10 @@ export interface GetTaskHistoryForProjectParams {
 export type GetTaskHistoryEventForProjectOkEnum = true;
 
 export interface GetTaskHistoryEventForProjectParams {
-  /** Постоянный номер события в ленте задачи */
-  entryId: any;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
+  /** Постоянный номер события в ленте задачи */
+  entryId: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6791,10 +7079,10 @@ export interface GetTaskHistoryEventForProjectParams {
 export type GetTaskCriterionForProjectOkEnum = true;
 
 export interface GetTaskCriterionForProjectParams {
-  /** Постоянный ID критерия приёмки */
-  criterionId: any;
   /** ID или ключ задачи */
-  reference: any;
+  reference: string;
+  /** Постоянный ID критерия приёмки */
+  criterionId: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6803,7 +7091,7 @@ export type UpdateBoardTaskForProjectOkEnum = true;
 
 export interface UpdateBoardTaskForProjectParams {
   /** ID или ключ редактируемой задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6812,7 +7100,7 @@ export type MoveBoardTaskForProjectOkEnum = true;
 
 export interface MoveBoardTaskForProjectParams {
   /** ID или ключ перемещаемой задачи */
-  reference: any;
+  reference: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6967,17 +7255,58 @@ export interface ListEntityTypesForProjectParams {
   project: string;
 }
 
+export type PreviewEntityDeletionForProjectOkEnum = true;
+
+export interface PreviewEntityDeletionForProjectParams {
+  /**
+   * Ключ или постоянный адрес удаляемой сущности
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+  kind: KindEnum12;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+/** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+export type KindEnum12 =
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "task"
+  | "document";
+
+/** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
+export type PreviewEntityDeletionForProjectParams1KindEnum =
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "task"
+  | "document";
+
+export type DeleteEntityForProjectOkEnum = true;
+
+export interface DeleteEntityForProjectParams {
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
 export type DescribeEntityTypeForProjectOkEnum = true;
 
 export interface DescribeEntityTypeForProjectParams {
   /** Вид основной сущности */
-  kind: KindEnum11;
+  kind: KindEnum13;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 /** Вид основной сущности */
-export type KindEnum11 =
+export type KindEnum13 =
   | "project"
   | "product"
   | "feature"
@@ -7023,7 +7352,7 @@ export interface ListEntitiesForProjectParams {
    */
   version?: string;
   /** Вид основной сущности */
-  kind?: KindEnum12;
+  kind?: KindEnum14;
   /**
    * Поиск по ключам, ID, названию и краткому описанию
    * @maxLength 4096
@@ -7093,7 +7422,7 @@ export interface ListEntitiesForProjectParams {
 }
 
 /** Вид основной сущности */
-export type KindEnum12 =
+export type KindEnum14 =
   | "project"
   | "product"
   | "feature"
@@ -7152,13 +7481,13 @@ export interface GetEntityForProjectParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum13;
+  kind?: KindEnum15;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum13 =
+export type KindEnum15 =
   | "project"
   | "product"
   | "feature"
@@ -7192,13 +7521,13 @@ export interface ResolveEntityForProjectParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum14;
+  kind?: KindEnum16;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum14 =
+export type KindEnum16 =
   | "project"
   | "product"
   | "feature"
@@ -7251,13 +7580,13 @@ export interface GetEntityKeysForProjectParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum15;
+  kind?: KindEnum17;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum15 =
+export type KindEnum17 =
   | "project"
   | "product"
   | "feature"
@@ -7303,13 +7632,13 @@ export interface GetEntityKeySpacesForProjectParams {
    */
   version?: string;
   /** Вид основной сущности */
-  kind: KindEnum16;
+  kind: KindEnum18;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 /** Вид основной сущности */
-export type KindEnum16 =
+export type KindEnum18 =
   | "project"
   | "product"
   | "feature"
@@ -7362,13 +7691,13 @@ export interface GetEntityHistoryForProjectParams {
    */
   ref: string;
   /** Уточнение ожидаемого вида при разрешении адреса */
-  kind?: KindEnum17;
+  kind?: KindEnum19;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
 
 /** Уточнение ожидаемого вида при разрешении адреса */
-export type KindEnum17 =
+export type KindEnum19 =
   | "project"
   | "product"
   | "feature"

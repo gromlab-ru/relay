@@ -109,6 +109,49 @@ export const entityDetailSchema = entitySummarySchema.extend({
 export type EntitySummary = z.infer<typeof entitySummarySchema>;
 export type EntityDetail = z.infer<typeof entityDetailSchema>;
 
+/** Виды с самостоятельным сценарием удаления. */
+export const deletableEntityKindSchema = z
+  .enum(["feature", "scenario", "application", "implementation", "task", "document"])
+  .describe("Вид удаляемой сущности; проект, паспорт и системные доски не удаляются");
+export const entityDeletionQuerySchema = z.strictObject({
+  ref: entityReferenceSchema.describe("Ключ или постоянный адрес удаляемой сущности"),
+  kind: deletableEntityKindSchema,
+});
+export const entityDeletionPreviewSchema = z.strictObject({
+  target: entitySummarySchema.describe("Выбранная сущность"),
+  version: z.string().describe("Версия состава удаления и связей для подтверждения"),
+  deleted: z
+    .array(entitySummarySchema)
+    .max(1000)
+    .describe("Полный состав удаления, не более 1000 сущностей"),
+  detached: z
+    .array(entitySummarySchema)
+    .max(1000)
+    .describe("Сохраняемые сущности, у которых снимаются ссылки"),
+  relations: z.number().int().nonnegative().describe("Количество отзываемых активных связей графа"),
+});
+export const deleteEntitySchema = entityDeletionQuerySchema.extend({
+  ifVersion: z.string().min(1).describe("Версия просмотренного состава удаления"),
+  requestId: requestIdSchema,
+  actor: actorSchema.optional().describe("Автор удаления; по умолчанию автор сервера"),
+});
+export const entityDeletedSchema = z.strictObject({
+  action: z.literal("delete").describe("Каскадное удаление завершено"),
+  ref: entityRefSchema,
+  requestId: requestIdSchema,
+  deleted: z.number().int().positive().describe("Количество удалённых сущностей"),
+  detached: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Количество сохранённых сущностей со снятыми ссылками"),
+  relations: z.number().int().nonnegative().describe("Количество отозванных связей графа"),
+});
+export type EntityDeletionQuery = z.infer<typeof entityDeletionQuerySchema>;
+export type EntityDeletionPreview = z.infer<typeof entityDeletionPreviewSchema>;
+export type DeleteEntity = z.infer<typeof deleteEntitySchema>;
+export type EntityDeleted = z.infer<typeof entityDeletedSchema>;
+
 export const entityPageQuerySchema = z.strictObject({
   offset: z.coerce.number().int().nonnegative().default(0).describe("Смещение страницы"),
   limit: z.coerce

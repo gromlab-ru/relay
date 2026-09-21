@@ -1,0 +1,321 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { TestContext } from "node:test";
+import { join } from "node:path";
+import { EntityEngine } from "@relay/core/application/entities/service";
+import { EntityDeletionService } from "@relay/core/application/entities/deletion";
+import { EntityDeletionRepository } from "@relay/core/storage/entity-deletion";
+import { GraphService } from "@relay/core/application/graph/service";
+import { readJson, atomicJson } from "@relay/core/storage/files";
+import { fixture } from "./helpers/workspace.js";
+
+/** Связанный продукт с внешними задачами и документом для проверки границ каскада. */
+async function setup(t: TestContext) {
+  const base = await fixture(t);
+  const engine = new EntityEngine(base.workspace);
+  const create = async (data: Parameters<EntityEngine["create"]>[0]["data"]) => {
+    const saved = await engine.create({ data, requestId: crypto.randomUUID() }, "tester");
+    return { ...saved, id: saved.ref.id };
+  };
+  const feature = await create({
+    kind: "feature",
+    name: "Фича",
+    summary: "",
+    description: "Требование",
+  });
+  const scenario = await create({
+    kind: "scenario",
+    name: "Сценарий",
+    featureId: feature.key,
+    description: "Шаги",
+  });
+  const application = await create({
+    kind: "application",
+    name: "Web",
+    summary: "",
+    description: "Клиент",
+    slug: "web",
+    prefix: "WEB",
+    type: "frontend",
+  });
+  const implementation = await create({
+    kind: "implementation",
+    application: application.key,
+    target: feature.key,
+    title: "Вклад",
+    description: "Вклад фичи",
+  });
+  const scenarioImplementation = await create({
+    kind: "implementation",
+    application: application.key,
+    target: scenario.key,
+    title: "Шаг",
+    description: "Вклад сценария",
+  });
+  const task = await create({
+    kind: "task",
+    board: "BOARD-WEB",
+    title: "Работа",
+    targets: [implementation.key],
+  });
+  const external = await create({
+    kind: "task",
+    board: "BOARD-INFRA",
+    title: "Внешняя",
+    related: [task.key],
+    parent: task.key,
+  });
+  await create({
+    kind: "task",
+    board: "BOARD-INFRA",
+    title: "Зависимая",
+    dependencies: [task.key],
+  });
+  const document = await create({
+    kind: "document",
+    name: "Документ",
+    summary: "",
+    body: "## Сохранить\n\nТекст  \n",
+    documentKind: "rules",
+    targets: [feature.key, scenarioImplementation.key],
+  });
+  const graph = new GraphService(base.workspace);
+  const page = await graph.read({});
+  await graph.mutate(
+    {
+      requestId: "graph",
+      ifVersion: page.version,
+      operations: [
+        {
+          action: "add",
+          from: document.key,
+          to: task.key,
+          type: "describes",
+          description: "Контекст",
+        },
+      ],
+    },
+    "tester",
+  );
+  return {
+    ...base,
+    engine,
+    create,
+    deletion: new EntityDeletionService(base.workspace),
+    feature,
+    scenario,
+    application,
+    implementation,
+    scenarioImplementation,
+    task,
+    external,
+    document,
+    graph,
+  };
+}
+
+for (const kind of [
+  "feature",
+  "scenario",
+  "application",
+  "implementation",
+  "task",
+  "document",
+] as const) {
+  test(`удаление ${kind}: каскад, внешние записи и безопасный повтор`, async (t) => {
+    const state = await setup(t);
+    const target = state[kind];
+    const preview = await state.deletion.preview({ kind, ref: target.key });
+    const expected = {
+      feature: [
+        state.feature.id,
+        state.scenario.id,
+        state.implementation.id,
+        state.scenarioImplementation.id,
+      ],
+      scenario: [state.scenario.id, state.scenarioImplementation.id],
+      application: [
+        state.application.id,
+        state.implementation.id,
+        state.scenarioImplementation.id,
+        state.task.id,
+        (await state.engine.resolve({ ref: "BOARD-WEB" })).ref.id,
+      ],
+      implementation: [state.implementation.id, state.scenarioImplementation.id],
+      task: [state.task.id],
+      document: [state.document.id],
+    };
+    assert.deepEqual(
+      new Set(preview.deleted.map((entry) => entry.ref.id)),
+      new Set(expected[kind]),
+    );
+    const command = {
+      kind,
+      ref: target.key,
+      ifVersion: preview.version,
+      requestId: `delete-${kind}`,
+    };
+    const result = await state.deletion.delete(command, "tester");
+    assert.equal(result.deleted, expected[kind].length);
+    assert.deepEqual(await state.deletion.delete(command, "tester"), result);
+    await assert.rejects(state.deletion.delete({ ...command, ifVersion: "changed" }, "tester"), {
+      code: "IDEMPOTENCY_CONFLICT",
+    });
+    for (const id of expected[kind])
+      await assert.rejects(state.engine.get({ ref: id }), { code: "ENTITY_NOT_FOUND" });
+    const remaining = await state.engine.list({ limit: 100 });
+    assert.ok(remaining.items.some((entry) => entry.ref.id === state.external.id));
+    if (kind !== "document") {
+      const document = await state.engine.get({ ref: state.document.id });
+      assert.equal(document.data.kind, "document");
+      if (document.data.kind === "document")
+        assert.equal(document.data.body, "## Сохранить\n\nТекст  \n");
+    }
+    if (kind === "application" || kind === "task") {
+      const external = await state.engine.get({ ref: state.external.id });
+      assert.equal(external.data.kind, "task");
+      if (external.data.kind === "task") {
+        assert.equal(external.data.parentId, null);
+        assert.deepEqual(external.data.dependencies, []);
+      }
+    }
+    await state.graph.read({});
+    if (kind === "document" || kind === "application" || kind === "task")
+      assert.equal(result.relations, 1);
+  });
+}
+
+test("удаление: конкурентное изменение требует нового предпросмотра", async (t) => {
+  const state = await setup(t);
+  const preview = await state.deletion.preview({ kind: "feature", ref: state.feature.id });
+  await state.create({
+    kind: "scenario",
+    featureId: state.feature.id,
+    name: "Новый",
+    description: "Новый сценарий",
+  });
+  await assert.rejects(
+    state.deletion.delete(
+      { kind: "feature", ref: state.feature.id, ifVersion: preview.version, requestId: "stale" },
+      "tester",
+    ),
+    { code: "REVISION_CONFLICT" },
+  );
+  assert.equal((await state.engine.get({ ref: state.feature.id })).ref.id, state.feature.id);
+});
+
+test("удаление: WAL восстанавливается до чтения после прерванной публикации", async (t) => {
+  const { workspace } = await fixture(t);
+  const repository = new EntityDeletionRepository(workspace);
+  let writes = 0;
+  await assert.rejects(
+    workspace.locked(async () => {
+      await repository.publish(
+        [{ path: "entity-deletions/test.json", after: { preserved: true } }],
+        [],
+        () => {
+          if (++writes === 2) throw new Error("Прерывание");
+        },
+      );
+    }),
+    /Прерывание/,
+  );
+  await workspace.locked(async () => {
+    assert.deepEqual(await readJson(join(repository.root, "entity-deletions/test.json")), {
+      preserved: true,
+    });
+  });
+});
+
+test("удаление: внешнее изменение файла блокирует восстановление", async (t) => {
+  const { workspace } = await fixture(t);
+  const repository = new EntityDeletionRepository(workspace);
+  let writes = 0;
+  await assert.rejects(
+    workspace.locked(() =>
+      repository.publish(
+        [{ path: "entity-deletions/test.json", after: { expected: true } }],
+        [],
+        () => {
+          if (++writes === 2) throw new Error("Прерывание");
+        },
+      ),
+    ),
+  );
+  await atomicJson(
+    join(repository.root, "entity-deletions/test.json"),
+    { external: true },
+    workspace.runtime,
+  );
+  await assert.rejects(
+    workspace.locked(async () => undefined),
+    { code: "DELETION_RECOVERY_CONFLICT" },
+  );
+});
+
+test("удаление: прерванный каскад приложения завершается перед повтором, ключи не переиспользуются", async (t) => {
+  const state = await setup(t);
+  const preview = await state.deletion.preview({ kind: "application", ref: state.application.id });
+  const command = {
+    kind: "application" as const,
+    ref: state.application.id,
+    ifVersion: preview.version,
+    requestId: "interrupted-cascade",
+  };
+  const original = EntityDeletionRepository.prototype.recover;
+  let calls = 0;
+  EntityDeletionRepository.prototype.recover = async function (owned) {
+    return original.call(this, () => {
+      owned();
+      if (++calls === 4) throw new Error("Прерван каскад");
+    });
+  };
+  try {
+    await assert.rejects(state.deletion.delete(command, "tester"), /Прерван каскад/);
+  } finally {
+    EntityDeletionRepository.prototype.recover = original;
+  }
+  const result = await state.deletion.delete(command, "tester");
+  assert.equal(result.deleted, 5);
+  await assert.rejects(state.engine.get({ ref: state.task.id }), { code: "ENTITY_NOT_FOUND" });
+  const external = await state.engine.get({ ref: state.external.id });
+  if (external.data.kind === "task") assert.equal(external.data.parentId, null);
+  assert.ok((await state.engine.get({ ref: state.document.id })).data);
+  await state.graph.read({});
+
+  const featurePreview = await state.deletion.preview({ kind: "feature", ref: state.feature.id });
+  await state.deletion.delete(
+    {
+      kind: "feature",
+      ref: state.feature.id,
+      ifVersion: featurePreview.version,
+      requestId: "feature-after-app",
+    },
+    "tester",
+  );
+  const next = await state.create({
+    kind: "feature",
+    name: "Следующая фича",
+    summary: "",
+    description: "Описание",
+  });
+  assert.notEqual(next.key, state.feature.key);
+  await assert.rejects(
+    state.engine.rename(
+      { ref: next.key, key: state.feature.key, ifRevision: next.revision, requestId: "reuse" },
+      "tester",
+    ),
+    { code: "ENTITY_KEY_CONFLICT" },
+  );
+});
+
+test("удаление: чужой проект и неподдерживаемые виды не изменяются", async (t) => {
+  const state = await setup(t);
+  const other = await fixture(t);
+  await assert.rejects(
+    new EntityDeletionService(other.workspace).preview({ kind: "task", ref: state.task.id }),
+    { code: "ENTITY_NOT_FOUND" },
+  );
+  await assert.rejects(state.deletion.preview({ kind: "application", ref: "BOARD-INFRA" }));
+  assert.equal((await state.engine.get({ ref: state.task.id })).ref.id, state.task.id);
+});

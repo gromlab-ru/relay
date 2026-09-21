@@ -20,6 +20,10 @@ import {
   entityLinkTaskSchema,
   entitySavedSchema,
   entityHistorySchema,
+  entityDeletionQuerySchema,
+  entityDeletionPreviewSchema,
+  deleteEntitySchema,
+  entityDeletedSchema,
 } from "@relay/contracts/entities";
 import {
   graphPageSchema,
@@ -97,6 +101,10 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  EntityDeletionQuery: entityDeletionQuerySchema,
+  EntityDeletionPreview: entityDeletionPreviewSchema,
+  DeleteEntity: deleteEntitySchema,
+  EntityDeleted: entityDeletedSchema,
   TaskActivityQuery: taskActivityQuerySchema,
   TaskActivityPage: taskActivityPageSchema,
   TaskHistoryEvent: taskHistoryEventSchema,

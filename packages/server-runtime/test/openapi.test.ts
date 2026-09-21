@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 97);
+    assert.equal(operations.size, 101);
     for (const path of [
       "/api/v1/tasks",
       "/api/v1/board",
@@ -264,7 +264,37 @@ for (const scoped of [false, true])
       { title: "Конфликт", ifRevision: 1, requestId: "stale" },
       409,
     );
-    assert.equal(visited.size, 47);
+    const deletion = await request(
+      "GET",
+      "/api/v1/entities/deletion-preview",
+      `/api/v1/entities/deletion-preview?kind=task&ref=${entityKey}`,
+    );
+    const deleteCommand = {
+      kind: "task",
+      ref: entityKey,
+      ifVersion: deletion.data.version,
+      requestId: "delete-entity",
+    };
+    await request(
+      "POST",
+      "/api/v1/entities/delete",
+      undefined,
+      { ...deleteCommand, ifVersion: "stale" },
+      409,
+    );
+    const deleted = await request("POST", "/api/v1/entities/delete", undefined, deleteCommand);
+    assert.deepEqual(
+      await request("POST", "/api/v1/entities/delete", undefined, deleteCommand),
+      deleted,
+    );
+    await request(
+      "GET",
+      "/api/v1/entities/get",
+      `/api/v1/entities/get?ref=${entityKey}`,
+      undefined,
+      404,
+    );
+    assert.equal(visited.size, 49);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateBoardTask as SchemaObject;

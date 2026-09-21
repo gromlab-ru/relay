@@ -1,9 +1,19 @@
 import { useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type { SWRResponse } from "swr";
 import type { EntitiesQuery, EntitiesPage, EntitySummary } from "@relay/contracts/entities";
 import { subscribeWorkspace } from "infra/workspace-events";
 import { getEntities, getEntitySummary, EntityAccessError } from "../adapters/entities.adapter";
+
+/**
+ * Перечитывает проекции каскада во всех доменах только выбранного проекта.
+ */
+export const useDeletionRefresh = (projectId: string): (() => Promise<void>) => {
+  const { mutate } = useSWRConfig();
+  return async () => {
+    await mutate((key) => Array.isArray(key) && key[1] === projectId);
+  };
+};
 
 /** Подписка обновляет серверный кеш, не заменяя локальное состояние редактора. */
 const useEntityRefresh = (projectId: string, refresh: () => Promise<unknown>): void => {

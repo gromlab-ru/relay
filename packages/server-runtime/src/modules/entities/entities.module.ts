@@ -13,6 +13,8 @@ import {
   entityRenameSchema,
   entityMoveTaskSchema,
   entityLinkTaskSchema,
+  entityDeletionQuerySchema,
+  deleteEntitySchema,
 } from "@relay/contracts/entities";
 import type { z } from "zod";
 import type {
@@ -25,8 +27,11 @@ import type {
   RenameEntity,
   MoveEntityTask,
   LinkEntityTask,
+  EntityDeletionQuery,
+  DeleteEntity,
 } from "@relay/contracts/entities";
 import { EntityEngine } from "@relay/core/application/entities/service";
+import { EntityDeletionService } from "@relay/core/application/entities/deletion";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { ZodValidationPipe } from "../../common/validation.js";
 import { WorkspaceService } from "../workspace/workspace.module.js";
@@ -60,6 +65,33 @@ class EntitiesController {
   })
   async types(@Query(new ZodValidationPipe(entityPageQuerySchema)) query: EntityPageQuery) {
     return success(await (await this.engine()).types(query));
+  }
+  @Get("deletion-preview")
+  @ApiEndpoint({
+    id: "previewEntityDeletion",
+    summary:
+      "Показать полный каскад удаления и сохраняемые сущности со снимаемыми связями; максимум 1000 записей",
+    query: "EntityDeletionQuery",
+    response: "EntityDeletionPreview",
+  })
+  async deletionPreview(
+    @Query(new ZodValidationPipe(entityDeletionQuerySchema)) query: EntityDeletionQuery,
+  ) {
+    return success(await new EntityDeletionService(await this.workspace.open()).preview(query));
+  }
+  @Post("delete")
+  @HttpCode(200)
+  @ApiEndpoint({
+    id: "deleteEntity",
+    summary:
+      "Удалить подтверждённый каскад и снять внешние связи; проверка версии и безопасный повтор по requestId",
+    body: "DeleteEntity",
+    response: "EntityDeleted",
+  })
+  async delete(@Body(new ZodValidationPipe(deleteEntitySchema)) input: DeleteEntity) {
+    return this.changed((engine) =>
+      new EntityDeletionService(engine.workspace).delete(input, this.workspace.actor()),
+    );
   }
   @Get("type")
   @ApiEndpoint({

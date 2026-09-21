@@ -342,11 +342,10 @@ export class ProductService {
         (fields.kind === "passport"
           ? "PRODUCT"
           : fields.kind === "feature" || fields.kind === "scenario" || fields.kind === "document"
-            ? nextProductKey(
-                fields.kind,
-                records,
-                catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
-              )
+            ? nextProductKey(fields.kind, records, [
+                ...catalog.reservedKeys,
+                ...catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
+              ])
             : fields.kind === "application"
               ? (fields.prefix ?? defaultBoardPrefix(fields.slug))
               : undefined);
@@ -390,7 +389,10 @@ export class ProductService {
           );
           const suffix = Number(targetRecord?.key?.split("-").at(-1));
           let number = Number.isSafeInteger(suffix) && suffix > 0 ? suffix : 1;
-          const used = new Set(catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]));
+          const used = new Set([
+            ...catalog.reservedKeys,
+            ...catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
+          ]);
           while (used.has(`${prefix}-${number}`)) number++;
           contract.key = `${prefix}-${number}`;
         }

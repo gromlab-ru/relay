@@ -15,6 +15,7 @@ import {
 import { Maximize2, Minimize2, Link2, Check } from "lucide-react";
 import { useMediaQuery, useClipboard } from "@mantine/hooks";
 import { useBoardTask } from "domains/board-tasks";
+import { EntityDelete } from "compositions/widgets/entity-delete";
 import { TaskEditor } from "./ui/task-editor";
 import { TaskActivity } from "./ui/task-activity";
 import type { TaskModalProps } from "./types/task-modal-props.type";
@@ -30,6 +31,7 @@ export const TaskModal = (props: TaskModalProps) => {
   const { projectId, reference, startEditing, onClose, onOpen } = props;
   const query = useBoardTask(projectId, reference, !startEditing);
   const [isExpanded, setExpanded] = useState(false);
+  const [isDeleteOpened, setDeleteOpened] = useState(false);
   const [tab, setTab] = useState<string | null>("task");
   const clipboard = useClipboard({ timeout: 2000 });
   const isMobile = useMediaQuery("(max-width: 48em)");
@@ -50,6 +52,9 @@ export const TaskModal = (props: TaskModalProps) => {
     <Modal.Root
       opened
       onClose={onClose}
+      closeOnEscape={!isDeleteOpened}
+      closeOnClickOutside={!isDeleteOpened}
+      trapFocus={!isDeleteOpened}
       centered
       size={size}
       xOffset={offset}
@@ -67,6 +72,15 @@ export const TaskModal = (props: TaskModalProps) => {
         <Modal.Header role="presentation">
           <Modal.Title>{title}</Modal.Title>
           <Group gap="xs">
+            {task !== undefined && (
+              <EntityDelete
+                key={task.id}
+                kind="task"
+                entityId={task.id}
+                onDeleted={onClose}
+                onOpenedChange={setDeleteOpened}
+              />
+            )}
             {!isMobile && (
               <Tooltip label={expandLabel}>
                 <ActionIcon
@@ -81,7 +95,7 @@ export const TaskModal = (props: TaskModalProps) => {
                 </ActionIcon>
               </Tooltip>
             )}
-            <Modal.CloseButton aria-label="Закрыть задачу" />
+            <Modal.CloseButton aria-label="Закрыть задачу" disabled={isDeleteOpened} />
           </Group>
         </Modal.Header>
         <Modal.Body>

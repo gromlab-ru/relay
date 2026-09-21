@@ -1,6 +1,6 @@
 import { Anchor, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ProductKey } from "domains/product";
 import { useProjectBasePath } from "domains/project";
 import { useProductRoute } from "compositions/widgets/product-page";
@@ -13,6 +13,7 @@ import {
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductContributions } from "compositions/widgets/product-contributions";
 import { ProductTasks } from "compositions/widgets/product-tasks";
+import { EntityDelete } from "compositions/widgets/entity-delete";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { isEmptyArray } from "shared/value-predicates";
@@ -28,6 +29,7 @@ import styles from "./styles/product-feature.module.css";
 export const ProductFeatureScreen = () => {
   const { featureId } = useProductRoute();
   const location = useLocation();
+  const navigate = useNavigate();
   const { snapshot } = useProductDemo();
   const base = useProductPath();
   const projectBase = useProjectBasePath();
@@ -65,15 +67,23 @@ export const ProductFeatureScreen = () => {
       backTo={backTo}
       backLabel={backLabel}
       actions={
-        <Button
-          component={Link}
-          to={`${base}/features/${featureData.key ?? featureData.id}/edit${location.search}`}
-          state={location.state}
-          variant="default"
-          leftSection={<Pencil size={14} aria-hidden="true" />}
-        >
-          Редактировать
-        </Button>
+        <Group gap="xs">
+          <Button
+            component={Link}
+            to={`${base}/features/${featureData.key ?? featureData.id}/edit${location.search}`}
+            state={location.state}
+            variant="default"
+            leftSection={<Pencil size={14} aria-hidden="true" />}
+          >
+            Редактировать
+          </Button>
+          <EntityDelete
+            key={featureData.id}
+            kind="feature"
+            entityId={featureData.id}
+            onDeleted={() => navigate(`${base}/features`, { replace: true })}
+          />
+        </Group>
       }
       meta={
         <Group gap="md">

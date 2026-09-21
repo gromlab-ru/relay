@@ -10,6 +10,8 @@ import { createBoardTaskForProject } from "./operations/create-board-task-for-pr
 import { createBoardTask } from "./operations/create-board-task.js";
 import { createEntityForProject } from "./operations/create-entity-for-project.js";
 import { createEntity } from "./operations/create-entity.js";
+import { deleteEntityForProject } from "./operations/delete-entity-for-project.js";
+import { deleteEntity } from "./operations/delete-entity.js";
 import { describeEntityTypeForProject } from "./operations/describe-entity-type-for-project.js";
 import { describeEntityType } from "./operations/describe-entity-type.js";
 import { getBoardBySlugForProject } from "./operations/get-board-by-slug-for-project.js";
@@ -81,6 +83,8 @@ import { mutateGraphForProject } from "./operations/mutate-graph-for-project.js"
 import { mutateGraph } from "./operations/mutate-graph.js";
 import { mutateProductForProject } from "./operations/mutate-product-for-project.js";
 import { mutateProduct } from "./operations/mutate-product.js";
+import { previewEntityDeletionForProject } from "./operations/preview-entity-deletion-for-project.js";
+import { previewEntityDeletion } from "./operations/preview-entity-deletion.js";
 import { publishTaskCommentForProject } from "./operations/publish-task-comment-for-project.js";
 import { publishTaskComment } from "./operations/publish-task-comment.js";
 import { registerProject } from "./operations/register-project.js";
@@ -193,6 +197,8 @@ export const operationsTree = {
   },
   entities: {
     listEntityTypes: listEntityTypes,
+    previewEntityDeletion: previewEntityDeletion,
+    deleteEntity: deleteEntity,
     describeEntityType: describeEntityType,
     listEntities: listEntities,
     createEntity: createEntity,
@@ -206,6 +212,8 @@ export const operationsTree = {
     moveEntityTask: moveEntityTask,
     linkEntityTask: linkEntityTask,
     listEntityTypesForProject: listEntityTypesForProject,
+    previewEntityDeletionForProject: previewEntityDeletionForProject,
+    deleteEntityForProject: deleteEntityForProject,
     describeEntityTypeForProject: describeEntityTypeForProject,
     listEntitiesForProject: listEntitiesForProject,
     createEntityForProject: createEntityForProject,

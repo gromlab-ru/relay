@@ -12,6 +12,7 @@ import {
 import { ProductReadiness } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductTasks } from "compositions/widgets/product-tasks";
+import { EntityDelete } from "compositions/widgets/entity-delete";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { ImplementationEditor } from "./ui/implementation-editor/implementation-editor";
@@ -204,6 +205,14 @@ export const ProductEntityScreen = () => {
       }
       actions={
         <Group>
+          {!isEditing && (
+            <EntityDelete
+              key={entity.id}
+              kind={fields.kind}
+              entityId={entity.id}
+              onDeleted={() => navigate(parent.href, { replace: true })}
+            />
+          )}
           <Button
             component={Link}
             variant="default"

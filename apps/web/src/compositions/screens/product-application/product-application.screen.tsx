@@ -1,6 +1,6 @@
 import { Accordion, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ProductKey } from "domains/product";
 import { useProjectBasePath } from "domains/project";
 import { useProductRoute } from "compositions/widgets/product-page";
@@ -8,6 +8,7 @@ import { getRelatedDocuments, useProductDemo } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
+import { EntityDelete } from "compositions/widgets/entity-delete";
 import { ApplicationFeatures } from "./ui/application-features";
 import styles from "./styles/product-application.module.css";
 
@@ -20,6 +21,7 @@ import styles from "./styles/product-application.module.css";
 export const ProductApplicationScreen = () => {
   const { applicationId } = useProductRoute();
   const location = useLocation();
+  const navigate = useNavigate();
   const { snapshot, scopes } = useProductDemo();
   const base = useProductPath();
   const projectBase = useProjectBasePath();
@@ -60,15 +62,23 @@ export const ProductApplicationScreen = () => {
       backTo={backTo}
       backLabel={backLabel}
       actions={
-        <Button
-          component={Link}
-          to={`${base}/applications/${applicationData.key ?? applicationData.id}/edit`}
-          state={location.state}
-          variant="default"
-          leftSection={<Pencil size={14} aria-hidden="true" />}
-        >
-          Редактировать приложение
-        </Button>
+        <Group gap="xs">
+          <Button
+            component={Link}
+            to={`${base}/applications/${applicationData.key ?? applicationData.id}/edit`}
+            state={location.state}
+            variant="default"
+            leftSection={<Pencil size={14} aria-hidden="true" />}
+          >
+            Редактировать приложение
+          </Button>
+          <EntityDelete
+            key={applicationData.id}
+            kind="application"
+            entityId={applicationData.id}
+            onDeleted={() => navigate(`${base}/applications`, { replace: true })}
+          />
+        </Group>
       }
       meta={
         <Group gap="md">

@@ -659,6 +659,7 @@ export class BoardTasksService {
       readEntityCatalog(this.workspace, owned),
     );
     const numbers = [
+      ...catalog.reservedKeys,
       ...tasks.flatMap((task) => task.keys),
       ...catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
     ]

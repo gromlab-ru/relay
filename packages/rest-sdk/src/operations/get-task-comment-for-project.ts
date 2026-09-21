@@ -22,7 +22,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
  */
 export const getTaskCommentForProject = (
   http: ApiRequestClient,
-  { entryId, reference, project }: GetTaskCommentForProjectParams,
+  { reference, entryId, project }: GetTaskCommentForProjectParams,
   params: RequestParams = {},
 ) =>
   http.request<

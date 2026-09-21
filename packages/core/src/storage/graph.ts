@@ -158,6 +158,21 @@ export class GraphRepository {
     assertOwned: () => void,
     activity: ActivityFile[] = [],
   ): Promise<GraphSaved> {
+    const prepared = await this.prepareCommit(snapshot, records, events, key, requestHash, saved);
+    await new GraphTransaction(this.workspace).publish(prepared.changes, assertOwned, activity);
+    prepared.publish();
+    return prepared.result;
+  }
+
+  /** Готовит граф для общей транзакции, не публикуя файлы или кеш индекса. */
+  async prepareCommit(
+    snapshot: GraphSnapshot,
+    records: GraphCurrent[],
+    events: GraphEvent[],
+    key: string,
+    requestHash: string,
+    saved: (fingerprint: string, revision: number) => GraphSaved,
+  ) {
     invariant(
       !snapshot.legacy,
       "GRAPH_MIGRATION_REQUIRED",
@@ -198,9 +213,7 @@ export class GraphRepository {
       ...index.changes,
       { path: "meta.json", after: meta },
     );
-    await new GraphTransaction(this.workspace).publish(changes, assertOwned, activity);
-    index.publish();
-    return result;
+    return { changes, result, publish: index.publish };
   }
 
   private async event(sequence: number): Promise<GraphEvent> {

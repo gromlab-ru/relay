@@ -22,7 +22,7 @@ import type { ApiRequestClient, RequestParams } from "../http-client.js";
  */
 export const getTaskCriterionForProject = (
   http: ApiRequestClient,
-  { criterionId, reference, project }: GetTaskCriterionForProjectParams,
+  { reference, criterionId, project }: GetTaskCriterionForProjectParams,
   params: RequestParams = {},
 ) =>
   http.request<

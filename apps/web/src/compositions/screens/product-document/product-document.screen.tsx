@@ -1,11 +1,12 @@
 import { Badge, Button, Group, Text } from "@mantine/core";
 import { Clock3, FileText, Link2, Pencil } from "lucide-react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { DOCUMENTATION_KINDS, DocumentationScopes, useProductDemo } from "domains/product-demo";
 import { useProjectBasePath } from "domains/project";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
+import { EntityDelete } from "compositions/widgets/entity-delete";
 import styles from "./styles/product-document.module.css";
 
 /**
@@ -21,6 +22,7 @@ export const ProductDocumentScreen = () => {
   const base = useProductPath();
   const projectBase = useProjectBasePath();
   const location = useLocation();
+  const navigate = useNavigate();
   const documentData = snapshot.documentation.find((entry) => entry.id === documentId);
   const backTo = getProductReturn(location.state, `${base}/documents`, base);
   if (documentData === undefined)
@@ -49,15 +51,23 @@ export const ProductDocumentScreen = () => {
       backTo={backTo}
       backLabel="К документам"
       actions={
-        <Button
-          component={Link}
-          to={`${base}/documents/${documentData.id}/edit`}
-          state={{ returnTo: backTo }}
-          variant="default"
-          leftSection={<Pencil size={15} aria-hidden="true" />}
-        >
-          Редактировать
-        </Button>
+        <Group gap="xs">
+          <Button
+            component={Link}
+            to={`${base}/documents/${documentData.id}/edit`}
+            state={{ returnTo: backTo }}
+            variant="default"
+            leftSection={<Pencil size={15} aria-hidden="true" />}
+          >
+            Редактировать
+          </Button>
+          <EntityDelete
+            key={documentData.id}
+            kind="document"
+            entityId={documentData.id}
+            onDeleted={() => navigate(`${base}/documents`, { replace: true })}
+          />
+        </Group>
       }
       meta={
         <Group gap="sm">

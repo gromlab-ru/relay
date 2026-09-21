@@ -17,6 +17,7 @@ import type { Workspace } from "./workspace.js";
 import { nextProductKey, productAddresses } from "../domain/product-addresses.js";
 import { defaultBoardPrefix } from "../domain/board.js";
 import { ProductTransaction } from "./product-transaction.js";
+import { EntityDeletionRepository } from "./entity-deletion.js";
 
 export const PRODUCT_DIRECTORIES = {
   passport: "",
@@ -85,7 +86,7 @@ export class ProductRepository {
     return paths;
   }
 
-  private implementationPath(
+  implementationPath(
     applicationId: string,
     contract: Pick<ProductContract, "id" | "scenarioId">,
   ): string {
@@ -196,7 +197,7 @@ export class ProductRepository {
     return { records, implementations: new Map(this.decodedImplementations) };
   }
 
-  private path(record: ProductRecord): string {
+  path(record: ProductRecord): string {
     if (record.fields.kind === "application") return `applications/${record.id}/application.json`;
     if (record.fields.kind === "scope")
       return `applications/${record.fields.applicationId}/scope.json`;
@@ -226,9 +227,10 @@ export class ProductRepository {
             : nextProductKey(kind as "feature" | "scenario" | "document", records);
       await this.save(record, false, assertOwned);
     }
-    const keys = new Set(
-      productAddresses(records).flatMap((entry) => (entry.key ? [entry.key] : [])),
-    );
+    const keys = new Set([
+      ...(await new EntityDeletionRepository(this.workspace).reservedKeys()),
+      ...productAddresses(records).flatMap((entry) => (entry.key ? [entry.key] : [])),
+    ]);
     if (
       records.some(
         (entry) =>
@@ -402,6 +404,17 @@ export class ProductRepository {
   }
 
   async save(record: ProductRecord, exclusive: boolean, assertOwned: () => void): Promise<void> {
+    await new ProductTransaction(this.workspace).publish(
+      await this.prepare(record, exclusive),
+      assertOwned,
+    );
+  }
+
+  /** Готовит файлы без публикации для общей транзакции нескольких владельцев. */
+  async prepare(
+    record: ProductRecord,
+    exclusive = false,
+  ): Promise<{ path: string; after: unknown }[]> {
     const target = this.path(record);
     const oldPaths = [
       ...new Set([
@@ -480,6 +493,6 @@ export class ProductRepository {
         "RESPONSE_TOO_LARGE",
         "Запись продукта превышает 16 МиБ",
       );
-    await new ProductTransaction(this.workspace).publish(changes, assertOwned);
+    return changes;
   }
 }

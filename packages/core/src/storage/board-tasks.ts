@@ -137,6 +137,17 @@ export class BoardTaskRepository {
     assertOwned: () => void,
     activity: ActivityFile[] = [],
   ) {
+    const transaction = this.prepare(writes, removes, activity);
+    await atomicJson(this.pending, transaction, this.workspace.runtime, true, assertOwned);
+    await this.recover(assertOwned);
+  }
+
+  /** Кодирует и проверяет пакет без записи для составных операций проекта. */
+  prepare(
+    writes: { slug: string; task: BoardTaskRecord }[],
+    removes: { slug: string; id: string }[],
+    activity: ActivityFile[] = [],
+  ) {
     new TaskActivityRepository(this.workspace).validate(activity);
     const transaction = parse(
       transactionSchema,
@@ -190,8 +201,7 @@ export class BoardTaskRepository {
         "Документ задачи превышает 16 МиБ",
         4,
       );
-    await atomicJson(this.pending, transaction, this.workspace.runtime, true, assertOwned);
-    await this.recover(assertOwned);
+    return transaction;
   }
 
   /** Запускается под общей блокировкой до чтения: полуперенесённая задача не наблюдается. */
