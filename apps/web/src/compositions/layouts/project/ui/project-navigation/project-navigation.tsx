@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import { useEffect, useId, useState } from "react";
-import { Button, NavLink, Text } from "@mantine/core";
+import { Fragment, useEffect, useId, useState } from "react";
+import { Button, Divider, NavLink, Text } from "@mantine/core";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { Box, ChartNoAxesCombined, LayoutDashboard } from "lucide-react";
 import { useBoards } from "domains/boards";
@@ -34,6 +34,13 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
   const openedTask = useBoardTask(projectId, isKanbanTask ? taskReference : null);
   const isBoardsRoute = pathname.startsWith(`${basePath}/boards/`) || isKanbanTask;
   const boardItems = boards.data?.flatMap((page) => page.items) ?? [];
+  const boardNavigationItems = boardItems.map((board, index) => ({
+    id: board.id,
+    name: board.name,
+    href: `${basePath}/boards/${board.slug}`,
+    isActive: isKanbanTask && openedTask.data?.boardSlug === board.slug,
+    hasSeparator: index > 0 && board.kind !== boardItems[index - 1]?.kind,
+  }));
   const hasMoreBoards = boards.data?.at(-1)?.nextOffset != null;
   const hasBoardsError = boards.error !== undefined;
   const productNavigationId = useId();
@@ -129,17 +136,21 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
               Загружаем доски…
             </Text>
           )}
-          {boardItems.map((board) => (
-            <NavLink
-              key={board.id}
-              component={RouterNavLink}
-              to={`${basePath}/boards/${board.slug}`}
-              label={board.name}
-              active={isKanbanTask && openedTask.data?.boardSlug === board.slug}
-              className={clsx(styles.link, styles._child)}
-              classNames={LINK_CLASSES}
-              onClick={onNavigate}
-            />
+          {boardNavigationItems.map((board) => (
+            <Fragment key={board.id}>
+              {board.hasSeparator && (
+                <Divider my="xs" mx="xs" color="var(--tasks-border)" aria-hidden="true" />
+              )}
+              <NavLink
+                component={RouterNavLink}
+                to={board.href}
+                label={board.name}
+                active={board.isActive}
+                className={clsx(styles.link, styles._child)}
+                classNames={LINK_CLASSES}
+                onClick={onNavigate}
+              />
+            </Fragment>
           ))}
           {hasBoardsError && (
             <div role="alert">

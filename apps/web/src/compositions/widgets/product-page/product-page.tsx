@@ -41,15 +41,8 @@ export const ProductPage = (props: ProductPageProps) => {
   }, [location.pathname, location.hash, title]);
   return (
     <section {...rootAttrs} className={clsx(styles.root, className)}>
-      {hasBack && (
-        <Link to={backTo} state={backState} className={styles.back}>
-          <ArrowLeft size={14} aria-hidden="true" />
-          {backLabel}
-        </Link>
-      )}
       <header className={styles.heading}>
         <div className={styles.titleBlock}>
-          <span className={styles.eyebrow}>{eyebrow}</span>
           <h1 tabIndex={-1} ref={headingRef} className={styles.title}>
             {title}
           </h1>
