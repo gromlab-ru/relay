@@ -1,5 +1,21 @@
 # Журнал создания TSX
 
+## Хлебные крошки — 20 сентября 2026
+
+Из корня выполнено:
+
+```bash
+pnpm --filter @relay/web run create ui-unit page-breadcrumbs src/compositions/widgets
+pnpm --filter @relay/web run create ui-component project-breadcrumbs src/compositions/widgets/page-breadcrumbs/ui
+pnpm --filter @relay/web run create ui-component breadcrumb-item src/compositions/widgets/page-breadcrumbs/ui
+pnpm --filter @relay/web run create ui-component resolved-breadcrumb src/compositions/widgets/page-breadcrumbs/ui
+pnpm --filter @relay/web run create ui-component breadcrumb-link src/compositions/widgets/page-breadcrumbs/ui
+```
+
+Общий юнит обслуживает каркас проекта, служебные состояния Relay и окно задачи.
+Внутренние компоненты связывают маршрутные метаданные, адресные названия и ссылки;
+ненужные CSS-заготовки удалены. Метаданные URL принадлежат `app/router`.
+
 ## Последовательные маршруты — 20 сентября 2026
 
 Из корня выполнено:

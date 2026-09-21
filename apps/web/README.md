@@ -39,6 +39,7 @@ Vite по умолчанию слушает 5173 и проксирует `/api` 
 | app/router                               | Вложенные URL и техническая интеграция                        |
 | compositions/screens/relay               | Выбор проекта и область ProjectScope                          |
 | compositions/layouts/project             | Общая шапка, навигация и Outlet                               |
+| compositions/widgets/page-breadcrumbs    | Путь страницы, адресные названия и адаптивное меню родителей  |
 | domains/project                          | Настройки, постоянный ID, путь по slug и индикатор соединения |
 | domains/workspace                        | Режим и реестр сервера                                        |
 | domains/product                          | Постоянные продуктовые данные, операции и кеш                 |

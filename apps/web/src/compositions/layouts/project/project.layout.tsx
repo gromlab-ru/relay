@@ -10,6 +10,7 @@ import {
 } from "domains/project";
 import { useWorkspace } from "domains/workspace";
 import { useThemeColorScheme } from "ui/themes";
+import { ProjectBreadcrumbs } from "compositions/widgets/page-breadcrumbs";
 import { ProjectNavigation } from "./ui/project-navigation";
 import styles from "./styles/project.module.css";
 
@@ -144,6 +145,7 @@ export const ProjectLayout = () => {
           </div>
         </aside>
         <main className={styles.content}>
+          <ProjectBreadcrumbs />
           <Outlet />
         </main>
       </div>

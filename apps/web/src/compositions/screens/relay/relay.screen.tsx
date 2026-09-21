@@ -5,6 +5,7 @@ import { useWorkspace } from "domains/workspace";
 import { ProjectScope } from "domains/project";
 import { StatePanel } from "ui/state-panel";
 import { MarkdownLinkProvider } from "ui/markdown-link";
+import { PageBreadcrumbs } from "compositions/widgets/page-breadcrumbs";
 import { RelayMarkdownLink } from "./ui/relay-markdown-link/relay-markdown-link";
 import styles from "./styles/relay.module.css";
 
@@ -93,12 +94,20 @@ export const RelayScreen = () => {
 
   if (workspaceData === undefined) {
     return (
-      <StatePanel
-        title="Подключение к Relay"
-        description="Запустите relay-server и проверьте подключение."
-        isLoading={workspace.isLoading}
-        action={<Button onClick={() => void workspace.mutate()}>Повторить</Button>}
-      />
+      <main>
+        <PageBreadcrumbs
+          items={[
+            { id: "relay", label: "Relay", href: "/" },
+            { id: "connection", label: "Подключение" },
+          ]}
+        />
+        <StatePanel
+          title="Подключение к Relay"
+          description="Запустите relay-server и проверьте подключение."
+          isLoading={workspace.isLoading}
+          action={<Button onClick={() => void workspace.mutate()}>Повторить</Button>}
+        />
+      </main>
     );
   }
 
@@ -141,6 +150,12 @@ export const RelayScreen = () => {
       )}
       {!canOpenProject && (
         <main>
+          <PageBreadcrumbs
+            items={[
+              { id: "relay", label: "Relay", href: "/" },
+              { id: "selection", label: stateTitle },
+            ]}
+          />
           <StatePanel title={stateTitle} description={stateDescription} />
         </main>
       )}
