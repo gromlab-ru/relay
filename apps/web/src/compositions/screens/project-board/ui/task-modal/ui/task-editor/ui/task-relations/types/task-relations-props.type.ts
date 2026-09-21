@@ -1,8 +1,10 @@
 import type { BoardTask } from "domains/board-tasks";
-/** Граф связей текущей задачи и переходы к соседям. */
+/** Подзадачи текущей задачи и переходы к ним. */
 export type TaskRelationsProps = {
+  /** Проект, содержащий задачи. */
   projectId: string;
+  /** Родительская задача. */
   task: BoardTask;
+  /** Открывает выбранную подзадачу с сохранением контекста доски. */
   onOpen: (id: string, boardSlug?: string) => void;
-  onOwnRevision: (revision: number) => void;
 };

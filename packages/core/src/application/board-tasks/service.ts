@@ -95,6 +95,40 @@ function validate(tasks: BoardTaskRecord[]) {
   }
 }
 
+/** Строит порядок завершения: родитель ожидает детей и явно заданные зависимости. */
+function completionGraph(tasks: BoardTaskRecord[]): Map<string, Set<string>> {
+  const graph = new Map(tasks.map((task) => [task.id, new Set(task.dependencies)]));
+  for (const task of tasks) {
+    if (task.parentId !== null) graph.get(task.parentId)?.add(task.id);
+  }
+  return graph;
+}
+
+/** Запрещает новые смешанные циклы, сохраняя возможность читать и исправлять старые связи. */
+function validateCompletionChanges(previous: BoardTaskRecord[], current: BoardTaskRecord[]): void {
+  const before = completionGraph(previous);
+  const after = completionGraph(current);
+  for (const [source, targets] of after) {
+    for (const target of targets) {
+      if (before.get(source)?.has(target)) continue;
+      const pending = [target];
+      const visited = new Set<string>();
+      while (pending.length > 0) {
+        const id = pending.pop()!;
+        invariant(
+          id !== source,
+          "DEPENDENCY_CYCLE",
+          "Подзадачи и зависимости создают цикл завершения",
+          4,
+        );
+        if (visited.has(id)) continue;
+        visited.add(id);
+        pending.push(...(after.get(id) ?? []));
+      }
+    }
+  }
+}
+
 function resolveTask(tasks: BoardTaskRecord[], reference: string): BoardTaskRecord {
   parse(boardTaskReferenceSchema, reference, "ссылка на задачу");
   const value = reference.startsWith("task:") ? reference.slice(5) : reference;
@@ -121,7 +155,11 @@ function resolveBoard(boards: Board[], reference: string): Board {
 }
 function view(task: BoardTaskRecord, tasks: BoardTaskRecord[], boards: Board[]): BoardTaskView {
   const { version: _version, keys: _keys, requests: _requests, events: _events, ...data } = task;
-  const blockers = task.dependencies.filter(
+  const requirements = new Set([
+    ...task.dependencies,
+    ...tasks.filter((entry) => entry.parentId === task.id).map((entry) => entry.id),
+  ]);
+  const blockers = [...requirements].filter(
     (id) => tasks.find((entry) => entry.id === id)?.column !== "done",
   );
   const board = resolveBoard(boards, task.boardId);
@@ -185,11 +223,13 @@ export class BoardTasksService {
         }
       }
       const board = query.board === undefined ? undefined : resolveBoard(boards, query.board);
+      const parent = query.parentId === undefined ? undefined : resolveTask(tasks, query.parentId);
       const selected = tasks
         .filter((task) => {
           const state = view(task, tasks, boards);
           return (
             (!board || task.boardId === board.id) &&
+            (!parent || task.parentId === parent.id) &&
             (!query.column || task.column === query.column) &&
             (!query.completion ||
               (query.completion === "finished") ===
@@ -328,6 +368,7 @@ export class BoardTasksService {
         parse(boardTaskRecordSchema, task, "задача"),
       );
       validate(candidates);
+      validateCompletionChanges(tasks, candidates);
       const writes = candidates
         .filter((task) => before.get(task.id) !== JSON.stringify(task))
         .map((task) => ({ slug: resolveBoard(boards, task.boardId).slug, task }));
@@ -412,6 +453,14 @@ export class BoardTasksService {
       async (tasks, boards, _previous, author) => {
         const productLinks = await this.validateProductLinks(command.productLinks ?? []);
         const board = resolveBoard(boards, command.board);
+        const parent =
+          command.parentId === undefined ? undefined : resolveTask(tasks, command.parentId);
+        invariant(
+          parent?.column !== "done" || command.column === "done",
+          "TASK_BLOCKED",
+          "Сначала верните родительскую задачу из готовых: подзадача ещё не выполнена",
+          4,
+        );
         const key = await this.nextKey(tasks, board);
         const now = new Date().toISOString();
         const rank =
@@ -432,7 +481,7 @@ export class BoardTasksService {
           revision: 1,
           dependencies: (command.dependencies ?? []).map((ref) => resolveTask(tasks, ref).id),
           related: (command.related ?? []).map((ref) => resolveTask(tasks, ref).id),
-          parentId: command.parentId === undefined ? null : resolveTask(tasks, command.parentId).id,
+          parentId: parent?.id ?? null,
           createdAt: now,
           updatedAt: now,
           createdBy: author,
@@ -487,7 +536,7 @@ export class BoardTasksService {
         invariant(
           command.column !== "done" || !view(task, tasks, boards).blocked,
           "TASK_BLOCKED",
-          "Нельзя завершить задачу с невыполненными зависимостями",
+          "Нельзя завершить задачу: остались незавершённые подзадачи или зависимости",
           4,
         );
         const column = tasks
@@ -573,7 +622,15 @@ export class BoardTasksService {
             4,
           );
           task.parentId = null;
-        } else task.parentId = target.id;
+        } else {
+          invariant(
+            target.column !== "done" || task.column === "done",
+            "TASK_BLOCKED",
+            "Сначала верните родительскую задачу из готовых: подзадача ещё не выполнена",
+            4,
+          );
+          task.parentId = target.id;
+        }
       } else {
         const field = command.relation === "depends-on" ? "dependencies" : "related";
         task[field] = task[field].filter((id) => id !== target.id);

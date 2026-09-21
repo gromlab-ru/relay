@@ -3,7 +3,6 @@ import { ActionIcon, Alert, Button, Group, Modal, Skeleton, Tooltip } from "@man
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { useBoardTask } from "domains/board-tasks";
-import { ProjectBreadcrumbs } from "compositions/widgets/page-breadcrumbs";
 import { TaskEditor } from "./ui/task-editor";
 import type { TaskModalProps } from "./types/task-modal-props.type";
 import styles from "./styles/task-modal.module.css";
@@ -65,7 +64,6 @@ export const TaskModal = (props: TaskModalProps) => {
           </Group>
         </Modal.Header>
         <Modal.Body>
-          <ProjectBreadcrumbs embedded />
           {query.isLoading && <Skeleton height={360} radius="md" />}
           {hasError && (
             <Alert color="red" title="Не удалось прочитать задачу">

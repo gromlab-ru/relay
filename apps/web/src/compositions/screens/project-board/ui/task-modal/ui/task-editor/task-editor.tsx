@@ -345,12 +345,7 @@ export const TaskEditor = (props: TaskEditorProps) => {
                 </Button>
               </section>
               <section className={styles.section}>
-                <TaskRelations
-                  projectId={projectId}
-                  task={task}
-                  onOpen={onOpen}
-                  onOwnRevision={handleOwnRevision}
-                />
+                <TaskRelations projectId={projectId} task={task} onOpen={onOpen} />
               </section>
             </div>
             <Stack gap="lg" className={styles.sidebar}>

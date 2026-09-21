@@ -460,7 +460,7 @@ export interface EntityDetail {
          * @maxItems 200
          */
         related: string[];
-        /** Родительская задача или null */
+        /** Родительская задача или null; незавершённая подзадача блокирует завершение родителя */
         parentId: string | null;
         /** Задача доски */
         kind: "task";
@@ -1678,7 +1678,7 @@ export interface BoardTaskView {
    * @maxItems 200
    */
   related: string[];
-  /** Родительская задача или null */
+  /** Родительская задача или null; незавершённая подзадача блокирует завершение родителя */
   parentId: string | null;
   /**
    * Время создания
@@ -1704,7 +1704,7 @@ export interface BoardTaskView {
   updatedBy: string;
   /** Текущий slug доски для навигации */
   boardSlug: string;
-  /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+  /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
   blockers: string[];
   /** Есть невыполненные зависимости */
   blocked: boolean;
@@ -1800,7 +1800,7 @@ export interface BoardTaskSaved {
      * @maxItems 200
      */
     related: string[];
-    /** Родительская задача или null */
+    /** Родительская задача или null; незавершённая подзадача блокирует завершение родителя */
     parentId: string | null;
     /**
      * Время создания
@@ -1826,7 +1826,7 @@ export interface BoardTaskSaved {
     updatedBy: string;
     /** Текущий slug доски для навигации */
     boardSlug: string;
-    /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+    /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
     blockers: string[];
     /** Есть невыполненные зависимости */
     blocked: boolean;
@@ -1891,7 +1891,7 @@ export interface BoardTasksPage {
      * @maxItems 200
      */
     related: string[];
-    /** Родительская задача или null */
+    /** Родительская задача или null; незавершённая подзадача блокирует завершение родителя */
     parentId: string | null;
     /**
      * Время создания
@@ -1917,7 +1917,7 @@ export interface BoardTasksPage {
     updatedBy: string;
     /** Текущий slug доски для навигации */
     boardSlug: string;
-    /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+    /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
     blockers: string[];
     /** Есть невыполненные зависимости */
     blocked: boolean;
@@ -1988,7 +1988,7 @@ export interface BoardTaskLinksPage {
        * @maxItems 200
        */
       related: string[];
-      /** Родительская задача или null */
+      /** Родительская задача или null; незавершённая подзадача блокирует завершение родителя */
       parentId: string | null;
       /**
        * Время создания
@@ -2014,7 +2014,7 @@ export interface BoardTaskLinksPage {
       updatedBy: string;
       /** Текущий slug доски для навигации */
       boardSlug: string;
-      /** Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей */
+      /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
       blockers: string[];
       /** Есть невыполненные зависимости */
       blocked: boolean;
@@ -2028,6 +2028,13 @@ export interface BoardTaskLinksPage {
 }
 
 export interface BoardTasksQuery {
+  /**
+   * Только прямые подзадачи родителя с указанным ID или ключом; фильтр до пагинации
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  parentId?: string;
   /**
    * ID продуктовой цели: только задачи с явной связью реализации
    * @minLength 1
@@ -4759,6 +4766,13 @@ export type GetBoardTasksOkEnum = true;
 
 export interface GetBoardTasksParams {
   /**
+   * Только прямые подзадачи родителя с указанным ID или ключом; фильтр до пагинации
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  parentId?: string;
+  /**
    * ID продуктовой цели: только задачи с явной связью реализации
    * @minLength 1
    * @maxLength 128
@@ -4849,6 +4863,13 @@ export interface GetBoardTaskParams {
 export type GetBoardTaskLinksOkEnum = true;
 
 export interface GetBoardTaskLinksParams {
+  /**
+   * Только прямые подзадачи родителя с указанным ID или ключом; фильтр до пагинации
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  parentId?: string;
   /**
    * ID продуктовой цели: только задачи с явной связью реализации
    * @minLength 1
@@ -5742,6 +5763,13 @@ export type GetBoardTasksForProjectOkEnum = true;
 
 export interface GetBoardTasksForProjectParams {
   /**
+   * Только прямые подзадачи родителя с указанным ID или ключом; фильтр до пагинации
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  parentId?: string;
+  /**
    * ID продуктовой цели: только задачи с явной связью реализации
    * @minLength 1
    * @maxLength 128
@@ -5843,6 +5871,13 @@ export interface GetBoardTaskForProjectParams {
 export type GetBoardTaskLinksForProjectOkEnum = true;
 
 export interface GetBoardTaskLinksForProjectParams {
+  /**
+   * Только прямые подзадачи родителя с указанным ID или ключом; фильтр до пагинации
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  parentId?: string;
   /**
    * ID продуктовой цели: только задачи с явной связью реализации
    * @minLength 1

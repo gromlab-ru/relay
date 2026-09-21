@@ -79,7 +79,11 @@ export const boardTaskSchema = z.strictObject({
     .array(boardTaskIdSchema)
     .max(200)
     .describe("Связанные задачи; обратное представление вычисляется"),
-  parentId: boardTaskIdSchema.nullable().describe("Родительская задача или null"),
+  parentId: boardTaskIdSchema
+    .nullable()
+    .describe(
+      "Родительская задача или null; незавершённая подзадача блокирует завершение родителя",
+    ),
   createdAt: timestampSchema.describe("Время создания"),
   updatedAt: timestampSchema.describe("Время последнего изменения"),
   createdBy: actorSchema.describe("Автор создания"),
@@ -90,7 +94,7 @@ export const boardTaskViewSchema = boardTaskSchema.extend({
   blockers: z
     .array(boardTaskIdSchema)
     .describe(
-      "Невыполненные прямые зависимости; их собственные блокеры доступны через чтение связей",
+      "Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей",
     ),
   blocked: z.boolean().describe("Есть невыполненные зависимости"),
   ready: z.boolean().describe("Можно брать в работу: колонка ready и нет блокеров"),
@@ -176,6 +180,9 @@ export const linkBoardTaskSchema = z.strictObject({
   remove: z.boolean().default(false).describe("Удалить связь вместо добавления"),
 });
 export const boardTasksQuerySchema = z.strictObject({
+  parentId: boardTaskReferenceSchema
+    .optional()
+    .describe("Только прямые подзадачи родителя с указанным ID или ключом; фильтр до пагинации"),
   productTarget: z
     .string()
     .min(1)

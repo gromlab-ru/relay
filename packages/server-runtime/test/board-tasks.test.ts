@@ -3,6 +3,49 @@ import { test } from "node:test";
 import { fixture } from "./helpers/server.js";
 import { ProductService } from "@relay/core/application/product/service";
 
+test("HTTP: список подзадач и защита завершения родителя работают через общий Core", async (t) => {
+  const { app, tasks } = await fixture(t);
+  const parent = await tasks.create({ board: "product", requestId: "parent" }, "agent");
+  const child = await tasks.create(
+    { board: "infrastructure", parentId: parent.id, requestId: "child" },
+    "agent",
+  );
+  await tasks.create({ board: "infrastructure", requestId: "other" }, "agent");
+  const base = "/api/v1/board-tasks";
+  const listed = await app.inject(`${base}?parentId=${parent.key}&limit=1`);
+  assert.equal(listed.statusCode, 200, listed.body);
+  assert.equal(listed.json().data.total, 1);
+  assert.equal(listed.json().data.items[0].id, child.id);
+  assert.equal(listed.json().data.nextOffset, null);
+  assert.deepEqual((await app.inject(`${base}/${parent.id}`)).json().data.blockers, [child.id]);
+  const blocked = await app.inject({
+    method: "POST",
+    url: `${base}/${parent.id}/move`,
+    payload: { column: "done", ifRevision: 1, requestId: "blocked" },
+  });
+  assert.equal(blocked.statusCode, 409, blocked.body);
+  assert.equal(blocked.json().error.code, "TASK_BLOCKED");
+  const finished = await app.inject({
+    method: "POST",
+    url: `${base}/${child.id}/move`,
+    payload: { column: "done", ifRevision: 1, requestId: "finish-child" },
+  });
+  assert.equal(finished.statusCode, 200, finished.body);
+  const completed = await app.inject({
+    method: "POST",
+    url: `${base}/${parent.id}/move`,
+    payload: { column: "done", ifRevision: 1, requestId: "finish-parent" },
+  });
+  assert.equal(completed.statusCode, 200, completed.body);
+  assert.equal((await app.inject(`${base}?parentId=${parent.id}`)).json().data.total, 1);
+  const schema = (await app.inject("/api/openapi.json")).json();
+  assert.ok(
+    schema.paths[base].get.parameters.some(
+      (parameter: { name: string }) => parameter.name === "parentId",
+    ),
+  );
+});
+
 test("HTTP: продуктовая связь, обратная фильтрация и создание подзадачи", async (t) => {
   const { app, workspace } = await fixture(t);
   const feature = await new ProductService(workspace).mutate(

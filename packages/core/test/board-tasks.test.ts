@@ -8,6 +8,240 @@ import { BoardsService } from "@relay/core/application/boards/service";
 import { BoardTaskRepository } from "@relay/core/storage/board-tasks";
 import { fixture } from "./helpers/workspace.js";
 
+test("подзадачи блокируют завершение родителя, отмена не готовность, повторное открытие пересчитывает блокеры", async (t) => {
+  const { workspace } = await fixture(t);
+  const service = new BoardTasksService(workspace);
+  const parent = await service.create(
+    { board: "product", column: "ready", requestId: "parent" },
+    "agent",
+  );
+  const child = await service.create(
+    { board: "infrastructure", parentId: parent.id, requestId: "child" },
+    "agent",
+  );
+  assert.deepEqual((await service.get(parent.id)).dependencies, []);
+  assert.deepEqual((await service.get(parent.id)).blockers, [child.id]);
+  assert.equal((await service.list({ readiness: "ready" })).total, 0);
+  await assert.rejects(
+    service.move(parent.id, { column: "done", ifRevision: 1, requestId: "blocked" }, "agent"),
+    { code: "TASK_BLOCKED" },
+  );
+  await service.move(
+    child.id,
+    { column: "cancelled", ifRevision: 1, requestId: "cancel" },
+    "agent",
+  );
+  assert.equal((await service.get(parent.id)).blocked, true);
+  await service.move(
+    child.id,
+    { column: "done", ifRevision: 2, requestId: "finish-child" },
+    "agent",
+  );
+  assert.equal((await service.get(parent.id)).ready, true);
+  assert.equal((await service.get(parent.id)).column, "ready");
+  await service.move(
+    parent.id,
+    { column: "done", ifRevision: 1, requestId: "finish-parent" },
+    "agent",
+  );
+  await service.move(child.id, { column: "ready", ifRevision: 3, requestId: "reopen" }, "agent");
+  const reopened = await service.get(parent.id);
+  assert.equal(reopened.column, "done");
+  assert.deepEqual(reopened.blockers, [child.id]);
+});
+
+test("привязка и создание подзадачи защищают готового родителя; удаление и смена родителя снимают блокер", async (t) => {
+  const { workspace } = await fixture(t);
+  const service = new BoardTasksService(workspace);
+  const finished = await service.create(
+    { board: "product", column: "done", requestId: "finished" },
+    "agent",
+  );
+  const parent = await service.create({ board: "product", requestId: "parent" }, "agent");
+  const other = await service.create({ board: "product", requestId: "other" }, "agent");
+  const child = await service.create({ board: "infrastructure", requestId: "child" }, "agent");
+  await assert.rejects(
+    service.create(
+      { board: "product", parentId: finished.id, requestId: "invalid-create" },
+      "agent",
+    ),
+    { code: "TASK_BLOCKED" },
+  );
+  await assert.rejects(
+    service.link(
+      child.id,
+      { target: finished.id, relation: "parent", ifRevision: 1, requestId: "invalid-link" },
+      "agent",
+    ),
+    { code: "TASK_BLOCKED" },
+  );
+  const command = {
+    target: parent.id,
+    relation: "parent" as const,
+    ifRevision: 1,
+    requestId: "link",
+  };
+  const saved = await service.link(child.id, command, "agent");
+  assert.deepEqual(await service.link(child.id, command, "agent"), saved);
+  assert.equal((await service.get(parent.id)).blocked, true);
+  await assert.rejects(
+    service.link(child.id, { ...command, target: other.id, requestId: "stale" }, "agent"),
+    { code: "REVISION_CONFLICT" },
+  );
+  await service.link(
+    child.id,
+    { ...command, target: other.id, ifRevision: 2, requestId: "reparent" },
+    "agent",
+  );
+  assert.equal((await service.get(parent.id)).blocked, false);
+  assert.equal((await service.get(other.id)).blocked, true);
+  await service.link(
+    child.id,
+    { ...command, target: other.id, remove: true, ifRevision: 3, requestId: "unlink" },
+    "agent",
+  );
+  assert.equal((await service.get(other.id)).blocked, false);
+  assert.equal((await service.get(child.id)).parentId, null);
+  await service.create(
+    { board: "product", parentId: finished.id, column: "done", requestId: "finished-child" },
+    "agent",
+  );
+  assert.equal((await service.get(finished.id)).blocked, false);
+});
+
+test("смешанные циклы подзадач и зависимостей запрещены, один блокер не дублируется", async (t) => {
+  const { workspace } = await fixture(t);
+  const service = new BoardTasksService(workspace);
+  const parent = await service.create({ board: "product", requestId: "parent" }, "agent");
+  const child = await service.create(
+    { board: "infrastructure", parentId: parent.id, requestId: "child" },
+    "agent",
+  );
+  await service.link(
+    parent.id,
+    { target: child.id, relation: "depends-on", ifRevision: 1, requestId: "duplicate-edge" },
+    "agent",
+  );
+  assert.deepEqual((await service.get(parent.id)).blockers, [child.id]);
+  await assert.rejects(
+    service.link(
+      child.id,
+      { target: parent.id, relation: "depends-on", ifRevision: 1, requestId: "cycle" },
+      "agent",
+    ),
+    { code: "DEPENDENCY_CYCLE" },
+  );
+  await assert.rejects(
+    service.create(
+      {
+        board: "product",
+        parentId: parent.id,
+        dependencies: [parent.id],
+        requestId: "create-cycle",
+      },
+      "agent",
+    ),
+    { code: "DEPENDENCY_CYCLE" },
+  );
+  const next = await service.create(
+    { board: "product", dependencies: [parent.id], requestId: "next" },
+    "agent",
+  );
+  await assert.rejects(
+    service.link(
+      next.id,
+      { target: child.id, relation: "parent", ifRevision: 1, requestId: "long-cycle" },
+      "agent",
+    ),
+    { code: "DEPENDENCY_CYCLE" },
+  );
+  assert.equal((await service.get(next.id)).parentId, null);
+});
+
+test("фильтр родителя применяется до пагинации, сохраняет готовых детей и разрешает прежний ключ", async (t) => {
+  const { workspace } = await fixture(t);
+  const service = new BoardTasksService(workspace);
+  const parent = await service.create({ board: "product", requestId: "parent" }, "agent");
+  await service.create({ board: "product", requestId: "unrelated" }, "agent");
+  const childIds = [];
+  for (const column of ["inbox", "done", "cancelled"] as const) {
+    const child = await service.create(
+      { board: "infrastructure", parentId: parent.id, column, requestId: column },
+      "agent",
+    );
+    childIds.push(child.id);
+  }
+  await service.move(
+    parent.id,
+    { board: "infrastructure", column: "inbox", ifRevision: 1, requestId: "move" },
+    "agent",
+  );
+  const first = await service.list({ parentId: parent.key, limit: 2 });
+  assert.equal(first.total, 3);
+  assert.equal(first.items.length, 2);
+  const next = await service.list({
+    parentId: parent.id,
+    limit: 2,
+    offset: first.nextOffset!,
+    version: first.version,
+  });
+  assert.equal(next.nextOffset, null);
+  assert.deepEqual(
+    new Set([...first.items, ...next.items].map((task) => task.id)),
+    new Set(childIds),
+  );
+  assert.equal((await service.list({ parentId: parent.id, completion: "unfinished" })).total, 1);
+  await assert.rejects(service.list({ parentId: "Absent01" }), { code: "NOT_FOUND" });
+  await service.create({ board: "product", parentId: parent.id, requestId: "new-child" }, "agent");
+  await assert.rejects(service.list({ parentId: parent.id, version: first.version }), {
+    code: "BOARD_CHANGED",
+  });
+});
+
+test("старый смешанный цикл читается и исправляется без переписывания хранения", async (t) => {
+  const { workspace } = await fixture(t);
+  const service = new BoardTasksService(workspace);
+  const parent = await service.create({ board: "product", requestId: "parent" }, "agent");
+  const child = await service.create(
+    { board: "product", parentId: parent.id, requestId: "child" },
+    "agent",
+  );
+  const path = join(dirname(workspace.configPath), "boards/product/tasks", `${child.id}.json`);
+  const stored = JSON.parse(await readFile(path, "utf8"));
+  stored.dependencies = [parent.id];
+  await writeFile(path, JSON.stringify(stored));
+  const before = await readFile(path, "utf8");
+  assert.equal((await service.get(parent.id)).blocked, true);
+  assert.equal((await service.get(child.id)).blocked, true);
+  assert.equal(await readFile(path, "utf8"), before);
+  await service.link(
+    child.id,
+    { target: parent.id, relation: "depends-on", remove: true, ifRevision: 1, requestId: "repair" },
+    "agent",
+  );
+  assert.equal((await service.get(child.id)).blocked, false);
+});
+
+test("конкурентные завершение родителя и привязка ребёнка не обходят блокировку", async (t) => {
+  const { workspace } = await fixture(t);
+  const service = new BoardTasksService(workspace);
+  const parent = await service.create({ board: "product", requestId: "parent" }, "agent");
+  const child = await service.create({ board: "infrastructure", requestId: "child" }, "agent");
+  const results = await Promise.allSettled([
+    service.move(parent.id, { column: "done", ifRevision: 1, requestId: "done" }, "agent"),
+    service.link(
+      child.id,
+      { target: parent.id, relation: "parent", ifRevision: 1, requestId: "link" },
+      "agent",
+    ),
+  ]);
+  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+  const failure = results.find((result) => result.status === "rejected");
+  assert.equal(failure?.reason.code, "TASK_BLOCKED");
+  const fresh = await service.get(parent.id);
+  assert.equal(fresh.column === "done" && fresh.blocked, false);
+});
+
 test("выбор связи исключает готовые и отменённые до пагинации и ищет ключ/название", async (t) => {
   const { workspace } = await fixture(t);
   const service = new BoardTasksService(workspace);
@@ -247,6 +481,8 @@ test("граф: междосочные блокеры, отмена, обрат�
     { target: a.id, relation: "parent", ifRevision: 3, requestId: "parent" },
     "agent",
   );
+  // Проверяем именно цикл, когда новый родитель не запрещён собственным статусом done.
+  await service.move(b.id, { column: "ready", ifRevision: 4, requestId: "reopen-cycle" }, "agent");
   await assert.rejects(
     service.link(
       a.id,

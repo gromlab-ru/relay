@@ -17,6 +17,8 @@ export type TasksPage = z.infer<typeof TASKS_PAGE_SCHEMA>;
 export type TaskLinksPage = z.infer<typeof LINKS_PAGE_SCHEMA>;
 export type TaskSaved = z.infer<typeof TASK_SAVED_SCHEMA>;
 export type TaskFilters = {
+  /** ID или ключ родителя для списка прямых подзадач. */
+  parentId?: string;
   board?: string;
   column?: TaskColumn;
   q?: string;
