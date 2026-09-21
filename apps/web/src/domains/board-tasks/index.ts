@@ -5,6 +5,8 @@ export {
   useBoardTaskRefresh,
   useBoardTaskSlice,
   useBoardTaskCreation,
+  useTaskCriteria,
+  useTaskCriterion,
 } from "./hooks/board-tasks.hook";
 export {
   createBoardTask,
@@ -13,6 +15,8 @@ export {
   linkBoardTask,
   getBoardTask,
   BoardTaskError,
+  getTaskCriterion,
+  changeTaskCriterion,
 } from "./adapters/board-tasks.adapter";
 export {
   KANBAN_COLUMNS,
@@ -34,3 +38,11 @@ export type {
   MoveTaskInput,
   LinkTaskInput,
 } from "./types/board-tasks.type";
+export type {
+  AcceptanceCriterion,
+  CriterionSummary,
+  CriterionView,
+  CriteriaPage,
+  CriterionContent,
+  ChangeCriterionInput,
+} from "./types/acceptance.type";

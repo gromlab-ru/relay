@@ -32,7 +32,16 @@ export interface Backend {
   graph: Pick<GraphService, "read" | "mutate" | "history">;
   boardTasks: Pick<
     BoardTasksService,
-    "list" | "get" | "links" | "create" | "update" | "move" | "link"
+    | "list"
+    | "get"
+    | "links"
+    | "create"
+    | "update"
+    | "move"
+    | "link"
+    | "listCriteria"
+    | "getCriterion"
+    | "changeCriterion"
   >;
   boards: Pick<BoardsService, "list" | "get">;
   product: Pick<

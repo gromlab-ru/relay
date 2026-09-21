@@ -7,6 +7,9 @@ import {
   updateBoardTaskSchema,
   moveBoardTaskSchema,
   linkBoardTaskSchema,
+  criteriaQuerySchema,
+  criterionIdSchema,
+  changeCriterionSchema,
 } from "../../domain/board-task.js";
 import type {
   BoardTaskRecord,
@@ -17,6 +20,9 @@ import type {
   UpdateBoardTask,
   MoveBoardTask,
   LinkBoardTask,
+  CriteriaQuery,
+  ChangeCriterion,
+  AcceptanceCriterion,
 } from "../../domain/board-task.js";
 import { defaultBoardPrefix } from "../../domain/board.js";
 import type { Board } from "../../domain/board.js";
@@ -40,6 +46,22 @@ function validate(tasks: BoardTaskRecord[]) {
   const ids = new Set(tasks.map((task) => task.id));
   const keys = new Set<string>();
   for (const task of tasks) {
+    invariant(
+      new Set(task.acceptanceCriteria.map((criterion) => criterion.id)).size ===
+        task.acceptanceCriteria.length,
+      "INVALID_DATA",
+      "Повтор ID критерия приёмки",
+      5,
+    );
+    for (const criterion of task.acceptanceCriteria)
+      invariant(
+        criterion.completed
+          ? criterion.completedAt !== null && criterion.completedBy !== null
+          : criterion.completedAt === null && criterion.completedBy === null,
+        "INVALID_DATA",
+        "Отметка критерия не согласована с автором и временем",
+        5,
+      );
     invariant(
       task.keys.includes(task.key),
       "INVALID_DATA",
@@ -154,7 +176,18 @@ function resolveBoard(boards: Board[], reference: string): Board {
   return board;
 }
 function view(task: BoardTaskRecord, tasks: BoardTaskRecord[], boards: Board[]): BoardTaskView {
-  const { version: _version, keys: _keys, requests: _requests, events: _events, ...data } = task;
+  const {
+    version: _version,
+    keys: _keys,
+    requests: _requests,
+    events: _events,
+    acceptanceCriteria,
+    ...data
+  } = task;
+  const acceptance = {
+    total: acceptanceCriteria.length,
+    completed: acceptanceCriteria.filter((criterion) => criterion.completed).length,
+  };
   const requirements = new Set([
     ...task.dependencies,
     ...tasks.filter((entry) => entry.parentId === task.id).map((entry) => entry.id),
@@ -165,6 +198,8 @@ function view(task: BoardTaskRecord, tasks: BoardTaskRecord[], boards: Board[]):
   const board = resolveBoard(boards, task.boardId);
   return {
     ...data,
+    acceptance,
+    canComplete: blockers.length === 0 && acceptance.completed === acceptance.total,
     boardSlug: board.slug,
     blockers,
     blocked: blockers.length > 0,
@@ -252,6 +287,109 @@ export class BoardTasksService {
     return this.read((tasks, boards) => view(resolveTask(tasks, reference), tasks, boards));
   }
 
+  /** Читает ограниченную страницу критериев без полного Markdown. */
+  async listCriteria(reference: string, input: CriteriaQuery = {}) {
+    const query = parse(criteriaQuerySchema, input, "список критериев приёмки");
+    return this.read((tasks) => {
+      const task = resolveTask(tasks, reference);
+      const items = task.acceptanceCriteria.map(
+        ({ description: _description, ...criterion }) => criterion,
+      );
+      return { ...page(items, query, String(task.revision)), revision: task.revision };
+    });
+  }
+
+  /** Читает полное описание одного критерия с ревизией задачи. */
+  async getCriterion(reference: string, criterionId: string) {
+    parse(criterionIdSchema, criterionId, "ID критерия");
+    return this.read((tasks) => {
+      const task = resolveTask(tasks, reference);
+      const criterion = task.acceptanceCriteria.find((entry) => entry.id === criterionId);
+      invariant(criterion, "NOT_FOUND", "Критерий приёмки не найден", 3);
+      return { criterion, revision: task.revision };
+    });
+  }
+
+  /** Изменяет один критерий под блокировкой, с ревизией и квитанцией повтора. */
+  async changeCriterion(reference: string, input: ChangeCriterion, actor: string) {
+    const command = parse(changeCriterionSchema, input, "изменение критерия приёмки");
+    return this.mutate(
+      `criterion-${command.action}`,
+      reference,
+      command,
+      actor,
+      (_tasks, _boards, previous, author) => {
+        invariant(previous, "NOT_FOUND", "Задача не найдена", 3);
+        invariant(
+          previous.column !== "done",
+          "TASK_ACCEPTANCE_LOCKED",
+          "Сначала верните задачу из готовых, чтобы изменить критерии приёмки",
+          4,
+        );
+        const criteria = structuredClone(previous.acceptanceCriteria);
+        const now = new Date().toISOString();
+        if (command.action === "add") {
+          invariant(
+            criteria.length < 100,
+            "VALIDATION_ERROR",
+            "В задаче допускается не более 100 критериев",
+            2,
+          );
+          const usedIds = [
+            ...criteria.map((entry) => entry.id),
+            ...Object.values(previous.requests).flatMap((receipt) =>
+              receipt.result.criterionId ? [receipt.result.criterionId] : [],
+            ),
+          ];
+          criteria.push({
+            id: shortId(usedIds),
+            title: command.title,
+            summary: command.summary,
+            description: command.description,
+            completed: false,
+            completedAt: null,
+            completedBy: null,
+          });
+        } else {
+          const criterion = criteria.find((entry) => entry.id === command.criterionId);
+          invariant(criterion, "NOT_FOUND", "Критерий приёмки не найден", 3);
+          if (command.action === "remove") criteria.splice(criteria.indexOf(criterion), 1);
+          if (command.action === "complete" && criterion.completed !== command.completed) {
+            criterion.completed = command.completed;
+            criterion.completedAt = command.completed ? now : null;
+            criterion.completedBy = command.completed ? author : null;
+          }
+          if (command.action === "update") {
+            invariant(
+              command.title !== undefined ||
+                command.summary !== undefined ||
+                command.description !== undefined,
+              "VALIDATION_ERROR",
+              "Изменения критерия не заданы",
+              2,
+            );
+            const changed = (["title", "summary", "description"] as const).some(
+              (field) => command[field] !== undefined && command[field] !== criterion[field],
+            );
+            for (const field of ["title", "summary", "description"] as const) {
+              const value = command[field];
+              if (value !== undefined) criterion[field] = value;
+            }
+            if (changed)
+              Object.assign(criterion, { completed: false, completedAt: null, completedBy: null });
+          }
+        }
+        return {
+          ...previous,
+          acceptanceCriteria: criteria,
+          revision: previous.revision + 1,
+          updatedAt: now,
+          updatedBy: author,
+        };
+      },
+    );
+  }
+
   async links(reference: string, input: BoardTasksQuery = {}) {
     const query = parse(boardTasksQuerySchema, input, "список связей задачи");
     return this.read((tasks, boards) => {
@@ -329,6 +467,14 @@ export class BoardTasksService {
       const before = new Map(tasks.map((task) => [task.id, JSON.stringify(task)]));
       const next = await change(tasks, boards, previous, actor);
       invariant(
+        action !== "create" ||
+          next.column !== "done" ||
+          next.acceptanceCriteria.every((criterion) => criterion.completed),
+        "TASK_ACCEPTANCE_INCOMPLETE",
+        "Нельзя создать готовую задачу с невыполненными критериями приёмки",
+        4,
+      );
+      invariant(
         action !== "create" || next.column !== "done" || !view(next, tasks, boards).blocked,
         "TASK_BLOCKED",
         "Нельзя создать готовую задачу с невыполненными зависимостями",
@@ -339,7 +485,7 @@ export class BoardTasksService {
           kind: "task",
           id: next.id,
         });
-      next.version = 3;
+      next.version = 4;
       next.events = [
         ...(previous?.events ?? []),
         { revision: next.revision, actor, at: next.updatedAt, action },
@@ -352,12 +498,18 @@ export class BoardTasksService {
         action,
         requestId: input.requestId,
       };
+      if (action.startsWith("criterion-")) {
+        result.criterionId =
+          "criterionId" in input && typeof input.criterionId === "string"
+            ? input.criterionId
+            : next.acceptanceCriteria.at(-1)?.id;
+      }
       if (action === "create" && "includeTask" in input && input.includeTask === true)
         result.task = view(next, [...tasks, next], boards);
       next.requests[requestKey] = { hash: requestHash, result };
       for (const task of tasks) {
         if (task.id !== next.id && before.get(task.id) !== JSON.stringify(task)) {
-          task.version = 3;
+          task.version = 4;
           task.events = [
             ...(task.events ?? []),
             { revision: task.revision, actor, at: task.updatedAt, action },
@@ -479,12 +631,22 @@ export class BoardTasksService {
         );
         const key = await this.nextKey(tasks, board);
         const now = new Date().toISOString();
+        const acceptanceCriteria: AcceptanceCriterion[] = [];
+        for (const content of command.acceptanceCriteria ?? [])
+          acceptanceCriteria.push({
+            ...content,
+            id: shortId(acceptanceCriteria.map((entry) => entry.id)),
+            completed: false,
+            completedAt: null,
+            completedBy: null,
+          });
         const rank =
           tasks
             .filter((task) => task.boardId === board.id && task.column === command.column)
             .reduce((max, task) => Math.max(max, task.rank), 0) + 1024;
         return {
-          version: 3,
+          version: 4,
+          acceptanceCriteria,
           id: shortId(tasks.map((task) => task.id)),
           key,
           keys: [key],
@@ -555,6 +717,18 @@ export class BoardTasksService {
         const board = resolveBoard(boards, command.board ?? task.boardId);
         if (board.id !== task.boardId)
           await this.validateProductLinks(task.productLinks, board, task.productLinks);
+        invariant(
+          command.column !== "done" ||
+            task.acceptanceCriteria.every((criterion) => criterion.completed),
+          "TASK_ACCEPTANCE_INCOMPLETE",
+          "Нельзя завершить задачу: остались невыполненные критерии приёмки",
+          4,
+          {
+            criterionIds: task.acceptanceCriteria
+              .filter((criterion) => !criterion.completed)
+              .map((criterion) => criterion.id),
+          },
+        );
         invariant(
           command.column !== "done" || !view(task, tasks, boards).blocked,
           "TASK_BLOCKED",

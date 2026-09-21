@@ -6,6 +6,7 @@ import {
   boardTaskIdSchema,
   boardTaskSavedSchema,
   boardTaskViewSchema,
+  acceptanceCriterionSchema,
 } from "../domain/board-task.js";
 import type { BoardTaskRecord } from "../domain/board-task.js";
 import { boardSlugSchema } from "../domain/board.js";
@@ -31,17 +32,25 @@ const storedSavedSchema = boardTaskSavedSchema.extend({
 });
 const currentStoredSchema = boardTaskRecordSchema.extend({
   description: z.array(z.string()),
+  acceptanceCriteria: z
+    .array(acceptanceCriterionSchema.extend({ description: z.array(z.string()) }))
+    .max(100),
   requests: z.record(z.string(), z.strictObject({ hash: z.string(), result: storedSavedSchema })),
 });
-// Версии 1/2 читаются без изменения файла; следующая предметная запись публикует v3 с событиями.
+// Старые версии читаются без изменения файла; следующая предметная запись публикует v4.
 const storedSchema = z.preprocess((value) => {
   // Совместимость с промежуточной локальной итерацией; классификация задач отменена пользователем.
   if (typeof value === "object" && value !== null && "kind" in value) {
     const { kind: _kind, ...rest } = value;
     value = rest;
   }
-  if (typeof value === "object" && value !== null && "version" in value && value.version === 1)
-    return { ...value, version: 2 };
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "version" in value &&
+    [1, 2, 3].includes(Number(value.version))
+  )
+    return { ...value, version: value.version === 1 ? 2 : value.version, acceptanceCriteria: [] };
   return value;
 }, currentStoredSchema);
 const transactionSchema = z.strictObject({
@@ -89,7 +98,15 @@ export class BoardTaskRepository {
         );
         const record = parse(
           boardTaskRecordSchema,
-          { ...stored, requests, description: stored.description.join("\n") },
+          {
+            ...stored,
+            requests,
+            description: stored.description.join("\n"),
+            acceptanceCriteria: stored.acceptanceCriteria.map((criterion) => ({
+              ...criterion,
+              description: criterion.description.join("\n"),
+            })),
+          },
           path,
           true,
         );
@@ -125,6 +142,10 @@ export class BoardTaskRepository {
           task: {
             ...task,
             description: task.description.split("\n"),
+            acceptanceCriteria: task.acceptanceCriteria.map((criterion) => ({
+              ...criterion,
+              description: criterion.description.split("\n"),
+            })),
             requests: Object.fromEntries(
               Object.entries(task.requests).map(([key, receipt]) => [
                 key,

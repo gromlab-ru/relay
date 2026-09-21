@@ -24,6 +24,12 @@ import {
   updateBoardTaskSchema,
   moveBoardTaskSchema,
   linkBoardTaskSchema,
+  criteriaQuerySchema,
+  criterionIdSchema,
+  addCriterionSchema,
+  editCriterionSchema,
+  completeCriterionSchema,
+  removeCriterionSchema,
 } from "@relay/core/domain/board-task";
 import type { BoardTaskSaved } from "@relay/core/domain/board-task";
 import { requestIdSchema } from "@relay/contracts/primitives";
@@ -221,6 +227,103 @@ export function createTools(projects: Projects): Server {
     async (backend, input) =>
       changedBoardTask(
         backend.boardTasks.create(createBoardTaskSchema.strip().parse(input), input.actor),
+      ),
+  );
+  projectTool(
+    "task_criteria_list",
+    "Список критериев приёмки задачи: заголовки, краткие описания и выполнение; по 20 с продолжением",
+    { ...selector, ...boardTask, ...criteriaQuerySchema.shape },
+    true,
+    async (backend, input) => ({
+      data: await backend.boardTasks.listCriteria(
+        input.reference,
+        criteriaQuerySchema.strip().parse(input),
+      ),
+    }),
+  );
+  projectTool(
+    "task_criterion_get",
+    "Прочитать полное Markdown-описание критерия приёмки и ревизию задачи",
+    { ...selector, ...boardTask, criterionId: criterionIdSchema },
+    true,
+    async (backend, input) => ({
+      data: await backend.boardTasks.getCriterion(input.reference, input.criterionId),
+    }),
+  );
+  projectTool(
+    "task_criterion_add",
+    "Добавить невыполненный критерий приёмки; максимум 100. Для готовой задачи сначала измените статус",
+    {
+      ...selector,
+      ...boardTask,
+      ...addCriterionSchema.shape,
+      actor: actorSchema.describe("Автор критерия"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.changeCriterion(
+          input.reference,
+          { ...addCriterionSchema.strip().parse(input), action: "add" },
+          input.actor,
+        ),
+      ),
+  );
+  projectTool(
+    "task_criterion_update",
+    "Изменить критерий приёмки; изменение текста сбрасывает выполнение и требует повторной проверки",
+    {
+      ...selector,
+      ...boardTask,
+      ...editCriterionSchema.shape,
+      actor: actorSchema.describe("Автор изменения критерия"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.changeCriterion(
+          input.reference,
+          { ...editCriterionSchema.strip().parse(input), action: "update" },
+          input.actor,
+        ),
+      ),
+  );
+  projectTool(
+    "task_criterion_complete",
+    "Отметить критерий выполненным или снять отметку: completed задаёт явное состояние; сохраняются автор и время",
+    {
+      ...selector,
+      ...boardTask,
+      ...completeCriterionSchema.shape,
+      actor: actorSchema.describe("Автор отметки выполнения"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.changeCriterion(
+          input.reference,
+          { ...completeCriterionSchema.strip().parse(input), action: "complete" },
+          input.actor,
+        ),
+      ),
+  );
+  projectTool(
+    "task_criterion_remove",
+    "Удалить критерий приёмки из задачи с проверкой ревизии",
+    {
+      ...selector,
+      ...boardTask,
+      ...removeCriterionSchema.shape,
+      actor: actorSchema.describe("Автор удаления критерия"),
+    },
+    false,
+    async (backend, input) =>
+      changedBoardTask(
+        backend.boardTasks.changeCriterion(
+          input.reference,
+          { ...removeCriterionSchema.strip().parse(input), action: "remove" },
+          input.actor,
+        ),
       ),
   );
   projectTool(

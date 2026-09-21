@@ -41,6 +41,10 @@ import {
   boardTasksPageSchema,
   boardTaskLinksPageSchema,
   boardTasksQuerySchema,
+  criteriaPageSchema,
+  criteriaQuerySchema,
+  criterionViewSchema,
+  createBoardTaskSchema,
 } from "@relay/core/domain/board-task";
 import { HttpClient, ApiError } from "@relay/rest-sdk/http-client";
 import { createApiClient } from "@relay/rest-sdk/create-api-client";
@@ -321,6 +325,31 @@ export async function createHttpBackend(url: string, project?: string): Promise<
         decode(boardViewSchema, await call(() => api.boards.getBoardBySlug({ slug }))),
     },
     boardTasks: {
+      listCriteria: async (reference, input = {}) =>
+        decode(
+          criteriaPageSchema,
+          await call(() =>
+            api.kanban.getTaskCriteria({ reference, ...defined(criteriaQuerySchema.parse(input)) }),
+          ),
+        ),
+      getCriterion: async (reference, criterionId) =>
+        decode(
+          criterionViewSchema,
+          await call(() => api.kanban.getTaskCriterion({ reference, criterionId })),
+        ),
+      changeCriterion: async (reference, input, actor) =>
+        decode(
+          boardTaskSavedSchema,
+          await call(
+            () =>
+              api.kanban.changeTaskCriterion(
+                { reference },
+                defined({ ...input, actor: input.actor ?? actor }),
+              ),
+            "write",
+            input.requestId,
+          ),
+        ),
       list: async (input = {}) =>
         decode(
           boardTasksPageSchema,
@@ -342,7 +371,10 @@ export async function createHttpBackend(url: string, project?: string): Promise<
         decode(
           boardTaskSavedSchema,
           await call(
-            () => api.kanban.createBoardTask(defined({ ...input, actor: input.actor ?? actor })),
+            () =>
+              api.kanban.createBoardTask(
+                defined(createBoardTaskSchema.parse({ ...input, actor: input.actor ?? actor })),
+              ),
             "write",
             input.requestId,
           ),

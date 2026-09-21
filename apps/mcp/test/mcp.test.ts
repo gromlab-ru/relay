@@ -63,7 +63,16 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   const content = z.object({ text: z.string() }).parse(result.content[0]).text;
   if (
     body.ok &&
-    ["board_task_create", "board_task_update", "board_task_move", "board_task_link"].includes(name)
+    [
+      "board_task_create",
+      "board_task_update",
+      "board_task_move",
+      "board_task_link",
+      "task_criterion_add",
+      "task_criterion_update",
+      "task_criterion_complete",
+      "task_criterion_remove",
+    ].includes(name)
   ) {
     assert.match(content, /Задача .*Ревизия/);
     assert.ok(content.includes(String(body.data?.id)));
@@ -201,6 +210,53 @@ test("MCP канбана: предметные аргументы, блокер�
   });
   assert.equal(moved.data?.id, reference);
   assert.equal(moved.data?.key, "INFRA-2");
+});
+
+test("MCP критериев: discovery, атомарное создание, выполнение, повтор и конфликт", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const tools = (await client.listTools()).tools;
+  for (const name of [
+    "task_criteria_list",
+    "task_criterion_get",
+    "task_criterion_add",
+    "task_criterion_update",
+    "task_criterion_complete",
+    "task_criterion_remove",
+  ]) {
+    const definition = tools.find((tool) => tool.name === name);
+    assert.ok(definition);
+    for (const property of Object.values(definition.inputSchema.properties ?? {}))
+      assert.match((property as { description?: string }).description ?? "", /[А-Яа-яЁё]/);
+  }
+  const saved = await call(client, "board_task_create", {
+    board: "product",
+    requestId: "criteria",
+    actor: "orchestrator",
+    acceptanceCriteria: [{ title: "Условие", description: "## Проверить\n\nРезультат" }],
+  });
+  assert.equal(saved.ok, true);
+  const reference = saved.data?.id;
+  const page = await call(client, "task_criteria_list", { reference });
+  const criterionId = z.object({ items: z.array(z.object({ id: z.string() })) }).parse(page.data)
+    .items[0]!.id;
+  assert.equal((await call(client, "task_criterion_get", { reference, criterionId })).ok, true);
+  const command = {
+    reference,
+    criterionId,
+    completed: true,
+    ifRevision: 1,
+    actor: "human",
+    requestId: "complete",
+  };
+  const complete = await call(client, "task_criterion_complete", command);
+  assert.equal(complete.ok, true);
+  assert.deepEqual((await call(client, "task_criterion_complete", command)).data, complete.data);
+  assert.equal(
+    (await call(client, "task_criterion_complete", { ...command, requestId: "stale" })).error?.code,
+    "REVISION_CONFLICT",
+  );
 });
 
 test("продукт доступен агенту через API и изолирован между областями", async (t) => {

@@ -1,5 +1,18 @@
 # Журнал создания TSX
 
+## Критерии приёмки — 21 сентября 2026
+
+Из корня выполнены:
+
+```bash
+pnpm --filter @relay/web run create ui-unit task-acceptance src/compositions/screens/project-board/ui/task-modal/ui/task-editor/ui
+pnpm --filter @relay/web run create ui-component criterion-form src/compositions/screens/project-board/ui/task-modal/ui/task-editor/ui/task-acceptance/ui
+pnpm --filter @relay/web run create ui-component criterion-row src/compositions/screens/project-board/ui/task-modal/ui/task-editor/ui/task-acceptance/ui
+```
+
+TaskAcceptance принадлежит редактору задачи; форма и строка — внутренние компоненты
+без фасетов. Данные и операции принадлежат domains/board-tasks, Markdown — общему UI.
+
 ## Хлебные крошки — 20 сентября 2026
 
 Из корня выполнено:

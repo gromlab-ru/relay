@@ -29,6 +29,7 @@ import { MarkdownView } from "ui/markdown-view";
 import { isDefined } from "shared/value-predicates";
 import { TaskRelations } from "./ui/task-relations";
 import { TaskContext } from "./ui/task-context";
+import { TaskAcceptance } from "./ui/task-acceptance";
 import { TASK_DRAFT_SCHEMA } from "./config/editor.schema";
 import type { TaskEditorProps } from "./types/task-editor-props.type";
 import styles from "./styles/task-editor.module.css";
@@ -365,6 +366,12 @@ export const TaskEditor = (props: TaskEditorProps) => {
               <section className={styles.section}>
                 <TaskRelations projectId={projectId} task={task} onOpen={onOpen} />
               </section>
+              <TaskAcceptance
+                className={styles.section}
+                projectId={projectId}
+                task={task}
+                onOwnRevision={handleOwnRevision}
+              />
             </div>
             <Stack gap="lg" className={styles.sidebar}>
               <Stack gap="sm">

@@ -4,6 +4,8 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export { changeTaskCriterionForProject } from "./change-task-criterion-for-project.js";
+export { changeTaskCriterion } from "./change-task-criterion.js";
 export { createBoardTaskForProject } from "./create-board-task-for-project.js";
 export { createBoardTask } from "./create-board-task.js";
 export { createEntityForProject } from "./create-entity-for-project.js";
@@ -51,6 +53,10 @@ export { getProjectSettingsForProject } from "./get-project-settings-for-project
 export { getProjectSettings } from "./get-project-settings.js";
 export { getProjects } from "./get-projects.js";
 export { getServerContext } from "./get-server-context.js";
+export { getTaskCriteriaForProject } from "./get-task-criteria-for-project.js";
+export { getTaskCriteria } from "./get-task-criteria.js";
+export { getTaskCriterionForProject } from "./get-task-criterion-for-project.js";
+export { getTaskCriterion } from "./get-task-criterion.js";
 export { linkBoardTaskForProject } from "./link-board-task-for-project.js";
 export { linkBoardTask } from "./link-board-task.js";
 export { linkEntityTaskForProject } from "./link-entity-task-for-project.js";

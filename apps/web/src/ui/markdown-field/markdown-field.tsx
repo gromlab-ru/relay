@@ -19,7 +19,7 @@ export const MarkdownField = (props: MarkdownFieldProps) => {
     error,
     placeholder,
     disabled,
-    minRows = 6,
+    minRows = 4,
     className,
     ...rootAttrs
   } = props;
@@ -93,15 +93,16 @@ export const MarkdownField = (props: MarkdownFieldProps) => {
                 "&": {
                   backgroundColor: "var(--mantine-color-body)",
                   color: "var(--mantine-color-text)",
-                  fontSize: "14px",
+                  fontSize: "var(--mantine-font-size-sm)",
                 },
                 ".cm-content": {
                   fontFamily: "var(--mantine-font-family-monospace)",
-                  padding: "14px",
-                  minHeight: `${minRows * 1.6}em`,
+                  padding: "var(--mantine-spacing-xs)",
+                  minHeight: `calc(${minRows * 1.6}em + 2 * var(--mantine-spacing-xs))`,
                   caretColor: "var(--mantine-color-text)",
                 },
-                ".cm-line": { padding: "0", lineHeight: "1.7" },
+                ".cm-line": { padding: "0", lineHeight: "1.6" },
+                ".cm-content .cm-placeholder": { color: "var(--mantine-color-dimmed)" },
                 ".cm-scroller": { maxHeight: "36dvh", overflow: "auto" },
                 "&.cm-focused": { outline: "none" },
               }),

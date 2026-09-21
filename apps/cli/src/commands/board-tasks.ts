@@ -5,10 +5,13 @@ import {
   updateBoardTaskSchema,
   moveBoardTaskSchema,
   linkBoardTaskSchema,
+  changeCriterionSchema,
+  criterionContentSchema,
 } from "@relay/core/domain/board-task";
 import type { BoardTasksQuery } from "@relay/core/domain/board-task";
 import type { BoardsQuery } from "@relay/core/domain/board";
 import { parse } from "@relay/core/domain/validation";
+import { AppError } from "@relay/core/shared/errors";
 import { commandGroup, registerCommand } from "../command.js";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
@@ -19,6 +22,8 @@ import {
   boardTasksText,
   boardTaskLinksText,
   boardsText,
+  criteriaText,
+  criterionText,
 } from "../presentation/board-tasks.js";
 
 const paging = (command: Command) =>
@@ -43,7 +48,22 @@ type WriteOptions = {
   implementation?: string[];
   clearProductLinks?: boolean;
   parentId?: string;
+  criteria?: string;
 };
+
+/** Разбирает критерии создания с предметной ошибкой ввода вместо транспортного сбоя. */
+function parseCriteria(value: string) {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(value);
+  } catch {
+    throw new AppError(
+      "INVALID_JSON",
+      "Параметр --criteria должен содержать JSON-массив критериев",
+    );
+  }
+  return parse(criterionContentSchema.array().max(100), raw, "критерии приёмки");
+}
 
 /** Предметные команды досок и задач канбана. */
 export function registerBoardTasks(program: Command, runtime: Runtime): void {
@@ -65,6 +85,107 @@ export function registerBoardTasks(program: Command, runtime: Runtime): void {
       "ID задачи постоянный, ключ с префиксом меняется при переносе. Markdown передаётся напрямую. Запись требует автора; изменение — прочитанной ревизии. Повторите тот же request-id после потери ответа.",
     examples: [["relay-cli task list --readiness ready", "Работа без блокеров для оркестратора"]],
   });
+  const criteria = commandGroup(group, {
+    name: "criterion",
+    description: "Критерии приёмки: условия завершения задачи",
+    details:
+      "Критерии не мешают началу работы, но обязательны для done. Запись требует ревизии задачи; повторяйте тот же request-id после потери ответа.",
+    examples: [["relay-cli task criterion list PRODUCT-1", "Прочитать условия приёмки"]],
+  });
+  registerCommand<BoardTasksQuery>(criteria, runtime, {
+    name: "list <reference>",
+    description: "Список критериев без полного Markdown",
+    details:
+      "По умолчанию 20 записей, максимум 100; продолжение сохраняет версию. Полное описание доступно через criterion get.",
+    examples: [
+      ["relay-cli task criterion list PRODUCT-1 --limit 20", "Прочитать страницу критериев"],
+    ],
+    arguments: { reference: "ID или ключ задачи" },
+    configure: paging,
+    run: async (context, input) => {
+      const data = await context.backend.boardTasks.listCriteria(input.argument(), input.options);
+      return { data, text: (options) => criteriaText(data, input.argument(), options) };
+    },
+  });
+  registerCommand(criteria, runtime, {
+    name: "get <reference> <criterionId>",
+    description: "Полное описание и состояние критерия",
+    details:
+      "Возвращает Markdown, отметку выполнения, автора и время, а также ревизию задачи для записи.",
+    examples: [["relay-cli task criterion get PRODUCT-1 Abc12345", "Прочитать один критерий"]],
+    arguments: { reference: "ID или ключ задачи", criterionId: "Постоянный ID критерия" },
+    run: async (context, input) => {
+      const data = await context.backend.boardTasks.getCriterion(
+        input.argument(),
+        input.argument(1),
+      );
+      return { data, text: (options) => criterionText(data, options) };
+    },
+  });
+  for (const action of ["add", "update", "complete", "reopen", "remove"] as const) {
+    registerCommand<WriteOptions & { summary?: string }>(criteria, runtime, {
+      name: action === "add" ? "add <reference>" : `${action} <reference> <criterionId>`,
+      description: {
+        add: "Добавить критерий",
+        update: "Изменить критерий и сбросить выполнение при изменении текста",
+        complete: "Отметить критерий выполненным",
+        reopen: "Снять отметку выполнения",
+        remove: "Удалить критерий",
+      }[action],
+      arguments: {
+        reference: "ID или ключ задачи",
+        ...(action === "add" ? {} : { criterionId: "Постоянный ID критерия" }),
+      },
+      details:
+        "Готовую задачу сначала верните из done. Повтор с прежним request-id возвращает первоначальную квитанцию.",
+      examples: [
+        [
+          `relay-cli --actor human task criterion ${action} PRODUCT-1${action === "add" ? ' --title "Данные сохраняются"' : " Abc12345"} --if-revision 1`,
+          "Изменить критерий приёмки",
+        ],
+      ],
+      configure: (command) => {
+        command
+          .requiredOption(
+            "--if-revision <n>",
+            "Прочитанная ревизия задачи",
+            integer(1, Number.MAX_SAFE_INTEGER),
+          )
+          .option(
+            "--request-id <id>",
+            "Ключ безопасного повтора; по умолчанию создаётся автоматически",
+          );
+        if (action === "add")
+          command.requiredOption("--title <title>", "Обязательный однострочный заголовок");
+        if (action === "update") command.option("--title <title>", "Новый однострочный заголовок");
+        if (action === "add" || action === "update")
+          command
+            .option("--summary <text>", "Краткое описание обычным многострочным текстом")
+            .option("--description <markdown>", "Полное описание в Markdown");
+      },
+      run: async (context, input) => {
+        const command = parse(
+          changeCriterionSchema,
+          {
+            ...input.options,
+            action: action === "reopen" ? "complete" : action,
+            ...(action === "add" ? {} : { criterionId: input.argument(1) }),
+            ...(action === "complete" || action === "reopen"
+              ? { completed: action === "complete" }
+              : {}),
+            requestId: input.options.requestId ?? randomUUID(),
+          },
+          "изменение критерия",
+        );
+        const data = await context.backend.boardTasks.changeCriterion(
+          input.argument(),
+          command,
+          author(context),
+        );
+        return { data, text: boardTaskSavedText(data) };
+      },
+    });
+  }
   registerCommand<BoardTasksQuery>(group, runtime, {
     name: "list",
     description: "Найти задачи и блокеры на всех или одной доске",
@@ -173,6 +294,10 @@ export function registerBoardTasks(program: Command, runtime: Runtime): void {
         if (action === "create")
           command
             .option("--column <column>", "Колонка; по умолчанию inbox")
+            .option(
+              "--criteria <json>",
+              "Массив критериев {title,summary,description} в JSON для атомарного создания; максимум 100",
+            )
             .option("--parent-id <id>", "Постоянный ID родителя для атомарного создания подзадачи");
         if (action === "move")
           command
@@ -193,7 +318,8 @@ export function registerBoardTasks(program: Command, runtime: Runtime): void {
             .option("--remove", "Удалить указанную связь");
       },
       run: async (context, input) => {
-        const { feature, scenario, implementation, clearProductLinks, ...options } = input.options;
+        const { feature, scenario, implementation, clearProductLinks, criteria, ...options } =
+          input.options;
         const links = [
           ...(feature ?? []).map((id) => ({ kind: "feature", id })),
           ...(scenario ?? []).map((id) => ({ kind: "scenario", id })),
@@ -203,6 +329,7 @@ export function registerBoardTasks(program: Command, runtime: Runtime): void {
           throw new Error("Нельзя совместить удаление всех связей и новые цели");
         const values = {
           ...options,
+          ...(criteria === undefined ? {} : { acceptanceCriteria: parseCriteria(criteria) }),
           ...(clearProductLinks || links.length > 0 ? { productLinks: links } : {}),
           requestId: input.options.requestId ?? randomUUID(),
         };

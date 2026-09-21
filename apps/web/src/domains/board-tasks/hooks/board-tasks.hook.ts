@@ -8,9 +8,12 @@ import {
   listBoardTasks,
   getBoardTaskSlice,
   createBoardTask,
+  getTaskCriteria,
+  getTaskCriterion,
 } from "../adapters/board-tasks.adapter";
 import type { CreateTaskInput } from "../types/board-tasks.type";
 import type { BoardTask, TaskFilters, TasksPage, TaskLinksPage } from "../types/board-tasks.type";
+import type { CriteriaPage, CriterionView } from "../types/acceptance.type";
 
 /** Объединяет соседние уведомления; первичная загрузка принадлежит SWR, а не подписке. */
 const useKanbanSync = (project: string, refresh: () => Promise<unknown>): void => {
@@ -31,6 +34,37 @@ const useKanbanSync = (project: string, refresh: () => Promise<unknown>): void =
       unsubscribe();
     };
   }, [project, refresh]);
+};
+
+/**
+ * Сохраняет загруженный объём критериев при SSE и подгрузке.
+ */
+export const useTaskCriteria = (project: string, reference: string, count = 20) => {
+  const query = useSWR<CriteriaPage, Error>(
+    ["task-criteria", project, reference, count],
+    () => getTaskCriteria(project, reference, count),
+    { keepPreviousData: true },
+  );
+  useKanbanSync(project, query.mutate);
+  return query;
+};
+/**
+ * Загружает полное описание только раскрытого критерия.
+ */
+export const useTaskCriterion = (
+  project: string,
+  reference: string,
+  criterionId: string | null,
+) => {
+  const query = useSWR<CriterionView, Error>(
+    criterionId === null ? null : ["task-criterion", project, reference, criterionId],
+    () => {
+      if (criterionId === null) throw new Error("Не выбран критерий приёмки");
+      return getTaskCriterion(project, reference, criterionId);
+    },
+  );
+  useKanbanSync(project, query.mutate);
+  return query;
 };
 
 /** Сохраняет предыдущую проекцию, count и прокрутку при подгрузке и SSE, как прежняя доска. */
@@ -138,9 +172,14 @@ export const useBoardTaskRefresh = (project: string) => {
       const refreshViews = mutate(
         (key) =>
           Array.isArray(key) &&
-          ["board-tasks", "board-task", "board-task-links", "board-task-slice"].includes(
-            String(key[0]),
-          ) &&
+          [
+            "board-tasks",
+            "board-task",
+            "board-task-links",
+            "board-task-slice",
+            "task-criteria",
+            "task-criterion",
+          ].includes(String(key[0])) &&
           key[1] === project,
       );
       return Promise.all([refreshCard, refreshViews]);

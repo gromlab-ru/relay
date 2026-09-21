@@ -782,6 +782,24 @@ export interface CreateEntity {
         status?: CreateEntityStatusEnum;
       }
     | {
+        /**
+         * Критерии приёмки при создании задачи одной атомарной операцией; все первоначально не выполнены
+         * @maxItems 100
+         */
+        acceptanceCriteria?: {
+          /** Обязательный однострочный заголовок критерия */
+          title: string;
+          /**
+           * Краткое описание обычным многострочным текстом, до 4 КиБ
+           * @default ""
+           */
+          summary?: string;
+          /**
+           * Полное описание критерия в Markdown, до 64 КиБ
+           * @default ""
+           */
+          description?: string;
+        }[];
         /** Создать задачу */
         kind: "task";
         /**
@@ -1702,6 +1720,23 @@ export interface BoardTaskView {
    * @maxLength 128
    */
   updatedBy: string;
+  /** Прогресс критериев приёмки; отсутствует в старых квитанциях */
+  acceptance?: {
+    /**
+     * Общее число критериев
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Число выполненных критериев
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Выполнены критерии, подзадачи и зависимости; можно завершить задачу */
+  canComplete?: boolean;
   /** Текущий slug доски для навигации */
   boardSlug: string;
   /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
@@ -1711,6 +1746,215 @@ export interface BoardTaskView {
   /** Можно брать в работу: колонка ready и нет блокеров */
   ready: boolean;
 }
+
+export interface CriteriaPage {
+  /** Критерии без полного Markdown */
+  items: {
+    /**
+     * Обязательный однострочный заголовок критерия
+     * @minLength 1
+     */
+    title: string;
+    /**
+     * Краткое описание обычным многострочным текстом, до 4 КиБ
+     * @default ""
+     */
+    summary: string;
+    /**
+     * Постоянный ID критерия приёмки
+     * @pattern ^[A-Za-z0-9]{8}$
+     */
+    id: string;
+    /** Критерий отмечен выполненным */
+    completed: boolean;
+    /** Время отметки выполнения или null */
+    completedAt: string | null;
+    /** Автор отметки выполнения или null */
+    completedBy: string | null;
+  }[];
+  /** Общее число критериев */
+  total: number;
+  /** Смещение продолжения или null */
+  nextOffset: number | null;
+  /** Версия списка критериев */
+  version: string;
+  /**
+   * Ревизия задачи для изменения критериев
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+}
+
+export interface CriteriaQuery {
+  /**
+   * Смещение страницы критериев
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы; после изменения перечитайте список */
+  version?: string;
+}
+
+export interface CriterionView {
+  /** Полное содержание критерия */
+  criterion: {
+    /**
+     * Обязательный однострочный заголовок критерия
+     * @minLength 1
+     */
+    title: string;
+    /**
+     * Краткое описание обычным многострочным текстом, до 4 КиБ
+     * @default ""
+     */
+    summary: string;
+    /**
+     * Полное описание критерия в Markdown, до 64 КиБ
+     * @default ""
+     */
+    description: string;
+    /**
+     * Постоянный ID критерия приёмки
+     * @pattern ^[A-Za-z0-9]{8}$
+     */
+    id: string;
+    /** Критерий отмечен выполненным */
+    completed: boolean;
+    /** Время отметки выполнения или null */
+    completedAt: string | null;
+    /** Автор отметки выполнения или null */
+    completedBy: string | null;
+  };
+  /**
+   * Ревизия задачи на момент чтения
+   * @exclusiveMin 0
+   * @max 9007199254740991
+   */
+  revision: number;
+}
+
+export type ChangeCriterion =
+  | {
+      /** Обязательный однострочный заголовок критерия */
+      title: string;
+      /**
+       * Краткое описание обычным многострочным текстом, до 4 КиБ
+       * @default ""
+       */
+      summary?: string;
+      /**
+       * Полное описание критерия в Markdown, до 64 КиБ
+       * @default ""
+       */
+      description?: string;
+      /**
+       * Прочитанная ревизия задачи
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      ifRevision: number;
+      /**
+       * Ключ безопасного повтора операции
+       * @minLength 1
+       * @maxLength 128
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+       */
+      requestId: string;
+      /** Автор изменения; по умолчанию автор интерфейса */
+      actor?: string;
+      /** Добавить критерий */
+      action: "add";
+    }
+  | {
+      /**
+       * Прочитанная ревизия задачи
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      ifRevision: number;
+      /**
+       * Ключ безопасного повтора операции
+       * @minLength 1
+       * @maxLength 128
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+       */
+      requestId: string;
+      /** Автор изменения; по умолчанию автор интерфейса */
+      actor?: string;
+      /**
+       * Постоянный ID критерия приёмки
+       * @pattern ^[A-Za-z0-9]{8}$
+       */
+      criterionId: string;
+      /** Обязательный однострочный заголовок критерия */
+      title?: string;
+      /** Новое краткое описание обычным многострочным текстом */
+      summary?: string;
+      /** Новое полное описание в Markdown */
+      description?: string;
+      /** Изменить содержание и сбросить выполнение при изменении текста */
+      action: "update";
+    }
+  | {
+      /**
+       * Прочитанная ревизия задачи
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      ifRevision: number;
+      /**
+       * Ключ безопасного повтора операции
+       * @minLength 1
+       * @maxLength 128
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+       */
+      requestId: string;
+      /** Автор изменения; по умолчанию автор интерфейса */
+      actor?: string;
+      /**
+       * Постоянный ID критерия приёмки
+       * @pattern ^[A-Za-z0-9]{8}$
+       */
+      criterionId: string;
+      /** Явное состояние: true — выполнено, false — снять отметку */
+      completed: boolean;
+      /** Установить состояние выполнения */
+      action: "complete";
+    }
+  | {
+      /**
+       * Прочитанная ревизия задачи
+       * @exclusiveMin 0
+       * @max 9007199254740991
+       */
+      ifRevision: number;
+      /**
+       * Ключ безопасного повтора операции
+       * @minLength 1
+       * @maxLength 128
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+       */
+      requestId: string;
+      /** Автор изменения; по умолчанию автор интерфейса */
+      actor?: string;
+      /**
+       * Постоянный ID критерия приёмки
+       * @pattern ^[A-Za-z0-9]{8}$
+       */
+      criterionId: string;
+      /** Удалить критерий */
+      action: "remove";
+    };
 
 export interface BoardTaskSaved {
   /**
@@ -1735,6 +1979,11 @@ export interface BoardTaskSaved {
   revision: number;
   /** Выполненное действие */
   action: BoardTaskSavedActionEnum;
+  /**
+   * ID изменённого критерия приёмки
+   * @pattern ^[A-Za-z0-9]{8}$
+   */
+  criterionId?: string;
   /**
    * Ключ повтора: повтор с тем же содержимым возвращает первоначальную квитанцию
    * @minLength 1
@@ -1824,6 +2073,23 @@ export interface BoardTaskSaved {
      * @maxLength 128
      */
     updatedBy: string;
+    /** Прогресс критериев приёмки; отсутствует в старых квитанциях */
+    acceptance?: {
+      /**
+       * Общее число критериев
+       * @min 0
+       * @max 9007199254740991
+       */
+      total: number;
+      /**
+       * Число выполненных критериев
+       * @min 0
+       * @max 9007199254740991
+       */
+      completed: number;
+    };
+    /** Выполнены критерии, подзадачи и зависимости; можно завершить задачу */
+    canComplete?: boolean;
     /** Текущий slug доски для навигации */
     boardSlug: string;
     /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
@@ -1915,6 +2181,23 @@ export interface BoardTasksPage {
      * @maxLength 128
      */
     updatedBy: string;
+    /** Прогресс критериев приёмки; отсутствует в старых квитанциях */
+    acceptance?: {
+      /**
+       * Общее число критериев
+       * @min 0
+       * @max 9007199254740991
+       */
+      total: number;
+      /**
+       * Число выполненных критериев
+       * @min 0
+       * @max 9007199254740991
+       */
+      completed: number;
+    };
+    /** Выполнены критерии, подзадачи и зависимости; можно завершить задачу */
+    canComplete?: boolean;
     /** Текущий slug доски для навигации */
     boardSlug: string;
     /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
@@ -2012,6 +2295,23 @@ export interface BoardTaskLinksPage {
        * @maxLength 128
        */
       updatedBy: string;
+      /** Прогресс критериев приёмки; отсутствует в старых квитанциях */
+      acceptance?: {
+        /**
+         * Общее число критериев
+         * @min 0
+         * @max 9007199254740991
+         */
+        total: number;
+        /**
+         * Число выполненных критериев
+         * @min 0
+         * @max 9007199254740991
+         */
+        completed: number;
+      };
+      /** Выполнены критерии, подзадачи и зависимости; можно завершить задачу */
+      canComplete?: boolean;
       /** Текущий slug доски для навигации */
       boardSlug: string;
       /** Невыполненные прямые зависимости и подзадачи без повторов; их блокеры доступны через чтение связей */
@@ -2088,6 +2388,24 @@ export interface CreateBoardTask {
   requestId: string;
   /** Автор изменения; по умолчанию автор текущего интерфейса */
   actor?: string;
+  /**
+   * Критерии приёмки при создании задачи одной атомарной операцией; все первоначально не выполнены
+   * @maxItems 100
+   */
+  acceptanceCriteria?: {
+    /** Обязательный однострочный заголовок критерия */
+    title: string;
+    /**
+     * Краткое описание обычным многострочным текстом, до 4 КиБ
+     * @default ""
+     */
+    summary?: string;
+    /**
+     * Полное описание критерия в Markdown, до 64 КиБ
+     * @default ""
+     */
+    description?: string;
+  }[];
   /**
    * Slug, префикс или постоянный ID доски выбранного проекта
    * @minLength 1
@@ -4322,7 +4640,11 @@ export type BoardTaskSavedActionEnum =
   | "update"
   | "move"
   | "link"
-  | "rename";
+  | "rename"
+  | "criterion-add"
+  | "criterion-update"
+  | "criterion-complete"
+  | "criterion-remove";
 
 /** Цель реализации: общая фича, сценарий или контракт приложения */
 export type BoardTaskSavedKindEnum = "feature" | "scenario" | "implementation";
@@ -4972,6 +5294,45 @@ export type LinkBoardTaskOkEnum = true;
 
 export interface LinkBoardTaskParams {
   /** ID или ключ исходной задачи */
+  reference: any;
+}
+
+export type GetTaskCriteriaOkEnum = true;
+
+export interface GetTaskCriteriaParams {
+  /**
+   * Смещение страницы критериев
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы; после изменения перечитайте список */
+  version?: string;
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type ChangeTaskCriterionOkEnum = true;
+
+export interface ChangeTaskCriterionParams {
+  /** ID или ключ задачи */
+  reference: any;
+}
+
+export type GetTaskCriterionOkEnum = true;
+
+export interface GetTaskCriterionParams {
+  /** Постоянный ID критерия приёмки */
+  criterionId: any;
+  /** ID или ключ задачи */
   reference: any;
 }
 
@@ -5996,6 +6357,51 @@ export type LinkBoardTaskForProjectOkEnum = true;
 
 export interface LinkBoardTaskForProjectParams {
   /** ID или ключ исходной задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskCriteriaForProjectOkEnum = true;
+
+export interface GetTaskCriteriaForProjectParams {
+  /**
+   * Смещение страницы критериев
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы, по умолчанию 20, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы; после изменения перечитайте список */
+  version?: string;
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type ChangeTaskCriterionForProjectOkEnum = true;
+
+export interface ChangeTaskCriterionForProjectParams {
+  /** ID или ключ задачи */
+  reference: any;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskCriterionForProjectOkEnum = true;
+
+export interface GetTaskCriterionForProjectParams {
+  /** Постоянный ID критерия приёмки */
+  criterionId: any;
+  /** ID или ключ задачи */
   reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;

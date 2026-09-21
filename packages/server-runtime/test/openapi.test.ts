@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 81);
+    assert.equal(operations.size, 87);
     for (const path of [
       "/api/v1/tasks",
       "/api/v1/board",
@@ -151,6 +151,23 @@ for (const scoped of [false, true])
       requestId: "kanban-link",
     });
     await request("GET", "/api/v1/board-tasks/{reference}/links", `${cardBase}/links`);
+    const criterion = await request(
+      "POST",
+      "/api/v1/board-tasks/{reference}/criteria",
+      `${cardBase}/criteria`,
+      {
+        action: "add",
+        title: "Критерий схемы",
+        ifRevision: 4,
+        requestId: "criterion",
+      },
+    );
+    await request("GET", "/api/v1/board-tasks/{reference}/criteria", `${cardBase}/criteria`);
+    await request(
+      "GET",
+      "/api/v1/board-tasks/{reference}/criteria/{criterionId}",
+      `${cardBase}/criteria/${criterion.data.criterionId}`,
+    );
     await request("POST", "/api/v1/product/records", undefined, {
       action: "create",
       requestId: "product-passport",
@@ -223,7 +240,7 @@ for (const scoped of [false, true])
       { title: "Конфликт", ifRevision: 1, requestId: "stale" },
       409,
     );
-    assert.equal(visited.size, 39);
+    assert.equal(visited.size, 42);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateBoardTask as SchemaObject;

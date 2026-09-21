@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { getProjectApi, ApiError } from "infra/tasks-api";
+import { CRITERIA_PAGE_SCHEMA, CRITERION_VIEW_SCHEMA } from "../config/acceptance.schema";
+import type { CriteriaPage, CriterionView, ChangeCriterionInput } from "../types/acceptance.type";
 import {
   BOARD_TASK_SCHEMA,
   TASKS_PAGE_SCHEMA,
@@ -28,6 +30,42 @@ export class BoardTaskError extends Error {
   }
 }
 const failure = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+/**
+ * Читает текущий ограниченный объём списка без Markdown.
+ */
+export const getTaskCriteria = (
+  project: string,
+  reference: string,
+  limit = 20,
+): Promise<CriteriaPage> =>
+  request(
+    () => getProjectApi(project).kanban.getTaskCriteria({ reference, limit }),
+    CRITERIA_PAGE_SCHEMA,
+  );
+/**
+ * Читает полное содержание выбранного критерия.
+ */
+export const getTaskCriterion = (
+  project: string,
+  reference: string,
+  criterionId: string,
+): Promise<CriterionView> =>
+  request(
+    () => getProjectApi(project).kanban.getTaskCriterion({ reference, criterionId }),
+    CRITERION_VIEW_SCHEMA,
+  );
+/**
+ * Изменяет критерий через общие правила Core.
+ */
+export const changeTaskCriterion = (
+  project: string,
+  reference: string,
+  input: ChangeCriterionInput,
+): Promise<TaskSaved> =>
+  request(
+    () => getProjectApi(project).kanban.changeTaskCriterion({ reference }, input),
+    TASK_SAVED_SCHEMA,
+  );
 async function request<T>(
   operation: () => Promise<{ data: unknown }>,
   schema: z.ZodType<T>,

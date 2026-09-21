@@ -14,7 +14,11 @@ import {
   productStatusSchema,
 } from "./entities/product.js";
 import { productImplementationSchema } from "./entities/product-implementation.js";
-import { boardTaskSchema, kanbanColumnSchema } from "./entities/board-task.js";
+import {
+  boardTaskSchema,
+  kanbanColumnSchema,
+  createBoardTaskSchema,
+} from "./entities/board-task.js";
 import { boardSchema } from "./entities/board.js";
 import { projectDisplayNameSchema, projectSettingsSchema } from "./entities/project-settings.js";
 
@@ -202,6 +206,7 @@ export const entityKeySpacesSchema = z.strictObject({
 
 const referenceList = z.array(entityReferenceSchema).max(100);
 const taskCreate = z.strictObject({
+  acceptanceCriteria: createBoardTaskSchema.shape.acceptanceCriteria,
   kind: z.literal("task").describe("Создать задачу"),
   board: entityReferenceSchema.describe("Ключ или ID доски"),
   title: boardTaskSchema.shape.title.default(""),

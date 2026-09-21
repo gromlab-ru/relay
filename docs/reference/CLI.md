@@ -68,6 +68,8 @@
 `task create --board <slug|prefix|id> [--title <text>] [--description <markdown>] [--column <column>]`.
 Пустые поля допустимы. `--parent-id` создаёт подзадачу; `--feature`, `--scenario`,
 `--implementation` задают продуктовые цели. `--request-id` фиксирует ключ безопасного повтора.
+`--criteria <json>` принимает массив `{title,summary?,description?}` для атомарного
+создания критериев вместе с задачей. Все критерии первоначально не выполнены.
 
 ### task get
 
@@ -103,6 +105,45 @@
 `task link <reference> --target <reference> --relation depends-on|related|parent --if-revision <n> [--remove]`.
 Изменяет связь между задачами одного проекта. Все записи канбана принимают `--request-id`.
 [Контракт канбана](KANBAN.md).
+
+## Критерии приёмки задачи
+
+### task criterion list
+
+`task criterion list <reference> [--offset <n>] [--limit <n>] [--version <version>]`.
+Список заголовков, кратких описаний и отметок, по умолчанию 20, максимум 100;
+показывает ревизию задачи и команду продолжения.
+
+### task criterion get
+
+`task criterion get <reference> <criterionId>` читает полный Markdown, состояние,
+автора/время выполнения и ревизию задачи. `--format json` возвращает структурированный ответ.
+
+### task criterion add
+
+`task criterion add <reference> --title <text> [--summary <text>] [--description <markdown>] --if-revision <n>`.
+Добавляет невыполненный критерий. Все записи критериев требуют автора и принимают
+`--request-id`; после потери ответа повторяется тот же запрос с тем же ключом.
+
+### task criterion update
+
+`task criterion update <reference> <criterionId> --if-revision <n> [--title <text>] [--summary <text>] [--description <markdown>]`.
+Непереданные поля сохраняются; изменение текста снимает выполнение.
+
+### task criterion complete
+
+`task criterion complete <reference> <criterionId> --if-revision <n>` отмечает выполнение
+с автором и временем. Не закрывает задачу автоматически.
+
+### task criterion reopen
+
+`task criterion reopen <reference> <criterionId> --if-revision <n>` снимает отметку.
+
+### task criterion remove
+
+`task criterion remove <reference> <criterionId> --if-revision <n>` удаляет критерий.
+Для любого изменения критериев готовая задача сначала возвращается из done.
+Невыполненные критерии запрещают done, но не исключают задачу из ready.
 
 ## Граф
 

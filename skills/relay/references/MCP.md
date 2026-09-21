@@ -61,6 +61,32 @@ entity_context({project: "app", ref: "WEB-24", depth: 4, profile: "context"})
 
 ## Канбан отдельных досок
 
+### Критерии приёмки задач
+
+Все инструменты принимают project?, reference (ключ/ID задачи), maxBytes?.
+Записи также требуют actor, requestId, ifRevision задачи.
+
+| Инструмент                | Действие и дополнительные аргументы                                             |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `task_criteria_list`      | Список без полного Markdown; offset?, limit? (20 по умолчанию, 1–100), version? |
+| `task_criterion_get`      | Полное содержание и ревизия; criterionId                                        |
+| `task_criterion_add`      | Добавить невыполненный критерий; title, summary?, description?                  |
+| `task_criterion_update`   | Изменить текст; criterionId, title?, summary?, description?                     |
+| `task_criterion_complete` | Явно установить выполнение; criterionId, completed: boolean                     |
+| `task_criterion_remove`   | Удалить критерий; criterionId                                                   |
+
+`board_task_create` и `entity_task_create` принимают acceptanceCriteria? — до 100
+элементов `{title,summary?,description?}`. Задача и критерии создаются атомарно.
+Пустые описания допустимы; заголовок обязателен. summary — обычный многострочный текст,
+description — Markdown. Полное чтение возвращает `{criterion, revision}`, список —
+items/total/nextOffset/version/revision. Квитанция записи содержит criterionId и ревизию задачи.
+
+Изменение текста снимает выполнение. Готовую задачу сначала возвращают из done.
+Критерии не влияют на readiness=ready, но препятствуют done до выполнения всех условий.
+`board_task_get` возвращает общий прогресс acceptance и canComplete. Отметка — утверждение
+автора о фактической проверке, Relay сам проверку не запускает.
+После потери ответа повторяйте прежний запрос; после конфликта перечитайте критерий.
+
 ### Адресные продуктовые цели
 
 - `product_entities`: компактный поиск по q/kind/application, пакет refs (до 100),

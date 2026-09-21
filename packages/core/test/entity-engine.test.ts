@@ -218,7 +218,7 @@ test("движок: все виды, вложенные ссылки ключ/ID
     ),
   );
   assert.deepEqual(disk.description, ["## Работа", "", "Сохранить Markdown  ", ""]);
-  assert.equal(disk.version, 3);
+  assert.equal(disk.version, 4);
 });
 
 test("движок: смена формата ключей всех видов, алиасы, точный повтор и сохранность ссылок", async (t) => {

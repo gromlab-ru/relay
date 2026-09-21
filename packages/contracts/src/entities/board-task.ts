@@ -1,5 +1,12 @@
 import { z } from "zod";
 import {
+  acceptanceCriterionSchema,
+  criterionContentSchema,
+  criteriaProgressSchema,
+  criterionIdSchema,
+} from "./task-acceptance.js";
+export * from "./task-acceptance.js";
+import {
   actorSchema,
   singleLine,
   text,
@@ -90,6 +97,13 @@ export const boardTaskSchema = z.strictObject({
   updatedBy: actorSchema.describe("Автор последнего изменения"),
 });
 export const boardTaskViewSchema = boardTaskSchema.extend({
+  acceptance: criteriaProgressSchema
+    .optional()
+    .describe("Прогресс критериев приёмки; отсутствует в старых квитанциях"),
+  canComplete: z
+    .boolean()
+    .optional()
+    .describe("Выполнены критерии, подзадачи и зависимости; можно завершить задачу"),
   boardSlug: z.string().describe("Текущий slug доски для навигации"),
   blockers: z
     .array(boardTaskIdSchema)
@@ -105,7 +119,20 @@ export const boardTaskSavedSchema = z.strictObject({
   key: boardTaskReferenceSchema,
   boardId: z.string().describe("ID доски на момент операции"),
   revision,
-  action: z.enum(["create", "update", "move", "link", "rename"]).describe("Выполненное действие"),
+  action: z
+    .enum([
+      "create",
+      "update",
+      "move",
+      "link",
+      "rename",
+      "criterion-add",
+      "criterion-update",
+      "criterion-complete",
+      "criterion-remove",
+    ])
+    .describe("Выполненное действие"),
+  criterionId: criterionIdSchema.optional().describe("ID изменённого критерия приёмки"),
   requestId: write.requestId,
   task: boardTaskViewSchema
     .optional()
@@ -114,7 +141,12 @@ export const boardTaskSavedSchema = z.strictObject({
     ),
 });
 export const boardTaskRecordSchema = boardTaskSchema.extend({
-  version: z.union([z.literal(2), z.literal(3)]),
+  version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+  acceptanceCriteria: z
+    .array(acceptanceCriterionSchema)
+    .max(100)
+    .default([])
+    .describe("Критерии приёмки в порядке добавления, максимум 100"),
   events: z.array(recordEventSchema).optional(),
   keys: z.array(boardTaskReferenceSchema).min(1),
   requests: z.record(
@@ -124,6 +156,13 @@ export const boardTaskRecordSchema = boardTaskSchema.extend({
 });
 export const createBoardTaskSchema = z.strictObject({
   ...write,
+  acceptanceCriteria: z
+    .array(criterionContentSchema)
+    .max(100)
+    .optional()
+    .describe(
+      "Критерии приёмки при создании задачи одной атомарной операцией; все первоначально не выполнены",
+    ),
   board,
   title: title.default(""),
   description: description.default(""),

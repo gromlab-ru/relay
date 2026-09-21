@@ -9,6 +9,10 @@ export const COLUMN_SCHEMA = z.enum([
   "cancelled",
 ]);
 export const TASK_SUMMARY_SCHEMA = z.object({
+  acceptance: z
+    .object({ total: z.number(), completed: z.number() })
+    .default({ total: 0, completed: 0 }),
+  canComplete: z.boolean().optional(),
   id: z.string(),
   key: z.string(),
   boardId: z.string(),
@@ -45,6 +49,7 @@ export const LINKS_PAGE_SCHEMA = z.object({
   ),
 });
 export const TASK_SAVED_SCHEMA = z.object({
+  criterionId: z.string().optional(),
   id: z.string(),
   key: z.string(),
   boardId: z.string(),

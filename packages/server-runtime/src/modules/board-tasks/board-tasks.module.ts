@@ -19,6 +19,9 @@ import {
   updateBoardTaskSchema,
   moveBoardTaskSchema,
   linkBoardTaskSchema,
+  criteriaQuerySchema,
+  criterionIdSchema,
+  changeCriterionSchema,
 } from "@relay/core/domain/board-task";
 import type {
   BoardTasksQuery,
@@ -27,6 +30,8 @@ import type {
   MoveBoardTask,
   LinkBoardTask,
   BoardTaskSaved,
+  CriteriaQuery,
+  ChangeCriterion,
 } from "@relay/core/domain/board-task";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { ZodValidationPipe } from "../../common/validation.js";
@@ -100,6 +105,59 @@ class BoardTasksController {
   })
   async create(@Body(new ZodValidationPipe(createBoardTaskSchema)) input: CreateBoardTask) {
     return this.write((service) => service.create(input, this.workspace.actor()));
+  }
+
+  @Get(":reference/criteria")
+  @ApiParam({ name: "reference", description: "ID или ключ задачи" })
+  @ApiEndpoint({
+    id: "getTaskCriteria",
+    summary: "Критерии приёмки без полного Markdown, по 20 с продолжением",
+    response: "CriteriaPage",
+    query: "CriteriaQuery",
+  })
+  async criteria(
+    @Param("reference", new ZodValidationPipe(boardTaskReferenceSchema)) reference: string,
+    @Query(new ZodValidationPipe(criteriaQuerySchema)) query: CriteriaQuery,
+  ) {
+    return success(
+      await new BoardTasksService(await this.workspace.open()).listCriteria(reference, query),
+    );
+  }
+
+  @Get(":reference/criteria/:criterionId")
+  @ApiParam({ name: "reference", description: "ID или ключ задачи" })
+  @ApiParam({ name: "criterionId", description: "Постоянный ID критерия приёмки" })
+  @ApiEndpoint({
+    id: "getTaskCriterion",
+    summary: "Полное описание критерия приёмки и ревизия задачи",
+    response: "CriterionView",
+  })
+  async criterion(
+    @Param("reference", new ZodValidationPipe(boardTaskReferenceSchema)) reference: string,
+    @Param("criterionId", new ZodValidationPipe(criterionIdSchema)) criterionId: string,
+  ) {
+    return success(
+      await new BoardTasksService(await this.workspace.open()).getCriterion(reference, criterionId),
+    );
+  }
+
+  @Post(":reference/criteria")
+  @HttpCode(200)
+  @ApiParam({ name: "reference", description: "ID или ключ задачи" })
+  @ApiEndpoint({
+    id: "changeTaskCriterion",
+    summary:
+      "Добавить, изменить, удалить или отметить критерий; проверка ревизии и безопасный повтор",
+    response: "BoardTaskSaved",
+    body: "ChangeCriterion",
+  })
+  async changeCriterion(
+    @Param("reference", new ZodValidationPipe(boardTaskReferenceSchema)) reference: string,
+    @Body(new ZodValidationPipe(changeCriterionSchema)) input: ChangeCriterion,
+  ) {
+    return this.write((service) =>
+      service.changeCriterion(reference, input, this.workspace.actor()),
+    );
   }
 
   @Post(":reference/update")

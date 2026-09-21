@@ -21,11 +21,15 @@ body {
   min-width: 20rem;
 }
 
-button,
+button {
+  font: inherit;
+}
+
+/* Размер и межстрочный интервал полей определяет size компонента Mantine. */
 input,
 textarea,
 select {
-  font: inherit;
+  font-family: inherit;
 }
 
 button,

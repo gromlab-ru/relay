@@ -192,7 +192,6 @@ export const GeneralSettings = (props: GeneralSettingsProps) => {
               <TextInput
                 id="project-name"
                 key={form.key("name")}
-                size="md"
                 maxLength={120}
                 placeholder="Например, Мастерская"
                 autoComplete="off"
@@ -215,7 +214,6 @@ export const GeneralSettings = (props: GeneralSettingsProps) => {
               <TextInput
                 id="project-slug"
                 key={form.key("slug")}
-                size="md"
                 maxLength={64}
                 placeholder="my-project"
                 autoComplete="off"

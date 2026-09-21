@@ -247,6 +247,7 @@ export async function readEntityCatalog(
       createdBy: _createdBy,
       updatedBy: _updatedBy,
       events: _events,
+      acceptanceCriteria: _acceptanceCriteria,
       ...data
     } = task;
     add(

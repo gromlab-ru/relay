@@ -31,6 +31,7 @@ export function boardTaskText(task: BoardTaskView, options: TextOptions): string
     `ID: ${task.id}\nДоска: ${task.boardSlug}\nКолонка: ${columns[task.column]}\nРевизия: ${task.revision}`,
     task.blocked ? `Блокеры: ${task.blockers.join(", ")}` : "Невыполненных зависимостей нет.",
     task.description ? renderMarkdown(task.description, options) : "Описание пока не заполнено.",
+    `Критерии приёмки: выполнено ${task.acceptance?.completed ?? 0} из ${task.acceptance?.total ?? 0}.\nСписок: relay-cli task criterion list ${task.key}`,
     task.productLinks.length === 0
       ? "Продуктовых связей нет."
       : "Реализует:\n" +
@@ -46,7 +47,50 @@ export function boardTaskText(task: BoardTaskView, options: TextOptions): string
   ].join("\n\n");
 }
 export function boardTaskSavedText(saved: BoardTaskSaved): string {
-  return `Задача ${saved.key}: действие ${saved.action} выполнено.\nID: ${saved.id}\nРевизия: ${saved.revision}\nКлюч повтора: ${saved.requestId}`;
+  return `Задача ${saved.key}: действие ${saved.action} выполнено.\nID: ${saved.id}${saved.criterionId ? `\nКритерий: ${saved.criterionId}` : ""}\nРевизия: ${saved.revision}\nКлюч повтора: ${saved.requestId}`;
+}
+
+/** Компактный список критериев с продолжением и сохранением переносов краткого текста. */
+export function criteriaText(
+  page: Awaited<ReturnType<BoardTasksService["listCriteria"]>>,
+  reference: string,
+  options: TextOptions,
+): string {
+  const content = page.items
+    .map((criterion) =>
+      wrap(
+        `${criterion.completed ? "[✓]" : "[ ]"} ${criterion.id} · ${safeText(criterion.title)}\n${safeText(criterion.summary)}`,
+        options.width,
+      ),
+    )
+    .join("\n\n");
+  const next =
+    page.nextOffset === null
+      ? "Конец списка."
+      : `Продолжение: relay-cli task criterion list ${quote(reference)} --offset ${page.nextOffset} --version ${quote(page.version)}`;
+  return `Критерии приёмки · ${safeText(reference)}\n\n${content || "Критерии приёмки не заданы."}\n\nПоказано: ${page.items.length} из ${page.total}. Ревизия задачи: ${page.revision}.\n${next}`;
+}
+
+/** Полное содержание критерия отображается терминальным Markdown-рендерером. */
+export function criterionText(
+  view: Awaited<ReturnType<BoardTasksService["getCriterion"]>>,
+  options: TextOptions,
+): string {
+  const criterion = view.criterion;
+  return [
+    wrap(`${criterion.id} · ${safeText(criterion.title)}`, options.width),
+    `Состояние: ${criterion.completed ? "Выполнен" : "Не выполнен"}. Ревизия задачи: ${view.revision}.`,
+    wrap(safeText(criterion.summary), options.width),
+    renderMarkdown(criterion.description || "Полное описание не задано.", options),
+    criterion.completed
+      ? wrap(
+          `Выполнил: ${safeText(criterion.completedBy ?? "")}, ${criterion.completedAt}`,
+          options.width,
+        )
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 export function boardTasksText(
   page: Awaited<ReturnType<BoardTasksService["list"]>>,

@@ -39,6 +39,8 @@ HTTP-статус и код процесса различаются. API пер�
 | ENTITY_KEY_CONFLICT                               | Выберите свободный ключ, учитывая алиасы                           |
 | PROJECT_SLUG_TAKEN                                | Выберите свободный адрес проекта                                   |
 | TASK_BLOCKED                                      | Перечитайте task links и выполните зависимости                     |
+| TASK_ACCEPTANCE_INCOMPLETE                        | Прочитайте task criterion list и выполните оставшиеся критерии     |
+| TASK_ACCEPTANCE_LOCKED                            | Верните задачу из done перед изменением критериев                  |
 | REVISION_CONFLICT                                 | Перечитайте запись и согласуйте изменение                          |
 | IDEMPOTENCY_CONFLICT                              | Восстановите исходный запрос с тем же ключом                       |
 | BOARD_CHANGED, GRAPH_CHANGED                      | Начните чтение снимка заново                                       |

@@ -38,6 +38,10 @@ import {
 } from "@relay/core/domain/product-implementation";
 import {
   boardTaskViewSchema,
+  criteriaPageSchema,
+  criteriaQuerySchema,
+  criterionViewSchema,
+  changeCriterionSchema,
   boardTaskSavedSchema,
   boardTasksPageSchema,
   boardTaskLinksPageSchema,
@@ -117,6 +121,10 @@ export const schemas = {
   ProjectSettings: projectSettingsSchema,
   SaveProjectSettings: saveProjectSettingsSchema,
   BoardTaskView: boardTaskViewSchema,
+  CriteriaPage: criteriaPageSchema,
+  CriteriaQuery: criteriaQuerySchema,
+  CriterionView: criterionViewSchema,
+  ChangeCriterion: changeCriterionSchema,
   BoardTaskSaved: boardTaskSavedSchema,
   BoardTasksPage: boardTasksPageSchema,
   BoardTaskLinksPage: boardTaskLinksPageSchema,

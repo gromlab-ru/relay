@@ -36,7 +36,9 @@ export const TaskCard = (props: TaskCardProps) => {
   const linkCount = task.dependencies.length + task.related.length + Number(task.parentId !== null);
   const hasLinks = linkCount > 0;
   const blockerLabel = `Ожидает задач: ${task.blockers.length}`;
-  const hasDetails = task.blocked || hasLinks;
+  const hasCriteria = task.acceptance.total > 0;
+  const criteriaLabel = `Критерии · ${task.acceptance.completed}/${task.acceptance.total}`;
+  const hasDetails = task.blocked || hasLinks || hasCriteria;
   return (
     <article
       {...rootAttrs}
@@ -76,6 +78,11 @@ export const TaskCard = (props: TaskCardProps) => {
       </UnstyledButton>
       {hasDetails && (
         <Group gap="xs" className={styles.details}>
+          {hasCriteria && (
+            <Text size="xs" c="dimmed">
+              {criteriaLabel}
+            </Text>
+          )}
           {task.blocked && (
             <Badge
               color="red"
@@ -105,7 +112,9 @@ export const TaskCardPreview = ({ task }: TaskCardPreviewProps) => {
   const title = task.title || "Без названия";
   const linkCount = task.dependencies.length + task.related.length + Number(task.parentId !== null);
   const hasLinks = linkCount > 0;
-  const hasDetails = task.blocked || hasLinks;
+  const hasCriteria = task.acceptance.total > 0;
+  const criteriaLabel = `Критерии · ${task.acceptance.completed}/${task.acceptance.total}`;
+  const hasDetails = task.blocked || hasLinks || hasCriteria;
   const blockerLabel = `Ожидает задач: ${task.blockers.length}`;
   return (
     <article className={styles.root} data-overlay="true" aria-hidden="true">
@@ -120,6 +129,11 @@ export const TaskCardPreview = ({ task }: TaskCardPreviewProps) => {
       <div className={styles.title}>{title}</div>
       {hasDetails && (
         <Group gap="xs" className={styles.details}>
+          {hasCriteria && (
+            <Text size="xs" c="dimmed">
+              {criteriaLabel}
+            </Text>
+          )}
           {task.blocked && (
             <Badge
               color="red"

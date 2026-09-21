@@ -158,6 +158,9 @@ const taskHandler: EntityHandler = {
       {
         ...metadata(context),
         board: resolveEntity(context.catalog, data.board, "board").ref.id,
+        ...(data.acceptanceCriteria === undefined
+          ? {}
+          : { acceptanceCriteria: data.acceptanceCriteria }),
         title: data.title,
         description: data.description,
         column: data.column,

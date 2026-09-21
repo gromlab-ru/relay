@@ -4,6 +4,8 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+import { changeTaskCriterionForProject } from "./operations/change-task-criterion-for-project.js";
+import { changeTaskCriterion } from "./operations/change-task-criterion.js";
 import { createBoardTaskForProject } from "./operations/create-board-task-for-project.js";
 import { createBoardTask } from "./operations/create-board-task.js";
 import { createEntityForProject } from "./operations/create-entity-for-project.js";
@@ -51,6 +53,10 @@ import { getProjectSettingsForProject } from "./operations/get-project-settings-
 import { getProjectSettings } from "./operations/get-project-settings.js";
 import { getProjects } from "./operations/get-projects.js";
 import { getServerContext } from "./operations/get-server-context.js";
+import { getTaskCriteriaForProject } from "./operations/get-task-criteria-for-project.js";
+import { getTaskCriteria } from "./operations/get-task-criteria.js";
+import { getTaskCriterionForProject } from "./operations/get-task-criterion-for-project.js";
+import { getTaskCriterion } from "./operations/get-task-criterion.js";
 import { linkBoardTaskForProject } from "./operations/link-board-task-for-project.js";
 import { linkBoardTask } from "./operations/link-board-task.js";
 import { linkEntityTaskForProject } from "./operations/link-entity-task-for-project.js";
@@ -141,6 +147,9 @@ export const operationsTree = {
     getBoardTask: getBoardTask,
     getBoardTaskLinks: getBoardTaskLinks,
     linkBoardTask: linkBoardTask,
+    getTaskCriteria: getTaskCriteria,
+    changeTaskCriterion: changeTaskCriterion,
+    getTaskCriterion: getTaskCriterion,
     updateBoardTask: updateBoardTask,
     moveBoardTask: moveBoardTask,
     getBoardTasksForProject: getBoardTasksForProject,
@@ -148,6 +157,9 @@ export const operationsTree = {
     getBoardTaskForProject: getBoardTaskForProject,
     getBoardTaskLinksForProject: getBoardTaskLinksForProject,
     linkBoardTaskForProject: linkBoardTaskForProject,
+    getTaskCriteriaForProject: getTaskCriteriaForProject,
+    changeTaskCriterionForProject: changeTaskCriterionForProject,
+    getTaskCriterionForProject: getTaskCriterionForProject,
     updateBoardTaskForProject: updateBoardTaskForProject,
     moveBoardTaskForProject: moveBoardTaskForProject,
   },

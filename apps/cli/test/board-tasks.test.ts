@@ -2,6 +2,42 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fixture, successful, invokeRaw } from "./helpers/cli.js";
 
+test("CLI критериев: атомарное создание, текст и JSON, выполнение и Markdown", async (t) => {
+  const app = await fixture(t);
+  const task = successful(
+    await app.run<{ id: string }>([
+      "task",
+      "create",
+      "--board",
+      "product",
+      "--criteria",
+      JSON.stringify([
+        {
+          title: "Сохранение",
+          summary: "Первая\nВторая",
+          description: "## Проверка\n\n**Результат**",
+        },
+      ]),
+    ]),
+  ).data;
+  const page = successful(
+    await app.run<{ items: { id: string }[] }>(["task", "criterion", "list", task.id]),
+  ).data;
+  const id = page.items[0]!.id;
+  const list = await invokeRaw(app.root, ["task", "criterion", "list", task.id]);
+  assert.equal(list.code, 0, list.stderr);
+  assert.match(list.stdout, /Критерии приёмки/);
+  assert.match(list.stdout, /Первая\nВторая/);
+  const detail = await invokeRaw(app.root, ["task", "criterion", "get", task.id, id]);
+  assert.match(detail.stdout, /Результат/);
+  assert.doesNotMatch(detail.stdout, /"description":/);
+  successful(await app.run(["task", "criterion", "complete", task.id, id, "--if-revision", "1"]));
+  const current = successful(
+    await app.run<{ criterion: { completed: boolean } }>(["task", "criterion", "get", task.id, id]),
+  ).data;
+  assert.equal(current.criterion.completed, true);
+});
+
 test("CLI нового канбана: текст, JSON, связи и сохранение ID при переносе", async (t) => {
   const app = await fixture(t);
   const first = successful(

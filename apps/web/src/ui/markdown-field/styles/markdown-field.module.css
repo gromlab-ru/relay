@@ -13,7 +13,7 @@
 
 .label {
   flex-shrink: 0;
-  font-size: 0.8125rem;
+  font-size: var(--mantine-font-size-sm);
   font-weight: 550;
 }
 
@@ -38,8 +38,9 @@
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
   overflow: hidden;
-  margin-top: 8px;
-}
-.editor:focus-within {
-  border-color: var(--tasks-focus-ring);
+  margin-top: 4px;
+
+  &:focus-within {
+    border-color: var(--tasks-focus-ring);
+  }
 }
