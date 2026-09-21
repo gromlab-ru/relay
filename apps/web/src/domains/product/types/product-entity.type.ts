@@ -15,6 +15,8 @@ export type ProductEntitiesQuery = {
   q?: string;
   kind?: ProductEntitySummary["kind"];
   application?: string;
+  /** Вид цели имплементации; ограничивает каталог до пагинации. */
+  implementationTarget?: "feature" | "scenario";
   refs?: string[];
   active?: "true" | "false";
   offset?: number;

@@ -18,15 +18,15 @@
     "docs/reference/CONFIGURATION.md": "52cc3895428746429da4aae90a264485bef567f6a0ac4b214a78a8851fd8166e",
     "docs/reference/ENTITIES.md": "9b22a286d80a33fdcb58f6715214873461361269dce1eb8348e930b4bb5377e3",
     "docs/reference/GRAPH.md": "dd558e9ba75ce29e4fe814de1aa64a22299687a241bf5bfc5b5b498f28794c60",
-    "docs/reference/KANBAN.md": "720c184d9ec804bb9fc6696d0e5cbafb3021d372ef6343569a2b5b01d26b4d24",
+    "docs/reference/KANBAN.md": "322a021cdfe7d1bb12de9df6fbf0bfa48458d738ccb400df6e3fe30d3fe06e2a",
     "docs/reference/MCP.md": "e31d64def63e4548fd9aab77399693da6e4964afed5477c196b2f2f99910d10b",
     "docs/reference/PRODUCT-CONTENT.md": "7502baa3c3771c50d0eda23134eb9135ae8c30b296139acf1b1575520b4613bb",
-    "docs/reference/PRODUCT.md": "c2b4d808bfc9a8468089a02930cc6549f11b14c2441493dfa4c66eb8ac0e6113",
+    "docs/reference/PRODUCT.md": "0663f907210be824406884ae2a319dbf467caef0bac08a5631db15e170526241",
     "packages/contracts/src/entities.ts": "7d1259b4b6bd2ff5e617825c07be50573d6bccb77e6b629c6df5079cd7183713",
-    "packages/contracts/src/entities/board-task.ts": "58dbd8f4718165a3fb9092822ea669690d349abe4bf37bc162085fb2642ab68e",
+    "packages/contracts/src/entities/board-task.ts": "c4b8404975d8bcb11e4a44cabc6c05774d652ea32463b23d82cfb217ecbd58e6",
     "packages/contracts/src/entities/board.ts": "e1d1175f96234ba5a62f404a35fad3c43237f54e5feb37280d1cfb5187e2f21f",
     "packages/contracts/src/entities/graph.ts": "1c2d4c874a3eb116fc5f68fa3f1fbd94a316441d65f489feec32a2b0372e686a",
-    "packages/contracts/src/entities/product-implementation.ts": "c09b8738d06d87590a4c6a730bfe37eb1fe8be3527e657e796caa88cc561272f",
+    "packages/contracts/src/entities/product-implementation.ts": "2523e8909b27a1035ed91e1aa6e18d1e3ba3f0b644afd53af55c1cc81b82b187",
     "packages/contracts/src/entities/product.ts": "d0330bdb40d302c6ea481260e51141b883d6fe557418b683ed136fdf826913a9",
     "packages/contracts/src/entities/project-settings.ts": "8dff6f329837b4691f2c02280253d711fad8f3733d933b1f9d1f916c6dd2fca7",
     "packages/contracts/src/primitives.ts": "effb08ab4fff84039588b9fe065a80dd1d7e905622c07ec92d8f296ec308240b",
@@ -40,7 +40,7 @@
     "packages/core/src/application/product/catalog.ts": "35d2a702373459f336b20266cf08ddaf192caf87d00fbf68b0f6fc01f6c0d61e",
     "packages/core/src/application/product/content.ts": "3d0a1136e88a4f60d332ecd9cccc5109a849de664fb310e4766fc4ac5e27d113",
     "packages/core/src/application/product/model.ts": "5f53a1201347c252e036199ae61ee1702dcbd615e1de7e14080eb409cf78a63b",
-    "packages/core/src/application/product/queries.ts": "3178a4515f1b4c216d2a62bd11ce2add8f85b4b8c3f430b7f67f5a18bb850631",
+    "packages/core/src/application/product/queries.ts": "4978e8189c04f62defa1ae17ecfb76e194420f93a43c413cebec58aa70f12837",
     "packages/core/src/application/product/service.ts": "b44344a388f82ef8a5d8a18addf850737e8b57c95d7a4ea15ac46192a571a8f4",
     "packages/core/src/domain/config.ts": "56bcae026c776e33672cdeba89bb0f16d57b2997da2ce9d6143416888c292c98",
     "packages/core/src/domain/entity-graph.ts": "deedf2430b0d0aec58578b13337afaa53e8765a93d668ce7cb4e34940763619e",
@@ -61,6 +61,6 @@
     "src-skills/relay/references/RECOVERY.md": "132e0db07d83848a04f3f8491718ac816e9de7364136121645ba6fcf2af2f89e",
     "src-skills/relay/references/STARTUP.md": "4df23ba7ebe8e03183a74ebcdccd4d1183c49f80fef06571f790aaadb5ef064b",
     "src-skills/relay/references/WORKER.md": "b86458d982017c4ad6d2c09a9205917df4123c87f0be3c31406669a63233d080",
-    "src-skills/relay/skill.md": "f6123e50f127b54ad81fd259e47d22928c8cc4e72a88b18b6a6cc5ede15d9756"
+    "src-skills/relay/skill.md": "abeb79f93dcf25000af4991c54d80e280d814821ede526fd11d58a50d3003122"
   }
 }

@@ -10,6 +10,8 @@ export type ProductContextOption = {
   kind: string;
   description: string;
   targetKind: "feature" | "scenario" | "implementation";
+  /** Вид требования, в том числе для самостоятельной имплементации приложения. */
+  requirementKind: "feature" | "scenario";
   applicationId: string | null;
   isActive: boolean;
 };
@@ -25,6 +27,10 @@ export const getProductTargetOptions = (items: ProductEntitySummary[]): ProductC
         key: item.key,
         title: item.title,
         targetKind: item.kind,
+        requirementKind:
+          item.kind === "scenario" || (item.kind === "implementation" && item.scenarioId !== null)
+            ? "scenario"
+            : "feature",
         kind:
           item.kind === "feature"
             ? "Фича"
@@ -59,6 +65,7 @@ export const getProductContextOptions = (
         title: contract.title,
         kind: "Реализация",
         targetKind: "implementation" as const,
+        requirementKind: contract.scenarioId === null ? "feature" : "scenario",
         applicationId: fields.applicationId,
         isActive: contract.active,
         path: [
@@ -77,6 +84,7 @@ export const getProductContextOptions = (
           title: fields.name,
           kind: fields.kind === "feature" ? "Фича" : "Сценарий",
           targetKind: fields.kind,
+          requirementKind: fields.kind,
           applicationId: null,
           isActive: true,
           path:

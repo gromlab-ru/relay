@@ -33,6 +33,12 @@ offset/limit (1–100), total/nextOffset; `GET /entity?ref=…` — адресн
 Операции записи принимают requestId; прежняя замена состава остаётся совместимой.
 Описание старого формата ниже относится к читаемым v1/v2, не к новой записи.
 
+Необязательный `implementationTarget=feature|scenario` в `GET /entities` оставляет
+только реализации: с `scenarioId=null` для фич или непустым `scenarioId` для сценариев.
+Он сочетается с `application`, `active`, `q`, `kind` и применяется до `total`/пагинации.
+Без фильтра поведение каталога прежнее; Web использует его для двух разделов выбора
+целей карточки на доске приложения.
+
 Записи находятся в `product` рядом с `.relay/config.json`. Паспорт — `passport.json`.
 Остальные записи — `<kind>_<128-bit-id>.json` в каталогах `features`, `scenarios`,
 `applications`, `scopes`, `documents`. Название сущности не влияет на путь или ID.

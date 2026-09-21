@@ -7,7 +7,6 @@ import {
   Button,
   Checkbox,
   Group,
-  NativeSelect,
   SegmentedControl,
   Stack,
   Text,
@@ -15,7 +14,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { ArrowLeft, FileText, Plus, X, Layers } from "lucide-react";
+import { ArrowLeft, FileText, Plus, X, Puzzle, Route } from "lucide-react";
 import {
   useProductEntities,
   useProductEntity,
@@ -35,14 +34,13 @@ import styles from "./styles/task-context.module.css";
  * Связывает работу с постоянными требованиями продукта.
  *
  * Используется для:
- *  - выбора общих фич, сценариев и контрактов приложений
+ *  - выбора фич и сценариев в области ответственности доски
  *  - чтения требований и документов без вложенных модальных окон
  */
 export const TaskContext = (props: TaskContextProps) => {
-  const { projectId, task, onOwnRevision, className, ...rootAttrs } = props;
+  const { projectId, task, board, onOwnRevision, className, ...rootAttrs } = props;
   const [isChoosing, setChoosing] = useState(false);
-  const [mode, setMode] = useState("general");
-  const [application, setApplication] = useState("");
+  const [mode, setMode] = useState<"feature" | "scenario">("feature");
   const [search, setSearch] = useState("");
   const [isContextOpen, setContextOpen] = useState(false);
   const [visibleLinks, setVisibleLinks] = useState(5);
@@ -54,20 +52,29 @@ export const TaskContext = (props: TaskContextProps) => {
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const [debouncedSearch] = useDebouncedValue(search, 200);
-  const candidateKind =
-    mode === "application"
-      ? "implementation"
-      : mode === "scenario" || /^SCENARIO-/i.test(debouncedSearch)
-        ? "scenario"
-        : "feature";
+  const isApplicationBoard = board.kind === "application";
+  const canChoose =
+    board.kind === "product" || (isApplicationBoard && board.applicationId !== null);
+  const heading = isApplicationBoard ? "Реализует в приложении" : "Реализует в продукте";
+  const emptyText = isApplicationBoard
+    ? "Свяжите задачу с реализацией фичи или сценария этого приложения."
+    : "Свяжите задачу с фичей или сценарием продукта.";
+  const emptySearchText = isApplicationBoard
+    ? "Подходящих реализаций нет. Состав приложения задаётся в разделе «Продукт»."
+    : "Подходящих целей нет. Фичи и сценарии задаются в разделе «Продукт».";
+  const searchPlaceholder = isApplicationBoard
+    ? `Ключ или название, например ${board.prefix}-${mode === "feature" ? "FI" : "SI"}-12`
+    : `Ключ или название, например ${mode === "feature" ? "FEATURE" : "SCENARIO"}-12`;
   const product = useProductTargetSearch(
     projectId,
-    isChoosing
+    isChoosing && canChoose
       ? {
-          kind: candidateKind,
+          kind: isApplicationBoard ? "implementation" : mode,
           q: debouncedSearch,
           active: "true",
-          ...(application === "" || mode !== "application" ? {} : { application }),
+          ...(isApplicationBoard && board.applicationId !== null
+            ? { application: board.applicationId, implementationTarget: mode }
+            : {}),
         }
       : null,
   );
@@ -90,14 +97,6 @@ export const TaskContext = (props: TaskContextProps) => {
     projectId,
     isEmptyArray(linkRefs) ? null : { refs: linkRefs, limit: 100 },
   );
-  const appQuery = useProductTargetSearch(
-    projectId,
-    isChoosing && mode === "application" ? { kind: "application" } : null,
-  );
-  const applications = appQuery.items.map((entry) => ({
-    value: entry.id,
-    label: `${entry.key ?? ""} · ${entry.title}`,
-  }));
   const options = getProductTargetOptions([...product.items, ...(linked.data?.items ?? [])]);
   const candidateItems = getProductTargetOptions(product.items).map((option) => ({
     ...option,
@@ -111,6 +110,13 @@ export const TaskContext = (props: TaskContextProps) => {
       title: option?.title ?? link.id,
       path: option?.path ?? "Продуктовая цель недоступна",
       label: option?.kind ?? "Связь",
+      Icon: option?.requirementKind === "scenario" ? Route : Puzzle,
+      toneClassName:
+        option?.requirementKind === "scenario"
+          ? styles._scenario
+          : option?.requirementKind === "feature"
+            ? styles._feature
+            : undefined,
       isInactive: option !== undefined && !option.isActive,
     };
   });
@@ -179,7 +185,6 @@ export const TaskContext = (props: TaskContextProps) => {
   const hasError = error !== "";
   const hasStale = context.data?.readiness.some((item) => item.stale > 0) === true;
   const isBusy = form.submitting || isRemoving;
-  const isApplicationMode = mode === "application";
   const handleSave = async (
     links: typeof task.productLinks,
     revision: number,
@@ -243,7 +248,7 @@ export const TaskContext = (props: TaskContextProps) => {
       <Group justify="space-between" mb="sm">
         <Group gap="xs">
           <Text fw={600} size="sm">
-            Реализует в продукте
+            {heading}
           </Text>
           {hasLinks && (
             <Badge variant="light" color="gray" size="sm">
@@ -257,21 +262,21 @@ export const TaskContext = (props: TaskContextProps) => {
           color="gray"
           leftSection={<Plus size={14} />}
           onClick={handleChoose}
-          disabled={isBusy}
+          disabled={isBusy || !canChoose}
         >
           Связать
         </Button>
       </Group>
       {isEmpty && (
         <Text size="sm" c="dimmed">
-          Свяжите задачу с фичей, сценарием или вкладом приложения.
+          {emptyText}
         </Text>
       )}
       <Stack gap="xs">
         {linkedItems.map((item) => (
-          <Group key={item.id} wrap="nowrap" className={styles.option}>
-            <span className={styles.symbol}>
-              <Layers size={17} />
+          <Group key={item.id} wrap="nowrap" className={clsx(styles.option, item.toneClassName)}>
+            <span className={clsx(styles.symbol, item.toneClassName)}>
+              <item.Icon size={17} aria-hidden="true" />
             </span>
             <UnstyledButton
               flex={1}
@@ -316,43 +321,25 @@ export const TaskContext = (props: TaskContextProps) => {
           <Stack gap="md">
             <SegmentedControl
               value={mode}
+              disabled={isBusy}
               onChange={(value) => {
-                setMode(value);
+                if (value === "feature" || value === "scenario") setMode(value);
               }}
               data={[
-                { value: "general", label: "Фичи" },
+                { value: "feature", label: "Фичи" },
                 { value: "scenario", label: "Сценарии" },
-                { value: "application", label: "Реализации" },
               ]}
             />
-            {isApplicationMode && (
-              <NativeSelect
-                label="Приложение"
-                value={application}
-                onChange={(event) => {
-                  setApplication(event.currentTarget.value);
-                }}
-                data={[{ value: "", label: "Все приложения" }, ...applications]}
-              />
-            )}
             <TextInput
               ref={searchInput}
               label="Найти фичу или сценарий"
-              placeholder="Ключ или название, например WEB-FI-12"
+              placeholder={searchPlaceholder}
+              disabled={isBusy}
               value={search}
               onChange={(event) => {
                 setSearch(event.currentTarget.value);
               }}
             />
-            {appQuery.hasMore && (
-              <Button
-                variant="subtle"
-                size="xs"
-                onClick={() => void appQuery.setSize(appQuery.size + 1)}
-              >
-                Ещё приложения
-              </Button>
-            )}
             {product.isLoading && (
               <Text role="status" size="sm" c="dimmed">
                 Ищем продуктовые цели…
@@ -360,7 +347,7 @@ export const TaskContext = (props: TaskContextProps) => {
             )}
             {isEmptySearch && (
               <Text c="dimmed" size="sm">
-                Подходящих целей нет. Состав приложения задаётся в разделе «Продукт».
+                {emptySearchText}
               </Text>
             )}
             <div className={styles.picker}>

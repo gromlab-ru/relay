@@ -1,6 +1,4 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { useProjectBasePath } from "domains/project";
 import {
   Alert,
   Badge,
@@ -16,7 +14,7 @@ import {
 import { Pencil, Link2, ChevronDown, Check, Columns3, Circle } from "lucide-react";
 import { useForm } from "@mantine/form";
 import { useHotkeys } from "@mantine/hooks";
-import { useBoards } from "domains/boards";
+import { useBoard, useBoards } from "domains/boards";
 import {
   BoardTaskError,
   TASK_COLUMNS,
@@ -28,6 +26,7 @@ import {
 import { readSessionStored, writeSessionStored, removeSessionStored } from "infra/browser-storage";
 import { MarkdownField } from "ui/markdown-field";
 import { MarkdownView } from "ui/markdown-view";
+import { isDefined } from "shared/value-predicates";
 import { TaskRelations } from "./ui/task-relations";
 import { TaskContext } from "./ui/task-context";
 import { TASK_DRAFT_SCHEMA } from "./config/editor.schema";
@@ -43,7 +42,6 @@ import styles from "./styles/task-editor.module.css";
  */
 export const TaskEditor = (props: TaskEditorProps) => {
   const { projectId, task, startEditing, onOpen } = props;
-  const projectBase = useProjectBasePath();
   const draftKey = `relay:kanban:${projectId}:${task.id}`;
   const [draft] = useState(() => TASK_DRAFT_SCHEMA.safeParse(readSessionStored(draftKey)));
   const [isEditing, setEditing] = useState(startEditing || draft.success);
@@ -61,6 +59,11 @@ export const TaskEditor = (props: TaskEditorProps) => {
   const formRef = useRef<HTMLFormElement>(null);
   const refresh = useBoardTaskRefresh(projectId);
   const boards = useBoards(projectId);
+  const currentBoard = useBoard(projectId, task.boardSlug);
+  const boardData = currentBoard.data;
+  const hasBoardError = isDefined(currentBoard.error);
+  const canLinkProduct = isDefined(boardData) && boardData.kind !== "infrastructure";
+  const shouldShowProductSection = currentBoard.isLoading || hasBoardError || canLinkProduct;
   const initial = { title: task?.title ?? "", description: task?.description ?? "" };
   const form = useForm({
     mode: "uncontrolled",
@@ -334,16 +337,31 @@ export const TaskEditor = (props: TaskEditorProps) => {
                   </Stack>
                 </fieldset>
               </form>
-              <section className={styles.section}>
-                <TaskContext projectId={projectId} task={task} onOwnRevision={handleOwnRevision} />
-                <Button
-                  component={Link}
-                  variant="subtle"
-                  to={`${projectBase}/relations?root=task:${task.id}`}
-                >
-                  Все связи и контекст задачи
-                </Button>
-              </section>
+              {shouldShowProductSection && (
+                <section className={styles.section}>
+                  {currentBoard.isLoading && (
+                    <Text size="sm" c="dimmed" role="status">
+                      Загружаем возможности доски…
+                    </Text>
+                  )}
+                  {hasBoardError && (
+                    <Alert color="red" title="Возможности доски недоступны">
+                      <Button variant="subtle" onClick={() => void currentBoard.mutate()}>
+                        Повторить
+                      </Button>
+                    </Alert>
+                  )}
+                  {canLinkProduct && (
+                    <TaskContext
+                      key={task.boardId}
+                      projectId={projectId}
+                      task={task}
+                      board={boardData}
+                      onOwnRevision={handleOwnRevision}
+                    />
+                  )}
+                </section>
+              )}
               <section className={styles.section}>
                 <TaskRelations projectId={projectId} task={task} onOpen={onOpen} />
               </section>

@@ -399,9 +399,16 @@ export class BoardTasksService {
   /** Новые цели проверяются под той же блокировкой; снятые контракты можно оставить в старых связях. */
   private async validateProductLinks(
     links: BoardTaskRecord["productLinks"],
+    board: Board,
     previous: BoardTaskRecord["productLinks"] = [],
   ) {
     if (links.length === 0) return [];
+    invariant(
+      board.kind !== "infrastructure",
+      "INVALID_REFERENCE",
+      "На инфраструктурной доске нет целей реализации. Сначала снимите продуктовые связи",
+      4,
+    );
     const records = await new ProductRepository(this.workspace).all();
     const catalog = await this.workspace.locked((owned) =>
       readEntityCatalog(this.workspace, owned),
@@ -423,12 +430,21 @@ export class BoardTasksService {
       const key = `${link.kind}:${link.id}`;
       invariant(!seen.has(key), "INVALID_ARGUMENT", "Продуктовая связь повторяется", 4);
       seen.add(key);
+      invariant(
+        board.kind === "product" ? link.kind !== "implementation" : link.kind === "implementation",
+        "INVALID_REFERENCE",
+        board.kind === "product"
+          ? "На продуктовой доске доступны только фичи и сценарии продукта. Сначала снимите несовместимые связи"
+          : "На доске приложения доступны только его реализации. Сначала снимите несовместимые связи",
+        4,
+      );
       const isExisting = previous.some((item) => item.id === link.id && item.kind === link.kind);
       const exists =
         link.kind === "implementation"
           ? records.some(
               (record) =>
                 record.fields.kind === "scope" &&
+                record.fields.applicationId === board.applicationId &&
                 record.fields.contracts.some(
                   (contract) => contract.id === link.id && (contract.active || isExisting),
                 ),
@@ -437,7 +453,7 @@ export class BoardTasksService {
       invariant(
         exists,
         "INVALID_REFERENCE",
-        "Продуктовая цель отсутствует в проекте или её участие снято",
+        "Цель отсутствует, её участие снято или она принадлежит другому приложению. Снимите несовместимые связи",
         4,
       );
     }
@@ -451,8 +467,8 @@ export class BoardTasksService {
       command,
       actor,
       async (tasks, boards, _previous, author) => {
-        const productLinks = await this.validateProductLinks(command.productLinks ?? []);
         const board = resolveBoard(boards, command.board);
+        const productLinks = await this.validateProductLinks(command.productLinks ?? [], board);
         const parent =
           command.parentId === undefined ? undefined : resolveTask(tasks, command.parentId);
         invariant(
@@ -505,11 +521,15 @@ export class BoardTasksService {
       reference,
       command,
       actor,
-      async (_tasks, _boards, previous, author) => {
+      async (_tasks, boards, previous, author) => {
         const productLinks =
           command.productLinks === undefined
             ? previous!.productLinks
-            : await this.validateProductLinks(command.productLinks, previous!.productLinks);
+            : await this.validateProductLinks(
+                command.productLinks,
+                resolveBoard(boards, previous!.boardId),
+                previous!.productLinks,
+              );
         return {
           ...previous!,
           title: command.title ?? previous!.title,
@@ -533,6 +553,8 @@ export class BoardTasksService {
         const task = previous!;
         if (command.beforeId !== null) command.beforeId = resolveTask(tasks, command.beforeId).id;
         const board = resolveBoard(boards, command.board ?? task.boardId);
+        if (board.id !== task.boardId)
+          await this.validateProductLinks(task.productLinks, board, task.productLinks);
         invariant(
           command.column !== "done" || !view(task, tasks, boards).blocked,
           "TASK_BLOCKED",

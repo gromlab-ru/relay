@@ -16,6 +16,14 @@
   border-radius: 10px;
   background: var(--tasks-canvas);
   overflow-wrap: anywhere;
+
+  &._feature {
+    background: color-mix(in srgb, var(--mantine-color-violet-light) 25%, var(--tasks-canvas));
+  }
+
+  &._scenario {
+    background: color-mix(in srgb, var(--mantine-color-teal-light) 25%, var(--tasks-canvas));
+  }
 }
 .symbol {
   display: grid;
@@ -24,8 +32,18 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: 9px;
-  color: var(--mantine-color-violet-text);
-  background: var(--mantine-color-violet-light);
+  color: var(--mantine-color-dimmed);
+  background: var(--mantine-color-gray-light);
+
+  &._feature {
+    color: var(--mantine-color-violet-text);
+    background: var(--mantine-color-violet-light);
+  }
+
+  &._scenario {
+    color: var(--mantine-color-teal-text);
+    background: var(--mantine-color-teal-light);
+  }
 }
 .target {
   min-width: 0;

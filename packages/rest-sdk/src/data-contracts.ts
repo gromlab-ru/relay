@@ -2541,6 +2541,8 @@ export interface ProductEntitiesQuery {
    * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
    */
   application?: string;
+  /** Только реализации фич или сценариев; фильтр применяется до пагинации */
+  implementationTarget?: ProductEntitiesQueryImplementationTargetEnum;
   /**
    * До 100 ID или ключей для краткого чтения существующих связей
    * @maxItems 100
@@ -4453,6 +4455,11 @@ export type ProductEntitiesQueryKindEnum =
   | "implementation"
   | "document";
 
+/** Только реализации фич или сценариев; фильтр применяется до пагинации */
+export type ProductEntitiesQueryImplementationTargetEnum =
+  | "feature"
+  | "scenario";
+
 /** Фильтр участия; прежние ссылки читаются без фильтра */
 export type ProductEntitiesQueryActiveEnum = "true" | "false";
 
@@ -4601,6 +4608,8 @@ export interface GetProductEntitiesParams {
    * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
    */
   application?: string;
+  /** Только реализации фич или сценариев; фильтр применяется до пагинации */
+  implementationTarget?: ImplementationTargetEnum;
   /**
    * До 100 ID или ключей для краткого чтения существующих связей
    * @maxItems 100
@@ -4633,6 +4642,9 @@ export type KindEnum =
   | "implementation"
   | "document";
 
+/** Только реализации фич или сценариев; фильтр применяется до пагинации */
+export type ImplementationTargetEnum = "feature" | "scenario";
+
 /** Фильтр участия; прежние ссылки читаются без фильтра */
 export type ActiveEnum = "true" | "false";
 
@@ -4644,6 +4656,11 @@ export type GetProductEntitiesParams1KindEnum =
   | "application"
   | "implementation"
   | "document";
+
+/** Только реализации фич или сценариев; фильтр применяется до пагинации */
+export type GetProductEntitiesParams1ImplementationTargetEnum =
+  | "feature"
+  | "scenario";
 
 /** Фильтр участия; прежние ссылки читаются без фильтра */
 export type GetProductEntitiesParams1ActiveEnum = "true" | "false";
@@ -5566,6 +5583,8 @@ export interface GetProductEntitiesForProjectParams {
    * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
    */
   application?: string;
+  /** Только реализации фич или сценариев; фильтр применяется до пагинации */
+  implementationTarget?: ImplementationTargetEnum1;
   /**
    * До 100 ID или ключей для краткого чтения существующих связей
    * @maxItems 100
@@ -5600,6 +5619,9 @@ export type KindEnum9 =
   | "implementation"
   | "document";
 
+/** Только реализации фич или сценариев; фильтр применяется до пагинации */
+export type ImplementationTargetEnum1 = "feature" | "scenario";
+
 /** Фильтр участия; прежние ссылки читаются без фильтра */
 export type ActiveEnum2 = "true" | "false";
 
@@ -5611,6 +5633,11 @@ export type GetProductEntitiesForProjectParams1KindEnum =
   | "application"
   | "implementation"
   | "document";
+
+/** Только реализации фич или сценариев; фильтр применяется до пагинации */
+export type GetProductEntitiesForProjectParams1ImplementationTargetEnum =
+  | "feature"
+  | "scenario";
 
 /** Фильтр участия; прежние ссылки читаются без фильтра */
 export type GetProductEntitiesForProjectParams1ActiveEnum = "true" | "false";

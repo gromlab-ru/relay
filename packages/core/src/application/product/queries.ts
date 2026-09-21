@@ -46,6 +46,11 @@ export class ProductQueries extends ProductService {
           (entry) =>
             (!query.kind || entry.kind === query.kind) &&
             (!applicationId || entry.applicationId === applicationId) &&
+            (query.implementationTarget === undefined ||
+              (entry.kind === "implementation" &&
+                (query.implementationTarget === "feature"
+                  ? entry.scenarioId === null
+                  : entry.scenarioId !== null))) &&
             (!ids || ids.has(entry.id)) &&
             (query.active === undefined || entry.active === (query.active === "true")) &&
             (!needle ||

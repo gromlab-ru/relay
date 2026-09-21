@@ -69,6 +69,25 @@ test("HTTP: продуктовая связь, обратная фильтрац
   });
   assert.equal(created.statusCode, 200, created.body);
   const id = created.json().data.id;
+  const invalidCreate = await app.inject({
+    method: "POST",
+    url: base,
+    payload: {
+      board: "infrastructure",
+      productLinks: [{ kind: "feature", id: feature.id }],
+      requestId: "invalid-create",
+    },
+  });
+  assert.equal(invalidCreate.statusCode, 409, invalidCreate.body);
+  assert.equal(invalidCreate.json().error.code, "INVALID_REFERENCE");
+  const invalidMove = await app.inject({
+    method: "POST",
+    url: `${base}/${id}/move`,
+    payload: { board: "infrastructure", column: "inbox", ifRevision: 1, requestId: "invalid-move" },
+  });
+  assert.equal(invalidMove.statusCode, 409, invalidMove.body);
+  assert.equal(invalidMove.json().error.code, "INVALID_REFERENCE");
+  assert.equal((await app.inject(`${base}/${id}`)).json().data.boardSlug, "product");
   assert.equal("kind" in (await app.inject(`${base}/${id}`)).json().data, false);
   assert.equal((await app.inject(`${base}?productTarget=${feature.id}`)).json().data.total, 1);
   assert.equal((await app.inject(`${base}?productTarget=missing`)).json().data.total, 0);

@@ -57,6 +57,10 @@ export const productEntitiesQuerySchema = z.strictObject({
     .describe("Поиск по ключу или названию; точное совпадение первым"),
   kind: productEntitySummarySchema.shape.kind.optional().describe("Тип цели"),
   application: productRefSchema.optional().describe("ID или ключ приложения"),
+  implementationTarget: z
+    .enum(["feature", "scenario"])
+    .optional()
+    .describe("Только реализации фич или сценариев; фильтр применяется до пагинации"),
   refs: z
     .array(productRefSchema)
     .max(100)

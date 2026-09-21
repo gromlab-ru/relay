@@ -60,6 +60,27 @@ test("HTTP: ключи, краткое пакетное чтение и неза
   const list = await app.inject(`${base}/entities?q=WEB-FI-1&limit=1`);
   assert.equal(list.statusCode, 200, list.body);
   assert.equal(list.json().data.items[0].key, "WEB-FI-1");
+  const features = await app.inject(
+    `${base}/entities?kind=implementation&application=${application.id}&implementationTarget=feature&active=true&limit=1`,
+  );
+  assert.equal(features.statusCode, 200, features.body);
+  assert.equal(features.json().data.total, 1);
+  assert.equal(features.json().data.items[0].key, "WEB-FI-1");
+  assert.equal(features.json().data.nextOffset, null);
+  const scenarios = await app.inject(
+    `${base}/entities?application=${application.id}&implementationTarget=scenario`,
+  );
+  assert.equal(scenarios.statusCode, 200, scenarios.body);
+  assert.equal(scenarios.json().data.total, 0);
+  assert.equal((await app.inject(`${base}/entities?implementationTarget=invalid`)).statusCode, 400);
+  const schema = (await app.inject("/api/openapi.json")).json();
+  for (const path of ["/api/v1/product/entities", "/api/v1/projects/{project}/product/entities"]) {
+    const parameter = schema.paths[path].get.parameters.find(
+      (entry: { name: string }) => entry.name === "implementationTarget",
+    );
+    assert.deepEqual(parameter.schema.enum, ["feature", "scenario"]);
+    assert.ok(parameter.schema.description.includes("до пагинации"));
+  }
   assert.ok(list.body.length < 2000);
   const one = await app.inject(`${base}/entities?refs=FEATURE-1`);
   assert.equal(one.statusCode, 200, one.body);
