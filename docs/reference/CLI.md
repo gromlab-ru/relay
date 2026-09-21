@@ -313,6 +313,8 @@ comment list. Возвращает события всех сохранённы�
 
 `product contract update <id> --application <id> --status <status> --if-revision <n> --if-version <version>`.
 Допустимы `--title`, `--description`, `--request-id`.
+Переданный status сохраняется как совместимая прежняя отметка; фактическая готовность
+поднимается по каскаду задача → реализация приложения → фича/сценарий, а не этой командой.
 
 ### product implementation update
 

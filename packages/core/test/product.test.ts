@@ -224,8 +224,8 @@ test("продукт: все участники, версии требовани
   const webScope = await scope(frontend.id, "done");
   const apiScope = await scope(backend.id, "partial");
   let state = await service.state();
-  assert.equal(state.readiness.find((entry) => entry.id === scenario.id)?.status, "partial");
-  assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "partial");
+  assert.equal(state.readiness.find((entry) => entry.id === scenario.id)?.status, "none");
+  assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "none");
   const apiRecord = state.records.find((record) => record.id === apiScope.id);
   assert.ok(apiRecord?.fields.kind === "scope");
   const readyCommand: ProductMutation = {
@@ -247,7 +247,7 @@ test("продукт: все участники, версии требовани
   const ready = await service.mutate(readyCommand, "agent");
   assert.deepEqual(await service.mutate(readyCommand, "agent"), ready);
   state = await service.state();
-  assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "done");
+  assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "none");
   await assert.rejects(service.mutate({ ...readyCommand, requestId: randomUUID() }, "agent"), {
     code: "REVISION_CONFLICT",
   });
@@ -317,8 +317,8 @@ test("продукт: все участники, версии требовани
     "agent",
   );
   state = await service.state();
-  assert.equal(state.readiness.find((entry) => entry.id === scenario.id)?.stale, 2);
-  assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "partial");
+  assert.equal(state.readiness.find((entry) => entry.id === scenario.id)?.stale, 0);
+  assert.equal(state.readiness.find((entry) => entry.id === feature.id)?.status, "none");
   await service.mutate(
     {
       action: "update",
@@ -468,7 +468,8 @@ test("точечное подтверждение не переподтверж�
   const state = await service.state();
   const record = state.records.find((entry) => entry.id === scope.id);
   assert.ok(record?.fields.kind === "scope");
-  assert.ok(record.fields.contracts.every((entry) => entry.status === "partial"));
+  // Прежнее подтверждение сохраняется совместимо, но не заменяет прямые задачи.
+  assert.ok(record.fields.contracts.every((entry) => entry.status === "none"));
   const scenarioContract = record.fields.contracts.find(
     (entry) => entry.scenarioId === scenario.id,
   );
@@ -488,9 +489,9 @@ test("точечное подтверждение не переподтверж�
   const saved = await service.mutate(command, "agent");
   assert.deepEqual(await service.mutate(command, "agent"), saved);
   const current = await service.state();
-  assert.equal(current.readiness.find((entry) => entry.id === scenario.id)?.status, "done");
-  assert.equal(current.readiness.find((entry) => entry.id === feature.id)?.status, "partial");
-  assert.equal(current.readiness.find((entry) => entry.id === feature.id)?.stale, 1);
+  assert.equal(current.readiness.find((entry) => entry.id === scenario.id)?.status, "none");
+  assert.equal(current.readiness.find((entry) => entry.id === feature.id)?.status, "none");
+  assert.equal(current.readiness.find((entry) => entry.id === feature.id)?.stale, 0);
   const context = await service.context({ id: scenarioContract.id });
   assert.ok(context.records.some((entry) => entry.record.id === scope.id));
 });

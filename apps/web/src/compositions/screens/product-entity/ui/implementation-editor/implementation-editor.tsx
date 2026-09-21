@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useRef, useState } from "react";
-import { Alert, Button, Group, NativeSelect, Stack, TextInput } from "@mantine/core";
+import { Alert, Button, Group, Stack, Text, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useBeforeUnload } from "react-router-dom";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import styles from "./styles/implementation-editor.module.css";
  * Редактирует отдельный вклад приложения с ID-черновиком и явным разрешением конфликта.
  *
  * Используется для:
- *  - сохранения описания и готовности без изменения соседних реализаций
+ *  - сохранения описания без изменения соседних реализаций
  */
 export const ImplementationEditor = (props: ImplementationEditorProps) => {
   const { projectId, initial, onSaved, onClose, className, ...rootAttrs } = props;
@@ -52,6 +52,9 @@ export const ImplementationEditor = (props: ImplementationEditorProps) => {
     event.returnValue = "";
   });
   const hasError = error !== "";
+  /**
+   * Сохраняет только содержание; готовность вычисляет сервер по задачам.
+   */
   const handleSubmit = async (values: typeof form.values) => {
     setError("");
     const change = {
@@ -59,7 +62,6 @@ export const ImplementationEditor = (props: ImplementationEditorProps) => {
       ifRevision: revision,
       title: values.title,
       description: values.description,
-      status: values.status,
     };
     const fingerprint = JSON.stringify(change);
     if (request.current?.fingerprint !== fingerprint)
@@ -72,6 +74,9 @@ export const ImplementationEditor = (props: ImplementationEditorProps) => {
       setError(productError(failure));
     }
   };
+  /**
+   * Явно заменяет черновик актуальным содержанием после конфликта.
+   */
   const handleUseCurrent = () => {
     form.setValues(initial);
     form.resetDirty(initial);
@@ -79,6 +84,9 @@ export const ImplementationEditor = (props: ImplementationEditorProps) => {
     setError("");
     removeSessionStored(draftKey);
   };
+  /**
+   * Сохраняет введённый текст и обновляет только основание следующей записи.
+   */
   const handleKeepDraft = () => {
     setRevision(initial.revision);
     setCanPersist(
@@ -116,16 +124,9 @@ export const ImplementationEditor = (props: ImplementationEditorProps) => {
           key={form.key("title")}
           {...form.getInputProps("title")}
         />
-        <NativeSelect
-          label="Готовность реализации"
-          data={[
-            { value: "none", label: "Не реализовано" },
-            { value: "partial", label: "Частично" },
-            { value: "done", label: "Готово — требования проверены" },
-          ]}
-          key={form.key("status")}
-          {...form.getInputProps("status")}
-        />
+        <Text size="sm" c="dimmed">
+          Готовность рассчитывается автоматически по задачам реализации.
+        </Text>
         <MarkdownField
           label="Описание вклада"
           key={form.key("description")}

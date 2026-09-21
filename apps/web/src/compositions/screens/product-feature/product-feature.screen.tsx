@@ -11,10 +11,8 @@ import {
   useProductDemo,
 } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
-import { ProductContributions } from "compositions/widgets/product-contributions";
-import { ProductTasks } from "compositions/widgets/product-tasks";
+import { ProductRequirement } from "compositions/widgets/product-requirement";
 import { EntityDelete } from "compositions/widgets/entity-delete";
-import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { isEmptyArray } from "shared/value-predicates";
 import { FeatureScenarios } from "./ui/feature-scenarios";
@@ -58,7 +56,7 @@ export const ProductFeatureScreen = () => {
         }
       />
     );
-  const readinessLabel = isEmptyArray(featureData.scenarios) ? "Сценарии не описаны" : undefined;
+  const hasNoDocuments = isEmptyArray(relatedDocuments);
   return (
     <ProductPage
       title={featureData.name}
@@ -96,30 +94,33 @@ export const ProductFeatureScreen = () => {
           >
             Все связи и контекст
           </Button>
-          <ProductReadiness status={getFeatureStatus(featureData)} label={readinessLabel} />
+          <ProductReadiness status={getFeatureStatus(featureData)} />
           <Text size="xs" c="dimmed">
-            Готовность по всем сценариям и контрактам приложений
+            Фича продукта · готовность по задачам и реализациям приложений
           </Text>
         </Group>
       }
     >
-      <div className={styles.root}>
-        <div className={styles.content}>
-          <article className={styles.document} aria-label="Описание фичи">
-            <Text size="xs" c="dimmed" mb="md">
-              НАЗНАЧЕНИЕ И ОЖИДАЕМОЕ ПОВЕДЕНИЕ
-            </Text>
-            <MarkdownView text={featureData.description} />
-          </article>
-          <FeatureScenarios feature={featureData} />
-          <ProductTasks targetId={featureData.id} />
-        </div>
-        <ProductContributions featureId={featureData.id} />
-      </div>
-      <section aria-label="Документы фичи">
+      <ProductRequirement
+        key={featureData.id}
+        kind="feature"
+        targetId={featureData.id}
+        entityKey={featureData.key}
+        description={featureData.description}
+        parentName="Возможности продукта"
+        parentHref={`${base}/features${location.search}`}
+      >
+        <FeatureScenarios key={featureData.id} feature={featureData} />
+      </ProductRequirement>
+      <section className={styles.documents} aria-label="Документы фичи">
         <Text component="h2" size="lg" fw={600} mt="xl" mb="sm">
           Документы фичи и сценариев
         </Text>
+        {hasNoDocuments && (
+          <Text size="sm" c="dimmed">
+            К фиче и её сценариям пока не прикреплены документы.
+          </Text>
+        )}
         <ul>
           {relatedDocuments.map((document) => (
             <li key={document.id}>

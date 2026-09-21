@@ -228,7 +228,9 @@ export const boardTasksQuerySchema = z.strictObject({
     .min(1)
     .max(128)
     .optional()
-    .describe("ID продуктовой цели: только задачи с явной связью реализации"),
+    .describe(
+      "Ключ или ID цели: её прямые задачи и, для фичи/сценария, задачи активных имплементаций приложений",
+    ),
   board: board.optional(),
   column: kanbanColumnSchema.optional(),
   completion: z

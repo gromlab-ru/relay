@@ -1,5 +1,10 @@
 .root {
   min-width: 0;
+  scroll-margin-top: 5rem;
+  padding: var(--mantine-spacing-lg);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
 }
 
 .title {
@@ -19,10 +24,10 @@
 
 .contribution {
   min-width: 0;
-  padding: 1.25rem;
-  border: 1px solid var(--tasks-border);
-  border-radius: var(--mantine-radius-lg);
-  background: var(--tasks-surface);
+  display: grid;
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-sm) 0;
+  border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
 .link {

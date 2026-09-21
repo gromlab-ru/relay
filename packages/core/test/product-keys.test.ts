@@ -181,7 +181,7 @@ test("реализации: ID-пути, отдельное чтение и ре
   assert.equal(renamed.fields.scenarioId, scenario.id);
   assert.equal(
     (await service.state()).readiness.find((entry) => entry.id === scenario.id)?.status,
-    "done",
+    "partial",
   );
   assert.equal(
     (await new BoardTasksService(app.workspace).get(task.id)).productLinks[0]?.id,

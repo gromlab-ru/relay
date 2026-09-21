@@ -1,6 +1,6 @@
 import type { ComponentProps, ComponentPropsWithoutRef } from "react";
 import type { MarkdownField } from "ui/markdown-field";
-import type { NativeSelect, TextInput } from "@mantine/core";
+import type { TextInput } from "@mantine/core";
 import type { ProductStatus } from "domains/product-demo";
 
 /** Контекст одного редактируемого вклада. */
@@ -31,13 +31,6 @@ export type ScopeEditorParams = {
   >;
   /** Готовность собственной реализации в приложении. */
   status: ProductStatus;
-  /** Ключ неконтролируемого поля готовности. */
-  statusKey: string;
-  /** Свойства поля готовности от владельца формы. */
-  statusProps: Pick<
-    ComponentProps<typeof NativeSelect>,
-    "defaultValue" | "onChange" | "onBlur" | "error"
-  >;
   /** Включает элемент в состав. */
   onEnable: () => void;
   /** Возвращает к выбору на узком экране. */

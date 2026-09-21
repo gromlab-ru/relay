@@ -12,11 +12,32 @@ import {
   getTaskCriterion,
   getTaskActivity,
   getTaskActivityEvent,
+  getProductTaskProgress,
 } from "../adapters/board-tasks.adapter";
 import type { CreateTaskInput } from "../types/board-tasks.type";
 import type { BoardTask, TaskFilters, TasksPage, TaskLinksPage } from "../types/board-tasks.type";
 import type { CriteriaPage, CriterionView } from "../types/acceptance.type";
 import type { ActivityPage, ActivityEvent } from "../types/activity.type";
+import type { ProductTaskProgress } from "../types/board-tasks.type";
+import type { SWRResponse } from "swr";
+
+/**
+ * Обновляет полные счётчики реализации при изменении канбана и восстановлении связи.
+ */
+export const useProductTaskProgress = (
+  project: string,
+  targetId: string | null,
+): SWRResponse<ProductTaskProgress, Error> => {
+  const query = useSWR<ProductTaskProgress, Error>(
+    targetId === null ? null : ["product-task-progress", project, targetId],
+    () => {
+      if (targetId === null) throw new Error("Продуктовая цель не выбрана");
+      return getProductTaskProgress(project, targetId);
+    },
+  );
+  useKanbanSync(project, query.mutate);
+  return query;
+};
 
 /** Объединяет соседние уведомления; первичная загрузка принадлежит SWR, а не подписке. */
 const useKanbanSync = (project: string, refresh: () => Promise<unknown>): void => {

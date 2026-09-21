@@ -4,6 +4,10 @@ import type { ComponentPropsWithoutRef } from "react";
 export type ProductTasksParams = {
   /** Постоянный ID продуктовой цели. Отсутствие скрывает блок прототипа. */
   targetId?: string;
+  /** Открытый список и прогресс для продуктовой цели или реализации приложения. */
+  scope?: "application" | "product";
+  /** Переход к планированию задач приложения. */
+  boardHref?: string;
 };
 /** Атрибуты корневого элемента. */
 type RootAttrs = Omit<ComponentPropsWithoutRef<"div">, "children">;

@@ -11,9 +11,9 @@ export const DEMO_MODE = {
 } as const;
 /** Подписи готовности фич и сценариев. */
 export const PRODUCT_STATUS_OPTIONS = [
-  { value: "none", label: "Не готово" },
+  { value: "none", label: "Не реализовано" },
   { value: "partial", label: "В работе" },
-  { value: "done", label: "Готово" },
+  { value: "done", label: "Реализовано" },
 ];
 /** Назначения приложений. */
 export const APPLICATION_TYPES = ["Фронтенд", "Бэкенд", "Внутренний инструмент"];

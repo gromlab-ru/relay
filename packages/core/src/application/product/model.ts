@@ -4,9 +4,10 @@ import type {
   ProductRecord,
   ProductReference,
   ProductState,
-  ProductStatus,
 } from "../../domain/product.js";
 import { invariant } from "../../shared/errors.js";
+import type { BoardTaskRecord } from "../../domain/board-task.js";
+import { productTaskStatuses } from "./task-progress.js";
 
 /** Отпечаток содержимого учитывает также внешнее редактирование файлов. */
 export function productVersion(records: ProductRecord[]): string {
@@ -29,13 +30,6 @@ export function contractBasis(
       ]),
     )
     .digest("hex");
-}
-
-/** Готовность пустого набора не является подтверждением. */
-export function aggregateStatus(statuses: ProductStatus[]): ProductStatus {
-  if (!statuses.length) return "none";
-  if (statuses.every((status) => status === "done")) return "done";
-  return statuses.some((status) => status !== "none") ? "partial" : "none";
 }
 
 /** Проверяет типизированную цель, включая исторические реализации. */
@@ -158,11 +152,16 @@ export function validateProduct(records: ProductRecord[]): void {
   }
 }
 
-/** Строит общую проекцию и объяснимую готовность по всем участникам. */
-export function productState(productId: string, records: ProductRecord[]): ProductState {
+/** Поднимает готовность задач через активные реализации и считает участие приложений. */
+export function productState(
+  productId: string,
+  records: ProductRecord[],
+  tasks: Pick<BoardTaskRecord, "column" | "productLinks">[] = [],
+): ProductState {
   const contracts = records.flatMap((record) =>
     record.fields.kind === "scope" ? record.fields.contracts.filter((entry) => entry.active) : [],
   );
+  const statusesById = productTaskStatuses(tasks, contracts);
   const readiness = records
     .filter((record) => record.fields.kind === "scenario" || record.fields.kind === "feature")
     .map((record) => {
@@ -171,37 +170,16 @@ export function productState(productId: string, records: ProductRecord[]): Produ
           ? contract.scenarioId === record.id
           : contract.featureId === record.id && contract.scenarioId === null,
       );
-      const statuses = selected.map((contract) =>
-        contract.status === "done" && contract.basis !== contractBasis(contract, records)
-          ? ("partial" as const)
-          : contract.status,
-      );
       return {
         id: record.id,
-        status: aggregateStatus(statuses),
+        status: statusesById.get(`${record.fields.kind}:${record.id}`) ?? "none",
         participants: selected.length,
-        completed: statuses.filter((status) => status === "done").length,
-        stale: selected.filter(
-          (contract) =>
-            contract.status === "done" && contract.basis !== contractBasis(contract, records),
+        completed: selected.filter(
+          (contract) => statusesById.get(`implementation:${contract.id}`) === "done",
         ).length,
+        stale: 0,
       };
     });
-  for (const record of records.filter((entry) => entry.fields.kind === "feature")) {
-    const own = readiness.find((entry) => entry.id === record.id);
-    const scenarios = records.filter(
-      (entry) => entry.fields.kind === "scenario" && entry.fields.featureId === record.id,
-    );
-    if (!own) continue;
-    own.status = scenarios.length
-      ? aggregateStatus([
-          own.status,
-          ...scenarios.map(
-            (scenario) => readiness.find((entry) => entry.id === scenario.id)?.status ?? "none",
-          ),
-        ])
-      : "none";
-  }
   return {
     productId,
     version: productVersion(records),
@@ -213,10 +191,7 @@ export function productState(productId: string, records: ProductRecord[]): Produ
           ...record.fields,
           contracts: record.fields.contracts.map((contract) => ({
             ...contract,
-            status:
-              contract.status === "done" && contract.basis !== contractBasis(contract, records)
-                ? ("partial" as const)
-                : contract.status,
+            status: statusesById.get(`implementation:${contract.id}`) ?? "none",
           })),
         },
       };

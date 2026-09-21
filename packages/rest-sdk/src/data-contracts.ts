@@ -2719,7 +2719,7 @@ export interface BoardTasksQuery {
    */
   parentId?: string;
   /**
-   * ID продуктовой цели: только задачи с явной связью реализации
+   * Ключ или ID цели: её прямые задачи и, для фичи/сценария, задачи активных имплементаций приложений
    * @minLength 1
    * @maxLength 128
    */
@@ -5582,7 +5582,7 @@ export interface GetBoardTasksParams {
    */
   parentId?: string;
   /**
-   * ID продуктовой цели: только задачи с явной связью реализации
+   * Ключ или ID цели: её прямые задачи и, для фичи/сценария, задачи активных имплементаций приложений
    * @minLength 1
    * @maxLength 128
    */
@@ -5680,7 +5680,7 @@ export interface GetBoardTaskLinksParams {
    */
   parentId?: string;
   /**
-   * ID продуктовой цели: только задачи с явной связью реализации
+   * Ключ или ID цели: её прямые задачи и, для фичи/сценария, задачи активных имплементаций приложений
    * @minLength 1
    * @maxLength 128
    */
@@ -6745,7 +6745,7 @@ export interface GetBoardTasksForProjectParams {
    */
   parentId?: string;
   /**
-   * ID продуктовой цели: только задачи с явной связью реализации
+   * Ключ или ID цели: её прямые задачи и, для фичи/сценария, задачи активных имплементаций приложений
    * @minLength 1
    * @maxLength 128
    */
@@ -6854,7 +6854,7 @@ export interface GetBoardTaskLinksForProjectParams {
    */
   parentId?: string;
   /**
-   * ID продуктовой цели: только задачи с явной связью реализации
+   * Ключ или ID цели: её прямые задачи и, для фичи/сценария, задачи активных имплементаций приложений
    * @minLength 1
    * @maxLength 128
    */

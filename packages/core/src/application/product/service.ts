@@ -12,6 +12,7 @@ import type {
 import { actorSchema, parse } from "../../domain/validation.js";
 import { ProductRepository } from "../../storage/product.js";
 import { BoardRepository } from "../../storage/boards.js";
+import { BoardTaskRepository } from "../../storage/board-tasks.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
 import { contractBasis, productState, productVersion, validateProduct } from "./model.js";
@@ -31,7 +32,11 @@ export class ProductService {
       const repository = new ProductRepository(this.workspace);
       const records = await repository.ensureKeys(assertOwned);
       validateProduct(records);
-      return productState(repository.productId, records);
+      return productState(
+        repository.productId,
+        records,
+        await new BoardTaskRepository(this.workspace).all(),
+      );
     });
   }
 

@@ -1,12 +1,12 @@
 import { useLocation } from "react-router-dom";
 import { useProductPath } from "compositions/widgets/product-page";
 import { ProductTreeRow } from "compositions/widgets/product-tree-row";
-import { ProductTasks } from "compositions/widgets/product-tasks";
+import { PRODUCT_STATUS_LABELS } from "domains/product";
 import { isEmptyArray } from "shared/value-predicates";
 import type { ApplicationFeatureProps } from "./types/application-feature-props.type";
 
 /**
- * Открывает редактор вклада по названию, сохраняя отдельный переход к общему контракту.
+ * Открывает страницу реализации по названию, сохраняя отдельный переход к общему контракту.
  *
  * Используется для:
  *  - компактного отображения статуса и заголовка вклада под фичей или сценарием
@@ -36,7 +36,7 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
   const countLabel = isFeature
     ? isEmptyArray(contribution.scenarios)
       ? "Сценарии не выбраны"
-      : `Готово ${readyCount} из ${contribution.scenarios.length}`
+      : `Сценарии: ${readyCount} из ${contribution.scenarios.length} реализовано`
     : undefined;
   return (
     <div>
@@ -47,6 +47,7 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
         entityKey={selected.key}
         summary={selected.title}
         status={selected.status}
+        readinessLabel={PRODUCT_STATUS_LABELS[selected.status]}
         href={href}
         sourceHref={sourceHref}
         sourceLabel={sourceLabel}
@@ -56,7 +57,6 @@ export const ApplicationFeature = (props: ApplicationFeatureProps) => {
         isLastScenario={isLastScenario}
         payload={payload}
       />
-      <ProductTasks targetId={selected.contractId} />
     </div>
   );
 };

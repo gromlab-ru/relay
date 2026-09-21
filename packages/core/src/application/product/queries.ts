@@ -27,7 +27,7 @@ import { actorSchema } from "../../domain/validation.js";
 import { contractBasis } from "./model.js";
 import { readEntityCatalog, resolveEntity, assertEntityKeyAvailable } from "../entities/catalog.js";
 
-/** Выборки продукта не зависят от планов, задач и отчётов. */
+/** Выборки требований и реализаций; готовность реализации определяется задачами. */
 export class ProductQueries extends ProductService {
   async entities(input: ProductEntitiesQuery = {}) {
     const query = parse(productEntitiesQuerySchema, input, "список продуктовых целей");

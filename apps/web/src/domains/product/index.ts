@@ -21,3 +21,4 @@ export { ProductKey } from "./ui/product-key/product-key";
 export { PRODUCT_TARGET_LINK_SCHEMA } from "./config/product.schema";
 export type { ProductTargetLink } from "./types/product-entity.type";
 export { useFeatureExpansion } from "./hooks/use-feature-expansion.hook";
+export { PRODUCT_STATUS_LABELS } from "./config/product-status";

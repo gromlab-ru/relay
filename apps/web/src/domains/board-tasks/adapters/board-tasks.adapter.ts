@@ -27,6 +27,7 @@ import type {
   TaskFilters,
   CreateTaskInput,
   EditTaskInput,
+  ProductTaskProgress,
   MoveTaskInput,
   LinkTaskInput,
 } from "../types/board-tasks.type";
@@ -162,6 +163,31 @@ export const listBoardTasks = (
     () => getProjectApi(project).kanban.getBoardTasks({ ...filters, offset, limit, version }),
     TASKS_PAGE_SCHEMA,
   );
+
+/**
+ * Читает полные счётчики на одной версии без выгрузки всех задач.
+ */
+export const getProductTaskProgress = async (
+  project: string,
+  targetId: string,
+): Promise<ProductTaskProgress> => {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const all = await listBoardTasks(project, { productTarget: targetId }, 0, undefined, 1);
+      const completed = await listBoardTasks(
+        project,
+        { productTarget: targetId, column: "done" },
+        0,
+        all.version,
+        1,
+      );
+      return { total: all.total, completed: completed.total };
+    } catch (error) {
+      if (!(error instanceof BoardTaskError) || error.code !== "BOARD_CHANGED" || attempt >= 2)
+        throw error;
+    }
+  }
+};
 
 /** Как на прежней доске: единая согласованная проекция запрошенного объёма, с ограниченным повтором версии. */
 export const getBoardTaskSlice = async (

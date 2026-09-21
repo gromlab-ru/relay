@@ -14,6 +14,13 @@ export type TaskSummary = z.infer<typeof TASK_SUMMARY_SCHEMA>;
 export type TaskColumn = z.infer<typeof COLUMN_SCHEMA>;
 export type TaskRelation = z.infer<typeof RELATION_SCHEMA>;
 export type TasksPage = z.infer<typeof TASKS_PAGE_SCHEMA>;
+/** Прогресс задач цели, включая её активные имплементации, на одной версии выборки. */
+export type ProductTaskProgress = {
+  /** Всего задач с обязательством. */
+  total: number;
+  /** Задачи в колонке done. */
+  completed: number;
+};
 export type TaskLinksPage = z.infer<typeof LINKS_PAGE_SCHEMA>;
 export type TaskSaved = z.infer<typeof TASK_SAVED_SCHEMA>;
 export type TaskFilters = {

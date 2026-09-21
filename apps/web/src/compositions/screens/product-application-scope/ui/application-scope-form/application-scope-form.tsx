@@ -365,8 +365,6 @@ export const ApplicationScopeForm = (props: ApplicationScopeFormProps) => {
               titleKey={`${editor.titlePath}:${form.key(editor.titlePath)}`}
               titleProps={form.getInputProps(editor.titlePath)}
               status={editor.status}
-              statusKey={`${editor.statusPath}:${form.key(editor.statusPath)}`}
-              statusProps={form.getInputProps(editor.statusPath)}
               onEnable={() => handleToggle(editor.featureId, editor.scenarioId, true)}
               onBack={handleBackToSelection}
             />

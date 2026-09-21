@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { ProductRepository } from "../../storage/product.js";
 import { atomicJson, exists, readJson } from "../../storage/files.js";
@@ -7,6 +8,8 @@ import type { ProductEntitySummary } from "../../domain/product-implementation.j
 import { productState, validateProduct } from "./model.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { AppError } from "../../shared/errors.js";
+import { BoardTaskRepository } from "../../storage/board-tasks.js";
+import { productTaskStatuses } from "./task-progress.js";
 
 const catalogSchema = z.strictObject({
   version: z.literal(1),
@@ -15,7 +18,7 @@ const catalogSchema = z.strictObject({
 });
 
 /** Восстанавливаемый краткий индекс: запросы задач не читают полные описания продукта. */
-export async function productCatalog(workspace: Workspace, assertOwned: () => void) {
+async function storedProductCatalog(workspace: Workspace, assertOwned: () => void) {
   const repository = new ProductRepository(workspace);
   const path = join(repository.root, ".indexes", "catalog.json");
   const fingerprint = await repository.fingerprint();
@@ -90,4 +93,34 @@ export async function productCatalog(workspace: Workspace, assertOwned: () => vo
   if (Buffer.byteLength(JSON.stringify(catalog, null, 2) + "\n") <= 32 * 1024 * 1024)
     await atomicJson(path, catalog, workspace.runtime, false, assertOwned);
   return catalog;
+}
+
+/** Статусы накладываются после чтения индекса: изменения задач не оставляют устаревшую готовность. */
+export async function productCatalog(workspace: Workspace, assertOwned: () => void) {
+  const catalog = await storedProductCatalog(workspace, assertOwned);
+  const implementations = catalog.items.flatMap((entry) =>
+    entry.kind === "implementation" && entry.featureId !== null
+      ? [{ ...entry, featureId: entry.featureId }]
+      : [],
+  );
+  const statusesById = productTaskStatuses(
+    await new BoardTaskRepository(workspace).all(),
+    implementations,
+  );
+  return {
+    ...catalog,
+    fingerprint: createHash("sha256")
+      .update(
+        JSON.stringify([
+          catalog.fingerprint,
+          [...statusesById].sort(([left], [right]) => left.localeCompare(right)),
+        ]),
+      )
+      .digest("hex"),
+    items: catalog.items.map((entry) =>
+      ["feature", "scenario", "implementation"].includes(entry.kind)
+        ? { ...entry, status: statusesById.get(`${entry.kind}:${entry.id}`) ?? "none" }
+        : entry,
+    ),
+  };
 }

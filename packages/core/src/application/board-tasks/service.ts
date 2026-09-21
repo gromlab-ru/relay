@@ -40,6 +40,7 @@ import { entityKeySchema } from "@relay/contracts/primitives";
 import { readEntityCatalog, resolveEntity, assertEntityKeyAvailable } from "../entities/catalog.js";
 import { TaskActivityRepository, activityHash } from "../../storage/task-activity.js";
 import { prepareTaskHistory, taskBaseline } from "./history.js";
+import { productTaskTargets } from "../product/task-progress.js";
 
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const versionOf = (tasks: BoardTaskRecord[]) => hash(tasks.map((task) => [task.id, task.revision]));
@@ -250,13 +251,23 @@ export class BoardTasksService {
   async list(input: BoardTasksQuery = {}) {
     const query = parse(boardTasksQuerySchema, input, "список задач доски");
     return this.read(async (tasks, boards) => {
+      let targetAddresses: Set<string> | undefined;
+      let pageVersion = versionOf(tasks);
       if (query.productTarget) {
         try {
-          query.productTarget = resolveEntity(
-            await this.workspace.locked((owned) => readEntityCatalog(this.workspace, owned)),
-            query.productTarget,
-            ["feature", "scenario", "implementation"],
-          ).ref.id;
+          const catalog = await this.workspace.locked((owned) =>
+            readEntityCatalog(this.workspace, owned),
+          );
+          const target = resolveEntity(catalog, query.productTarget, [
+            "feature",
+            "scenario",
+            "implementation",
+          ]).ref;
+          const implementations = catalog.entries.flatMap((entry) =>
+            entry.data.kind === "implementation" ? [{ id: entry.ref.id, ...entry.data }] : [],
+          );
+          targetAddresses = productTaskTargets(target, implementations);
+          pageVersion = hash([pageVersion, [...targetAddresses].sort()]);
         } catch (error) {
           // Совместимый список канбана возвращает пустую выборку для отсутствующей цели.
           if (!(error instanceof AppError) || error.code !== "ENTITY_NOT_FOUND") throw error;
@@ -275,7 +286,7 @@ export class BoardTasksService {
               (query.completion === "finished") ===
                 (task.column === "done" || task.column === "cancelled")) &&
             (!query.productTarget ||
-              task.productLinks.some((link) => link.id === query.productTarget)) &&
+              task.productLinks.some((link) => targetAddresses?.has(`${link.kind}:${link.id}`))) &&
             (!query.q ||
               `${task.id} ${task.keys.join(" ")} ${task.title} ${query.searchIn === "title" ? "" : task.description}`
                 .toLocaleLowerCase()
@@ -285,7 +296,7 @@ export class BoardTasksService {
         })
         .sort(ordered)
         .map((task) => summary(task, tasks, boards));
-      return page(selected, query, versionOf(tasks));
+      return page(selected, query, pageVersion);
     });
   }
   async get(reference: string) {

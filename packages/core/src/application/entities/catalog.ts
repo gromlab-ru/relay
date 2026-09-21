@@ -78,9 +78,9 @@ export async function readEntityCatalog(
   const repository = new ProductRepository(workspace);
   const source = await repository.snapshot(owned);
   validateProduct(source.records);
-  const state = productState(repository.productId, source.records);
   const boards = await new BoardRepository(workspace).all();
   const tasks = await new BoardTaskRepository(workspace).all();
+  const state = productState(repository.productId, source.records, tasks);
   const entries: EntityEntry[] = [];
   const add = (
     kind: EntityKind,

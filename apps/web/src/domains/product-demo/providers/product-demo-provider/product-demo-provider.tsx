@@ -35,10 +35,6 @@ export const ProductDemoProvider = (props: ProductDemoProviderProps) => {
     state ?? { productId: scopeId, version: "0", records: [], readiness: [] },
   );
   const mode: DemoMode = query.error ? "read-error" : state === undefined ? "loading" : "filled";
-  const hasStaleImplementations = state?.readiness.some((entry) => entry.stale > 0) ?? false;
-  const notice = hasStaleImplementations
-    ? "Требования изменились. Ранее выполненные реализации требуют переподтверждения в составе приложений."
-    : "";
 
   /**
    * Проверяет версию формы до отправки и сохраняет requestId при сетевом отказе.
@@ -187,7 +183,7 @@ export const ProductDemoProvider = (props: ProductDemoProviderProps) => {
         snapshot: view.snapshot,
         scopes: view.scopes,
         mode,
-        notice,
+        notice: "",
         setMode: retry,
         reset: retry,
         saveDocument,

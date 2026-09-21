@@ -1,5 +1,26 @@
 # Журнал создания TSX
 
+## Проектные фичи и сценарии — 21 сентября 2026
+
+`pnpm --filter @relay/web run create ui-unit product-requirement src/compositions/widgets`.
+Общий виджет владеет описанием требования, задачами, контекстом, зависимостями и
+реализациями; используется страницами фичи и сценария. Компонент зависимостей первого
+этапа перенесён целиком в `compositions/widgets/product-dependencies` и получил фасет;
+перенос существующего TSX не требует повторной генерации. Глубокие прежние импорты удалены.
+
+## Страницы реализаций приложений — 21 сентября 2026
+
+Из корня выполнены:
+
+```bash
+pnpm --filter @relay/web run create ui-component implementation-details src/compositions/screens/product-entity/ui
+pnpm --filter @relay/web run create ui-component implementation-dependencies src/compositions/screens/product-entity/ui
+```
+
+Оба компонента — внутренняя реализация product-entity без фасетов. Полное требование
+и зависимости загружаются через domains/product и domains/relations; список задач
+предоставляет существующий product-tasks. Стили и свойства адаптированы к сценарию чтения.
+
 ## Удаление сущностей — 21 сентября 2026
 
 `pnpm --filter @relay/web run create ui-unit entity-delete src/compositions/widgets`.

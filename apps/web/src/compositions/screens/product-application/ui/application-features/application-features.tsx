@@ -85,7 +85,8 @@ export const ApplicationFeatures = (props: ApplicationFeaturesProps) => {
         <div>
           <h2 className={styles.title}>Реализуемые фичи и сценарии</h2>
           <Text size="sm" c="dimmed">
-            Что приложение берёт на себя для выполнения общих контрактов.
+            Готовность обновляется по задачам. Откройте фичу или сценарий, чтобы увидеть описание и
+            ход реализации.
           </Text>
         </div>
         <Button
@@ -110,9 +111,9 @@ export const ApplicationFeatures = (props: ApplicationFeaturesProps) => {
         <div className={styles.scope}>
           <div className={styles.toolbar}>
             <Group gap="md" role="group" aria-label="Готовность реализации в приложении">
-              <ProductReadiness status="done" />
-              <ProductReadiness status="partial" />
-              <ProductReadiness status="none" />
+              <ProductReadiness status="done" label="Реализовано" />
+              <ProductReadiness status="partial" label="В работе" />
+              <ProductReadiness status="none" label="Не реализовано" />
             </Group>
             <Button
               size="compact-xs"

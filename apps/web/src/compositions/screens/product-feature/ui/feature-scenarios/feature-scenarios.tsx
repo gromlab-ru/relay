@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { useState } from "react";
 import { Button, Text } from "@mantine/core";
 import { Plus } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -18,16 +19,27 @@ export const FeatureScenarios = (props: FeatureScenariosProps) => {
   const { feature, className, ...rootAttrs } = props;
   const base = useProductPath();
   const location = useLocation();
+  const [count, setCount] = useState(10);
+  const orderedScenarios = [...feature.scenarios].sort((left, right) =>
+    (left.key ?? left.name).localeCompare(right.key ?? right.name, "ru", { numeric: true }),
+  );
+  const anchorIndex = orderedScenarios.findIndex(
+    (entry) => location.hash === `#scenario-${entry.id}`,
+  );
+  const visibleCount = Math.max(count, anchorIndex + 1);
+  const scenarioItems = orderedScenarios.slice(0, visibleCount);
+  const hasMore = visibleCount < feature.scenarios.length;
   const featurePath = `${base}/features/${feature.key ?? feature.id}`;
   const hasNoScenarios = isEmptyArray(feature.scenarios);
   const readyCount = feature.scenarios.filter((scenario) => scenario.status === "done").length;
   return (
-    <section {...rootAttrs} id="scenarios" className={clsx(styles.root, className)}>
+    <section {...rootAttrs} id="scenarios" tabIndex={-1} className={clsx(styles.root, className)}>
       <header className={styles.header}>
         <div>
           <h2 className={styles.title}>Сценарии фичи</h2>
           <Text size="sm" c="dimmed">
-            Готово {readyCount} из {feature.scenarios.length}
+            Реализовано {readyCount} из {feature.scenarios.length} · каждый сценарий имеет свои
+            задачи
           </Text>
         </div>
         <Button
@@ -44,12 +56,13 @@ export const FeatureScenarios = (props: FeatureScenariosProps) => {
         <div className={styles.empty}>
           <Text fw={600}>Сценарии не описаны</Text>
           <Text size="sm" c="dimmed" mt="xs">
-            Добавьте первое конкретное поведение. Готовность фичи будет определяться её сценариями.
+            Опишите первое конкретное поведение. У сценария будет собственная страница и список
+            задач.
           </Text>
         </div>
       )}
       <div className={styles.sections}>
-        {feature.scenarios.map((scenario) => (
+        {scenarioItems.map((scenario) => (
           <ScenarioSection
             key={scenario.id}
             scenario={scenario}
@@ -58,6 +71,11 @@ export const FeatureScenarios = (props: FeatureScenariosProps) => {
           />
         ))}
       </div>
+      {hasMore && (
+        <Button variant="subtle" mt="md" onClick={() => setCount(visibleCount + 10)}>
+          Ещё сценарии · показано {scenarioItems.length} из {feature.scenarios.length}
+        </Button>
+      )}
     </section>
   );
 };

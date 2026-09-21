@@ -1,9 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 
-/** Общая фича, для которой приложения объявляют вклад. */
+/** Продуктовое требование, для которого приложения объявляют вклад. */
 export type ProductContributionsParams = {
-  /** Идентификатор фичи. */
-  featureId: string;
+  /** Постоянный идентификатор фичи или сценария. */
+  targetId: string;
 };
 /** Атрибуты области реализации. */
 type RootAttrs = Omit<ComponentPropsWithoutRef<"section">, "children">;

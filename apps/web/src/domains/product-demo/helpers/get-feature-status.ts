@@ -1,14 +1,8 @@
-import { isEmptyArray } from "shared/value-predicates";
 import type { ProductFeature, ProductStatus } from "../types/product-demo.type";
 
 /**
- * Определяет готовность по полному составу сценариев независимо от фильтров и задач.
+ * Возвращает серверную готовность фичи по её прямым задачам.
  */
 export const getFeatureStatus = (feature: ProductFeature): ProductStatus => {
-  if (feature.status !== undefined) return feature.status;
-  const scenarios = feature.scenarios;
-  if (isEmptyArray(scenarios)) return "none";
-  if (scenarios.every((scenario) => scenario.status === "done")) return "done";
-  if (scenarios.some((scenario) => scenario.status !== "none")) return "partial";
-  return "none";
+  return feature.status ?? "none";
 };

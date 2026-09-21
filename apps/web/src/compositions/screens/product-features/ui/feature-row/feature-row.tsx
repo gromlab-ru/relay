@@ -17,12 +17,11 @@ export const FeatureRow = (props: FeatureRowProps) => {
   const name = scenario?.name ?? feature.name;
   const status = scenario?.status ?? getFeatureStatus(feature);
   const hasNoScenarios = isEmptyArray(feature.scenarios);
-  const readinessLabel = isFeature && hasNoScenarios ? "Сценарии не описаны" : undefined;
   const readyCount = feature.scenarios.filter((entry) => entry.status === "done").length;
   const countLabel = isFeature
     ? hasNoScenarios
       ? "Сценарии не описаны"
-      : `Готово ${readyCount} из ${feature.scenarios.length}`
+      : `Сценарии: ${readyCount} из ${feature.scenarios.length} реализовано`
     : undefined;
   const summary = isFeature ? feature.summary : undefined;
   const href = `${base}/features/${feature.key ?? feature.id}${search}`;
@@ -39,7 +38,6 @@ export const FeatureRow = (props: FeatureRowProps) => {
       href={target}
       returnTo={`${base}/features${search}`}
       status={status}
-      readinessLabel={readinessLabel}
       countLabel={countLabel}
       isFeature={isFeature}
       isLastScenario={isLastScenario}

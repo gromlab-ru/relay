@@ -1,4 +1,4 @@
-import { Alert, Anchor, Button, Group, Stack, Text } from "@mantine/core";
+import { Alert, Button, Group, Stack, Text } from "@mantine/core";
 import { Link, Navigate, useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
 import { Pencil } from "lucide-react";
 import { useProjectId, useProjectBasePath } from "domains/project";
@@ -8,14 +8,15 @@ import {
   productError,
   useProductEntities,
   useProductEntity,
+  PRODUCT_STATUS_LABELS,
 } from "domains/product";
 import { ProductReadiness } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
-import { ProductTasks } from "compositions/widgets/product-tasks";
+import { ProductRequirement } from "compositions/widgets/product-requirement";
 import { EntityDelete } from "compositions/widgets/entity-delete";
-import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { ImplementationEditor } from "./ui/implementation-editor/implementation-editor";
+import { ImplementationDetails } from "./ui/implementation-details/implementation-details";
 import styles from "./styles/product-entity.module.css";
 
 /**
@@ -150,10 +151,11 @@ export const ProductEntityScreen = () => {
         replace
       />
     );
-  const title = fields.kind === "implementation" ? fields.title : fields.name;
+  const title = fields.kind === "implementation" ? (meta.targetName ?? fields.title) : fields.name;
+  const contributionTitle = fields.kind === "implementation" ? fields.title : title;
   const eyebrow = isImplementation ? "ПРОДУКТ / РЕАЛИЗАЦИЯ" : "ПРОДУКТ / СЦЕНАРИЙ";
   const description = isImplementation
-    ? "Вклад приложения в общее требование продукта."
+    ? `${meta.scenarioId === null ? "Реализация фичи" : "Реализация сценария"} · ${applicationParent?.title ?? "Приложение"}`
     : "Ожидаемое поведение и проверяемый результат.";
   const isInactive = fields.kind === "implementation" && !fields.active;
   if (isInactive && isEditing)
@@ -176,9 +178,15 @@ export const ProductEntityScreen = () => {
   const backState = isEditing ? location.state : undefined;
   const backLabel = isEditing ? "К просмотру реализации" : "Назад к контексту";
   const editorState = { returnTo: contextReturn, editorReturnTo: viewHref };
-  const hasParents = parentItems.length !== 0;
   const hasStatus = meta?.status !== null && meta?.status !== undefined;
-  const hasReadError = query.error !== undefined;
+  const readinessLabel = meta.status !== null ? PRODUCT_STATUS_LABELS[meta.status] : undefined;
+  const shouldShowImplementation = isImplementation && !isEditing;
+  const shouldShowDocument = !isImplementation && !isEditing;
+  const implementationTarget = meta.scenarioId ?? meta.featureId;
+  const canShowDetails = shouldShowImplementation && implementationTarget !== null;
+  const hasReadError =
+    query.error !== undefined || summary.error !== undefined || parents.error !== undefined;
+  const sourceParent = parentItems.find((entry) => entry.id === implementationTarget);
   const editorData =
     fields.kind === "implementation"
       ? {
@@ -200,7 +208,7 @@ export const ProductEntityScreen = () => {
       meta={
         <Group gap="md">
           <ProductKey value={entity.key} copyable />
-          {hasStatus && <ProductReadiness status={meta.status!} />}
+          {hasStatus && <ProductReadiness status={meta.status ?? "none"} label={readinessLabel} />}
         </Group>
       }
       actions={
@@ -249,28 +257,20 @@ export const ProductEntityScreen = () => {
         {hasReadError && (
           <Alert color="orange">
             Не удалось обновить запись. Ваш ввод сохранён.{" "}
-            <Button variant="subtle" onClick={() => void query.mutate()}>
+            <Button
+              variant="subtle"
+              onClick={() => {
+                void query.mutate();
+                void summary.mutate();
+                void parents.mutate();
+              }}
+            >
               Повторить
             </Button>
           </Alert>
         )}
         {isInactive && (
           <Alert color="gray">Участие приложения снято. Описание и прежние связи сохранены.</Alert>
-        )}
-        {hasParents && (
-          <Group gap="md" className={styles.context}>
-            {parentItems.map((entry) => (
-              <Anchor
-                component={Link}
-                to={entry.contextHref}
-                key={entry.id}
-                c="var(--mantine-color-text)"
-                size="sm"
-              >
-                <ProductKey value={entry.key} /> · {entry.title}
-              </Anchor>
-            ))}
-          </Group>
         )}
         {isEditing && editorData !== null && (
           <ImplementationEditor
@@ -285,15 +285,33 @@ export const ProductEntityScreen = () => {
             }}
           />
         )}
-        {!isEditing && (
-          <article className={styles.document}>
-            <MarkdownView text={fields.description} />
-          </article>
+        {canShowDetails && (
+          <ImplementationDetails
+            key={entity.id}
+            implementationId={entity.id}
+            targetId={implementationTarget}
+            title={contributionTitle}
+            description={fields.description}
+            applicationName={parent.title}
+            applicationId={parent.id}
+            applicationHref={parent.href}
+            sourceHref={sourceParent?.href}
+          />
+        )}
+        {shouldShowDocument && (
+          <ProductRequirement
+            key={entity.id}
+            kind="scenario"
+            targetId={entity.id}
+            entityKey={entity.key}
+            description={fields.description}
+            parentName={parent.title}
+            parentHref={parent.contextHref}
+          />
         )}
         <Text size="xs" c="dimmed">
           Ревизия {entity.revision} · ID {entity.id}
         </Text>
-        <ProductTasks targetId={entity.id} />
       </Stack>
     </ProductPage>
   );

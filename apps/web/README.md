@@ -34,23 +34,26 @@ Vite по умолчанию слушает 5173 и проксирует `/api` 
 Внутренние сегменты `ui`, `hooks`, `types`, `styles`, `helpers`, `config`, `adapters`
 колоцируются у владельца; фасет объявляет отдельный юнит.
 
-| Владелец                                 | Ответственность                                               |
-| ---------------------------------------- | ------------------------------------------------------------- |
-| app/router                               | Вложенные URL и техническая интеграция                        |
-| compositions/screens/relay               | Выбор проекта и область ProjectScope                          |
-| compositions/layouts/project             | Общая шапка, навигация и Outlet                               |
-| compositions/widgets/page-breadcrumbs    | Путь страницы, адресные названия и адаптивное меню родителей  |
-| domains/project                          | Настройки, постоянный ID, путь по slug и индикатор соединения |
-| domains/workspace                        | Режим и реестр сервера                                        |
-| domains/product                          | Постоянные продуктовые данные, операции и кеш                 |
-| domains/product-demo                     | Адаптер действующего продуктового интерфейса                  |
-| domains/boards, domains/board-tasks      | Каталог досок, канбан и записи задач                          |
-| domains/entities, domains/relations      | Общий каталог, резолвер, отношения и контекст                 |
-| compositions/screens/project-board       | Канбан и центральное окно задачи                              |
-| infra/tasks-api                          | Неизменяемые проектные клиенты общего SDK                     |
-| infra/workspace-events                   | Разделяемый EventSource и восстановление подключения          |
-| ui/kanban-dnd                            | Универсальные helpers переноса                                |
-| ui/markdown-*, ui/themes, ui/state-panel | Markdown, темы и состояния интерфейса                         |
+| Владелец                                   | Ответственность                                               |
+| ------------------------------------------ | ------------------------------------------------------------- |
+| app/router                                 | Вложенные URL и техническая интеграция                        |
+| compositions/screens/relay                 | Выбор проекта и область ProjectScope                          |
+| compositions/layouts/project               | Общая шапка, навигация и Outlet                               |
+| compositions/widgets/page-breadcrumbs      | Путь страницы, адресные названия и адаптивное меню родителей  |
+| domains/project                            | Настройки, постоянный ID, путь по slug и индикатор соединения |
+| domains/workspace                          | Режим и реестр сервера                                        |
+| domains/product                            | Постоянные продуктовые данные, операции и кеш                 |
+| compositions/widgets/product-requirement   | Полное описание, задачи и контекст проектной фичи/сценария    |
+| compositions/widgets/product-dependencies  | Прямые зависимости требований и реализаций                    |
+| compositions/widgets/product-contributions | Адресные реализации выбранного требования в приложениях       |
+| domains/product-demo                       | Адаптер действующего продуктового интерфейса                  |
+| domains/boards, domains/board-tasks        | Каталог досок, канбан и записи задач                          |
+| domains/entities, domains/relations        | Общий каталог, резолвер, отношения и контекст                 |
+| compositions/screens/project-board         | Канбан и центральное окно задачи                              |
+| infra/tasks-api                            | Неизменяемые проектные клиенты общего SDK                     |
+| infra/workspace-events                     | Разделяемый EventSource и восстановление подключения          |
+| ui/kanban-dnd                              | Универсальные helpers переноса                                |
+| ui/markdown-*, ui/themes, ui/state-panel   | Markdown, темы и состояния интерфейса                         |
 
 Алиасы определены в tsconfig, Vite читает их через resolve.tsconfigPaths. Браузерный
 ESNext/Bundler-профиль не наследует NodeNext серверных пакетов. SDK принадлежит

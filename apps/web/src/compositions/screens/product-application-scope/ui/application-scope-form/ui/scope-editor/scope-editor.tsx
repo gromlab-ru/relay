@@ -1,9 +1,10 @@
 import clsx from "clsx";
-import { Accordion, Button, NativeSelect, Text, TextInput } from "@mantine/core";
+import { Accordion, Button, Text, TextInput } from "@mantine/core";
 import { ArrowLeft, Plus } from "lucide-react";
 import { MarkdownField } from "ui/markdown-field";
 import { MarkdownView } from "ui/markdown-view";
-import { PRODUCT_STATUS_OPTIONS, ProductReadiness } from "domains/product-demo";
+import { ProductReadiness } from "domains/product-demo";
+import { PRODUCT_STATUS_LABELS } from "domains/product";
 import type { ScopeEditorProps } from "./types/scope-editor-props.type";
 import styles from "./styles/scope-editor.module.css";
 
@@ -25,8 +26,6 @@ export const ScopeEditor = (props: ScopeEditorProps) => {
     titleKey,
     titleProps,
     status,
-    statusKey,
-    statusProps,
     onEnable,
     onBack,
     className,
@@ -72,16 +71,10 @@ export const ScopeEditor = (props: ScopeEditorProps) => {
         disabled={!isEnabled}
       />
       <div className={styles.readiness}>
-        <NativeSelect
-          {...statusProps}
-          key={statusKey}
-          label="Готовность в этом приложении"
-          description="Приложение отмечает состояние своей части реализации."
-          data={PRODUCT_STATUS_OPTIONS}
-          disabled={!isEnabled}
-          className={styles.statusField}
-        />
-        <ProductReadiness status={status} />
+        <Text size="sm" c="dimmed">
+          Готовность рассчитывается по задачам реализации.
+        </Text>
+        <ProductReadiness status={status} label={PRODUCT_STATUS_LABELS[status]} />
       </div>
       {!isEnabled && (
         <div className={styles.notSelected}>
