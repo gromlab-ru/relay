@@ -16,7 +16,7 @@ export function registerProject(program: Command, runtime: Runtime): void {
     name: "init",
     description: "Создать конфиг и хранилище проекта",
     details:
-      "Создаёт .relay/config.json и базу .relay/tasks. Существующий конфиг не заменяется.\n--storage разрешается относительно конфигурации. --config задаёт её явный путь.\nПосле init задайте RELAY_ACTOR и создайте первую задачу.",
+      "Создаёт .relay/config.json и единое ID-хранилище рядом с конфигом: entities, relations, operations и индексы. Существующие данные не заменяются.\n--storage сохраняет совместимую привязку прежнего runtime; --config задаёт путь конфигурации.\nПосле init задайте RELAY_ACTOR и создайте первую задачу.",
     examples: [
       ["relay-cli init", "Начать в текущем проекте"],
       [
@@ -25,7 +25,11 @@ export function registerProject(program: Command, runtime: Runtime): void {
       ],
     ],
     configure: (command) =>
-      command.option("--storage <path>", "Каталог данных относительно конфига", "tasks"),
+      command.option(
+        "--storage <path>",
+        "Прежняя привязка storageDir/runtime относительно конфига",
+        "tasks",
+      ),
   });
   init.action(async () => {
     const globals = init.optsWithGlobals<GlobalOptions>();
@@ -62,8 +66,8 @@ export function registerProject(program: Command, runtime: Runtime): void {
     printResult(
       runtime.stdout,
       {
-        data: { configPath: workspace.configPath, storageDir: workspace.root },
-        text: (options) => initializedText(workspace.configPath, workspace.root, options),
+        data: { configPath: workspace.configPath, storageDir: workspace.dataRoot },
+        text: (options) => initializedText(workspace.configPath, workspace.dataRoot, options),
       },
       runtime.output,
     );

@@ -1,0 +1,291 @@
+import { dirname, join, relative } from "node:path";
+import { readdir } from "node:fs/promises";
+import type { Workspace } from "../../storage/workspace.js";
+import { ProductRepository } from "../../storage/product.js";
+import { BoardRepository } from "../../storage/boards.js";
+import { BoardTaskRepository } from "../../storage/board-tasks.js";
+import { TaskActivityRepository, legacyTaskEvents } from "../../storage/task-activity.js";
+import type { ActivityFile } from "../../storage/task-activity.js";
+import { GraphRepository } from "../../storage/graph.js";
+import { DocumentLinksRepository } from "../../storage/document-links.js";
+import { EntityDeletionRepository } from "../../storage/entity-deletion.js";
+import { graphReceiptSchema } from "../../storage/graph-format.js";
+import type { GraphCurrent, GraphReceipt } from "../../storage/graph-format.js";
+import type { GraphEvent } from "../../domain/entity-graph.js";
+import { readJson, exists } from "../../storage/files.js";
+import { projectSettings } from "../../storage/project-settings.js";
+import * as unified from "../../storage/unified-adapter.js";
+import { writeOwnedRelations, appendGraphEvent } from "../../storage/entity-store/relations.js";
+import {
+  syncBoardRelations,
+  syncProductRelations,
+  syncTaskRelations,
+} from "../entities/owned-relations.js";
+import { refreshEntityCards } from "../entities/storage-projection.js";
+import { invariant } from "../../shared/errors.js";
+import { GraphService } from "../graph/service.js";
+import { atomicJson } from "../../storage/files.js";
+import { digest } from "../../storage/entity-store/format.js";
+
+/** Только явное обслуживание меняет физический формат существующего проекта. */
+export class StorageService {
+  constructor(readonly workspace: Workspace) {}
+
+  async reindex() {
+    invariant(
+      await this.workspace.hasUnifiedStorage(),
+      "STORAGE_MIGRATION_REQUIRED",
+      "Сначала выполните storage migrate",
+      4,
+    );
+    return new GraphService(this.workspace).reindex();
+  }
+
+  /** Файловый наблюдатель проверяет только изменённые пути; обычные запросы не сканируют базу. */
+  async checkExternalChanges(paths: readonly string[]): Promise<void> {
+    const selected = [...new Set(paths)].filter(
+      (path) =>
+        /^(entities|relations|keyspaces|operations)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.json$/.test(
+          path,
+        ) && !path.split("/").some((part) => part === "." || part === ".." || part === ".indexes"),
+    );
+    if (!selected.length) return;
+    await this.workspace.withEntityStorage(async (store, owned) => {
+      const changed: string[] = [];
+      await store.transaction(owned, async (snapshot) => {
+        for (const path of selected) {
+          try {
+            const expected = await snapshot.indexGet("file-hashes", path);
+            const raw = await snapshot.readFile(path);
+            const actual = raw === null ? undefined : digest(raw);
+            if (expected !== actual) changed.push(path);
+          } catch {
+            changed.push(path);
+          }
+        }
+      });
+      if (!changed.length) return;
+      await atomicJson(
+        join(store.root, "runtime/index-stale.json"),
+        { paths: changed.slice(0, 20), total: changed.length },
+        join(store.root, "runtime"),
+        false,
+        owned,
+      );
+      invariant(
+        false,
+        "STORAGE_INDEX_STALE",
+        "Данные изменены вне Core. Выполните storage reindex и перечитайте записи",
+        4,
+        { paths: changed.slice(0, 20), total: changed.length },
+      );
+    });
+  }
+
+  async migrate() {
+    return this.workspace.locked(async (owned) => {
+      if (this.workspace.storageSession)
+        return { migrated: false, format: "relay-entities", entities: 0 };
+      const workspace = this.workspace,
+        root = dirname(workspace.configPath);
+      const products = new ProductRepository(workspace);
+      const productSource = await products.snapshot(owned);
+      const boards = await new BoardRepository(workspace).all();
+      const tasks = await new BoardTaskRepository(workspace).all();
+      const graph = new GraphRepository(workspace);
+      let graphSource = await graph.open(owned);
+      if (graphSource.legacy) {
+        await graph.migrate(owned);
+        graphSource = await graph.open(owned);
+      }
+      const edges: GraphCurrent[] = [];
+      for (const id of graphSource.index.entries.keys())
+        edges.push((await graph.get(id, graphSource))!);
+      const graphEvents: GraphEvent[] = [];
+      for (let offset = 0; offset < graphSource.meta.eventCount; offset += 100)
+        graphEvents.push(...(await graph.history({ offset, limit: 100 }, owned)).items);
+      const graphReceipts: { key: string; value: GraphReceipt }[] = [];
+      for (const file of await jsonTree(join(root, "relations/requests")))
+        graphReceipts.push({
+          key: file.slice(file.lastIndexOf("/") + 1, -5),
+          value: graphReceiptSchema.parse(await readJson(file)),
+        });
+      const activity = new TaskActivityRepository(workspace);
+      const activityFiles: ActivityFile[] = [];
+      for (const path of await jsonTree(activity.root))
+        activityFiles.push({
+          path: relative(activity.root, path),
+          value: await readJson(path, 16 * 1024 * 1024),
+        });
+      for (const task of tasks)
+        if (!(await activity.hasHistory(task)))
+          for (const event of legacyTaskEvents(task))
+            activityFiles.push(...activity.eventFiles(event));
+      const bindings = new Map<string, { owner: { kind: string; id: string }; slot: string }>();
+      for (const record of productSource.records)
+        if (record.fields.kind === "document")
+          for (const binding of Object.values(
+            await new DocumentLinksRepository(workspace).bindings(record.id),
+          ))
+            bindings.set(binding.id, {
+              owner: { kind: "document", id: record.id },
+              slot: "document-links",
+            });
+      const reserved = await new EntityDeletionRepository(workspace).reservedKeys();
+      const deletionReceipts: { key: string; value: unknown }[] = [];
+      for (const path of await jsonTree(join(root, "entity-deletions/receipts")))
+        deletionReceipts.push({
+          key: path.slice(path.lastIndexOf("/") + 1, -5),
+          value: await readJson(path),
+        });
+      // После переключения известные JSON-источники удаляются тем же WAL; их прежнее содержание остаётся в журнале переноса.
+      const sources: string[] = [];
+      for (const path of [
+        products.root,
+        new BoardRepository(workspace).root,
+        activity.root,
+        join(root, "relations"),
+        join(root, "entity-deletions"),
+      ])
+        for (const file of await jsonTree(path))
+          if (!file.includes("/.indexes/")) sources.push(relative(root, file));
+      const config = unified.json(await readJson(workspace.configPath)) as Record<string, unknown>;
+      const settings = workspace.config.projectSettings ?? {
+        version: 1 as const,
+        ...projectSettings(workspace.config, workspace.configPath),
+      };
+      workspace.storageProductId = products.productId;
+      await workspace.withEntityStorage(
+        (store, migrationOwned) =>
+          store.transaction(
+            migrationOwned,
+            (tx) =>
+              workspace.inStorageSession(tx, migrationOwned, async () => {
+                await unified.saveSettings(workspace, settings, true);
+                if (!productSource.records.some((record) => record.fields.kind === "passport")) {
+                  const at = new Date().toISOString();
+                  await tx.importRecord({
+                    schemaVersion: 1,
+                    dataVersion: 1,
+                    kind: "product",
+                    id: "passport",
+                    key: "PRODUCT",
+                    aliases: [],
+                    revision: 0,
+                    data: { name: "", summary: "", description: "" },
+                    createdAt: at,
+                    createdBy: "relay",
+                    updatedAt: at,
+                    updatedBy: "relay",
+                  });
+                }
+                for (const record of productSource.records.filter(
+                  (record) => record.fields.kind !== "scope",
+                ))
+                  await unified.saveProduct(workspace, record, true);
+                for (const board of boards) await unified.saveBoard(workspace, board, true);
+                for (const record of productSource.implementations.values())
+                  await unified.saveImplementation(workspace, record, true);
+                for (const record of productSource.records.filter(
+                  (record) => record.fields.kind === "scope",
+                ))
+                  await unified.saveProduct(workspace, record, true);
+                for (const task of tasks) await unified.saveTask(workspace, task, true);
+                for (const key of reserved) await tx.reserveLegacyKey(key);
+                await new TaskActivityRepository(workspace).publish(activityFiles, owned);
+                for (const receipt of deletionReceipts)
+                  await tx.appendValue(
+                    "deletion-receipt",
+                    receipt.key,
+                    unified.json(receipt.value),
+                  );
+                await tx.appendValue("graph-baseline", "legacy", unified.json(graphSource.meta));
+                for (const record of edges) {
+                  const binding = bindings.get(record.edge.id) ?? {
+                    owner: record.edge.from,
+                    slot: "diagnostic",
+                  };
+                  await writeOwnedRelations(tx, binding.owner, [
+                    {
+                      slot: binding.slot,
+                      edge: {
+                        ...record.edge,
+                        description: record.edge.description.split("\n"),
+                        active: record.active,
+                        historyCount: record.historyCount,
+                        updatedAt: record.edge.createdAt,
+                        updatedBy: record.edge.createdBy,
+                      },
+                    },
+                  ]);
+                }
+                for (const [index, event] of graphEvents.entries())
+                  await appendGraphEvent(tx, event, `legacy-${String(index).padStart(16, "0")}`);
+                for (const receipt of graphReceipts)
+                  await tx.appendValue("graph-receipt", receipt.key, unified.json(receipt.value));
+                for (const [kind, prefix] of [
+                  ["feature", "FEATURE"],
+                  ["scenario", "SCENARIO"],
+                  ["document", "DOC"],
+                ] as const)
+                  await tx.saveKeySpace({
+                    schemaVersion: 1,
+                    id: `global-${kind}`,
+                    entityKind: kind,
+                    owner: { kind: "project", id: workspace.config.projectId ?? "project" },
+                    prefix,
+                    format: "{prefix}-{number}",
+                  });
+                // Это явный этап импорта продуктовых линков. Уже сохранённые ID прикреплений не заменяются.
+                await syncBoardRelations(workspace, boards, "relay");
+                for (const record of productSource.records)
+                  await syncProductRelations(workspace, record, "relay");
+                await syncTaskRelations(workspace, tasks, "relay");
+                await refreshEntityCards(workspace, owned);
+                for (const path of sources) await tx.writeFile(path, null);
+                delete config.projectSettings;
+                await tx.writeFile(relative(root, workspace.configPath), unified.json(config));
+                await tx.writeFile("storage.json", {
+                  format: "relay-entities",
+                  schemaVersion: 1,
+                  productId: products.productId,
+                });
+              }),
+            true,
+          ),
+        true,
+      );
+      return {
+        migrated: true,
+        format: "relay-entities",
+        entities:
+          productSource.records.length +
+          productSource.implementations.size +
+          boards.length +
+          tasks.length +
+          1 +
+          (productSource.records.some((record) => record.fields.kind === "passport") ? 0 : 1),
+      };
+    });
+  }
+}
+
+async function jsonTree(root: string): Promise<string[]> {
+  if (!(await exists(root))) return [];
+  const files: string[] = [];
+  for (const entry of await readdir(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== ".indexes") files.push(...(await jsonTree(path)));
+    } else if (entry.isFile() && entry.name.endsWith(".json")) files.push(path);
+    else
+      invariant(
+        entry.isFile() && entry.name === ".gitignore",
+        "STORAGE_MIGRATION_CONFLICT",
+        "В прежнем хранилище обнаружен неизвестный файл",
+        5,
+        { path },
+      );
+  }
+  return files.sort();
+}

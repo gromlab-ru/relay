@@ -18,6 +18,7 @@ import { nextProductKey, productAddresses } from "../domain/product-addresses.js
 import { defaultBoardPrefix } from "../domain/board.js";
 import { ProductTransaction } from "./product-transaction.js";
 import { EntityDeletionRepository } from "./entity-deletion.js";
+import * as unified from "./unified-adapter.js";
 
 export const PRODUCT_DIRECTORIES = {
   passport: "",
@@ -60,12 +61,13 @@ export class ProductRepository {
   constructor(readonly workspace: Workspace) {
     this.root = join(dirname(workspace.configPath), "product");
     this.productId =
-      workspace.config.projectId && /^[A-Za-z0-9]{8}$/.test(workspace.config.projectId)
+      workspace.storageProductId ??
+      (workspace.config.projectId && /^[A-Za-z0-9]{8}$/.test(workspace.config.projectId)
         ? workspace.config.projectId
         : `product_${createHash("sha256")
             .update(workspace.config.projectId ?? workspace.root)
             .digest("hex")
-            .slice(0, 32)}`;
+            .slice(0, 32)}`);
   }
 
   private async sources(): Promise<string[]> {
@@ -164,6 +166,10 @@ export class ProductRepository {
   }
 
   async all(): Promise<ProductRecord[]> {
+    if (!this.workspace.storageSession && (await this.workspace.hasUnifiedStorage()))
+      return this.workspace.locked(() => this.all());
+    if (this.workspace.storageSession)
+      return unified.productRecords(this.workspace, this.productId);
     this.decodedImplementations.clear();
     const records: ProductRecord[] = [];
     for (const path of await this.sources()) {
@@ -193,6 +199,16 @@ export class ProductRepository {
 
   /** Единый снимок предоставляет метаданные отдельных реализаций без повторного чтения файлов. */
   async snapshot(assertOwned: () => void) {
+    if (this.workspace.storageSession)
+      return {
+        records: await this.all(),
+        implementations: new Map(
+          (await unified.implementationRecords(this.workspace, this.productId)).map((entry) => [
+            entry.id,
+            entry,
+          ]),
+        ),
+      };
     const records = await this.ensureKeys(assertOwned);
     return { records, implementations: new Map(this.decodedImplementations) };
   }
@@ -208,6 +224,7 @@ export class ProductRepository {
 
   /** Однократное закрепление ключей на диске; техническая миграция не меняет требования. */
   async ensureKeys(assertOwned: () => void): Promise<ProductRecord[]> {
+    if (this.workspace.storageSession) return this.all();
     const records = await this.all();
     const ordered = [...records].sort(
       (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
@@ -282,6 +299,7 @@ export class ProductRepository {
 
   /** Явная миграция переносит также старые записи, которым ключи уже назначены. */
   async migrate(assertOwned: () => void): Promise<number> {
+    if (this.workspace.storageSession) return 0;
     let migrated = 0;
     for (const path of await this.sources()) {
       const raw = await readJson(path, 16 * 1024 * 1024);
@@ -307,6 +325,19 @@ export class ProductRepository {
     id: string,
     scenario: boolean,
   ): Promise<ProductImplementation> {
+    if (this.workspace.storageSession) {
+      const record = (await unified.implementationRecords(this.workspace, this.productId)).find(
+        (entry) => entry.id === id,
+      );
+      invariant(
+        record?.fields.applicationId === applicationId &&
+          (record.fields.scenarioId !== null) === scenario,
+        "PRODUCT_RECORD_NOT_FOUND",
+        "Реализация не найдена в приложении",
+        3,
+      );
+      return record;
+    }
     const path = this.implementationPath(applicationId, {
       id,
       scenarioId: scenario ? "scenario" : null,
@@ -325,6 +356,15 @@ export class ProductRepository {
 
   /** Подпись файлов проверяет внешние правки без загрузки Markdown и историй. */
   async fingerprint(): Promise<string> {
+    if (this.workspace.storageSession)
+      return createHash("sha256")
+        .update(
+          JSON.stringify([
+            this.workspace.storageSession.state.version,
+            [...this.workspace.storageSession.files],
+          ]),
+        )
+        .digest("hex");
     const paths = await this.sources();
     for (const app of await directories(join(this.root, "applications"))) {
       for (const kind of ["features", "scenarios"]) {
@@ -347,6 +387,19 @@ export class ProductRepository {
   }
 
   async entity(summary: ProductEntitySummary): Promise<ProductEntity> {
+    if (this.workspace.storageSession) {
+      const record =
+        summary.kind === "implementation"
+          ? await this.implementation(
+              summary.applicationId!,
+              summary.id,
+              summary.scenarioId !== null,
+            )
+          : (await this.all()).find((entry) => entry.id === summary.id);
+      invariant(record, "PRODUCT_RECORD_NOT_FOUND", "Запись продукта не найдена", 3);
+      const { events: _events, requests: _requests, ...entity } = record;
+      return entity;
+    }
     if (summary.kind === "implementation") {
       invariant(summary.applicationId, "INVALID_DATA", "У реализации отсутствует приложение", 5);
       const {
@@ -389,6 +442,7 @@ export class ProductRepository {
   }
 
   async saveImplementation(record: ProductImplementation, assertOwned: () => void): Promise<void> {
+    if (this.workspace.storageSession) return unified.saveImplementation(this.workspace, record);
     await new ProductTransaction(this.workspace).publish(
       [
         {
@@ -404,6 +458,7 @@ export class ProductRepository {
   }
 
   async save(record: ProductRecord, exclusive: boolean, assertOwned: () => void): Promise<void> {
+    if (this.workspace.storageSession) return unified.saveProduct(this.workspace, record);
     await new ProductTransaction(this.workspace).publish(
       await this.prepare(record, exclusive),
       assertOwned,

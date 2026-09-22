@@ -7,6 +7,7 @@ import { atomicJson } from "../../storage/files.js";
 import { readWorkspaceConfig } from "../../storage/workspace.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { projectSettings } from "../../storage/project-settings.js";
+import * as unified from "../../storage/unified-adapter.js";
 
 /**
  * Сохраняет настройки под общей блокировкой проекта, перечитывая конфигурацию перед записью.
@@ -19,10 +20,9 @@ export async function saveProjectSettings(
 ): Promise<ProjectSettings> {
   const command = parse(saveProjectSettingsSchema, input, "настройки проекта");
   return workspace.locked(async (assertOwned) => {
-    const { config } = await readWorkspaceConfig(
-      dirname(workspace.configPath),
-      workspace.configPath,
-    );
+    const { config } = workspace.storageSession
+      ? { config: { ...workspace.config, projectSettings: await unified.settings(workspace) } }
+      : await readWorkspaceConfig(dirname(workspace.configPath), workspace.configPath);
     const previous = projectSettings(config, workspace.configPath);
     if (previous.name === command.name && previous.slug === command.slug) return previous;
     invariant(
@@ -41,6 +41,24 @@ export async function saveProjectSettings(
       assertCatalogOwned();
       assertOwned();
     };
+    if (workspace.storageSession) {
+      assertAllOwned();
+      await unified.saveSettings(workspace, {
+        ...config.projectSettings,
+        version: 3,
+        ...saved,
+        events: [
+          ...(config.projectSettings?.events ?? []),
+          {
+            revision: saved.revision,
+            actor: "relay",
+            at: new Date().toISOString(),
+            action: "settings",
+          },
+        ],
+      });
+      return saved;
+    }
     await atomicJson(
       workspace.configPath,
       {

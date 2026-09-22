@@ -427,7 +427,7 @@ test(
 );
 
 test(
-  "наблюдение восстанавливается после замены каталога и смены storageDir",
+  "наблюдение обнаруживает внешнюю замену ID-каталога и восстанавливается после reindex",
   { timeout: 15000 },
   async (t) => {
     const { app, tasks, workspace, root } = await fixture(t);
@@ -439,12 +439,18 @@ test(
     const stream = await connect(await app.getUrl());
     t.after(() => stream.close());
     await stream.next();
-    const tasksRoot = join(root, ".relay/boards/product/tasks");
+    const tasksRoot = join(root, ".relay/entities/tasks");
     const taskPath = join(tasksRoot, `${task.id}.json`);
     const original = JSON.parse(await readFile(taskPath, "utf8"));
     await rename(tasksRoot, join(root, "old-storage"));
     await mkdir(tasksRoot, { recursive: true });
-    await writeFile(taskPath, JSON.stringify({ ...original, title: "External, same revision" }));
+    await writeFile(
+      taskPath,
+      JSON.stringify({ ...original, data: { ...original.data, title: "External, same revision" } }),
+    );
+    const stale = await stream.next((event) => event.type === "workspace-error");
+    if (stale.type === "workspace-error") assert.equal(stale.data.code, "STORAGE_INDEX_STALE");
+    await new GraphService(workspace).reindex();
     await stream.next((event) => event.type === "changed" && event.data.source === "storage");
     assert.equal(
       (await app.inject(`/api/v1/board-tasks/${task.id}`)).json().data.title,
@@ -461,7 +467,7 @@ test(
       JSON.stringify({ ...workspace.config, storageDir: ".other-tasks" }),
     );
     const context = (await app.inject("/api/v1/context")).json().data;
-    assert.equal(context.storagePath, join(root, ".relay/.other-tasks"));
+    assert.equal(context.storagePath, join(root, ".relay"));
     await stream.next((event) => event.type === "changed" && event.data.source === "storage");
     assert.equal((await app.inject("/api/v1/board-tasks")).json().data.total, 1);
   },

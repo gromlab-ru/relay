@@ -9,7 +9,7 @@ import {
 import { parse } from "@relay/core/domain/validation";
 import { AppError, invariant } from "@relay/core/shared/errors";
 import { exists, readJson } from "@relay/core/storage/files";
-import { CONFIG_NAME } from "@relay/core/storage/workspace";
+import { CONFIG_NAME, readWorkspaceConfig } from "@relay/core/storage/workspace";
 
 export const REGISTRY_NAME = "relay.workspace.json";
 export const projectNameSchema = z.string().regex(/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u);
@@ -89,7 +89,8 @@ export async function readConfiguration(
   )
     return { kind: "registry", path, value: parse(registrySchema, value, path) };
   invariant(!registryOnly, "REGISTRY_REQUIRED", `Ожидается конфиг проектов: ${path}`);
-  return { kind: "project", path, value: parse(configSchema, value, path) };
+  const project = await readWorkspaceConfig(cwd, path);
+  return { kind: "project", path: project.configPath, value: project.config };
 }
 
 export interface ProjectTarget {

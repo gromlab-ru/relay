@@ -15,6 +15,7 @@ import { startServer } from "@relay/server-runtime";
 import { initializeRegistry, registerProject } from "@relay/project-runtime/registry";
 import { startMcp } from "../dist/server.js";
 import { entitySavedSchema, entityDetailSchema } from "@relay/contracts/entities";
+import { fullContextSchema } from "@relay/contracts/entities/graph";
 
 async function setup(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), "tasks-mcp-"));
@@ -204,10 +205,21 @@ test("MCP движка: discovery из контрактов, публичные 
     1,
   );
   assert.equal((await call(client, "entity_keys", { ref: renamed.key })).data?.total, 2);
-  const context = await call(client, "entity_context", { ref: created.key, depth: 1 });
+  const contextDefinition = tools.find((tool) => tool.name === "entity_context")!;
+  const contextProperties = contextDefinition.inputSchema.properties as Record<string, unknown>;
+  assert.equal("depth" in contextProperties, false);
+  assert.equal("offset" in contextProperties, false);
+  const context = await call(client, "entity_context", { ref: created.key });
   assert.equal(context.ok, true);
-  assert.equal(context.data?.totalNodes, 1);
-  assert.equal(context.data?.totalEdges, 0);
+  const graph = fullContextSchema.parse(context.data);
+  assert.equal(graph.complete, true);
+  assert.equal(graph.nodes.length, 2);
+  assert.equal(graph.edges.length, 1);
+  assert.equal(graph.edges[0]?.type, "part-of");
+  const limited = await call(client, "entity_context", { ref: created.key, maxBytes: 1024 });
+  assert.equal(limited.ok, false);
+  assert.equal(limited.error?.code, "RESPONSE_TOO_LARGE");
+  assert.equal(limited.data, undefined);
 });
 
 test("MCP канбана: предметные аргументы, блокеры, повтор и перенос со стабильным ID", async (t) => {

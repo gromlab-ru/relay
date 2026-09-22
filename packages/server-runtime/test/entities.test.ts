@@ -43,8 +43,20 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
   assert.ok(
     context.json().data.nodes.some((entry: { key: string }) => entry.key === "TASK-WEB-23"),
   );
-  assert.equal(context.json().data.totalNodes, 1);
-  assert.equal(context.json().data.totalEdges, 0);
+  assert.equal(context.json().data.totalNodes, 3);
+  assert.equal(context.json().data.totalEdges, 2);
+  assert.ok(
+    context
+      .json()
+      .data.edges.some(
+        (edge: { type: string; to: { id: string } }) =>
+          edge.type === "implements" && edge.to.id === feature.ref.id,
+      ),
+  );
+  const full = await app.inject(`/api/v1/graph/context?root=${task.key}`);
+  assert.equal(full.statusCode, 200, full.body);
+  assert.equal(full.json().data.complete, true);
+  assert.equal(full.json().data.edges.length, 2);
   const linked = await app.inject({
     method: "POST",
     url: "/api/v1/graph",
@@ -72,4 +84,5 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
     await engine.get({ ref: task.ref.id }),
   );
   assert.equal((await backend.entities.types()).total, 9);
+  assert.equal((await backend.graph.context({ root: task.key })).complete, true);
 });

@@ -45,7 +45,7 @@
     }
   },
   "scripts": {
-    "generate": "pnpm dlx @gromlab/rest-api-codegen@5.2.4 --input http://127.0.0.1:4700/api/openapi.json --output src",
+    "generate": "pnpm -w run openapi:export && pnpm dlx @gromlab/rest-api-codegen@5.2.4 --input ../../.artifacts/openapi.json --output src",
     "clean": "node --input-type=module -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true });\"",
     "build": "pnpm run clean && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"

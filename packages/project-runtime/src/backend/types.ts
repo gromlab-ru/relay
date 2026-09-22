@@ -29,7 +29,7 @@ export interface Backend {
     | "moveTask"
     | "linkTask"
   >;
-  graph: Pick<GraphService, "read" | "mutate" | "history">;
+  graph: Pick<GraphService, "read" | "context" | "mutate" | "history">;
   boardTasks: Pick<
     BoardTasksService,
     | "list"

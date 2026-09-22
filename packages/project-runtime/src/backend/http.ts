@@ -28,6 +28,8 @@ import {
   graphSavedSchema,
   graphHistorySchema,
   graphHistoryQuerySchema,
+  fullContextSchema,
+  fullContextQuerySchema,
 } from "@relay/core/domain/entity-graph";
 import {
   productEntitySchema,
@@ -294,6 +296,18 @@ export async function createHttpBackend(url: string, project?: string): Promise<
         ),
     },
     graph: {
+      context: async (input) => {
+        if (!context.capabilities?.includes("relay-full-context-v1"))
+          throw new AppError(
+            "SERVER_INCOMPATIBLE",
+            "Для полного контекста обновите Relay Server",
+            5,
+          );
+        return decode(
+          fullContextSchema,
+          await call(() => api.graph.getFullContext(fullContextQuerySchema.parse(input))),
+        );
+      },
       read: async (input = {}) =>
         decode(
           graphPageSchema,

@@ -18,6 +18,7 @@
     "docs/reference/KANBAN.md": "references/KANBAN.md",
     "docs/reference/TASK-ACTIVITY.md": "references/TASK-ACTIVITY.md",
     "docs/reference/GRAPH.md": "references/GRAPH.md",
+    "docs/reference/STORAGE.md": "references/STORAGE.md",
     "docs/reference/ENTITIES.md": "references/ENTITIES.md",
     "docs/reference/PRODUCT-CONTENT.md": "references/PRODUCT-CONTENT.md"
   },
@@ -56,6 +57,11 @@
     "packages/core/src/storage/graph-format.ts",
     "packages/core/src/storage/graph-index.ts",
     "packages/core/src/storage/graph-migration.ts",
-    "packages/core/src/storage/graph-transaction.ts"
+    "packages/core/src/storage/graph-transaction.ts",
+    "packages/core/src/storage/entity-store",
+    "packages/core/src/application/storage",
+    "packages/core/src/storage/unified-adapter.ts",
+    "packages/core/src/storage/unified-graph.ts",
+    "packages/contracts/src/storage.ts"
   ]
 }

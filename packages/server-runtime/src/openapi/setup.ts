@@ -65,6 +65,7 @@ export function setupOpenApi(app: INestApplication): void {
           "GraphMutation",
           "GraphQuery",
           "GraphHistoryQuery",
+          "FullContextQuery",
           "CreateBoardTask",
           "ChangeCriterion",
           "CriteriaQuery",

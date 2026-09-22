@@ -61,12 +61,29 @@ export class EntityDeletionRepository {
 
   async receipt(key: string) {
     invariant(/^[a-f0-9]{64}$/.test(key), "INVALID_DATA", "Неверный адрес квитанции", 5);
+    if (this.workspace.storageSession) {
+      const value = await this.workspace.storageSession.value("deletion-receipt", key);
+      return value === undefined ? undefined : receiptSchema.parse(value);
+    }
     const path = join(this.root, "entity-deletions", "receipts", `${key}.json`);
     return (await exists(path)) ? receiptSchema.parse(await readJson(path)) : undefined;
   }
 
   /** Удалённые адреса не передаются новым сущностям и не оживляют старые ссылки. */
   async reservedKeys(): Promise<string[]> {
+    if (this.workspace.storageSession) {
+      const output = new Set(
+        (await this.workspace.storageSession.indexEntries("reserved-key")).map(([key]) => key),
+      );
+      for (const [key, value] of await this.workspace.storageSession.indexEntries("addresses")) {
+        const entries = z
+          .array(z.object({ deleted: z.boolean(), matches: z.array(z.string()) }))
+          .parse(value);
+        if (entries.some((entry) => entry.deleted && entry.matches.some((match) => match !== "id")))
+          output.add(key);
+      }
+      return [...output];
+    }
     const path = join(this.root, "entity-deletions", "keys.json");
     return (await exists(path))
       ? z.array(z.string()).parse(await readJson(path, 16 * 1024 * 1024))

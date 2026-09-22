@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { EntitySaved, EntityDetail, EntitiesPage } from "@relay/contracts/entities";
-import type { GraphPage } from "@relay/core/domain/entity-graph";
+import type { FullContext } from "@relay/core/domain/entity-graph";
 import { fixture, successful, invokeRaw } from "./helpers/cli.js";
 
 test("CLI движка: определения, ключи вместо ID, содержимое, пагинация и сохранные связи", async (t) => {
@@ -44,8 +44,11 @@ test("CLI движка: определения, ключи вместо ID, со
   assert.equal(human.code, 0, human.stdout);
   assert.match(human.stdout, /FEATURE-1/);
   assert.doesNotMatch(human.stdout, /"data":/);
-  const graphBefore = successful(await app.run<GraphPage>(["graph", "context", created.key])).data;
-  assert.equal(graphBefore.totalEdges, 0);
+  const graphBefore = successful(
+    await app.run<FullContext>(["graph", "context", created.key]),
+  ).data;
+  assert.equal(graphBefore.complete, true);
+  assert.equal(graphBefore.edges.length, 2);
   successful(
     await app.run([
       "graph",
@@ -78,8 +81,7 @@ test("CLI движка: определения, ключи вместо ID, со
   assert.equal(old.key, "TASK-PRODUCT-23");
   assert.equal(old.ref.id, created.ref.id);
   assert.equal(
-    successful(await app.run<{ totalNodes: number }>(["graph", "context", created.key])).data
-      .totalNodes > 1,
+    successful(await app.run<FullContext>(["graph", "context", created.key])).data.nodes.length > 1,
     true,
   );
   const first = successful(await app.run<EntitiesPage>(["entities", "list", "--limit", "1"])).data;

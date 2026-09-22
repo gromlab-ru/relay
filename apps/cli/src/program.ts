@@ -5,6 +5,7 @@ import { registerProduct } from "./commands/product.js";
 import { registerBoardTasks } from "./commands/board-tasks.js";
 import { registerGraph } from "./commands/graph.js";
 import { registerEntities } from "./commands/entities.js";
+import { registerStorage } from "./commands/storage.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -34,7 +35,7 @@ export function createProgram(runtime: Runtime): Command {
     .option(
       "--max-bytes <bytes>",
       "Максимальный размер ответа UTF-8",
-      integer(1024, 16 * 1024 * 1024),
+      integer(1024, 128 * 1024 * 1024),
     )
     .showSuggestionAfterError(true)
     .exitOverride()
@@ -45,6 +46,7 @@ export function createProgram(runtime: Runtime): Command {
   registerBoardTasks(program, runtime);
   registerGraph(program, runtime);
   registerEntities(program, runtime);
+  registerStorage(program, runtime);
   addCommandHelp(program, {
     details:
       "Режимы: .relay/config.json → local; relay.workspace.json → workspace.\nВ workspace укажите проект: relay-cli <проект> <команда>. Рабочие операции идут через общий сервер.\nВ local URL выбирает HTTP, отсутствие URL — Core; --local явно выбирает файлы.\nURL: --server-url → RELAY_SERVER_URL → server.url. Сервер запускается командой relay-server.\nЗадачи адресуются постоянным ID или ключом доски, например PRODUCT-1. Автор записи: --actor или RELAY_ACTOR.\nСправка: relay-cli <команда> --help. JSON: {ok, data, meta} или {ok, error}.",

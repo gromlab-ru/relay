@@ -5,6 +5,7 @@ import {
   graphHistoryQuerySchema,
   graphNodeSchema,
   graphEdgeSchema,
+  fullContextQuerySchema,
 } from "../../domain/entity-graph.js";
 import type {
   EntityRef,
@@ -15,6 +16,8 @@ import type {
   GraphHistoryQuery,
   GraphEdge,
   GraphEvent,
+  FullContext,
+  FullContextQuery,
 } from "../../domain/entity-graph.js";
 import { parse, actorSchema } from "../../domain/validation.js";
 import { invariant } from "../../shared/errors.js";
@@ -33,8 +36,17 @@ import { TaskActivityRepository } from "../../storage/task-activity.js";
 import type { ActivityFile } from "../../storage/task-activity.js";
 import type { TaskHistoryEvent } from "../../domain/board-task.js";
 import { taskBaseline } from "../board-tasks/history.js";
+import {
+  FullContextReader,
+  FULL_CONTEXT_LIMITS,
+  fullContextVersion,
+} from "../../storage/entity-store/context.js";
+import { refreshEntityCards } from "../entities/storage-projection.js";
+import { rm } from "node:fs/promises";
+import { join } from "node:path";
 
 const versions = new Map<string, string>();
+const contextReaders = new Map<string, FullContextReader>();
 const versionOf = (catalogHash: string, fingerprint: string) =>
   graphDigest([catalogHash, fingerprint]);
 
@@ -66,17 +78,19 @@ export class GraphService {
       ...(source.aliases ? { aliases: source.aliases } : {}),
     });
     // V1 остаётся читаемым без изменения постоянных связей и квитанций.
-    const version = store.legacy
-      ? graphDigest([
-          catalog.nodes,
-          [
-            ...store.legacy.edges.map((edge) =>
-              graphEdgeSchema.parse({ ...edge, description: edge.description.join("\n") }),
-            ),
-          ].sort((a, b) => a.id.localeCompare(b.id)),
-          store.meta.revision,
-        ])
-      : versionOf(catalogHash, store.index.fingerprint);
+    const version = this.workspace.storageSession
+      ? await fullContextVersion(this.workspace.storageSession)
+      : store.legacy
+        ? graphDigest([
+            catalog.nodes,
+            [
+              ...store.legacy.edges.map((edge) =>
+                graphEdgeSchema.parse({ ...edge, description: edge.description.join("\n") }),
+              ),
+            ].sort((a, b) => a.id.localeCompare(b.id)),
+            store.meta.revision,
+          ])
+        : versionOf(catalogHash, store.index.fingerprint);
     const addresses = new Set(catalog.nodes.map((node) => entityAddress(node.ref)));
     invariant(
       addresses.size === catalog.nodes.length,
@@ -214,10 +228,66 @@ export class GraphService {
     });
   }
 
+  /** Полный граф одной компоненты; чтение прежней базы совместимо и не выполняет миграцию. */
+  async context(input: FullContextQuery): Promise<FullContext> {
+    const query = parse(fullContextQuerySchema, input, "полный контекст сущности");
+    return this.workspace.locked(async (owned) => {
+      const session = this.workspace.storageSession;
+      if (session) {
+        let reader = contextReaders.get(session.store.root);
+        if (!reader) {
+          reader = new FullContextReader(session.store);
+          contextReaders.set(session.store.root, reader);
+          if (contextReaders.size > 8) contextReaders.delete(contextReaders.keys().next().value!);
+        }
+        return reader.readSnapshot(session, query.root);
+      }
+      const { catalog, store, version, references } = await this.snapshot(owned);
+      const root = resolveAddress(references, query.root).ref;
+      const byRef = new Map(catalog.nodes.map((node) => [entityAddress(node.ref), node]));
+      const seen = new Set([entityAddress(root)]),
+        ids = new Set<string>(),
+        queue = [root];
+      const edges: FullContext["edges"] = [];
+      for (let index = 0; index < queue.length; index++)
+        for (const summary of store.index.related(entityAddress(queue[index]!))) {
+          if (ids.has(summary.id)) continue;
+          const { id, type, from, to, revision } = await this.repository.edge(summary.id, store);
+          ids.add(id);
+          edges.push({ id, type, from, to, revision });
+          for (const ref of [from, to])
+            if (!seen.has(entityAddress(ref))) {
+              seen.add(entityAddress(ref));
+              queue.push(ref);
+            }
+          invariant(
+            seen.size <= FULL_CONTEXT_LIMITS.nodes && edges.length <= FULL_CONTEXT_LIMITS.edges,
+            "CONTEXT_TOO_LARGE",
+            "Полный контекст превышает технический предел",
+            4,
+          );
+        }
+      const result: FullContext = {
+        root,
+        version,
+        nodes: [...seen].sort().map((ref) => byRef.get(ref)!),
+        edges: edges.sort((a, b) => a.id.localeCompare(b.id)),
+        complete: true,
+      };
+      invariant(
+        Buffer.byteLength(JSON.stringify(result)) <= FULL_CONTEXT_LIMITS.bytes,
+        "CONTEXT_TOO_LARGE",
+        "Полный контекст превышает бюджет ответа",
+        4,
+      );
+      return result;
+    });
+  }
+
   async mutate(input: GraphMutation, defaultActor: string): Promise<GraphSaved> {
     const command = parse(graphMutationSchema, input, "изменение графа");
     const actor = parse(actorSchema, command.actor ?? defaultActor, "автор связи");
-    return this.workspace.locked(async (assertOwned) => {
+    return this.workspace.mutate("graph", command, actor, async (assertOwned) => {
       const key = graphDigest([actor, command.requestId]);
       const requestHash = graphDigest({ ...command, actor });
       const previous = await this.repository.receipt(key);
@@ -409,6 +479,27 @@ export class GraphService {
   }
   /** Восстанавливает производные индексы после внешнего редактирования или потери файлов. */
   async reindex() {
-    return this.workspace.locked((assertOwned) => this.repository.reindex(assertOwned));
+    if (await this.workspace.hasUnifiedStorage())
+      return this.workspace.withEntityStorage(async (store, owned) => {
+        await store.reindex(owned);
+        const result = await store.transaction(owned, (session) =>
+          this.workspace.inStorageSession(session, owned, async () => {
+            await refreshEntityCards(this.workspace, owned);
+            const snapshot = await this.repository.open(owned);
+            return {
+              revision: snapshot.meta.revision,
+              edges: snapshot.index.active.length,
+              events: snapshot.meta.eventCount,
+            };
+          }),
+        );
+        await rm(join(store.root, "runtime/index-stale.json"), { force: true });
+        return result;
+      });
+    return this.workspace.locked(async (owned) => {
+      const result = await this.repository.reindex(owned);
+      if (this.workspace.storageSession) await refreshEntityCards(this.workspace, owned);
+      return result;
+    });
   }
 }

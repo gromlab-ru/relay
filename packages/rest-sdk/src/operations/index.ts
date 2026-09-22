@@ -34,6 +34,8 @@ export { getEntityKeySpaces } from "./get-entity-key-spaces.js";
 export { getEntityKeysForProject } from "./get-entity-keys-for-project.js";
 export { getEntityKeys } from "./get-entity-keys.js";
 export { getEntity } from "./get-entity.js";
+export { getFullContextForProject } from "./get-full-context-for-project.js";
+export { getFullContext } from "./get-full-context.js";
 export { getGraphForProject } from "./get-graph-for-project.js";
 export { getGraphHistoryForProject } from "./get-graph-history-for-project.js";
 export { getGraphHistory } from "./get-graph-history.js";

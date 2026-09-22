@@ -16,6 +16,7 @@ import { TaskActivityRepository } from "@relay/core/storage/task-activity";
 import { WorkspaceService } from "../workspace/workspace.module.js";
 import { ProjectCatalog, ProjectContext } from "../workspace/catalog.js";
 import { httpFailure } from "../../common/errors.js";
+import { StorageService } from "@relay/core/application/storage/service";
 
 /** Поддерживает SSE активным при простое, до типичных таймаутов прокси. */
 const HEARTBEAT_INTERVAL = 15_000;
@@ -36,6 +37,8 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
   private refreshing: Promise<void> | undefined;
   private pending = false;
   private stopped = false;
+  private unifiedRoot: string | undefined;
+  private readonly changedFiles = new Set<string>();
 
   constructor(private readonly workspace: ProjectContext) {}
 
@@ -99,6 +102,33 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
       const workspace = await this.workspace.open();
       if (this.stopped) return;
       this.storageRoot = workspace.root;
+      if (await workspace.hasUnifiedStorage()) {
+        const root = dirname(workspace.configPath);
+        if (this.unifiedRoot !== root) {
+          this.watchers.get(root)?.close();
+          this.watchers.delete(root);
+          this.unifiedRoot = root;
+        }
+        this.productRoot = undefined;
+        this.productPaths = [];
+        this.boardPaths = [join(dirname(workspace.configPath), ".indexes")];
+        this.rebind();
+        const changed = [...this.changedFiles];
+        this.changedFiles.clear();
+        await new StorageService(workspace).checkExternalChanges(changed);
+        const signal = await workspace.locked(async () => workspace.storageSession!.state.version);
+        const version = createHash("sha256")
+          .update(JSON.stringify([signal, workspace.config]))
+          .digest("hex");
+        if (this.boardsVersion !== undefined && this.boardsVersion !== version)
+          this.events.next({ type: "changed", data: { source: "storage", version } });
+        this.boardsVersion = version;
+        this.productVersion = undefined;
+        if (this.lastError)
+          this.events.next({ type: "changed", data: { source: "storage", version } });
+        this.lastError = undefined;
+        return;
+      }
       this.productRoot = new ProductRepository(workspace).root;
       this.rebind();
       const product = await new ProductService(workspace).state();
@@ -174,36 +204,54 @@ class ProjectEvents implements OnModuleInit, OnModuleDestroy {
     for (const path of desired) {
       if (this.watchers.has(path)) continue;
       try {
-        const watcher = watch(path, { persistent: false }, (_event, filename) => {
-          const name = filename?.toString();
-          if (
-            name === undefined ||
-            this.boardPaths.includes(path) ||
-            this.productPaths.includes(path) ||
-            (path === configParent && name === "boards") ||
-            (path === configParent && name === "task-activity") ||
-            (path === configParent && (name === "relations.json" || name === "relations")) ||
-            path === this.productRoot ||
-            (this.productRoot !== undefined && dirname(path) === this.productRoot) ||
-            (path === configParent && name === "product") ||
-            (path === configParent && name === basename(this.workspace.options.configPath)) ||
-            (path === this.storageRoot && (name.endsWith(".json") || name === basename(path))) ||
-            (this.storageRoot &&
-              path === dirname(this.storageRoot) &&
-              name === basename(this.storageRoot))
-          ) {
-            // При замене каталога переоткрываем наблюдатель, привязанный к старому inode.
-            if (
-              this.storageRoot &&
-              path === dirname(this.storageRoot) &&
-              name === basename(this.storageRoot)
-            ) {
-              this.watchers.get(this.storageRoot)?.close();
-              this.watchers.delete(this.storageRoot);
+        const watcher = watch(
+          path,
+          { persistent: false, recursive: path === this.unifiedRoot },
+          (_event, filename) => {
+            const name = filename?.toString();
+            if (path === this.unifiedRoot && name !== undefined) {
+              const relative = name.replaceAll("\\", "/");
+              if (
+                /^(entities|relations|keyspaces|operations)\/.+\.json$/.test(relative) &&
+                !relative.includes("/.indexes/")
+              ) {
+                this.changedFiles.add(relative);
+                this.schedule();
+                return;
+              }
+              if (relative === ".indexes/state.json" || relative === "storage.json")
+                this.schedule();
             }
-            this.schedule();
-          }
-        });
+            if (
+              name === undefined ||
+              this.boardPaths.includes(path) ||
+              this.productPaths.includes(path) ||
+              (path === configParent && name === "boards") ||
+              (path === configParent && (name === ".indexes" || name === "storage.json")) ||
+              (path === configParent && name === "task-activity") ||
+              (path === configParent && (name === "relations.json" || name === "relations")) ||
+              path === this.productRoot ||
+              (this.productRoot !== undefined && dirname(path) === this.productRoot) ||
+              (path === configParent && name === "product") ||
+              (path === configParent && name === basename(this.workspace.options.configPath)) ||
+              (path === this.storageRoot && (name.endsWith(".json") || name === basename(path))) ||
+              (this.storageRoot &&
+                path === dirname(this.storageRoot) &&
+                name === basename(this.storageRoot))
+            ) {
+              // При замене каталога переоткрываем наблюдатель, привязанный к старому inode.
+              if (
+                this.storageRoot &&
+                path === dirname(this.storageRoot) &&
+                name === basename(this.storageRoot)
+              ) {
+                this.watchers.get(this.storageRoot)?.close();
+                this.watchers.delete(this.storageRoot);
+              }
+              this.schedule();
+            }
+          },
+        );
         watcher.on("error", () => {
           watcher.close();
           if (this.watchers.get(path) === watcher) this.watchers.delete(path);

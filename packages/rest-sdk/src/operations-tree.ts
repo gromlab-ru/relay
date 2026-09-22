@@ -34,6 +34,8 @@ import { getEntityKeySpaces } from "./operations/get-entity-key-spaces.js";
 import { getEntityKeysForProject } from "./operations/get-entity-keys-for-project.js";
 import { getEntityKeys } from "./operations/get-entity-keys.js";
 import { getEntity } from "./operations/get-entity.js";
+import { getFullContextForProject } from "./operations/get-full-context-for-project.js";
+import { getFullContext } from "./operations/get-full-context.js";
 import { getGraphForProject } from "./operations/get-graph-for-project.js";
 import { getGraphHistoryForProject } from "./operations/get-graph-history-for-project.js";
 import { getGraphHistory } from "./operations/get-graph-history.js";
@@ -190,9 +192,11 @@ export const operationsTree = {
   graph: {
     getGraph: getGraph,
     mutateGraph: mutateGraph,
+    getFullContext: getFullContext,
     getGraphHistory: getGraphHistory,
     getGraphForProject: getGraphForProject,
     mutateGraphForProject: mutateGraphForProject,
+    getFullContextForProject: getFullContextForProject,
     getGraphHistoryForProject: getGraphHistoryForProject,
   },
   entities: {

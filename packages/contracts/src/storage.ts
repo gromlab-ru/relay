@@ -1,0 +1,76 @@
+import { z } from "zod";
+import { actorSchema, entityKeySchema, timestampSchema } from "./primitives.js";
+import { entityRefSchema, graphNodeSchema } from "./entities/graph.js";
+import { entitySummarySchema } from "./entities.js";
+
+/** Переносимые схемы нового дискового формата; не DTO предметных операций. */
+export const storageManifestSchema = z.strictObject({
+  format: z.literal("relay-entities").describe("Маркер единого ID-хранилища"),
+  schemaVersion: z.literal(1).describe("Версия физического формата"),
+  productId: z
+    .string()
+    .optional()
+    .describe("Постоянный ID прежнего продуктового агрегата для совместимости DTO"),
+});
+export const storageTokenSchema = entityRefSchema.shape.id;
+export const storageCollectionSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]{0,63}$/)
+  .describe("Коллекция записей зарегистрированного владельца");
+export const storageKindDefinitionSchema = z.strictObject({
+  kind: entityRefSchema.shape.kind,
+  collection: storageCollectionSchema,
+  dataVersion: z.number().int().positive().describe("Версия предметных данных на диске"),
+});
+const identity = {
+  schemaVersion: z.literal(1).describe("Версия оболочки записи"),
+  dataVersion: z.number().int().positive().describe("Версия данных зарегистрированного вида"),
+  kind: entityRefSchema.shape.kind,
+  id: storageTokenSchema,
+  revision: z.number().int().nonnegative().describe("Предметная ревизия сущности"),
+  key: entityKeySchema
+    .nullable()
+    .describe("Публичный ключ; null только для технического владельца"),
+  aliases: z.array(entityKeySchema).describe("Зарезервированные прежние ключи"),
+};
+export const storedEntitySchema = z.strictObject({
+  ...identity,
+  data: z
+    .record(z.string(), z.json())
+    .describe("Данные вида; Markdown закодирован массивами строк"),
+  createdAt: timestampSchema,
+  createdBy: actorSchema,
+  updatedAt: timestampSchema,
+  updatedBy: actorSchema,
+});
+export const storedTombstoneSchema = z.strictObject({
+  ...identity,
+  deleted: z
+    .strictObject({ at: timestampSchema, actor: actorSchema })
+    .describe("Факт удаления; адреса сохраняются за прежним владельцем"),
+});
+export const storedRecordSchema = z.union([storedEntitySchema, storedTombstoneSchema]);
+export const storedKeySpaceSchema = z.strictObject({
+  schemaVersion: z.literal(1).describe("Версия пространства ключей"),
+  id: storageTokenSchema,
+  entityKind: entityRefSchema.shape.kind,
+  owner: entityRefSchema.describe("Постоянный адрес владельца нумерации"),
+  prefix: entityKeySchema.describe("Префикс выдачи; не определяет вид существующей записи"),
+  format: z.literal("{prefix}-{number}").describe("Формат последовательного читаемого ключа"),
+});
+export const storageCardSchema = graphNodeSchema.extend({
+  summary: entitySummarySchema.shape.summary.default(""),
+  active: entitySummarySchema.shape.active.default(true),
+  context: entitySummarySchema.shape.context,
+  document: entitySummarySchema.shape.document,
+  aliases: z.array(z.string()).describe("Алиасы для разрешения адресов"),
+  selectors: z.array(z.string()).describe("Предметные адреса при явно заданном виде"),
+});
+export { fullContextSchema } from "./entities/graph.js";
+export type { FullContext } from "./entities/graph.js";
+export type StoredEntity = z.infer<typeof storedEntitySchema>;
+export type StoredTombstone = z.infer<typeof storedTombstoneSchema>;
+export type StoredRecord = z.infer<typeof storedRecordSchema>;
+export type StoredKeySpace = z.infer<typeof storedKeySpaceSchema>;
+export type StorageCard = z.infer<typeof storageCardSchema>;
+export type JsonValue = z.infer<ReturnType<typeof z.json>>;

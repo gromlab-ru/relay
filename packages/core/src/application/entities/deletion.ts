@@ -30,6 +30,41 @@ import {
 } from "./catalog.js";
 import { validateProduct } from "../product/model.js";
 import { prepareTaskHistory } from "../board-tasks/history.js";
+import type { ProductRecord } from "../../domain/product.js";
+import type { BoardTaskRecord } from "../../domain/board-task.js";
+import { syncProductRelations, syncTaskRelations } from "./owned-relations.js";
+import { json, saveAudit } from "../../storage/unified-adapter.js";
+
+const detachProduct = (
+  record: ProductRecord,
+  has: (kind: string, id: string | null) => boolean,
+): ProductRecord => {
+  const next = structuredClone(record);
+  if (next.fields.kind === "document") {
+    next.fields.links = next.fields.links.filter(
+      (link) => link.kind === "product" || !has(link.kind, link.id),
+    );
+    if (next.fields.relations)
+      next.fields.relations = next.fields.relations.filter(
+        (link) => !has(link.target.kind, link.target.id),
+      );
+  }
+  if (next.fields.kind === "scope")
+    next.fields.contracts = next.fields.contracts.filter(
+      (entry) => !has("implementation", entry.id),
+    );
+  return next;
+};
+const detachTask = (
+  task: BoardTaskRecord,
+  has: (kind: string, id: string | null) => boolean,
+): BoardTaskRecord => ({
+  ...structuredClone(task),
+  dependencies: task.dependencies.filter((id) => !has("task", id)),
+  related: task.related.filter((id) => !has("task", id)),
+  parentId: has("task", task.parentId) ? null : task.parentId,
+  productLinks: task.productLinks.filter((link) => !has(link.kind, link.id)),
+});
 
 /** Каскад принадлежности и очистка внешних ссылок — общий сценарий для всех интерфейсов. */
 export class EntityDeletionService {
@@ -138,7 +173,7 @@ export class EntityDeletionService {
     const actor = parse(actorSchema, command.actor ?? defaultActor, "автор удаления");
     const key = entityDigest([actor, command.requestId]);
     const hash = entityDigest({ ...command, actor });
-    return this.workspace.locked(async (owned) => {
+    return this.workspace.mutate("entity-delete", command, actor, async (owned) => {
       const repository = new EntityDeletionRepository(this.workspace);
       const receipt = await repository.receipt(key);
       if (receipt) {
@@ -160,6 +195,8 @@ export class EntityDeletionService {
         "Состав удаления изменился. Обновите предпросмотр и подтвердите его заново",
         4,
       );
+      if (this.workspace.storageSession)
+        return this.deleteUnified(preview, has, actor, key, hash, command.requestId, owned);
       const products = new ProductRepository(this.workspace);
       const beforeProducts = await products.all();
       const beforeTasks = await new BoardTaskRepository(this.workspace).all();
@@ -176,7 +213,8 @@ export class EntityDeletionService {
           has(fields.kind, record.id) ||
           (fields.kind === "scope" && has("application", fields.applicationId));
         if (isDeleted) {
-          if (fields.kind === "document") add({ path: `product/.document-links/${record.id}.json`, after: null });
+          if (fields.kind === "document")
+            add({ path: `product/.document-links/${record.id}.json`, after: null });
           for (const path of new Set([
             products.path(record),
             `${PRODUCT_DIRECTORIES[fields.kind]}/${record.id}.json`.replace(/^\//, ""),
@@ -188,24 +226,15 @@ export class EntityDeletionService {
               add(file);
           continue;
         }
-        const next = structuredClone(record);
-        if (next.fields.kind === "document") {
-          next.fields.links = next.fields.links.filter(
-            (link) => link.kind === "product" || !has(link.kind, link.id),
-          );
-          if (next.fields.relations) next.fields.relations = next.fields.relations.filter((link) => !has(link.target.kind, link.target.id));
-        }
-        if (next.fields.kind === "scope") {
-          for (const contract of next.fields.contracts.filter((entry) =>
+        const next = detachProduct(record, has);
+        if (record.fields.kind === "scope") {
+          for (const contract of record.fields.contracts.filter((entry) =>
             has("implementation", entry.id),
           ))
             add({
-              path: `product/${products.implementationPath(next.fields.applicationId, contract)}`,
+              path: `product/${products.implementationPath(record.fields.applicationId, contract)}`,
               after: null,
             });
-          next.fields.contracts = next.fields.contracts.filter(
-            (entry) => !has("implementation", entry.id),
-          );
         }
         if (JSON.stringify(next.fields) !== JSON.stringify(record.fields)) {
           next.revision++;
@@ -221,11 +250,7 @@ export class EntityDeletionService {
       const afterTasks = beforeTasks
         .filter((task) => !has("task", task.id))
         .map((task) => {
-          const next = structuredClone(task);
-          next.dependencies = next.dependencies.filter((id) => !has("task", id));
-          next.related = next.related.filter((id) => !has("task", id));
-          if (has("task", next.parentId)) next.parentId = null;
-          next.productLinks = next.productLinks.filter((link) => !has(link.kind, link.id));
+          const next = detachTask(task, has);
           if (JSON.stringify(next) !== JSON.stringify(task)) {
             next.revision++;
             next.updatedAt = at;
@@ -327,5 +352,140 @@ export class EntityDeletionService {
       );
       return result;
     });
+  }
+
+  private async deleteUnified(
+    preview: EntityDeletionPreview,
+    has: (kind: string, id: string | null) => boolean,
+    actor: string,
+    key: string,
+    hash: string,
+    requestId: string,
+    owned: () => void,
+  ): Promise<EntityDeleted> {
+    const session = this.workspace.storageSession!;
+    const products = new ProductRepository(this.workspace);
+    const beforeProducts = await products.all();
+    const taskRepository = new BoardTaskRepository(this.workspace);
+    const beforeTasks = await taskRepository.all();
+    const boards = await new BoardRepository(this.workspace).all();
+    const at = new Date().toISOString();
+    const removed = [...preview.deleted.map((entry) => ({ ...entry.ref }))] as {
+      kind: string;
+      id: string;
+    }[];
+    const afterProducts: ProductRecord[] = [];
+    for (const record of beforeProducts) {
+      if (has(record.fields.kind, record.id)) continue;
+      if (record.fields.kind === "scope" && has("application", record.fields.applicationId)) {
+        removed.push({ kind: "scope", id: record.id });
+        continue;
+      }
+      const next = detachProduct(record, has);
+      if (JSON.stringify(next.fields) !== JSON.stringify(record.fields)) {
+        next.revision++;
+        next.updatedAt = at;
+        next.updatedBy = actor;
+        next.events.push({ revision: next.revision, actor, at });
+        await products.save(next, false, owned);
+        await syncProductRelations(this.workspace, next);
+      }
+      afterProducts.push(next);
+    }
+    validateProduct(afterProducts);
+    const afterTasks = beforeTasks
+      .filter((task) => !has("task", task.id))
+      .map((task) => {
+        const next = detachTask(task, has);
+        if (JSON.stringify(next) !== JSON.stringify(task)) {
+          next.revision++;
+          next.updatedAt = at;
+          next.updatedBy = actor;
+          next.events = [
+            ...(next.events ?? []),
+            { revision: next.revision, actor, at, action: "entity-delete" },
+          ];
+        }
+        return next;
+      });
+    const activity = await prepareTaskHistory(
+      this.workspace,
+      beforeTasks,
+      afterTasks,
+      boards,
+      preview.target.ref.id,
+      "entity-delete",
+      actor,
+      key,
+    );
+    const changed = afterTasks.filter(
+      (task) =>
+        JSON.stringify(task) !== JSON.stringify(beforeTasks.find((entry) => entry.id === task.id)),
+    );
+    await taskRepository.save(
+      changed.map((task) => ({
+        slug: boards.find((board) => board.id === task.boardId)!.slug,
+        task,
+      })),
+      [],
+      owned,
+      activity,
+    );
+    await syncTaskRelations(this.workspace, changed);
+    const graph = new GraphRepository(this.workspace),
+      state = await graph.open(owned);
+    const edges = state.index.active.filter(
+      (edge) => has(edge.from.kind, edge.from.id) || has(edge.to.kind, edge.to.id),
+    );
+    const records: GraphCurrent[] = [];
+    for (const edge of edges) {
+      const current = (await graph.get(edge.id, state))!;
+      records.push({
+        active: false,
+        historyCount: current.historyCount + 1,
+        edge: { ...current.edge, revision: current.edge.revision + 1 },
+      });
+    }
+    if (records.length)
+      await graph.commit(
+        state,
+        records,
+        records.map((record) => ({
+          action: "remove",
+          edge: record.edge,
+          actor,
+          at,
+          revision: state.meta.revision + 1,
+        })),
+        key,
+        hash,
+        (version, revision) => ({
+          ids: records.map((record) => record.edge.id),
+          version,
+          revision,
+          requestId,
+        }),
+        owned,
+      );
+    for (const ref of removed) {
+      const record = await session.get(ref);
+      await saveAudit(
+        this.workspace,
+        ref,
+        [{ revision: record.revision + 1, actor, at, action: "delete" }],
+        {},
+      );
+      await session.remove(ref, record.revision, actor);
+    }
+    const result: EntityDeleted = {
+      action: "delete",
+      ref: preview.target.ref,
+      requestId,
+      deleted: preview.deleted.length,
+      detached: preview.detached.length,
+      relations: preview.relations,
+    };
+    await session.appendValue("deletion-receipt", key, json({ hash, result }));
+    return result;
   }
 }

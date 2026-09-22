@@ -41,7 +41,7 @@ test("настройки: случайный адрес, атомарное со
 test("старый конфиг читается без записи; первое сохранение не меняет ID и остальные параметры", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "relay-old-settings-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const workspace = await initialize(root, "tasks");
+  const workspace = await initialize(root, "tasks", undefined, { legacy: true });
   const { projectSettings: omitted, ...oldConfig } = workspace.config;
   await writeFile(workspace.configPath, JSON.stringify(oldConfig));
   const before = await readFile(workspace.configPath, "utf8");

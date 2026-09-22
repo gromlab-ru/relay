@@ -32,6 +32,8 @@ import {
   graphSavedSchema,
   graphHistorySchema,
   graphHistoryQuerySchema,
+  fullContextSchema,
+  fullContextQuerySchema,
 } from "@relay/core/domain/entity-graph";
 import {
   productEntitiesQuerySchema,
@@ -136,6 +138,8 @@ export const schemas = {
   GraphSaved: graphSavedSchema,
   GraphHistory: graphHistorySchema,
   GraphHistoryQuery: graphHistoryQuerySchema,
+  FullContext: fullContextSchema,
+  FullContextQuery: fullContextQuerySchema,
   ProjectSettings: projectSettingsSchema,
   SaveProjectSettings: saveProjectSettingsSchema,
   BoardTaskView: boardTaskViewSchema,

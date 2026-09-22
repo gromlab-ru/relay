@@ -20,6 +20,7 @@ import type { Workspace } from "../../storage/workspace.js";
 import { invariant } from "../../shared/errors.js";
 import { assertEntityKeyAvailable, entityDigest, resolveEntity } from "./catalog.js";
 import type { EntityCatalog, EntityEntry } from "./catalog.js";
+import * as unified from "../../storage/unified-adapter.js";
 
 type CreateData = z.infer<typeof entityCreateSchema>["data"];
 type Changes = z.infer<typeof entityUpdateSchema>["changes"];
@@ -245,7 +246,29 @@ const implementationHandler: EntityHandler = {
 /** Настройки и доски сохраняют ключ и квитанцию в одной атомарной записи владельца. */
 async function saveMetadata(
   entry: EntityEntry,
-  input: { key?: string; name?: string | undefined; documentSections?: { id: string; name: string }[] | undefined },
+  input: {
+    key?: string;
+    name?: string | undefined;
+    documentSections?: { id: string; name: string }[] | undefined;
+  },
+  revision: number,
+  context: EntityOperationContext,
+): Promise<Saved> {
+  return context.workspace.mutate(
+    "entity-metadata",
+    { ref: entry.ref, input, revision, requestId: context.requestId },
+    context.actor,
+    () => saveMetadataRecord(entry, input, revision, context),
+  );
+}
+
+async function saveMetadataRecord(
+  entry: EntityEntry,
+  input: {
+    key?: string;
+    name?: string | undefined;
+    documentSections?: { id: string; name: string }[] | undefined;
+  },
   revision: number,
   context: EntityOperationContext,
 ): Promise<Saved> {
@@ -253,7 +276,9 @@ async function saveMetadata(
   const hash = entityDigest([entry.ref, input, revision, context.actor]);
   const at = new Date().toISOString();
   if (entry.ref.kind === "project") {
-    const config = configSchema.parse(await readJson(context.workspace.configPath));
+    const config = context.workspace.storageSession
+      ? { ...context.workspace.config, projectSettings: await unified.settings(context.workspace) }
+      : configSchema.parse(await readJson(context.workspace.configPath));
     const previous = config.projectSettings ?? {
       version: 1 as const,
       revision: entry.revision,
@@ -300,13 +325,16 @@ async function saveMetadata(
       ],
       requests: { ...previous.requests, [request]: { hash, result } },
     });
-    await atomicJson(
-      context.workspace.configPath,
-      config,
-      context.workspace.runtime,
-      false,
-      context.owned,
-    );
+    if (context.workspace.storageSession)
+      await unified.saveSettings(context.workspace, config.projectSettings);
+    else
+      await atomicJson(
+        context.workspace.configPath,
+        config,
+        context.workspace.runtime,
+        false,
+        context.owned,
+      );
     Object.assign(context.workspace.config, config);
     return result;
   }
@@ -345,13 +373,15 @@ async function saveMetadata(
       { revision: result.revision, at, actor: context.actor, action: "rename" },
     ],
   });
-  await atomicJson(
-    join(dirname(context.workspace.configPath), "boards", previous.slug, "board.json"),
-    next,
-    context.workspace.runtime,
-    false,
-    context.owned,
-  );
+  if (context.workspace.storageSession) await unified.saveBoard(context.workspace, next);
+  else
+    await atomicJson(
+      join(dirname(context.workspace.configPath), "boards", previous.slug, "board.json"),
+      next,
+      context.workspace.runtime,
+      false,
+      context.owned,
+    );
   return result;
 }
 
@@ -365,7 +395,12 @@ export const entityHandlers: Readonly<Record<EntityKind, EntityHandler>> = {
         "Ожидается изменение проекта",
         4,
       );
-      return saveMetadata(entry, { name: changes.name, documentSections: changes.documentSections }, revision, context);
+      return saveMetadata(
+        entry,
+        { name: changes.name, documentSections: changes.documentSections },
+        revision,
+        context,
+      );
     },
     rename: (entry, key, revision, context) => saveMetadata(entry, { key }, revision, context),
   },

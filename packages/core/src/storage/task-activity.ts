@@ -19,6 +19,7 @@ import { parse } from "../domain/validation.js";
 import { invariant } from "../shared/errors.js";
 import { atomicJson, exists, jsonFiles, readJson, syncDirectory } from "./files.js";
 import type { Workspace } from "./workspace.js";
+import { json } from "./unified-adapter.js";
 
 const MAX_BYTES = 16 * 1024 * 1024;
 const legacyActionLabels: Record<string, string> = {
@@ -82,11 +83,19 @@ export class TaskActivityRepository {
   constructor(readonly workspace: Workspace) {
     this.root = join(dirname(workspace.configPath), "task-activity");
   }
-  async signal() {
+  async signal(): Promise<unknown> {
+    if (!this.workspace.storageSession && (await this.workspace.hasUnifiedStorage()))
+      return this.workspace.locked(() => this.signal());
+    if (this.workspace.storageSession)
+      return { version: this.workspace.storageSession.state.version };
     const path = join(this.root, "signal.json");
     return (await exists(path)) ? readJson(path) : null;
   }
   async sequence(task: BoardTaskRecord): Promise<number> {
+    if (this.workspace.storageSession) {
+      const keys = await this.workspace.storageSession.postings("task-activity", task.id);
+      return keys.length ? Number(keys.at(-1)!.split(":").at(-1)) : 0;
+    }
     const path = join(this.root, task.id, "meta.json");
     if (await exists(path)) return parse(metaSchema, await readJson(path), path, true).sequence;
     invariant(task.version !== 5, "INVALID_DATA", "Потеряны метаданные истории задачи", 5);
@@ -99,10 +108,16 @@ export class TaskActivityRepository {
     return (task.events ?? []).length;
   }
   async hasHistory(task: BoardTaskRecord) {
+    if (this.workspace.storageSession)
+      return (await this.workspace.storageSession.postings("task-activity", task.id)).length > 0;
     return exists(join(this.root, task.id, "meta.json"));
   }
   async receipt(key: string) {
     invariant(/^[a-f0-9]{64}$/.test(key), "INVALID_DATA", "Неверный ключ квитанции", 5);
+    if (this.workspace.storageSession) {
+      const value = await this.workspace.storageSession.value("task-comment-receipt", key);
+      return value === undefined ? undefined : receiptSchema.parse(value);
+    }
     const path = join(this.root, "receipts", `${key}.json`);
     return (await exists(path))
       ? parse(receiptSchema, await readJson(path), path, true)
@@ -116,7 +131,14 @@ export class TaskActivityRepository {
       return event;
     }
     const path = join(this.root, task.id, "events", `${id}.json`);
-    const stored = parse(storedEventSchema, await readJson(path, MAX_BYTES), path, true);
+    const raw = this.workspace.storageSession
+      ? await this.workspace.storageSession.value(
+          "task-activity-event",
+          `${task.id}:${id.padStart(16, "0")}`,
+        )
+      : await readJson(path, MAX_BYTES);
+    invariant(raw !== undefined, "NOT_FOUND", "Событие не найдено", 3);
+    const stored = parse(storedEventSchema, raw, path, true);
     const event = parse(
       taskHistoryEventSchema,
       {
@@ -140,6 +162,14 @@ export class TaskActivityRepository {
     return event;
   }
   async summary(task: BoardTaskRecord, sequence: number): Promise<TaskHistorySummary> {
+    if (this.workspace.storageSession) {
+      const {
+        changes: _changes,
+        description: _description,
+        ...result
+      } = await this.event(task, String(sequence));
+      return result;
+    }
     const path = join(this.root, task.id, "summaries", `${sequence}.json`);
     if (await exists(path)) {
       const result = parse(taskHistorySummarySchema, await readJson(path), path, true);
@@ -231,7 +261,8 @@ export class TaskActivityRepository {
     files.push({ path: `${task.id}/meta.json`, value: { version: 1, sequence } });
     return files;
   }
-  private eventFiles(event: TaskHistoryEvent): ActivityFile[] {
+  /** Кодек события также используется явным переносом прежней ленты без изменения её ID. */
+  eventFiles(event: TaskHistoryEvent): ActivityFile[] {
     const { changes, description, ...summary } = event;
     const value = {
       ...event,
@@ -279,6 +310,27 @@ export class TaskActivityRepository {
   /** Вызывается только под долговечным намерением и общей блокировкой. */
   async publish(files: ActivityFile[], assertOwned: () => void) {
     this.validate(files);
+    if (this.workspace.storageSession) {
+      const session = this.workspace.storageSession;
+      for (const file of files) {
+        if (file.path.includes("/events/")) {
+          const event = storedEventSchema.parse(file.value);
+          await session.appendValue(
+            "task-activity-event",
+            `${event.taskId}:${event.id.padStart(16, "0")}`,
+            json(event),
+            [{ index: "task-activity", key: event.taskId }],
+          );
+          session.touched.add(`task:${event.taskId}`);
+        } else if (file.path.startsWith("receipts/"))
+          await session.appendValue(
+            "task-comment-receipt",
+            file.path.slice("receipts/".length, -5),
+            json(receiptSchema.parse(file.value)),
+          );
+      }
+      return;
+    }
     for (const file of files) {
       await atomicJson(
         join(this.root, file.path),

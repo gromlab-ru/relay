@@ -2285,6 +2285,109 @@ export interface GraphHistoryQuery {
   revision?: number;
 }
 
+export interface FullContext {
+  /** Постоянный адрес исходной сущности */
+  root: {
+    /**
+     * Расширяемый вид сущности
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    kind: string;
+    /**
+     * Постоянный ID сущности в выбранном проекте
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    id: string;
+  };
+  /** Версия согласованного снимка карточек и связей */
+  version: string;
+  /** Все узлы достижимой компоненты */
+  nodes: {
+    /** Адрес сущности */
+    ref: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Однострочное название сущности */
+    title: string;
+    /** Читаемый ключ или ID */
+    key: string;
+    /**
+     * Ревизия источника
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Состояние источника, пустая строка если не применимо */
+    status: string;
+  }[];
+  /** Все действующие рёбра, включая петли и параллельные отношения */
+  edges: {
+    /**
+     * Постоянный ID отношения
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    id: string;
+    /**
+     * Расширяемый тип отношения, например references или contains
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+     */
+    type: string;
+    /** Начало отношения */
+    from: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /** Конец отношения */
+    to: {
+      /**
+       * Расширяемый вид сущности
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      kind: string;
+      /**
+       * Постоянный ID сущности в выбранном проекте
+       * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+       */
+      id: string;
+    };
+    /**
+     * Ревизия отношения
+     * @exclusiveMin 0
+     * @max 9007199254740991
+     */
+    revision: number;
+  }[];
+  /** Успешный ответ всегда полный; превышение бюджета возвращает ошибку */
+  complete: true;
+}
+
+export interface FullContextQuery {
+  /**
+   * Ключ, ID или kind:ID исходной сущности; обход обоих направлений до конца компоненты
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  root: string;
+}
+
 export interface ProjectSettings {
   /**
    * Отображаемое имя проекта, от 1 до 120 символов без переносов строк
@@ -5023,7 +5126,7 @@ export interface ContextResponse {
       defaultLimit: number;
       /**
        * @min 1024
-       * @max 16777216
+       * @max 134217728
        * @default 16384
        */
       maxBytes: number;
@@ -6725,6 +6828,18 @@ export type GetGraphParams1ProfileEnum = "all" | "context";
 
 export type MutateGraphOkEnum = true;
 
+export type GetFullContextOkEnum = true;
+
+export interface GetFullContextParams {
+  /**
+   * Ключ, ID или kind:ID исходной сущности; обход обоих направлений до конца компоненты
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  root: string;
+}
+
 export type GetGraphHistoryOkEnum = true;
 
 export interface GetGraphHistoryParams {
@@ -7976,6 +8091,20 @@ export type GetGraphForProjectParams1ProfileEnum = "all" | "context";
 export type MutateGraphForProjectOkEnum = true;
 
 export interface MutateGraphForProjectParams {
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetFullContextForProjectOkEnum = true;
+
+export interface GetFullContextForProjectParams {
+  /**
+   * Ключ, ID или kind:ID исходной сущности; обход обоих направлений до конца компоненты
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  root: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }

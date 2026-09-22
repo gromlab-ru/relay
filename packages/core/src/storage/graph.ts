@@ -29,6 +29,12 @@ import { readLegacyGraph, legacyRecords, migrateGraph } from "./graph-migration.
 import { GraphTransaction, graphParallel, publishGraphJson } from "./graph-transaction.js";
 import type { GraphFileChange } from "./graph-transaction.js";
 import type { ActivityFile } from "./task-activity.js";
+import {
+  openUnifiedGraph,
+  unifiedGraphRecord,
+  commitUnifiedGraph,
+  unifiedGraphHistory,
+} from "./unified-graph.js";
 
 const historyPointerSchema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -50,6 +56,9 @@ export class GraphRepository {
   }
 
   async meta(): Promise<GraphMeta> {
+    if (!this.workspace.storageSession && (await this.workspace.hasUnifiedStorage()))
+      return this.workspace.locked(() => this.meta());
+    if (this.workspace.storageSession) return (await openUnifiedGraph(this.workspace)).meta;
     if (await exists(this.path))
       return parse(graphMetaSchema, await readJson(this.path, GRAPH_RECORD_BYTES), this.path, true);
     invariant(
@@ -67,7 +76,15 @@ export class GraphRepository {
   }
 
   /** SSE читает только малые метаданные, не текущие связи, журнал или индекс. */
-  async signal() {
+  async signal(): Promise<
+    | GraphMeta
+    | { version: string }
+    | { schemaVersion: number; size: number; mtime: number; ctime: number }
+  > {
+    if (!this.workspace.storageSession && (await this.workspace.hasUnifiedStorage()))
+      return this.workspace.locked(() => this.signal());
+    if (this.workspace.storageSession)
+      return { version: this.workspace.storageSession.state.version };
     if (await exists(this.legacyPath)) {
       const info = await stat(this.legacyPath);
       return { schemaVersion: 1, size: info.size, mtime: info.mtimeMs, ctime: info.ctimeMs };
@@ -76,6 +93,7 @@ export class GraphRepository {
   }
 
   async open(assertOwned: () => void): Promise<GraphSnapshot> {
+    if (this.workspace.storageSession) return openUnifiedGraph(this.workspace);
     if (await exists(this.legacyPath)) {
       invariant(
         !(await exists(this.path)),
@@ -104,6 +122,10 @@ export class GraphRepository {
 
   async receipt(key: string): Promise<GraphReceipt | undefined> {
     invariant(/^[a-f0-9]{64}$/.test(key), "INVALID_DATA", "Некорректный адрес квитанции", 5);
+    if (this.workspace.storageSession) {
+      const value = await this.workspace.storageSession.value("graph-receipt", key);
+      return value === undefined ? undefined : graphReceiptSchema.parse(value);
+    }
     if (await exists(this.legacyPath))
       return (await readLegacyGraph(this.legacyPath)).requests[key];
     const path = join(this.root, receiptPath(key));
@@ -114,6 +136,7 @@ export class GraphRepository {
 
   async get(id: string, snapshot: GraphSnapshot): Promise<GraphCurrent | undefined> {
     graphEdgeSchema.shape.id.parse(id);
+    if (this.workspace.storageSession) return unifiedGraphRecord(snapshot, id);
     if (snapshot.legacy) return legacyRecords(snapshot.legacy).get(id);
     const entry = snapshot.index.entries.get(id);
     if (!entry) return undefined;
@@ -158,6 +181,17 @@ export class GraphRepository {
     assertOwned: () => void,
     activity: ActivityFile[] = [],
   ): Promise<GraphSaved> {
+    if (this.workspace.storageSession)
+      return commitUnifiedGraph(
+        this.workspace,
+        records,
+        events,
+        key,
+        requestHash,
+        saved,
+        assertOwned,
+        activity,
+      );
     const prepared = await this.prepareCommit(snapshot, records, events, key, requestHash, saved);
     await new GraphTransaction(this.workspace).publish(prepared.changes, assertOwned, activity);
     prepared.publish();
@@ -282,6 +316,7 @@ export class GraphRepository {
     },
     assertOwned: () => void,
   ) {
+    if (this.workspace.storageSession) return unifiedGraphHistory(this.workspace, query);
     if (await exists(this.legacyPath)) {
       const legacy = await readLegacyGraph(this.legacyPath);
       invariant(
@@ -359,6 +394,15 @@ export class GraphRepository {
   }
 
   async migrate(assertOwned: () => void) {
+    if (this.workspace.storageSession) {
+      const state = await openUnifiedGraph(this.workspace);
+      return {
+        migrated: false,
+        revision: state.meta.revision,
+        edges: state.index.active.length,
+        events: state.meta.eventCount,
+      };
+    }
     const result = await migrateGraph(this.workspace, assertOwned);
     const meta = await this.meta();
     const index = await openGraphIndex(this.workspace, this.root, meta, assertOwned);
@@ -371,6 +415,24 @@ export class GraphRepository {
   }
 
   async reindex(assertOwned: () => void) {
+    const session = this.workspace.storageSession;
+    if (session) {
+      invariant(
+        !session.changed,
+        "REINDEX_DURING_MUTATION",
+        "Нельзя перестраивать индекс внутри изменения сущностей",
+        4,
+      );
+      await session.store.reindex(assertOwned);
+      Object.assign(session.state, await session.store.state());
+      session.originals.clear();
+      const snapshot = await openUnifiedGraph(this.workspace);
+      return {
+        revision: snapshot.meta.revision,
+        edges: snapshot.index.active.length,
+        events: snapshot.meta.eventCount,
+      };
+    }
     invariant(
       !(await exists(this.legacyPath)),
       "GRAPH_MIGRATION_REQUIRED",

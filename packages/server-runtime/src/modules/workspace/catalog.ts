@@ -41,10 +41,10 @@ export class ProjectContext {
   context(workspace: Workspace): ContextResponse {
     return {
       project: projectSettings(workspace.config, workspace.configPath).name,
-      capabilities: ["relay-projects-v1"],
+      capabilities: ["relay-projects-v1", "relay-full-context-v1"],
       projectId: this.projectId,
       configPath: workspace.configPath,
-      storagePath: workspace.root,
+      storagePath: workspace.dataRoot,
       actor: this.options.actor,
       config: workspace.config,
     };

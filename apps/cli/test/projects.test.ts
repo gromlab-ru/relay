@@ -59,7 +59,7 @@ test("local/workspace: единый сервер, выбор проекта и �
   );
   failed(await invoke(root, ["task", "list"]), "PROJECT_REQUIRED");
   failed(await invoke(root, ["unknown", "task", "get", aId]), "PROJECT_NOT_FOUND", 3);
-  const path = join(root, "b/.relay/boards/product/tasks", `${bId}.json`);
+  const path = join(root, "b/.relay/entities/tasks", `${bId}.json`);
   const original = await readFile(path, "utf8");
   successful(await invoke(root, ["projects", "remove", "b"]));
   failed(await invoke(root, ["b", "task", "get", bId]), "PROJECT_NOT_FOUND", 3);

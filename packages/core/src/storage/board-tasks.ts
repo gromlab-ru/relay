@@ -17,6 +17,7 @@ import { atomicJson, exists, jsonFiles, readJson, syncDirectory } from "./files.
 import type { Workspace } from "./workspace.js";
 import { activityFileSchema, TaskActivityRepository } from "./task-activity.js";
 import type { ActivityFile } from "./task-activity.js";
+import * as unified from "./unified-adapter.js";
 
 const storedSavedSchema = boardTaskSavedSchema.extend({
   task: z
@@ -75,6 +76,9 @@ export class BoardTaskRepository {
   }
 
   async all(): Promise<BoardTaskRecord[]> {
+    if (!this.workspace.storageSession && (await this.workspace.hasUnifiedStorage()))
+      return this.workspace.locked(() => this.all());
+    if (this.workspace.storageSession) return unified.tasks(this.workspace);
     const records: BoardTaskRecord[] = [];
     for (const board of await this.boards.all()) {
       for (const filename of await jsonFiles(join(this.boards.root, board.slug, "tasks"))) {
@@ -137,6 +141,17 @@ export class BoardTaskRepository {
     assertOwned: () => void,
     activity: ActivityFile[] = [],
   ) {
+    if (this.workspace.storageSession) {
+      invariant(
+        removes.every((entry) => writes.some((write) => write.task.id === entry.id)),
+        "INVALID_DATA",
+        "Перенос задачи требует её новой записи",
+        5,
+      );
+      for (const { task } of writes) await unified.saveTask(this.workspace, task);
+      await new TaskActivityRepository(this.workspace).publish(activity, assertOwned);
+      return;
+    }
     const transaction = this.prepare(writes, removes, activity);
     await atomicJson(this.pending, transaction, this.workspace.runtime, true, assertOwned);
     await this.recover(assertOwned);

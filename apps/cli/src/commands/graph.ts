@@ -9,7 +9,12 @@ import { commandGroup, registerCommand } from "../command.js";
 import { author } from "../context.js";
 import type { Runtime } from "../context.js";
 import { integer } from "../options.js";
-import { graphText, graphSavedText, graphHistoryText } from "../presentation/graph.js";
+import {
+  graphText,
+  fullContextText,
+  graphSavedText,
+  graphHistoryText,
+} from "../presentation/graph.js";
 
 /** Некорректный JSON является ошибкой ввода, а не отказом файлового хранилища. */
 function readOperations(value: string): unknown {
@@ -64,53 +69,55 @@ export function registerGraph(program: Command, runtime: Runtime): void {
         };
       },
     });
-  for (const action of ["list", "context"] as const)
-    registerCommand<GraphQuery & { snapshotVersion?: string }>(group, runtime, {
-      name: action === "list" ? "list" : "context <root>",
-      description:
-        action === "list"
-          ? "Прочитать граф или выбранный подграф с продолжением"
-          : "Восстановить окружение сущности с объясняющими путями",
-      ...(action === "context"
-        ? { arguments: { root: "Ключ или ID исходной сущности; допустим kind:ID" } }
-        : {}),
-      details:
-        "Узлы и сохранённые рёбра читаются страницами одного снимка, без скрытого отсечения документов и приложений. depthLimited обозначает границу глубины, nextOffset — продолжение страницы. Продуктовый линк без явной записи Core не появляется в графе.",
-      examples: [
-        [
-          `relay-cli graph ${action === "list" ? "list --limit 20" : "context WEB-24 --depth 5"}`,
-          "Прочитать связи",
-        ],
+  registerCommand<GraphQuery & { snapshotVersion?: string }>(group, runtime, {
+    name: "list",
+    description: "Прочитать граф или выбранный подграф с продолжением",
+    details:
+      "Узлы и сохранённые рёбра читаются страницами одного снимка, без скрытого отсечения документов и приложений. depthLimited обозначает границу глубины, nextOffset — продолжение страницы. Продуктовый линк без явной записи Core не появляется в графе.",
+    examples: [["relay-cli graph list --root WEB-24 --limit 20", "Прочитать связи"]],
+    configure: (command) => {
+      command.option("--root <address>", "Ключ или ID корня; без него весь проект");
+      return command
+        .option("--type <type>", "Фильтр типа отношений")
+        .option("--direction <direction>", "both, outgoing или incoming")
+        .option("--profile <profile>", "all — полный обход; context — совместимое имя all")
+        .option("--depth <n>", "Глубина обхода 0–100", integer(0, 100))
+        .option("--q <text>", "Поиск сущностей по ключу, адресу и названию")
+        .option("--offset <n>", "Смещение страницы", integer(0, Number.MAX_SAFE_INTEGER))
+        .option("--limit <n>", "Размер страницы 1–100", integer(1, 100))
+        .option(
+          "--snapshot-version <version>",
+          "Версия первой страницы графа; отличается от глобального --version CLI",
+        );
+    },
+    run: async (context, input) => {
+      const { snapshotVersion, ...options } = input.options;
+      const query: GraphQuery = {
+        ...options,
+        ...(snapshotVersion === undefined ? {} : { version: snapshotVersion }),
+      };
+      const data = await context.backend.graph.read(query);
+      return { data, text: (options) => graphText(data, query, options) };
+    },
+  });
+  registerCommand(group, runtime, {
+    name: "context <root>",
+    description: "Получить полный контекст сущности одним вызовом",
+    arguments: { root: "Ключ, ID или kind:ID исходной сущности любого зарегистрированного вида" },
+    details:
+      "Возвращает все узлы и рёбра достижимой компоненты в обоих направлениях, включая циклы и параллельные связи. Успешный ответ всегда полный. Глубина и страницы не применяются. При превышении бюджета вернётся ошибка; --max-bytes позволяет явно увеличить лимит.",
+    examples: [
+      ["relay-cli graph context WEB-24", "Прочитать полное окружение задачи"],
+      [
+        "relay-cli graph context WEB-24 --format json --max-bytes 1048576",
+        "Получить структурированный граф для агента",
       ],
-      configure: (command) => {
-        if (action === "list")
-          command.option("--root <address>", "Ключ или ID корня; без него весь проект");
-        return command
-          .option("--type <type>", "Фильтр типа отношений")
-          .option("--direction <direction>", "both, outgoing или incoming")
-          .option("--profile <profile>", "all — полный обход; context — совместимое имя all")
-          .option("--depth <n>", "Глубина обхода 0–100", integer(0, 100))
-          .option("--q <text>", "Поиск сущностей по ключу, адресу и названию")
-          .option("--offset <n>", "Смещение страницы", integer(0, Number.MAX_SAFE_INTEGER))
-          .option("--limit <n>", "Размер страницы 1–100", integer(1, 100))
-          .option(
-            "--snapshot-version <version>",
-            "Версия первой страницы графа; отличается от глобального --version CLI",
-          );
-      },
-      run: async (context, input) => {
-        const { snapshotVersion, ...options } = input.options;
-        const query: GraphQuery = {
-          ...options,
-          ...(snapshotVersion === undefined ? {} : { version: snapshotVersion }),
-          ...(action === "context"
-            ? { root: input.argument(), profile: input.options.profile ?? "all" }
-            : {}),
-        };
-        const data = await context.backend.graph.read(query);
-        return { data, text: (options) => graphText(data, query, options) };
-      },
-    });
+    ],
+    run: async (context, input) => {
+      const data = await context.backend.graph.context({ root: input.argument() });
+      return { data, text: (options) => fullContextText(data, options) };
+    },
+  });
   registerCommand<GraphHistoryQuery>(group, runtime, {
     name: "history",
     description: "Прочитать историю установленных и отозванных отношений",

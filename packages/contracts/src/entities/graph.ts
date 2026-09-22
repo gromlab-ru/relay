@@ -183,6 +183,26 @@ export type GraphSaved = z.infer<typeof graphSavedSchema>;
 export type GraphEvent = z.infer<typeof graphEventSchema>;
 export type GraphHistoryQuery = z.input<typeof graphHistoryQuerySchema>;
 
+/** Полный контекст — отдельный контракт; параметры страниц графа его не ограничивают. */
+export const fullContextQuerySchema = z.strictObject({
+  root: entityReferenceSchema.describe(
+    "Ключ, ID или kind:ID исходной сущности; обход обоих направлений до конца компоненты",
+  ),
+});
+export const fullContextSchema = z.strictObject({
+  root: entityRefSchema.describe("Постоянный адрес исходной сущности"),
+  version: z.string().describe("Версия согласованного снимка карточек и связей"),
+  nodes: z.array(graphNodeSchema).describe("Все узлы достижимой компоненты"),
+  edges: z
+    .array(graphEdgeSchema.pick({ id: true, type: true, from: true, to: true, revision: true }))
+    .describe("Все действующие рёбра, включая петли и параллельные отношения"),
+  complete: z
+    .literal(true)
+    .describe("Успешный ответ всегда полный; превышение бюджета возвращает ошибку"),
+});
+export type FullContextQuery = z.infer<typeof fullContextQuerySchema>;
+export type FullContext = z.infer<typeof fullContextSchema>;
+
 /** Канонический адрес узла без зависимости от его вида. */
 export function entityAddress(ref: EntityRef): string {
   return `${ref.kind}:${ref.id}`;

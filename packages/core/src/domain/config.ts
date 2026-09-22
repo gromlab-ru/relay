@@ -79,7 +79,7 @@ export const configSchema = z
           .number()
           .int()
           .min(1024)
-          .max(16 * 1024 * 1024)
+          .max(128 * 1024 * 1024)
           .default(16384),
       })
       .default({ format: "text", defaultLimit: 20, maxBytes: 16384 }),

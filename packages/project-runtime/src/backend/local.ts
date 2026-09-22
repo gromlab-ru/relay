@@ -16,7 +16,11 @@ export async function createLocalBackend(cwd: string, config?: string): Promise<
     boardTasks: new BoardTasksService(workspace),
     boards: new BoardsService(workspace),
     product: new ProductQueries(workspace),
-    workspace,
+    workspace: {
+      config: workspace.config,
+      configPath: workspace.configPath,
+      root: workspace.dataRoot,
+    },
     localWorkspace: workspace,
     validate: () => validateWorkspace(workspace),
   };

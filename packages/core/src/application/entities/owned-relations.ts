@@ -1,0 +1,176 @@
+import type { Workspace } from "../../storage/workspace.js";
+import type { ProductRecord } from "../../domain/product.js";
+import type { ProductImplementation } from "../../domain/product-implementation.js";
+import type { BoardTaskRecord } from "../../domain/board-task.js";
+import type { Board } from "../../domain/board.js";
+import { ProductRepository } from "../../storage/product.js";
+import { BoardRepository } from "../../storage/boards.js";
+import { replaceOwnedRelations } from "../../storage/entity-store/relations.js";
+import type { DesiredRelation } from "../../storage/entity-store/relations.js";
+
+export async function syncTaskRelations(
+  workspace: Workspace,
+  tasks: readonly BoardTaskRecord[],
+  actor?: string,
+) {
+  const tx = workspace.storageSession;
+  if (!tx) return;
+  for (const task of tasks) {
+    const owner = { kind: "task", id: task.id };
+    const links: DesiredRelation[] = [
+      { type: "part-of", from: owner, to: { kind: "board", id: task.boardId }, description: "" },
+      ...task.productLinks.map((to) => ({ type: "implements", from: owner, to, description: "" })),
+      ...task.dependencies.map((id) => ({
+        type: "depends-on",
+        from: owner,
+        to: { kind: "task", id },
+        description: "",
+      })),
+      ...task.related.map((id) => ({
+        type: "related",
+        from: owner,
+        to: { kind: "task", id },
+        description: "",
+      })),
+      ...(task.parentId
+        ? [
+            {
+              type: "part-of",
+              from: owner,
+              to: { kind: "task", id: task.parentId },
+              description: "",
+            },
+          ]
+        : []),
+    ];
+    await replaceOwnedRelations(tx, owner, "task-links", links, actor ?? task.updatedBy);
+  }
+}
+
+export async function syncBoardRelations(
+  workspace: Workspace,
+  boards: readonly Board[],
+  actor?: string,
+) {
+  if (!workspace.storageSession) return;
+  for (const board of boards) {
+    const owner = { kind: "board", id: board.id };
+    await replaceOwnedRelations(
+      workspace.storageSession,
+      owner,
+      "board-links",
+      board.applicationId
+        ? [
+            {
+              type: "part-of",
+              from: owner,
+              to: { kind: "application", id: board.applicationId },
+              description: "",
+            },
+          ]
+        : [],
+      actor ?? board.createdBy,
+    );
+  }
+}
+
+export async function syncImplementationRelations(
+  workspace: Workspace,
+  record: ProductImplementation,
+  actor?: string,
+) {
+  if (!workspace.storageSession) return;
+  const owner = { kind: "implementation", id: record.id };
+  await replaceOwnedRelations(
+    workspace.storageSession,
+    owner,
+    "implementation-links",
+    [
+      {
+        type: "part-of",
+        from: owner,
+        to: { kind: "application", id: record.fields.applicationId },
+        description: "",
+      },
+      {
+        type: "implements",
+        from: owner,
+        to: record.fields.scenarioId
+          ? { kind: "scenario", id: record.fields.scenarioId }
+          : { kind: "feature", id: record.fields.featureId },
+        description: "",
+      },
+    ],
+    actor ?? record.updatedBy,
+  );
+}
+
+export async function syncProductRelations(
+  workspace: Workspace,
+  record: ProductRecord,
+  actor?: string,
+) {
+  const tx = workspace.storageSession;
+  if (!tx) return;
+  const fields = record.fields;
+  if (fields.kind === "scenario") {
+    const owner = { kind: "scenario", id: record.id };
+    await replaceOwnedRelations(
+      tx,
+      owner,
+      "scenario-links",
+      [
+        {
+          type: "part-of",
+          from: owner,
+          to: { kind: "feature", id: fields.featureId },
+          description: "",
+        },
+      ],
+      actor ?? record.updatedBy,
+    );
+  } else if (fields.kind === "document") {
+    const owner = { kind: "document", id: record.id };
+    await replaceOwnedRelations(
+      tx,
+      owner,
+      "document-links",
+      [
+        ...fields.links.map((link) => ({
+          type: "documents",
+          from: owner,
+          to: { kind: link.kind, id: link.kind === "product" ? "passport" : link.id },
+          description: "",
+        })),
+        ...(fields.relations ?? []).map((link) => ({
+          type: link.type,
+          from: link.type === "references" ? link.target : owner,
+          to: link.type === "references" ? owner : link.target,
+          description: link.description,
+        })),
+      ],
+      actor ?? record.updatedBy,
+    );
+  } else if (fields.kind === "scope") {
+    const repository = new ProductRepository(workspace);
+    for (const contract of fields.contracts)
+      await syncImplementationRelations(
+        workspace,
+        await repository.implementation(
+          fields.applicationId,
+          contract.id,
+          contract.scenarioId !== null,
+        ),
+        actor,
+      );
+  } else if (fields.kind === "application") {
+    await syncBoardRelations(
+      workspace,
+      (await new BoardRepository(workspace).all()).filter(
+        (board) => board.applicationId === record.id,
+      ),
+      actor,
+    );
+  }
+  // Проектная изоляция productId не является продуктовым линком: фиктивные рёбра к проекту не добавляются.
+}

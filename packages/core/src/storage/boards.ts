@@ -11,6 +11,7 @@ import { atomicJson, exists, jsonFiles, readJson, syncDirectory } from "./files.
 import { ProductRepository } from "./product.js";
 import { encodeProduct, decodeProduct } from "./product-codec.js";
 import type { Workspace } from "./workspace.js";
+import * as unified from "./unified-adapter.js";
 
 /** Контейнеры досок и долговечные намерения создания приложения с доской. */
 export class BoardRepository {
@@ -22,6 +23,9 @@ export class BoardRepository {
   }
 
   async all(): Promise<Board[]> {
+    if (!this.workspace.storageSession && (await this.workspace.hasUnifiedStorage()))
+      return this.workspace.locked(() => this.all());
+    if (this.workspace.storageSession) return unified.boards(this.workspace);
     const entries = await readdir(this.root, { withFileTypes: true }).catch((error: unknown) => {
       if (isErrno(error, "ENOENT")) return [];
       throw error;
@@ -57,6 +61,32 @@ export class BoardRepository {
   /** Повтор восстанавливает только недостающие части, никогда не переписывая задачи. */
   async ensure(board: Board, assertOwned: () => void): Promise<void> {
     parse(boardSchema, board, "доска");
+    if (this.workspace.storageSession) {
+      const existing = await this.all();
+      const prior = existing.find((entry) => entry.id === board.id || entry.slug === board.slug);
+      if (prior) {
+        invariant(
+          prior.id === board.id &&
+            prior.slug === board.slug &&
+            prior.kind === board.kind &&
+            prior.applicationId === board.applicationId,
+          "ALREADY_EXISTS",
+          "Адрес доски уже занят",
+          4,
+        );
+        return;
+      }
+      invariant(
+        !existing.some(
+          (entry) => entry.prefix === (board.prefix ?? defaultBoardPrefix(board.slug)),
+        ),
+        "ALREADY_EXISTS",
+        "Префикс доски уже занят",
+        4,
+      );
+      await unified.saveBoard(this.workspace, board);
+      return;
+    }
     const others = (await this.all()).filter((entry) => entry.slug !== board.slug);
     invariant(
       !others.some((entry) => entry.id === board.id),
@@ -121,6 +151,26 @@ export class BoardRepository {
   /** До публикации двух файлов фиксируется возобновляемое намерение вне временного runtime. */
   async createApplication(record: ProductRecord, assertOwned: () => void): Promise<void> {
     invariant(record.fields.kind === "application", "INVALID_ARGUMENT", "Ожидается приложение");
+    if (this.workspace.storageSession) {
+      await unified.saveProduct(this.workspace, record);
+      await this.ensure(
+        {
+          version: 1,
+          id: record.id.startsWith("application_")
+            ? record.id.replace("application_", "board_")
+            : derivedId(`board:${record.id}`),
+          slug: record.fields.slug,
+          prefix: record.fields.prefix ?? defaultBoardPrefix(record.fields.slug),
+          kind: "application",
+          applicationId: record.id,
+          revision: 1,
+          createdAt: record.createdAt,
+          createdBy: record.createdBy,
+        },
+        assertOwned,
+      );
+      return;
+    }
     await mkdir(this.pending, { recursive: true });
     await atomicJson(
       join(this.pending, `${record.id}.json`),

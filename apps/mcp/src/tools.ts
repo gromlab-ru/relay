@@ -65,7 +65,7 @@ const selector = {
     .number()
     .int()
     .min(1024)
-    .max(16 * 1024 * 1024)
+    .max(128 * 1024 * 1024)
     .optional(),
 };
 const boardTask = { reference: boardTaskReferenceSchema };

@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 101);
+    assert.equal(operations.size, 103);
     for (const path of [
       "/api/v1/tasks",
       "/api/v1/board",
@@ -97,6 +97,12 @@ for (const scoped of [false, true])
     await request("DELETE", "/api/v1/projects/{project}", "/api/v1/projects/a", undefined, 400);
     await request("GET", "/api/v1/context");
     const graph = await request("GET", "/api/v1/graph");
+    const fullContext = await request(
+      "GET",
+      "/api/v1/graph/context",
+      "/api/v1/graph/context?root=PRODUCT",
+    );
+    assert.equal(fullContext.data.complete, true);
     await request("POST", "/api/v1/graph", undefined, {
       ifVersion: graph.data.version,
       requestId: "openapi-graph",
@@ -294,7 +300,7 @@ for (const scoped of [false, true])
       undefined,
       404,
     );
-    assert.equal(visited.size, 49);
+    assert.equal(visited.size, 50);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateBoardTask as SchemaObject;

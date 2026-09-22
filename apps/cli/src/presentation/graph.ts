@@ -1,6 +1,11 @@
 import Table from "cli-table3";
 import { entityAddress } from "@relay/core/domain/entity-graph";
-import type { GraphPage, GraphQuery, GraphSaved } from "@relay/core/domain/entity-graph";
+import type {
+  GraphPage,
+  GraphQuery,
+  GraphSaved,
+  FullContext,
+} from "@relay/core/domain/entity-graph";
 import type { GraphService } from "@relay/core/application/graph/service";
 import { safeText } from "./text.js";
 import { renderMarkdown } from "./markdown.js";
@@ -8,6 +13,58 @@ import { wrap } from "./layout.js";
 import type { TextOptions } from "./theme.js";
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\"'\"'")}'`;
+
+/** Плоское представление сохраняет все ветвления и циклы, не превращая граф в дерево. */
+export function fullContextText(context: FullContext, options: TextOptions): string {
+  const labels = new Map(
+    context.nodes.map((node) => [
+      entityAddress(node.ref),
+      `${node.key} [${entityAddress(node.ref)}]`,
+    ]),
+  );
+  const root = context.nodes.find(
+    (node) => entityAddress(node.ref) === entityAddress(context.root),
+  );
+  const rows = context.nodes.map((node) => [
+    node.key,
+    entityAddress(node.ref),
+    node.title,
+    node.status || "—",
+  ]);
+  const table = new Table({
+    head: ["Ключ", "Постоянный адрес", "Сущность", "Состояние"],
+    wordWrap: true,
+    colWidths: [24, 30, Math.max(20, options.width - 74), 15],
+  });
+  table.push(...rows.map((row) => row.map(safeText)));
+  const nodes =
+    options.width >= 110
+      ? table.toString()
+      : rows
+          .map((row) =>
+            wrap(
+              `${safeText(row[0]!)} · ${safeText(row[1]!)}\n${safeText(row[2]!)} · ${safeText(row[3]!)}`,
+              options.width,
+            ),
+          )
+          .join("\n\n");
+  const edges = context.edges
+    .map((edge) =>
+      wrap(
+        `${safeText(labels.get(entityAddress(edge.from)) ?? entityAddress(edge.from))} ── ${safeText(edge.type)} → ${safeText(labels.get(entityAddress(edge.to)) ?? entityAddress(edge.to))}\nСвязь ${safeText(edge.id)} · ревизия ${edge.revision}`,
+        options.width,
+      ),
+    )
+    .join("\n\n");
+  return [
+    `Полный контекст ${safeText(root?.key ?? entityAddress(context.root))}`,
+    nodes,
+    "Сохранённые отношения",
+    edges || "Связей нет: в контексте только исходная сущность.",
+    `Граф прочитан полностью: ${context.nodes.length} сущностей, ${context.edges.length} связей.`,
+    `Версия: ${context.version}`,
+  ].join("\n\n");
+}
 
 /** Показывает сущности, направления и объясняющие пути, не печатая внутренние объекты. */
 export function graphText(page: GraphPage, query: GraphQuery, options: TextOptions): string {

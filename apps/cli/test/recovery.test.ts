@@ -9,7 +9,7 @@ import { fixture, successful } from "./helpers/cli.js";
 test("прерывание перед публикацией JSON оставляет предыдущую карточку целой", async (t) => {
   const app = await fixture(t);
   const id = await app.create("Исходная карточка");
-  const target = join(app.root, ".relay/boards/product/tasks", `${id}.json`);
+  const target = join(app.root, ".relay/entities/tasks", `${id}.json`);
   const before = await readFile(target, "utf8");
   const moduleUrl = import.meta.resolve("@relay/core/storage/files");
   // Останавливаем настоящий процесс после fsync временного файла, до rename.
@@ -22,7 +22,7 @@ test("прерывание перед публикацией JSON оставля
     import { atomicJson } from ${JSON.stringify(moduleUrl)};
     import { readFile } from 'node:fs/promises';
     const task = JSON.parse(await readFile(process.env.TARGET, 'utf8'));
-    await atomicJson(process.env.TARGET, {...task, title: 'Незавершённая запись'}, process.env.STAGING, false,
+    await atomicJson(process.env.TARGET, {...task, data: {...task.data, title: 'Незавершённая запись'}}, process.env.STAGING, false,
       () => { process.kill(process.pid, 'SIGKILL'); });
   `,
     ],

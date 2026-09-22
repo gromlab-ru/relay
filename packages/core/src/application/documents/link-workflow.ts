@@ -84,6 +84,10 @@ export async function saveDocumentWithLinks(
   requestKey: string,
   owned: () => void,
 ): Promise<void> {
+  if (workspace.storageSession) {
+    await new ProductRepository(workspace).save(record, false, owned);
+    return;
+  }
   const repository = new DocumentLinksRepository(workspace);
   invariant(
     !(await repository.readPending()),

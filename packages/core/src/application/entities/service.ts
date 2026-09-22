@@ -17,6 +17,7 @@ import {
   entityLinkTaskSchema,
   entityDetailSchema,
   entityTypeDetailSchema,
+  entitySummarySchema,
 } from "@relay/contracts/entities";
 import type {
   EntityKind,
@@ -78,7 +79,7 @@ export class EntityEngine {
     operation: (context: EntityOperationContext) => Promise<T>,
   ) {
     const author = parse(actorSchema, input.actor ?? actor, "автор операции");
-    return this.workspace.locked(async (owned) =>
+    return this.workspace.mutate("entity", { ...input }, author, async (owned) =>
       operation({
         workspace: this.workspace,
         catalog: await readEntityCatalog(this.workspace, owned),
@@ -132,7 +133,20 @@ export class EntityEngine {
       archived,
       ...pagination
     } = query;
-    const filters = { board, application, feature, scenario, target, parent, status, active, section, documentKind, pinned, archived };
+    const filters = {
+      board,
+      application,
+      feature,
+      scenario,
+      target,
+      parent,
+      status,
+      active,
+      section,
+      documentKind,
+      pinned,
+      archived,
+    };
     if (kind) {
       const available = entityDefinitions.find((entry) => entry.kind === kind)!.filters;
       for (const [name, value] of Object.entries(filters))
@@ -176,7 +190,8 @@ export class EntityEngine {
             (section === undefined || (entry.document?.sectionId ?? "none") === section) &&
             (documentKind === undefined || entry.document?.kind === documentKind) &&
             (pinned === undefined || entry.document?.pinned === (pinned === "true")) &&
-            (archived === undefined || (entry.document?.status === "archived") === (archived === "true")) &&
+            (archived === undefined ||
+              (entry.document?.status === "archived") === (archived === "true")) &&
             Object.entries(resolved).every(([name, value]) =>
               Array.isArray(entry.filters[name])
                 ? entry.filters[name].includes(value)
@@ -185,7 +200,8 @@ export class EntityEngine {
         )
         .sort(
           (a, b) =>
-            (sort === "updated" ? (b.document?.updatedAt ?? "").localeCompare(a.document?.updatedAt ?? "")
+            (sort === "updated"
+              ? (b.document?.updatedAt ?? "").localeCompare(a.document?.updatedAt ?? "")
               : a[sort].localeCompare(b[sort], "ru", { numeric: true })) ||
             entityAddress(a.ref).localeCompare(entityAddress(b.ref)),
         )
@@ -193,7 +209,11 @@ export class EntityEngine {
           const summary = entitySummary(entry);
           if (needle && entry.data.kind === "document" && summary.document) {
             const match = entry.data.body.toLocaleLowerCase().indexOf(needle);
-            if (match >= 0) summary.document.excerpt = entry.data.body.slice(Math.max(0, match - 50), match + needle.length + 100);
+            if (match >= 0)
+              summary.document.excerpt = entry.data.body.slice(
+                Math.max(0, match - 50),
+                match + needle.length + 100,
+              );
           }
           return summary;
         });
@@ -203,7 +223,10 @@ export class EntityEngine {
       for (const entry of catalog.entries) {
         const document = entry.document;
         if (!document) continue;
-        if (document.status === "archived") { counts.archived!++; continue; }
+        if (document.status === "archived") {
+          counts.archived!++;
+          continue;
+        }
         counts.all!++;
         if (document.status === "draft") counts.draft!++;
         if (document.pinned) counts.pinned!++;
@@ -259,7 +282,19 @@ export class EntityEngine {
   }
   async resolve(input: EntityGetQuery) {
     const query = parse(entityGetQuerySchema, input, "адрес сущности");
-    return this.read((catalog) => entitySummary(resolveEntity(catalog, query.ref, query.kind)));
+    return this.workspace.locked(async (owned) => {
+      if (this.workspace.storageSession) {
+        const {
+          aliases: _aliases,
+          selectors: _selectors,
+          ...summary
+        } = await this.workspace.storageSession.resolve(query.ref, query.kind);
+        return entitySummarySchema.parse({ ...summary, status: summary.status || null });
+      }
+      return entitySummary(
+        resolveEntity(await readEntityCatalog(this.workspace, owned), query.ref, query.kind),
+      );
+    });
   }
   async keys(input: z.input<typeof entityKeysQuerySchema>) {
     const { ref, kind, ...page } = parse(entityKeysQuerySchema, input, "ключи сущности");

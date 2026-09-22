@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { GraphPage, GraphSaved } from "@relay/core/domain/entity-graph";
+import type { GraphPage, GraphSaved, FullContext } from "@relay/core/domain/entity-graph";
 import { fixture, successful, invokeRaw } from "./helpers/cli.js";
 
 test("CLI графа: контекстный документ, путь, безопасный повтор и читаемое продолжение", async (t) => {
@@ -35,7 +35,7 @@ test("CLI графа: контекстный документ, путь, без�
     ]),
   ).data;
   const initial = successful(await app.run<GraphPage>(["graph", "list"])).data;
-  assert.equal(initial.totalEdges, 0);
+  assert.equal(initial.totalEdges, 1);
   const link = [
     "graph",
     "link",
@@ -55,17 +55,26 @@ test("CLI графа: контекстный документ, путь, без�
   const receipt = successful(await app.run<GraphSaved>(link)).data;
   assert.deepEqual(successful(await app.run<GraphSaved>(link)).data, receipt);
   const context = successful(
-    await app.run<GraphPage>(["graph", "context", `task:${task.id}`]),
+    await app.run<FullContext>(["graph", "context", `task:${task.id}`]),
   ).data;
   assert.ok(context.nodes.some((node) => node.ref.id === doc.id));
-  assert.ok(
-    context.paths.some((path) => path.target.id === doc.id && path.edges.includes(receipt.ids[0]!)),
-  );
+  assert.ok(context.edges.some((edge) => edge.to.id === doc.id && edge.id === receipt.ids[0]));
   const human = await invokeRaw(app.root, ["graph", "context", `task:${task.id}`]);
   assert.equal(human.code, 0, human.stderr);
-  assert.match(human.stdout, /Почему включено/);
-  assert.match(human.stdout, /Для контекста/);
-  assert.match(human.stdout, /Сохранённая связь Core/);
+  assert.match(human.stdout, /Полный контекст/);
+  assert.match(human.stdout, /Граф прочитан полностью/);
+  assert.match(human.stdout, /example-for/);
+  assert.match(human.stdout, new RegExp(task.id));
+  assert.equal(context.complete, true);
+  const details = await invokeRaw(app.root, [
+    "graph",
+    "list",
+    "--root",
+    `task:${task.id}`,
+    "--type",
+    "example-for",
+  ]);
+  assert.match(details.stdout, /Для контекста/);
   assert.doesNotMatch(human.stdout, /Из предметной записи/);
   assert.doesNotMatch(human.stdout, /"nodes":/);
   const page = await invokeRaw(app.root, ["graph", "list", "--limit", "1"]);

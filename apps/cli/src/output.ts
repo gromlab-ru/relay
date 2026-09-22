@@ -18,7 +18,9 @@ export function printResult(stream: Writable, result: Result, options: OutputOpt
   if (Buffer.byteLength(encoded) > options.maxBytes) {
     throw new AppError(
       "RESPONSE_TOO_LARGE",
-      "Ответ превышает --max-bytes; выберите конкретную запись/область, уменьшите страницу или увеличьте лимит. Параметры: --help",
+      typeof result.data === "object" && result.data !== null && "complete" in result.data
+        ? "Полный контекст превышает --max-bytes. Увеличьте бюджет ответа; частичный граф не возвращён"
+        : "Ответ превышает --max-bytes; выберите конкретную запись/область, уменьшите страницу или увеличьте лимит. Параметры: --help",
       2,
       { requiredBytes: Buffer.byteLength(encoded), maxBytes: options.maxBytes },
     );

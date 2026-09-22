@@ -16,7 +16,7 @@ import {
 } from "@relay/contracts/entities";
 import type { EntitySaved } from "@relay/contracts/entities";
 import { actorSchema, entityReferenceSchema, requestIdSchema } from "@relay/contracts/primitives";
-import { graphQuerySchema } from "@relay/contracts/entities/graph";
+import { fullContextQuerySchema } from "@relay/contracts/entities/graph";
 import type { Backend } from "@relay/project-runtime/backend/types";
 import type { Result } from "./output.js";
 
@@ -117,15 +117,13 @@ export const entityTools: EntityTool[] = [
   {
     name: "entity_context",
     description:
-      "Прочитать сохранённые связи сущности по ключу или ID: входящие и исходящие направления, узлы, пути и границы глубины. Продуктовые поля не создают рёбер; документы и приложения не скрывают продолжение цепочки",
-    schema: graphQuerySchema.omit({ root: true }).extend({
-      ref: entityReferenceSchema,
-      profile: graphQuerySchema.shape.profile.default("all"),
-    }),
+      "Получить полный контекст сущности одним вызовом: все узлы и сохранённые рёбра достижимой компоненты в обоих направлениях, включая циклы. Успех всегда complete=true; при превышении maxBytes возвращается ошибка, усечённого графа нет",
+    schema: z.strictObject({ ref: fullContextQuerySchema.shape.root }),
     readOnly: true,
     run: async (backend, input) => {
-      const { ref, ...query } = input;
-      return { data: await backend.graph.read(graphQuerySchema.parse({ ...query, root: ref })) };
+      return {
+        data: await backend.graph.context(fullContextQuerySchema.parse({ root: input.ref })),
+      };
     },
   },
   {

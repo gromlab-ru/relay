@@ -1,0 +1,69 @@
+import type { Command } from "commander";
+import { StorageService } from "@relay/core/application/storage/service";
+import { AppError } from "@relay/core/shared/errors";
+import { commandGroup, registerCommand } from "../command.js";
+import type { Runtime } from "../context.js";
+
+/** Явное обслуживание выбранной файловой базы, с собственным результатом для человека. */
+export function registerStorage(program: Command, runtime: Runtime): void {
+  const group = commandGroup(program, {
+    name: "storage",
+    description: "Формат единого хранилища и восстановление индексов",
+    details:
+      "Обслуживание выполняется локально для выбранного .relay/config.json. Обычное открытие использует готовые индексы и не перестраивает базу.",
+    examples: [
+      ["relay-cli --local storage migrate", "Явно перенести прежнюю базу"],
+      [
+        "relay-cli --local storage reindex",
+        "Восстановить производные индексы после внешних изменений",
+      ],
+    ],
+  });
+  registerCommand(group, runtime, {
+    name: "migrate",
+    description: "Перенести существующие сущности, связи, историю и квитанции в единый формат",
+    details:
+      "Перед переносом остановите старые версии клиентов. ID, ключи, Markdown, ревизии и сохранённые события переносятся; незавершённый WAL восстанавливается. Повтор завершённого переноса ничего не дублирует.",
+    examples: [
+      [
+        "relay-cli --local --config .relay/config.json storage migrate",
+        "Перенести выбранный проект",
+      ],
+    ],
+    run: async (context) => {
+      const workspace = context.backend.localWorkspace;
+      if (!workspace)
+        throw new AppError(
+          "LOCAL_REQUIRED",
+          "Для обслуживания укажите --local и проектный --config",
+        );
+      const data = await new StorageService(workspace).migrate();
+      return {
+        data,
+        text: data.migrated
+          ? `Единое хранилище готово.\nПеренесено записей: ${data.entities}\nФормат: ${data.format}`
+          : "Проект уже использует единое хранилище. Перенос не требуется.",
+      };
+    },
+  });
+  registerCommand(group, runtime, {
+    name: "reindex",
+    description: "Перестроить адреса, карточки, связи и указатели истории из постоянных данных",
+    details:
+      "Используйте после Git-слияния, ручной правки либо потери индекса. Факты и история не удаляются. Команда работает и при отсутствующем заголовке индекса.",
+    examples: [["relay-cli --local storage reindex", "Восстановить индексы проекта"]],
+    run: async (context) => {
+      const workspace = context.backend.localWorkspace;
+      if (!workspace)
+        throw new AppError(
+          "LOCAL_REQUIRED",
+          "Для обслуживания укажите --local и проектный --config",
+        );
+      const data = await new StorageService(workspace).reindex();
+      return {
+        data,
+        text: `Индексы единого хранилища восстановлены.\nДействующих связей: ${data.edges}\nСобытий связей: ${data.events}\nРевизия графа: ${data.revision}`,
+      };
+    },
+  });
+}

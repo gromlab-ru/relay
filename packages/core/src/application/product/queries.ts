@@ -26,6 +26,7 @@ import { createHash } from "node:crypto";
 import { actorSchema } from "../../domain/validation.js";
 import { contractBasis } from "./model.js";
 import { readEntityCatalog, resolveEntity, assertEntityKeyAvailable } from "../entities/catalog.js";
+import { syncImplementationRelations } from "../entities/owned-relations.js";
 
 /** Выборки требований и реализаций; готовность реализации определяется задачами. */
 export class ProductQueries extends ProductService {
@@ -141,7 +142,7 @@ export class ProductQueries extends ProductService {
       "Изменения реализации не заданы",
     );
     const actor = parse(actorSchema, command.actor ?? defaultActor, "автор");
-    return this.workspace.locked(async (owned) => {
+    return this.workspace.mutate("implementation", command, actor, async (owned) => {
       const repository = new ProductRepository(this.workspace);
       const records = await repository.ensureKeys(owned);
       const receiptKey = createHash("sha256").update(`${actor}/${command.requestId}`).digest("hex");
@@ -240,6 +241,15 @@ export class ProductQueries extends ProductService {
         },
         owned,
       );
+      if (this.workspace.storageSession)
+        await syncImplementationRelations(
+          this.workspace,
+          await repository.implementation(
+            scope.fields.applicationId,
+            record.id,
+            record.fields.scenarioId !== null,
+          ),
+        );
       return result;
     });
   }

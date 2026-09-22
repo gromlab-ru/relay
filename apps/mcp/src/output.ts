@@ -35,7 +35,9 @@ export function checked(result: Result, maxBytes: number): CallToolResult {
   if (requiredBytes > maxBytes)
     throw new AppError(
       "RESPONSE_TOO_LARGE",
-      "Ответ не помещается в maxBytes; выберите поля, уменьшите limit или увеличьте maxBytes",
+      typeof result.data === "object" && result.data !== null && "complete" in result.data
+        ? "Полный контекст не помещается в maxBytes. Увеличьте бюджет; частичный граф не возвращён"
+        : "Ответ не помещается в maxBytes; выберите поля, уменьшите limit или увеличьте maxBytes",
       2,
       { requiredBytes, maxBytes },
     );

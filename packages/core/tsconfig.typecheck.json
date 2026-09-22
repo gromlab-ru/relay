@@ -4,6 +4,7 @@
     "rootDir": ".",
     "allowJs": true,
     "checkJs": true,
+    "paths": { "@relay/core/*": ["./src/*.ts"] },
     "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "test/**/*.mjs", "scripts/**/*.mjs"]

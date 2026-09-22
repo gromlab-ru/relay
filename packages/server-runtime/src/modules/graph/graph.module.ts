@@ -6,8 +6,14 @@ import {
   graphQuerySchema,
   graphMutationSchema,
   graphHistoryQuerySchema,
+  fullContextQuerySchema,
 } from "@relay/core/domain/entity-graph";
-import type { GraphQuery, GraphMutation, GraphHistoryQuery } from "@relay/core/domain/entity-graph";
+import type {
+  GraphQuery,
+  GraphMutation,
+  GraphHistoryQuery,
+  FullContextQuery,
+} from "@relay/core/domain/entity-graph";
 import { ApiEndpoint } from "../../openapi/endpoint.js";
 import { ZodValidationPipe } from "../../common/validation.js";
 import { WorkspaceService } from "../workspace/workspace.module.js";
@@ -31,6 +37,18 @@ class GraphController {
   })
   async read(@Query(new ZodValidationPipe(graphQuerySchema)) query: GraphQuery) {
     return success(await new GraphService(await this.workspace.open()).read(query));
+  }
+
+  @Get("context")
+  @ApiEndpoint({
+    id: "getFullContext",
+    summary:
+      "Получить все узлы и рёбра достижимой компоненты одним вызовом; превышение бюджета возвращает ошибку",
+    response: "FullContext",
+    query: "FullContextQuery",
+  })
+  async context(@Query(new ZodValidationPipe(fullContextQuerySchema)) query: FullContextQuery) {
+    return success(await new GraphService(await this.workspace.open()).context(query));
   }
 
   @Post()

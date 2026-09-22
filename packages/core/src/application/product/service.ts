@@ -24,6 +24,7 @@ import {
 import { readEntityCatalog, assertEntityKeyAvailable, resolveEntity } from "../entities/catalog.js";
 import { defaultDocumentSections } from "@relay/contracts/entities";
 import { saveDocumentWithLinks } from "../documents/link-workflow.js";
+import { syncProductRelations } from "../entities/owned-relations.js";
 
 /** Единая граница записи для Web, REST, CLI и MCP. */
 export class ProductService {
@@ -50,7 +51,7 @@ export class ProductService {
       "При создании ключ назначается автоматически",
     );
     const actor = parse(actorSchema, command.actor ?? defaultActor, "автор");
-    return this.workspace.locked(async (assertOwned) => {
+    return this.workspace.mutate("product", command, actor, async (assertOwned) => {
       const repository = new ProductRepository(this.workspace);
       const records = await repository.ensureKeys(assertOwned);
       validateProduct(records);
@@ -347,22 +348,46 @@ export class ProductService {
         const prior = previous?.fields.kind === "document" ? previous.fields : undefined;
         fields = {
           ...fields,
-          documentStatus: fields.documentStatus ?? prior?.documentStatus ?? (previous ? "active" : "draft"),
+          documentStatus:
+            fields.documentStatus ?? prior?.documentStatus ?? (previous ? "active" : "draft"),
           pinned: fields.pinned ?? prior?.pinned ?? false,
-          sectionId: fields.sectionId === undefined ? prior?.sectionId ?? null : fields.sectionId,
+          sectionId: fields.sectionId === undefined ? (prior?.sectionId ?? null) : fields.sectionId,
           relations: fields.relations ?? prior?.relations ?? [],
         };
-        const sections = this.workspace.config.projectSettings?.documentSections ?? defaultDocumentSections;
+        const sections =
+          this.workspace.config.projectSettings?.documentSections ?? defaultDocumentSections;
         const sectionId = fields.sectionId;
         if (sectionId !== null && sectionId !== prior?.sectionId)
-          invariant(sections.some((section) => section.id === sectionId), "INVALID_REFERENCE", "Раздел библиотеки не найден");
+          invariant(
+            sections.some((section) => section.id === sectionId),
+            "INVALID_REFERENCE",
+            "Раздел библиотеки не найден",
+          );
         for (const relation of fields.relations ?? []) {
           const target = resolveEntity(catalog, `${relation.target.kind}:${relation.target.id}`);
-          invariant(target.ref.id !== id || target.ref.kind !== "document", "INVALID_REFERENCE", "Документ нельзя связать с самим собой");
-          invariant(target.active || prior?.relations?.some((link) => JSON.stringify(link.target) === JSON.stringify(relation.target)),
-            "INVALID_REFERENCE", "Новая связь требует активной сущности");
-          invariant(!fields.links.some((link) => relation.type === "documents" && link.kind === relation.target.kind &&
-            (link.kind === "product" ? "passport" : link.id) === relation.target.id), "INVALID_REFERENCE", "Повтор прежней связи документа");
+          invariant(
+            target.ref.id !== id || target.ref.kind !== "document",
+            "INVALID_REFERENCE",
+            "Документ нельзя связать с самим собой",
+          );
+          invariant(
+            target.active ||
+              prior?.relations?.some(
+                (link) => JSON.stringify(link.target) === JSON.stringify(relation.target),
+              ),
+            "INVALID_REFERENCE",
+            "Новая связь требует активной сущности",
+          );
+          invariant(
+            !fields.links.some(
+              (link) =>
+                relation.type === "documents" &&
+                link.kind === relation.target.kind &&
+                (link.kind === "product" ? "passport" : link.id) === relation.target.id,
+            ),
+            "INVALID_REFERENCE",
+            "Повтор прежней связи документа",
+          );
         }
       }
       const publicKey =
@@ -371,16 +396,18 @@ export class ProductService {
         (fields.kind === "passport"
           ? "PRODUCT"
           : fields.kind === "feature" || fields.kind === "scenario" || fields.kind === "document"
-            ? nextProductKey(fields.kind, records, [
-                ...catalog.reservedKeys,
-                ...catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
-              ])
+            ? this.workspace.storageSession
+              ? await this.workspace.storageSession.nextKey(`global-${fields.kind}`)
+              : nextProductKey(fields.kind, records, [
+                  ...catalog.reservedKeys,
+                  ...catalog.entries.flatMap((entry) => [entry.key, ...entry.aliases]),
+                ])
             : fields.kind === "application"
               ? (fields.prefix ?? defaultBoardPrefix(fields.slug))
               : undefined);
       if (publicKey && (command.key !== undefined || previous === undefined))
         assertProductKey(publicKey, kind, id, records);
-      if (publicKey)
+      if (publicKey && (command.key !== undefined || previous === undefined))
         assertEntityKeyAvailable(catalog, publicKey, {
           kind: kind === "passport" ? "product" : kind,
           id,
@@ -471,6 +498,7 @@ export class ProductService {
       else await repository.save(record, previous === undefined, assertOwned);
       // Новые реализации получают постоянные ключи до освобождения общей блокировки.
       if (record.fields.kind === "scope") await repository.ensureKeys(assertOwned);
+      await syncProductRelations(this.workspace, record);
       return result;
     });
   }
