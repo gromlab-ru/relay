@@ -1,6 +1,7 @@
 export {
   useBoardTasks,
   useProductTaskProgress,
+  useApplicationTaskProgress,
   useBoardTask,
   useTaskLinks,
   useBoardTaskRefresh,

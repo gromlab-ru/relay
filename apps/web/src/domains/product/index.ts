@@ -22,3 +22,5 @@ export { PRODUCT_TARGET_LINK_SCHEMA } from "./config/product.schema";
 export type { ProductTargetLink } from "./types/product-entity.type";
 export { useFeatureExpansion } from "./hooks/use-feature-expansion.hook";
 export { PRODUCT_STATUS_LABELS } from "./config/product-status";
+export { useProductTargetPreviews } from "./hooks/use-product-target-previews.hook";
+export type { ProductTargetPreview } from "./types/product-target-preview.type";

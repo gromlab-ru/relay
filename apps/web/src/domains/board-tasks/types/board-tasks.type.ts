@@ -21,6 +21,13 @@ export type ProductTaskProgress = {
   /** Задачи в колонке done. */
   completed: number;
 };
+/** Выполнение бизнес-задач и всех задач одной доски приложения. */
+export type ApplicationTaskProgress = {
+  /** Задачи с явными связями с требованиями, без повторов по числу связей. */
+  business: ProductTaskProgress;
+  /** Все задачи доски, включая отменённые и подзадачи. */
+  overall: ProductTaskProgress;
+};
 export type TaskLinksPage = z.infer<typeof LINKS_PAGE_SCHEMA>;
 export type TaskSaved = z.infer<typeof TASK_SAVED_SCHEMA>;
 export type TaskFilters = {

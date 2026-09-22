@@ -13,12 +13,14 @@ import {
   getTaskActivity,
   getTaskActivityEvent,
   getProductTaskProgress,
+  getApplicationTaskProgress,
 } from "../adapters/board-tasks.adapter";
 import type { CreateTaskInput } from "../types/board-tasks.type";
 import type { BoardTask, TaskFilters, TasksPage, TaskLinksPage } from "../types/board-tasks.type";
 import type { CriteriaPage, CriterionView } from "../types/acceptance.type";
 import type { ActivityPage, ActivityEvent } from "../types/activity.type";
 import type { ProductTaskProgress } from "../types/board-tasks.type";
+import type { ApplicationTaskProgress } from "../types/board-tasks.type";
 import type { SWRResponse } from "swr";
 
 /**
@@ -34,6 +36,21 @@ export const useProductTaskProgress = (
       if (targetId === null) throw new Error("Продуктовая цель не выбрана");
       return getProductTaskProgress(project, targetId);
     },
+  );
+  useKanbanSync(project, query.mutate);
+  return query;
+};
+
+/**
+ * Обновляет оба показателя приложения после изменения задач и восстановления SSE.
+ */
+export const useApplicationTaskProgress = (
+  project: string,
+  board: string,
+): SWRResponse<ApplicationTaskProgress, Error> => {
+  const query = useSWR<ApplicationTaskProgress, Error>(
+    ["application-task-progress", project, board],
+    () => getApplicationTaskProgress(project, board),
   );
   useKanbanSync(project, query.mutate);
   return query;
@@ -253,6 +270,7 @@ export const useBoardTaskRefresh = (project: string) => {
             "board-task-slice",
             "task-criteria",
             "task-criterion",
+            "application-task-progress",
           ].includes(String(key[0])) &&
           key[1] === project,
       );

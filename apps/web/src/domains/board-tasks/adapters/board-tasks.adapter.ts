@@ -28,6 +28,7 @@ import type {
   CreateTaskInput,
   EditTaskInput,
   ProductTaskProgress,
+  ApplicationTaskProgress,
   MoveTaskInput,
   LinkTaskInput,
 } from "../types/board-tasks.type";
@@ -182,6 +183,46 @@ export const getProductTaskProgress = async (
         1,
       );
       return { total: all.total, completed: completed.total };
+    } catch (error) {
+      if (!(error instanceof BoardTaskError) || error.code !== "BOARD_CHANGED" || attempt >= 2)
+        throw error;
+    }
+  }
+};
+
+/**
+ * Считает всю доску на одной версии; в памяти остаются только текущая порция и счётчики.
+ */
+export const getApplicationTaskProgress = async (
+  project: string,
+  board: string,
+): Promise<ApplicationTaskProgress> => {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const progress: ApplicationTaskProgress = {
+        business: { total: 0, completed: 0 },
+        overall: { total: 0, completed: 0 },
+      };
+      let offset: number | null = 0;
+      let version: string | undefined;
+      do {
+        const page = await listBoardTasks(project, { board }, offset, version, 100);
+        for (const task of page.items) {
+          const isCompleted = task.column === "done";
+          const isBusiness = task.productLinks.some((link) =>
+            ["feature", "scenario", "implementation"].includes(link.kind),
+          );
+          progress.overall.total++;
+          if (isCompleted) progress.overall.completed++;
+          if (isBusiness) {
+            progress.business.total++;
+            if (isCompleted) progress.business.completed++;
+          }
+        }
+        version = page.version;
+        offset = page.nextOffset;
+      } while (offset !== null);
+      return progress;
     } catch (error) {
       if (!(error instanceof BoardTaskError) || error.code !== "BOARD_CHANGED" || attempt >= 2)
         throw error;

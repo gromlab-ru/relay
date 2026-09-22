@@ -5,6 +5,7 @@ import { useProductDemo } from "domains/product-demo";
 import { ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { StatePanel } from "ui/state-panel";
 import { isEmptyArray } from "shared/value-predicates";
+import { ApplicationProgress } from "./ui/application-progress/application-progress";
 import styles from "./styles/product-applications.module.css";
 
 /**
@@ -55,35 +56,38 @@ export const ProductApplicationsScreen = () => {
       )}
       <ul className={styles.root} aria-label="Приложения продукта">
         {applicationItems.map((application) => (
-          <li key={application.id}>
-            <Link to={`${base}/applications/${application.id}`} className={styles.application}>
-              <div className={styles.cardHeader}>
-                <span className={styles.icon}>
-                  <AppWindow size={21} aria-hidden="true" />
-                </span>
-                <Badge color="gray" variant="light" size="sm">
-                  {application.type}
-                </Badge>
-                <ArrowRight size={16} aria-hidden="true" className={styles.arrow} />
-              </div>
-              <h2 className={styles.name}>{application.name}</h2>
-              <Text size="sm" c="dimmed" lh={1.7} className={styles.summary}>
-                {application.summary}
+          <li key={application.id} className={styles.application}>
+            <div className={styles.cardHeader}>
+              <span className={styles.icon}>
+                <AppWindow size={21} aria-hidden="true" />
+              </span>
+              <Badge color="gray" variant="light" size="sm">
+                {application.type}
+              </Badge>
+              <ArrowRight size={16} aria-hidden="true" className={styles.arrow} />
+            </div>
+            <h2 className={styles.name}>
+              <Link to={`${base}/applications/${application.id}`} className={styles.link}>
+                {application.name}
+              </Link>
+            </h2>
+            <Text size="sm" c="dimmed" lh={1.7} className={styles.summary}>
+              {application.summary}
+            </Text>
+            <div className={styles.scope}>
+              <span>
+                Фичи: <strong>{application.featureCount}</strong>
+              </span>
+              <span>
+                Сценарии: <strong>{application.scenarioCount}</strong>
+              </span>
+            </div>
+            {!application.hasScope && (
+              <Text size="xs" c="dimmed">
+                Начните с выбора фич и сценариев
               </Text>
-              <div className={styles.scope}>
-                <span>
-                  Фичи: <strong>{application.featureCount}</strong>
-                </span>
-                <span>
-                  Сценарии: <strong>{application.scenarioCount}</strong>
-                </span>
-              </div>
-              {!application.hasScope && (
-                <Text size="xs" c="dimmed">
-                  Начните с выбора фич и сценариев
-                </Text>
-              )}
-            </Link>
+            )}
+            <ApplicationProgress board={application.slug} />
           </li>
         ))}
       </ul>

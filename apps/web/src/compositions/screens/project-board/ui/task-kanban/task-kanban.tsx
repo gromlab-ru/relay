@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -28,6 +28,7 @@ import {
 } from "domains/board-tasks";
 import type { TaskSummary, TaskColumn as ColumnId, TasksPage } from "domains/board-tasks";
 import { TaskColumn, TaskCardPreview } from "./ui/task-column";
+import type { ProductTargetPreview } from "domains/product";
 import { getBoardCollisions, getKeyboardCoordinates } from "ui/kanban-dnd";
 import type { TaskKanbanProps } from "./types/task-kanban-props.type";
 import styles from "./styles/task-kanban.module.css";
@@ -61,7 +62,20 @@ export const TaskKanban = (props: TaskKanbanProps) => {
     version: string;
     width: number;
     height: number;
+    /** Название цели, замороженное на время жеста. */
+    target: ProductTargetPreview | undefined;
+    /** Состояние чтения цели при захвате. */
+    targetState: "loading" | "ready" | "error";
   } | null>(null);
+  const targetSnapshots = useRef(
+    new Map<
+      ColumnId,
+      {
+        targets: Map<string, ProductTargetPreview> | undefined;
+        state: "loading" | "ready" | "error";
+      }
+    >(),
+  );
   const snapshots = useRef(new Map<ColumnId, TasksPage>());
   const nextIds = useRef(new Map<ColumnId, string | null>());
   const dragPages = useRef(new Map<ColumnId, TasksPage>());
@@ -69,9 +83,16 @@ export const TaskKanban = (props: TaskKanbanProps) => {
   const [preview, setPreview] = useState<Map<ColumnId, TaskSummary[]> | null>(null);
   const previewRef = useRef<Map<ColumnId, TaskSummary[]> | null>(null);
   const handleSnapshot = useCallback(
-    (column: ColumnId, page: TasksPage, nextId: string | null): void => {
+    (
+      column: ColumnId,
+      page: TasksPage,
+      nextId: string | null,
+      targets: Map<string, ProductTargetPreview> | undefined,
+      targetState: "loading" | "ready" | "error",
+    ): void => {
       snapshots.current.set(column, page);
       nextIds.current.set(column, nextId);
+      targetSnapshots.current.set(column, { targets, state: targetState });
     },
     [],
   );
@@ -81,6 +102,15 @@ export const TaskKanban = (props: TaskKanbanProps) => {
   };
   const [targetId, setTargetId] = useState<string | null>(null);
   const [isSaving, setSaving] = useState(false);
+  const focusTaskId = useRef<string | null>(null);
+  useEffect(() => {
+    if (active !== null || isSaving || focusTaskId.current === null) return;
+    const handle = boardRef.current?.querySelector<HTMLButtonElement>(
+      `[data-task-id="${CSS.escape(focusTaskId.current)}"] [data-drag-handle]`,
+    );
+    (handle ?? boardRef.current)?.focus({ preventScroll: true });
+    focusTaskId.current = null;
+  }, [active, isSaving]);
   const [error, setError] = useState("");
   const [defect, setDefect] = useState<unknown>();
   const refresh = useBoardTaskRefresh(projectId);
@@ -108,19 +138,29 @@ export const TaskKanban = (props: TaskKanbanProps) => {
     return { column, items, total };
   });
   const hasError = error !== "";
+  const hasActive = active !== null;
+  const activeSize = active === null ? undefined : { width: active.width, height: active.height };
   const dropAnimation = shouldReduceMotion ? null : { duration: 180, easing: "ease-out" };
   const handleStart = (event: DragStartEvent): void => {
     const task = TASK_SUMMARY_SCHEMA.safeParse(event.active.data.current?.task);
     const version = event.active.data.current?.version;
     if (task.success && typeof version === "string") {
-      const rect = event.active.rect.current.initial;
+      // initial rect ещё может быть null в onDragStart; измеряем оригинал до рендера placeholder.
+      const node = boardRef.current?.querySelector<HTMLElement>(
+        `[data-task-id="${CSS.escape(task.data.id)}"]`,
+      );
+      const rect = node?.getBoundingClientRect();
+      if (rect === undefined) return;
+      const targets = targetSnapshots.current.get(task.data.column);
       dragPages.current = new Map(snapshots.current);
       dragNextIds.current = new Map(nextIds.current);
       setActive({
         task: task.data,
         version,
-        width: rect?.width ?? 288,
-        height: rect?.height ?? 100,
+        width: rect.width,
+        height: rect.height,
+        target: targets?.targets?.get(task.data.productLinks[0]?.id ?? ""),
+        targetState: targets?.state ?? "loading",
       });
       updatePreview(
         new Map([...snapshots.current].map(([column, page]) => [column, [...page.items]])),
@@ -154,6 +194,7 @@ export const TaskKanban = (props: TaskKanbanProps) => {
     setTargetId(null);
   };
   const handleEnd = async (event: DragEndEvent): Promise<void> => {
+    restoreKeyboardFocus(event);
     setActive(null);
     setTargetId(null);
     if (!active || !event.over || isSaving) {
@@ -210,6 +251,11 @@ export const TaskKanban = (props: TaskKanbanProps) => {
       }
     }
   };
+  /** Возвращает фокус на ручку после переноса между разными колонками или отмены. */
+  const restoreKeyboardFocus = (event: DragEndEvent): void => {
+    if (!(event.activatorEvent instanceof KeyboardEvent)) return;
+    focusTaskId.current = String(event.active.id);
+  };
   if (defect !== undefined) throw defect;
   return (
     <DndContext
@@ -218,7 +264,8 @@ export const TaskKanban = (props: TaskKanbanProps) => {
       onDragStart={handleStart}
       onDragOver={handleOver}
       onDragEnd={handleEnd}
-      onDragCancel={() => {
+      onDragCancel={(event) => {
+        restoreKeyboardFocus(event);
         setActive(null);
         setTargetId(null);
         updatePreview(null);
@@ -226,7 +273,7 @@ export const TaskKanban = (props: TaskKanbanProps) => {
       accessibility={{
         screenReaderInstructions: {
           draggable:
-            "Пробел — поднять карточку. Стрелки —выбрать место. Пробел — переместить. Escape — отменить.",
+            "Пробел — поднять карточку. Стрелки — выбрать место. Пробел — переместить. Escape — отменить.",
         },
         announcements: {
           onDragStart: () => "Карточка поднята",
@@ -265,16 +312,21 @@ export const TaskKanban = (props: TaskKanbanProps) => {
             preview={items}
             previewTotal={total}
             activeId={active?.task.id ?? null}
+            activeSize={activeSize}
             onSnapshot={handleSnapshot}
             onOpen={onOpen}
             onCreate={onCreate}
           />
         ))}
       </Box>
-      <DragOverlay dropAnimation={dropAnimation}>
-        {active !== null && (
+      <DragOverlay dropAnimation={dropAnimation} adjustScale={false}>
+        {hasActive && (
           <div className={styles.overlay} style={{ width: active.width, height: active.height }}>
-            <TaskCardPreview task={active.task} />
+            <TaskCardPreview
+              task={active.task}
+              target={active.target}
+              targetState={active.targetState}
+            />
           </div>
         )}
       </DragOverlay>

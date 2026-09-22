@@ -1,5 +1,11 @@
 # Журнал создания TSX
 
+## Прогресс карточек приложений — 22 сентября 2026
+
+`pnpm --filter @relay/web run create ui-component application-progress src/compositions/screens/product-applications/ui`.
+Внутренний компонент экрана без фасета: два индикатора, загрузка и повтор ошибки.
+Сводные данные и синхронизация принадлежат `domains/board-tasks`.
+
 ## Проектные фичи и сценарии — 21 сентября 2026
 
 `pnpm --filter @relay/web run create ui-unit product-requirement src/compositions/widgets`.

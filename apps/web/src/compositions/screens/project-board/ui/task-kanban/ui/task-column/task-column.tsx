@@ -14,6 +14,7 @@ import {
 } from "@mantine/core";
 import { Plus } from "lucide-react";
 import { useBoardTaskSlice } from "domains/board-tasks";
+import { useProductTargetPreviews } from "domains/product";
 import { isEmptyArray } from "shared/value-predicates";
 import { TaskCard } from "./ui/task-card";
 import type { TaskColumnProps } from "./types/task-column-props.type";
@@ -38,20 +39,27 @@ export const TaskColumn = (props: TaskColumnProps) => {
     preview,
     previewTotal,
     activeId,
+    activeSize,
     onSnapshot,
   } = props;
   const [count, setCount] = useState(40);
   // Одна дополнительная запись служит точным якорем вставки на границе страницы.
   const query = useBoardTaskSlice(projectId, { ...filters, column: column.value }, count + 1);
   const items = preview ?? query.data?.items.slice(0, count) ?? [];
+  const targetIds = items.flatMap((task) => task.productLinks.slice(0, 1).map((link) => link.id));
+  const targets = useProductTargetPreviews(projectId, targetIds);
+  const targetState =
+    targets.error !== undefined ? "error" : targets.isLoading ? "loading" : "ready";
   useEffect(() => {
     if (query.data !== undefined)
       onSnapshot(
         column.value,
         { ...query.data, items: query.data.items.slice(0, count) },
         query.data.items[count]?.id ?? null,
+        targets.data,
+        targetState,
       );
-  }, [query.data, column.value, onSnapshot, count]);
+  }, [query.data, column.value, onSnapshot, count, targets.data, targetState]);
   const total = previewTotal ?? query.data?.total ?? 0;
   const isInteracting = activeId !== null || isSaving;
   const canLoadMore = query.data !== undefined && query.data.total > count;
@@ -62,9 +70,13 @@ export const TaskColumn = (props: TaskColumnProps) => {
     nextId: items[index + 1]?.id ?? query.data?.items[count]?.id ?? null,
     isTarget: targetId === task.id,
     isAfterTarget: targetId === `after:${task.id}`,
+    target: targets.data?.get(task.productLinks[0]?.id ?? ""),
+    isPlaceholder: task.id === activeId,
+    placeholderSize: task.id === activeId ? activeSize : undefined,
   }));
   const loadLabel = `Показать ещё · ${items.length} из ${query.data?.total ?? "—"}`;
   const hasError = query.error !== undefined;
+  const hasTargetsError = targets.error !== undefined;
   const id = `column:${column.value}`;
   const drop = useDroppable({
     id,
@@ -110,8 +122,8 @@ export const TaskColumn = (props: TaskColumnProps) => {
                 key={row.task.id}
                 {...row}
                 version={query.data?.version ?? ""}
+                targetState={targetState}
                 isDisabled={isSaving}
-                isPlaceholder={row.task.id === activeId}
                 onOpen={onOpen}
               />
             ))}
@@ -124,6 +136,17 @@ export const TaskColumn = (props: TaskColumnProps) => {
               Повторить
             </Button>
           </Alert>
+        )}
+        {hasTargetsError && (
+          <Button
+            variant="subtle"
+            size="xs"
+            color="gray"
+            mt="sm"
+            onClick={() => void targets.mutate().catch(() => undefined)}
+          >
+            Повторить загрузку целей
+          </Button>
         )}
         {canLoadMore && (
           <Button
