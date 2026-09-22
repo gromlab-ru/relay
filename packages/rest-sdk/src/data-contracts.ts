@@ -1587,15 +1587,15 @@ export interface GraphPage {
      * @max 9007199254740991
      */
     revision: number;
-    /** graph — редактируемое ребро; domain — проекция предметной записи */
-    source: GraphPageSourceEnum;
+    /** Единственный источник — явно сохранённая связь движка Core */
+    source: "graph";
     /**
-     * Автор создания или владелец предметной проекции
+     * Автор установки связи
      * @maxLength 128
      */
     createdBy: string;
     /**
-     * Время создания отношения или источника
+     * Время установки связи
      * @format date-time
      * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
      */
@@ -1719,7 +1719,7 @@ export interface GraphQuery {
    */
   depth?: number;
   /**
-   * all — все пути; context — документы, доски и приложения не расширяют чужую область
+   * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
    * @default "all"
    */
   profile?: GraphQueryProfileEnum;
@@ -1903,15 +1903,15 @@ export interface GraphHistory {
        * @max 9007199254740991
        */
       revision: number;
-      /** graph — редактируемое ребро; domain — проекция предметной записи */
-      source: GraphHistorySourceEnum;
+      /** Единственный источник — явно сохранённая связь движка Core */
+      source: "graph";
       /**
-       * Автор создания или владелец предметной проекции
+       * Автор установки связи
        * @maxLength 128
        */
       createdBy: string;
       /**
-       * Время создания отношения или источника
+       * Время установки связи
        * @format date-time
        * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
        */
@@ -5071,9 +5071,6 @@ export type EntitySavedActionEnum =
   | "move"
   | "link";
 
-/** graph — редактируемое ребро; domain — проекция предметной записи */
-export type GraphPageSourceEnum = "graph" | "domain";
-
 /**
  * Направление обхода относительно каждого узла
  * @default "both"
@@ -5081,16 +5078,13 @@ export type GraphPageSourceEnum = "graph" | "domain";
 export type GraphQueryDirectionEnum = "both" | "outgoing" | "incoming";
 
 /**
- * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
  * @default "all"
  */
 export type GraphQueryProfileEnum = "all" | "context";
 
 /** Выполненное действие */
 export type GraphHistoryActionEnum = "add" | "update" | "remove";
-
-/** graph — редактируемое ребро; domain — проекция предметной записи */
-export type GraphHistorySourceEnum = "graph" | "domain";
 
 /** Цель реализации: общая фича, сценарий или контракт приложения */
 export type BoardTaskViewKindEnum = "feature" | "scenario" | "implementation";
@@ -5929,7 +5923,7 @@ export interface GetGraphParams {
    */
   depth?: number;
   /**
-   * all — все пути; context — документы, доски и приложения не расширяют чужую область
+   * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
    * @default "all"
    */
   profile?: ProfileEnum;
@@ -5966,7 +5960,7 @@ export interface GetGraphParams {
 export type DirectionEnum = "both" | "outgoing" | "incoming";
 
 /**
- * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
  * @default "all"
  */
 export type ProfileEnum = "all" | "context";
@@ -5978,7 +5972,7 @@ export type ProfileEnum = "all" | "context";
 export type GetGraphParams1DirectionEnum = "both" | "outgoing" | "incoming";
 
 /**
- * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
  * @default "all"
  */
 export type GetGraphParams1ProfileEnum = "all" | "context";
@@ -7131,7 +7125,7 @@ export interface GetGraphForProjectParams {
    */
   depth?: number;
   /**
-   * all — все пути; context — документы, доски и приложения не расширяют чужую область
+   * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
    * @default "all"
    */
   profile?: ProfileEnum1;
@@ -7170,7 +7164,7 @@ export interface GetGraphForProjectParams {
 export type DirectionEnum1 = "both" | "outgoing" | "incoming";
 
 /**
- * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
  * @default "all"
  */
 export type ProfileEnum1 = "all" | "context";
@@ -7185,7 +7179,7 @@ export type GetGraphForProjectParams1DirectionEnum =
   | "incoming";
 
 /**
- * all — все пути; context — документы, доски и приложения не расширяют чужую область
+ * Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам
  * @default "all"
  */
 export type GetGraphForProjectParams1ProfileEnum = "all" | "context";

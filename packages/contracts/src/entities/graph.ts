@@ -26,11 +26,9 @@ export const graphEdgeSchema = z.strictObject({
   to: entityRefSchema.describe("Конец отношения"),
   description: text(64 * 1024).describe("Пояснение назначения связи в Markdown"),
   revision: z.number().int().positive().describe("Ревизия отношения"),
-  source: z
-    .enum(["graph", "domain"])
-    .describe("graph — редактируемое ребро; domain — проекция предметной записи"),
-  createdBy: actorSchema.describe("Автор создания или владелец предметной проекции"),
-  createdAt: timestampSchema.describe("Время создания отношения или источника"),
+  source: z.literal("graph").describe("Единственный источник — явно сохранённая связь движка Core"),
+  createdBy: actorSchema.describe("Автор установки связи"),
+  createdAt: timestampSchema.describe("Время установки связи"),
 });
 export const graphQuerySchema = z.strictObject({
   root: z
@@ -53,7 +51,9 @@ export const graphQuerySchema = z.strictObject({
   profile: z
     .enum(["all", "context"])
     .default("all")
-    .describe("all — все пути; context — документы, доски и приложения не расширяют чужую область"),
+    .describe(
+      "Полный обход сохранённых связей; context — совместимое имя all без скрытых ограничений по видам",
+    ),
   q: z
     .string()
     .max(1024)

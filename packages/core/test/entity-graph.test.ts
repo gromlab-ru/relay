@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { entityAddress } from "../src/domain/entity-graph.js";
 import type { GraphNode } from "../src/domain/entity-graph.js";
 import { fixture } from "./helpers/workspace.js";
+import { EntityEngine } from "../src/application/entities/service.js";
 
 const nodes: GraphNode[] = [
   "scenario:S",
@@ -31,7 +32,7 @@ const add = (from: number, to: number, type = "references", description = "") =>
 
 test("граф: произвольные пары и циклы, пути, пагинация и изолированные сущности", async (t) => {
   const { workspace } = await fixture(t);
-  const graph = new GraphService(workspace, async () => ({ nodes, edges: [] }));
+  const graph = new GraphService(workspace, async () => ({ nodes }));
   const before = await graph.read();
   assert.equal(before.totalNodes, 6);
   const saved = await graph.mutate(
@@ -65,7 +66,7 @@ test("граф: произвольные пары и циклы, пути, па�
 
 test("граф: атомарность, CAS, повтор до проверки версии, Markdown и история отзыва", async (t) => {
   const { workspace } = await fixture(t);
-  const graph = new GraphService(workspace, async () => ({ nodes, edges: [] }));
+  const graph = new GraphService(workspace, async () => ({ nodes }));
   const version = (await graph.read()).version;
   const command = {
     ifVersion: version,
@@ -119,7 +120,7 @@ test("граф: атомарность, CAS, повтор до проверки 
 
 test("граф: конкуренция, политика приложения, изоляция и повреждение файла", async (t) => {
   const { workspace } = await fixture(t);
-  const catalog = async () => ({ nodes, edges: [] });
+  const catalog = async () => ({ nodes });
   const graph = new GraphService(workspace, catalog);
   const version = (await graph.read()).version;
   const attempts = await Promise.allSettled(
@@ -133,7 +134,7 @@ test("граф: конкуренция, политика приложения, �
   assert.equal(attempts.filter((result) => result.status === "fulfilled").length, 1);
   const other = await fixture(t);
   assert.equal((await new GraphService(other.workspace, catalog).read()).totalEdges, 0);
-  const restricted = new GraphService(workspace, catalog, undefined, () => {
+  const restricted = new GraphService(workspace, catalog, () => {
     throw new Error("Политика приложения");
   });
   await assert.rejects(
@@ -148,18 +149,142 @@ test("граф: конкуренция, политика приложения, �
   await assert.rejects(graph.read());
 });
 
-test("контекст: прикреплённый документ не втягивает свою другую область", async (t) => {
+test("контекст: сохранённая цепочка проходит через документ и приложение без скрытого отсечения", async (t) => {
   const { workspace } = await fixture(t);
-  const graph = new GraphService(workspace, async () => ({ nodes, edges: [] }));
+  const graph = new GraphService(workspace, async () => ({ nodes }));
   await graph.mutate(
     {
       ifVersion: (await graph.read()).version,
       requestId: "context",
-      operations: [add(2, 3), add(3, 4)],
+      operations: [add(2, 3), add(3, 4), add(4, 0), add(0, 2)],
     },
     "agent",
   );
   const page = await graph.read({ root: "task:T", profile: "context", depth: 10 });
-  assert.deepEqual(page.nodes.map((node) => node.ref.kind).sort(), ["document", "task"]);
-  assert.equal((await graph.read({ root: "task:T", profile: "all", depth: 10 })).totalNodes, 3);
+  assert.deepEqual(page.nodes.map((node) => node.ref.kind).sort(), [
+    "application",
+    "document",
+    "scenario",
+    "task",
+  ]);
+  assert.equal(page.totalEdges, 4);
+  assert.equal(page.depthLimited, false);
+  assert.deepEqual(await graph.read({ root: "task:T", profile: "all", depth: 10 }), page);
+  for (const root of ["document:D", "application:A", "scenario:S"]) {
+    const context = await graph.read({ root, depth: 10 });
+    assert.equal(context.totalNodes, 4);
+    assert.equal(context.totalEdges, 4);
+  }
+});
+
+test("движок: продуктовые линки не создают и не разрывают связи; только явная запись Core", async (t) => {
+  const { workspace } = await fixture(t);
+  const engine = new EntityEngine(workspace);
+  const feature = await engine.create(
+    {
+      data: { kind: "feature", name: "API", summary: "", description: "Контракт API" },
+      requestId: "feature",
+    },
+    "agent",
+  );
+  const task = await engine.create(
+    {
+      data: { kind: "task", board: "BOARD-PRODUCT", title: "API-работа", targets: [feature.key] },
+      requestId: "task",
+    },
+    "agent",
+  );
+  const document = await engine.create(
+    {
+      data: {
+        kind: "document",
+        name: "Инструкция",
+        summary: "",
+        body: "## Материал",
+        documentKind: "description",
+        targets: [feature.key],
+      },
+      requestId: "document",
+    },
+    "agent",
+  );
+  const graph = new GraphService(workspace);
+  const before = await graph.read();
+  assert.ok(before.nodes.some((node) => node.ref.id === document.ref.id));
+  assert.ok(before.nodes.some((node) => node.ref.kind === "project"));
+  assert.ok(before.nodes.some((node) => node.ref.kind === "product"));
+  assert.equal(before.totalEdges, 0);
+  assert.equal((await graph.history()).total, 0);
+  const emptyContext = await graph.read({ root: task.key });
+  assert.equal(emptyContext.totalNodes, 1);
+  assert.equal(emptyContext.totalEdges, 0);
+
+  const command = {
+    ifVersion: before.version,
+    requestId: "explicit-attach",
+    operations: [
+      {
+        action: "add" as const,
+        from: task.ref,
+        to: document.ref,
+        type: "references",
+        description: "Перед выполнением",
+      },
+    ],
+  };
+  const saved = await graph.mutate(command, "agent");
+  assert.deepEqual(await graph.mutate(command, "agent"), saved);
+  const id = saved.ids[0]!;
+  const stored = JSON.parse(await readFile(join(graph.repository.root, currentPath(id)), "utf8"));
+  assert.equal(stored.edge.id, id);
+  assert.equal(stored.edge.source, "graph");
+  const fresh = new GraphService(workspace);
+  const outgoing = await fresh.read({ root: task.key, depth: 1, direction: "outgoing" });
+  const incoming = await fresh.read({ root: document.key, depth: 1, direction: "incoming" });
+  assert.equal(outgoing.edges[0]?.id, id);
+  assert.equal(incoming.edges[0]?.id, id);
+
+  // Следующий этап интеграции должен явно связать эти два действия; движок не угадывает их.
+  const detached = await engine.update(
+    {
+      ref: document.key,
+      ifRevision: document.revision,
+      requestId: "product-detach",
+      changes: { kind: "document", targets: [] },
+    },
+    "agent",
+  );
+  assert.equal((await fresh.read({ root: task.key })).edges[0]?.id, id);
+  await fresh.mutate(
+    {
+      ifVersion: (await fresh.read()).version,
+      requestId: "explicit-detach",
+      operations: [{ action: "remove", id }],
+    },
+    "agent",
+  );
+  assert.equal((await fresh.read({ root: task.key })).totalEdges, 0);
+
+  // Даже возврат продуктового линка и восстановление индекса не воскрешают отозванную связь.
+  await engine.update(
+    {
+      ref: document.key,
+      ifRevision: detached.revision,
+      requestId: "product-reattach",
+      changes: {
+        kind: "document",
+        targets: [feature.key],
+      },
+    },
+    "agent",
+  );
+  await fresh.reindex();
+  assert.equal((await fresh.read({ root: task.key })).totalEdges, 0);
+  assert.deepEqual(
+    (await fresh.history({ id })).items.map((event) => event.action),
+    ["add", "remove"],
+  );
+  assert.deepEqual(await fresh.mutate(command, "agent"), saved);
+  const unchanged = await engine.get({ ref: document.key });
+  assert.equal(unchanged.data.kind === "document" && unchanged.data.links.length, 1);
 });

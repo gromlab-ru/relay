@@ -10,6 +10,7 @@ test("HTTP графа: новые связи, контекст, CAS, повто�
   assert.equal(graph.statusCode, 200, graph.body);
   const page = graph.json().data;
   assert.ok(page.nodes.length >= 3);
+  assert.equal(page.totalEdges, 0);
   const payload = {
     ifVersion: page.version,
     requestId: "graph-http",
@@ -35,6 +36,11 @@ test("HTTP графа: новые связи, контекст, CAS, повто�
   const root = page.nodes[0].ref;
   const read = (await app.inject(`${url}?root=${root.kind}:${root.id}&depth=1`)).json().data;
   assert.equal(read.totalEdges, 1);
+  assert.equal(read.edges[0].source, "graph");
+  assert.deepEqual(
+    (await app.inject(`${url}?root=${root.kind}:${root.id}&depth=1&profile=context`)).json().data,
+    read,
+  );
   assert.ok(read.paths.some((path: { edges: string[] }) => path.edges.length === 1));
   assert.equal((await app.inject(`${url}/history`)).json().data.total, 1);
   assert.equal((await app.inject("/api/v1/projects/missing/graph")).statusCode, 404);

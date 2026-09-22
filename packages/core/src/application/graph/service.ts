@@ -25,8 +25,6 @@ import type { GraphCurrent, GraphSummary } from "../../storage/graph-format.js";
 import type { Workspace } from "../../storage/workspace.js";
 import { projectGraphCatalog } from "./catalog.js";
 import type { GraphCatalogProvider, GraphCatalog } from "./catalog.js";
-import { projectContextPolicy } from "./context.js";
-import type { GraphTraversalPolicy } from "./context.js";
 import { resolveAddress } from "../entities/resolver.js";
 import { AppError } from "../../shared/errors.js";
 import { BoardTaskRepository } from "../../storage/board-tasks.js";
@@ -36,7 +34,6 @@ import type { ActivityFile } from "../../storage/task-activity.js";
 import type { TaskHistoryEvent } from "../../domain/board-task.js";
 import { taskBaseline } from "../board-tasks/history.js";
 
-type EdgeReference = GraphSummary | GraphEdge;
 const versions = new Map<string, string>();
 const versionOf = (catalogHash: string, fingerprint: string) =>
   graphDigest([catalogHash, fingerprint]);
@@ -47,7 +44,6 @@ export class GraphService {
   constructor(
     readonly workspace: Workspace,
     readonly catalog: GraphCatalogProvider = () => projectGraphCatalog(workspace),
-    readonly contextPolicy: GraphTraversalPolicy = projectContextPolicy,
     readonly validateMutation?: (catalog: GraphCatalog, edges: readonly GraphEdge[]) => void,
   ) {
     this.repository = new GraphRepository(workspace);
@@ -59,7 +55,6 @@ export class GraphService {
       nodes: source.nodes
         .map((node) => graphNodeSchema.parse(node))
         .sort((a, b) => entityAddress(a.ref).localeCompare(entityAddress(b.ref))),
-      edges: source.edges.map((edge) => graphEdgeSchema.parse(edge)),
     };
     const store = await this.repository.open(assertOwned);
     const references = catalog.nodes.map((node) => ({
@@ -70,12 +65,11 @@ export class GraphService {
       ...catalog,
       ...(source.aliases ? { aliases: source.aliases } : {}),
     });
-    // V1 остаётся читаемым с прежней версией до явной миграции.
+    // V1 остаётся читаемым без изменения постоянных связей и квитанций.
     const version = store.legacy
       ? graphDigest([
           catalog.nodes,
           [
-            ...catalog.edges,
             ...store.legacy.edges.map((edge) =>
               graphEdgeSchema.parse({ ...edge, description: edge.description.join("\n") }),
             ),
@@ -92,7 +86,7 @@ export class GraphService {
     );
     if (versions.get(this.repository.root) !== version) {
       const ids = new Set<string>();
-      for (const edge of [...catalog.edges, ...store.index.active]) {
+      for (const edge of store.index.active) {
         invariant(!ids.has(edge.id), "INVALID_DATA", "Повтор ID отношения", 5);
         ids.add(edge.id);
         invariant(
@@ -121,7 +115,6 @@ export class GraphService {
       const root =
         query.root === undefined ? undefined : resolveAddress(references, query.root).ref;
       const byAddress = new Map(catalog.nodes.map((node) => [entityAddress(node.ref), node]));
-      const domainById = new Map(catalog.edges.map((edge) => [edge.id, edge]));
       if (root)
         invariant(
           byAddress.has(entityAddress(root)),
@@ -129,16 +122,9 @@ export class GraphService {
           "Корневая сущность не найдена",
           3,
         );
-      const adjacency = new Map<string, GraphEdge[]>();
-      for (const edge of catalog.edges)
-        for (const ref of [edge.from, edge.to]) {
-          const address = entityAddress(ref);
-          const list = adjacency.get(address) ?? [];
-          list.push(edge);
-          adjacency.set(address, list);
-        }
-      const neighbors = (address: string): EdgeReference[] =>
-        [...(adjacency.get(address) ?? []), ...store.index.related(address)]
+      const neighbors = (address: string): GraphSummary[] =>
+        store.index
+          .related(address)
           .filter((edge) => !query.type || edge.type === query.type)
           .sort((a, b) => a.id.localeCompare(b.id));
       const paths = new Map<string, { target: EntityRef; nodes: EntityRef[]; edges: string[] }>();
@@ -159,8 +145,6 @@ export class GraphService {
               continue;
             // Ответ не должен отдавать вызывающему изменяемую ссылку из кеша индекса.
             const next = { ...(outgoing ? edge.to : edge.from) };
-            if (query.profile === "context" && !this.contextPolicy(root, current, next, edge))
-              continue;
             if (paths.has(entityAddress(next))) continue;
             if (path.edges.length >= query.depth) {
               boundary.add(address);
@@ -191,7 +175,7 @@ export class GraphService {
               [...included].flatMap((address) => neighbors(address)).map((edge) => [edge.id, edge]),
             ).values(),
           ]
-        : [...catalog.edges, ...store.index.active];
+        : store.index.active;
       const edges = candidates
         .filter(
           (edge) =>
@@ -203,7 +187,7 @@ export class GraphService {
       const pageNodes = nodes.slice(query.offset, query.offset + query.limit);
       const pageEdges: GraphEdge[] = [];
       for (const edge of edges.slice(query.offset, query.offset + query.limit))
-        pageEdges.push(domainById.get(edge.id) ?? (await this.repository.edge(edge.id, store)));
+        pageEdges.push(await this.repository.edge(edge.id, store));
       const endpoints = new Set(
         pageEdges.flatMap((edge) => [entityAddress(edge.from), entityAddress(edge.to)]),
       );
@@ -261,7 +245,6 @@ export class GraphService {
         4,
       );
       const records = new Map<string, GraphCurrent>();
-      const domainIds = new Set(catalog.edges.map((edge) => edge.id));
       const events: GraphEvent[] = [];
       const taskEvents = new Map<string, Omit<TaskHistoryEvent, "id" | "sequence" | "taskId">[]>();
       const ids: string[] = [];
@@ -292,8 +275,7 @@ export class GraphService {
             4,
           );
           let id = shortId();
-          while (store.index.entries.has(id) || records.has(id) || domainIds.has(id))
-            id = shortId();
+          while (store.index.entries.has(id) || records.has(id)) id = shortId();
           record = {
             active: true,
             historyCount: 1,
@@ -312,12 +294,7 @@ export class GraphService {
         } else {
           const existing =
             records.get(operation.id) ?? (await this.repository.get(operation.id, store));
-          invariant(
-            existing?.active,
-            "NOT_FOUND",
-            "Редактируемая связь не найдена; предметные проекции изменяются у своего владельца",
-            3,
-          );
+          invariant(existing?.active, "NOT_FOUND", "Сохранённая активная связь не найдена", 3);
           previousEdge = existing.edge;
           record = {
             active: operation.action !== "remove",
@@ -372,7 +349,7 @@ export class GraphService {
         }
       }
       if (this.validateMutation) {
-        const edges = [...catalog.edges];
+        const edges: GraphEdge[] = [];
         for (const entry of store.index.active)
           if (!records.has(entry.id)) edges.push(await this.repository.edge(entry.id, store));
         edges.push(

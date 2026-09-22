@@ -43,7 +43,8 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
   assert.ok(
     context.json().data.nodes.some((entry: { key: string }) => entry.key === "TASK-WEB-23"),
   );
-  assert.ok(context.json().data.nodes.some((entry: { key: string }) => entry.key === feature.key));
+  assert.equal(context.json().data.totalNodes, 1);
+  assert.equal(context.json().data.totalEdges, 0);
   const linked = await app.inject({
     method: "POST",
     url: "/api/v1/graph",
@@ -55,6 +56,7 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
   });
   assert.equal(linked.statusCode, 200, linked.body);
   const graph = (await app.inject(`/api/v1/graph?root=${task.ref.id}`)).json().data;
+  assert.ok(graph.nodes.some((entry: { key: string }) => entry.key === feature.key));
   assert.ok(
     graph.edges.some(
       (edge: { source: string; from: { id: string }; to: { id: string } }) =>

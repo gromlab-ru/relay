@@ -29,7 +29,7 @@ export function registerGraph(program: Command, runtime: Runtime): void {
     name: "graph",
     description: "Связи всех сущностей, контекст и история проекта",
     details:
-      "Сущность задаётся читаемым ключом, ID или kind:ID. Core разрешает адрес; сохранённые связи используют ID. Типы расширяемы, циклы допустимы. Предметные проекции domain изменяются у своего владельца.",
+      "Сущность задаётся ключом, ID или kind:ID. Все связи явно сохранены в Core; продуктовые поля не создают рёбер. Типы расширяемы, циклы допустимы. Прямая запись графа предназначена для диагностики и ремонта; продуктовые действия выполняйте предметными командами.",
     examples: [
       ["relay-cli graph list", "Найти сущности и прочитать версию"],
       ["relay-cli graph context SCENARIO-1 --format json", "Восстановить цепочку для агента"],
@@ -75,7 +75,7 @@ export function registerGraph(program: Command, runtime: Runtime): void {
         ? { arguments: { root: "Ключ или ID исходной сущности; допустим kind:ID" } }
         : {}),
       details:
-        "Узлы и рёбра читаются страницами одного снимка. context не расширяет соседние области через документы. depthLimited обозначает границу глубины, nextOffset — продолжение страницы.",
+        "Узлы и сохранённые рёбра читаются страницами одного снимка, без скрытого отсечения документов и приложений. depthLimited обозначает границу глубины, nextOffset — продолжение страницы. Продуктовый линк без явной записи Core не появляется в графе.",
       examples: [
         [
           `relay-cli graph ${action === "list" ? "list --limit 20" : "context WEB-24 --depth 5"}`,
@@ -88,7 +88,7 @@ export function registerGraph(program: Command, runtime: Runtime): void {
         return command
           .option("--type <type>", "Фильтр типа отношений")
           .option("--direction <direction>", "both, outgoing или incoming")
-          .option("--profile <profile>", "all — весь обход, context — предметный контекст")
+          .option("--profile <profile>", "all — полный обход; context — совместимое имя all")
           .option("--depth <n>", "Глубина обхода 0–100", integer(0, 100))
           .option("--q <text>", "Поиск сущностей по ключу, адресу и названию")
           .option("--offset <n>", "Смещение страницы", integer(0, Number.MAX_SAFE_INTEGER))
@@ -104,7 +104,7 @@ export function registerGraph(program: Command, runtime: Runtime): void {
           ...options,
           ...(snapshotVersion === undefined ? {} : { version: snapshotVersion }),
           ...(action === "context"
-            ? { root: input.argument(), profile: input.options.profile ?? "context" }
+            ? { root: input.argument(), profile: input.options.profile ?? "all" }
             : {}),
         };
         const data = await context.backend.graph.read(query);
@@ -154,7 +154,7 @@ export function registerGraph(program: Command, runtime: Runtime): void {
         ? { arguments: { id: "ID явно установленного отношения" } }
         : {}),
       details:
-        "Требуется прочитанная версия графа и автор. Повтор после потери ответа выполняйте с тем же request-id, версией и содержимым. Новое отношение не изменяет предметные статусы автоматически.",
+        "Диагностика и ремонт сохранённых связей. Требуется прочитанная версия графа и автор. Повтор после потери ответа выполняйте с тем же request-id, версией и содержимым. Запись графа не меняет продуктовые линки и статусы.",
       examples: [
         [
           "relay-cli --actor agent graph link --from WEB-24 --to DOC-1 --type references --if-version VERSION",

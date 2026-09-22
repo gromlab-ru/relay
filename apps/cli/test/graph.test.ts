@@ -35,6 +35,7 @@ test("CLI графа: контекстный документ, путь, без�
     ]),
   ).data;
   const initial = successful(await app.run<GraphPage>(["graph", "list"])).data;
+  assert.equal(initial.totalEdges, 0);
   const link = [
     "graph",
     "link",
@@ -64,6 +65,8 @@ test("CLI графа: контекстный документ, путь, без�
   assert.equal(human.code, 0, human.stderr);
   assert.match(human.stdout, /Почему включено/);
   assert.match(human.stdout, /Для контекста/);
+  assert.match(human.stdout, /Сохранённая связь Core/);
+  assert.doesNotMatch(human.stdout, /Из предметной записи/);
   assert.doesNotMatch(human.stdout, /"nodes":/);
   const page = await invokeRaw(app.root, ["graph", "list", "--limit", "1"]);
   assert.match(page.stdout, /Продолжение: relay-cli graph list .*--snapshot-version/);

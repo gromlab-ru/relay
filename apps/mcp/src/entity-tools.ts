@@ -117,13 +117,11 @@ export const entityTools: EntityTool[] = [
   {
     name: "entity_context",
     description:
-      "Восстановить граф связей сущности по ключу или ID: узлы, отношения, пути и границы глубины",
-    schema: graphQuerySchema
-      .omit({ root: true })
-      .extend({
-        ref: entityReferenceSchema,
-        profile: graphQuerySchema.shape.profile.default("context"),
-      }),
+      "Прочитать сохранённые связи сущности по ключу или ID: входящие и исходящие направления, узлы, пути и границы глубины. Продуктовые поля не создают рёбер; документы и приложения не скрывают продолжение цепочки",
+    schema: graphQuerySchema.omit({ root: true }).extend({
+      ref: entityReferenceSchema,
+      profile: graphQuerySchema.shape.profile.default("all"),
+    }),
     readOnly: true,
     run: async (backend, input) => {
       const { ref, ...query } = input;
@@ -169,7 +167,7 @@ for (const [kind, schema] of Object.entries(entityCreateDataSchemas)) {
   const { kind: _kind, ...shape } = schema.shape;
   entityTools.push({
     name: `entity_${kind}_create`,
-    description: `Создать сущность ${kind} и её обязательные связи. Полные описания — Markdown; все ссылки принимают ключи или ID. Повторять с тем же requestId.`,
+    description: `Создать сущность ${kind} с продуктовыми линками. Рёбра контекста не вычисляются из полей автоматически. Полные описания — Markdown; ссылки принимают ключи или ID. Повторять с тем же requestId.`,
     schema: z.strictObject({ ...shape, ...write }),
     readOnly: false,
     run: async (backend, input) => {

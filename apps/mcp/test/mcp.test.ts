@@ -204,7 +204,10 @@ test("MCP движка: discovery из контрактов, публичные 
     1,
   );
   assert.equal((await call(client, "entity_keys", { ref: renamed.key })).data?.total, 2);
-  assert.equal((await call(client, "entity_context", { ref: created.key, depth: 1 })).ok, true);
+  const context = await call(client, "entity_context", { ref: created.key, depth: 1 });
+  assert.equal(context.ok, true);
+  assert.equal(context.data?.totalNodes, 1);
+  assert.equal(context.data?.totalEdges, 0);
 });
 
 test("MCP канбана: предметные аргументы, блокеры, повтор и перенос со стабильным ID", async (t) => {

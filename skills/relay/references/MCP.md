@@ -26,12 +26,17 @@ implementation, board, task, document. Ключ — основной адрес 
 | `entity_keys`       | Текущий ключ и алиасы; ref, kind?, offset/limit/version                                                                      |
 | `entity_key_spaces` | Владельцы нумерации и форматы; kind, offset/limit/version                                                                    |
 | `entity_history`    | Сохранённые события; ref, kind?, offset/limit/version                                                                        |
-| `entity_context`    | Граф с путями; ref, profile?, depth?, direction?, type?, q?, offset/limit/version                                            |
+| `entity_context`    | Сохранённые связи с путями; ref, profile?, depth?, direction?, type?, q?, offset/limit/version                               |
 | `entity_rename_key` | Смена публичного ключа; ref, key, ifRevision, actor, requestId                                                               |
 | `entity_task_move`  | ref, board?, column, before?, ifRevision, actor, requestId                                                                   |
 | `entity_task_link`  | ref, target, relation, remove?, ifRevision, actor, requestId                                                                 |
 
 Поля предметных инструментов находятся на верхнем уровне, их схемы выводятся из определения вида:
+
+`entity_context` по умолчанию использует полный обход `all` и направление `both`.
+Значение `profile=context` — совместимое имя того же обхода без скрытого отсечения видов.
+Продуктовые линки не превращаются в рёбра при чтении: пока предметная операция не
+интегрирована с явной записью Core, контекст может содержать только корневую сущность.
 
 - `entity_product_create`, `entity_product_update` — паспорт продукта: name, summary, description.
 - `entity_feature_create`, `entity_feature_update` — фича: name, summary, description.
@@ -53,7 +58,7 @@ implementation, board, task, document. Ключ — основной адрес 
 entity_task_create({project: "app", board: "BOARD-WEB", title: "Сделать форму",
   targets: ["WEB-SI-8"], dependencies: ["API-15"], actor: "agent", requestId: "form-1"})
 entity_get({project: "app", ref: "WEB-24"})
-entity_context({project: "app", ref: "WEB-24", depth: 4, profile: "context"})
+entity_context({project: "app", ref: "WEB-24", depth: 4, profile: "all"})
 ```
 
 Ключи примера заменяются прочитанными значениями. Готовность реализации по завершению

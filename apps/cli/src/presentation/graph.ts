@@ -38,7 +38,7 @@ export function graphText(page: GraphPage, query: GraphQuery, options: TextOptio
           `${safeText(labels.get(entityAddress(edge.from)) ?? entityAddress(edge.from))} ── ${safeText(edge.type)} → ${safeText(labels.get(entityAddress(edge.to)) ?? entityAddress(edge.to))}`,
           options.width,
         ),
-        `ID: ${edge.id} · ${edge.source === "graph" ? "Явная связь" : "Из предметной записи"} · ревизия ${edge.revision}`,
+        `ID: ${edge.id} · Сохранённая связь Core · ревизия ${edge.revision}`,
         ...(edge.description ? [renderMarkdown(edge.description, options)] : []),
       ].join("\n"),
     )

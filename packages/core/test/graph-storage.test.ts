@@ -24,7 +24,7 @@ const nodes: GraphNode[] = ["A", "B", "C"].map((id) => ({
   revision: 1,
   status: "",
 }));
-const catalog = async () => ({ nodes, edges: [] });
+const catalog = async () => ({ nodes });
 const add = {
   action: "add" as const,
   type: "references",
@@ -309,7 +309,7 @@ test("v1: прерванная миграция завершается до чт
 test("v2: запись не переписывает чужие файлы, версия учитывает изменения каталога", async (t) => {
   const { workspace } = await fixture(t);
   const mutableNodes = structuredClone(nodes);
-  const graph = new GraphService(workspace, async () => ({ nodes: mutableNodes, edges: [] }));
+  const graph = new GraphService(workspace, async () => ({ nodes: mutableNodes }));
   const saved = await graph.mutate(
     {
       ifVersion: (await graph.read()).version,

@@ -124,7 +124,7 @@ export function registerEntities(program: Command, runtime: Runtime): void {
     name: "entities",
     description: "Виды, записи и действия движка сущностей",
     details:
-      "Во всех ссылках допустимы ключи или ID. Core сохраняет связи по ID; старые ключи работают как алиасы. Поля и действия объясняет entities type.",
+      "Во всех ссылках допустимы ключи или ID. Продуктовые линки сохраняются по ID; граф читает только явно установленные связи Core. Старые ключи работают как алиасы. Поля и действия объясняет entities type.",
     examples: [
       ["relay-cli entities types", "Узнать доступные виды"],
       ["relay-cli entities list --kind task --board BOARD-WEB", "Найти задачи доски"],

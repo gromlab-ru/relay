@@ -18,7 +18,7 @@ const nodes: GraphNode[] = Array.from({ length: 10000 }, (_, index) => ({
   revision: 1,
   status: "",
 }));
-const catalog = async () => ({ nodes, edges: [] });
+const catalog = async () => ({ nodes });
 const address = (index: number) => nodes[index % nodes.length]!.ref;
 const selected = { root: "benchmark:node-1234", depth: 1, limit: 20 };
 const round = (value: number) => Math.round(value * 100) / 100;
