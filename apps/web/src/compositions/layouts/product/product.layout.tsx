@@ -12,6 +12,18 @@ export const ProductLayout = () => {
   const base = `${useProjectBasePath()}/product`;
   const location = useLocation();
   const isIndex = location.pathname.replace(/\/+$/, "") === base;
+  const legacyDocumentsPath = `${base}/documents`;
+  const isLegacyDocument =
+    location.pathname === legacyDocumentsPath ||
+    location.pathname.startsWith(`${legacyDocumentsPath}/`);
+  if (isLegacyDocument)
+    return (
+      <Navigate
+        to={`${base.slice(0, -"/product".length)}${location.pathname.slice(base.length)}${location.search}${location.hash}`}
+        state={location.state}
+        replace
+      />
+    );
   if (isIndex)
     return (
       <Navigate

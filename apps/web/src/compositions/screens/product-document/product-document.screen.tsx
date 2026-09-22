@@ -3,7 +3,7 @@ import { Clock3, FileText, Link2, Pencil } from "lucide-react";
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { DOCUMENTATION_KINDS, DocumentationScopes, useProductDemo } from "domains/product-demo";
 import { useProjectBasePath } from "domains/project";
-import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
+import { getProductReturn, ProductPage } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { EntityDelete } from "compositions/widgets/entity-delete";
@@ -19,8 +19,7 @@ import styles from "./styles/product-document.module.css";
 export const ProductDocumentScreen = () => {
   const { documentId } = useParams();
   const { snapshot } = useProductDemo();
-  const base = useProductPath();
-  const projectBase = useProjectBasePath();
+  const base = useProjectBasePath();
   const location = useLocation();
   const navigate = useNavigate();
   const documentData = snapshot.documentation.find((entry) => entry.id === documentId);
@@ -29,7 +28,7 @@ export const ProductDocumentScreen = () => {
     return (
       <StatePanel
         title="Документ не найден"
-        description="Возможно, выбран другой набор моковых данных. Откройте материал из библиотеки."
+        description="Документ недоступен в этом проекте. Откройте материал из библиотеки."
         action={
           <Button component={Link} to={`${base}/documents`}>
             К документам
@@ -47,7 +46,7 @@ export const ProductDocumentScreen = () => {
     <ProductPage
       title={documentData.name}
       description={documentData.summary}
-      eyebrow="ПРОДУКТ / ДОКУМЕНТЫ"
+      eyebrow="ДОКУМЕНТЫ"
       backTo={backTo}
       backLabel="К документам"
       actions={
@@ -75,7 +74,7 @@ export const ProductDocumentScreen = () => {
             component={Link}
             variant="subtle"
             size="xs"
-            to={`${projectBase}/relations?root=document:${documentData.id}`}
+            to={`${base}/relations?root=document:${documentData.id}`}
           >
             Все связи и контекст
           </Button>

@@ -121,7 +121,7 @@ export const ProductApplicationScreen = () => {
               <Anchor
                 component={Link}
                 c="var(--mantine-color-text)"
-                to={`${base}/documents/${document.id}`}
+                to={`${projectBase}/documents/${document.id}`}
                 state={{ returnTo: location.pathname }}
               >
                 {document.name}

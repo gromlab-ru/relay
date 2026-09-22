@@ -2,7 +2,8 @@ import { Button, NativeSelect, TextInput } from "@mantine/core";
 import { FilePlus2, Library, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { DOCUMENTATION_KIND_OPTIONS, useProductDemo } from "domains/product-demo";
-import { ProductPage, useProductPath } from "compositions/widgets/product-page";
+import { useProjectBasePath } from "domains/project";
+import { ProductPage } from "compositions/widgets/product-page";
 import { StatePanel } from "ui/state-panel";
 import { isEmptyArray } from "shared/value-predicates";
 import { DocumentCard } from "./ui/document-card";
@@ -11,7 +12,7 @@ import { filterDocuments, matchesDocumentScope } from "./helpers/filter-document
 import styles from "./styles/product-documents.module.css";
 
 /**
- * Собирает библиотеку Markdown-материалов продукта с поиском и визуальным контекстом.
+ * Собирает общую библиотеку Markdown-материалов проекта с поиском и контекстом.
  *
  * Используется для:
  *  - поиска требований, описаний и решений по продукту
@@ -19,7 +20,7 @@ import styles from "./styles/product-documents.module.css";
  */
 export const ProductDocumentsScreen = () => {
   const { snapshot, scopes } = useProductDemo();
-  const base = useProductPath();
+  const base = useProjectBasePath();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
   const requestedKind = searchParams.get("kind") ?? "all";
@@ -67,7 +68,7 @@ export const ProductDocumentsScreen = () => {
   return (
     <ProductPage
       title="Документы"
-      description="Требования, описания и решения — единая библиотека знаний о продукте."
+      description="Требования, описания и решения — общая библиотека документов проекта."
       actions={
         <Button
           component={Link}
@@ -165,7 +166,7 @@ export const ProductDocumentsScreen = () => {
             }
           />
         )}
-        <ul className={styles.grid} aria-label="Документы продукта">
+        <ul className={styles.grid} aria-label="Документы проекта">
           {documentItems.map((document) => (
             <li key={document.id}>
               <DocumentCard

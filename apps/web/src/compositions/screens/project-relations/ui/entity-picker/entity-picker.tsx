@@ -1,9 +1,20 @@
 import { useState } from "react";
-import { Button, Select, Stack, Text } from "@mantine/core";
+import {
+  Button,
+  CloseButton,
+  Combobox,
+  Group,
+  InputBase,
+  ScrollArea,
+  Stack,
+  Text,
+  useCombobox,
+} from "@mantine/core";
 import type { ComboboxItem } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { relationAddress } from "domains/relations";
 import { useEntities, useEntitySummary, entityKindLabel } from "domains/entities";
+import { isEmptyArray } from "shared/value-predicates";
 import type { EntityPickerProps } from "./types/entity-picker-props.type";
 
 /**
@@ -18,6 +29,7 @@ export const EntityPicker = (props: EntityPickerProps) => {
   const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState({ offset: 0, version: undefined as string | undefined });
+  const combobox = useCombobox({ onDropdownClose: () => setSearch("") });
   const selected = value === undefined ? localValue : value;
   const selection = useEntitySummary(projectId, selected === "" ? null : selected);
   const selectedNode = selection.data;
@@ -46,6 +58,12 @@ export const EntityPicker = (props: EntityPickerProps) => {
   const errorMessage = response.error?.message ?? selection.error?.message;
   const hasError = errorMessage !== undefined;
   const emptyMessage = response.isLoading ? "Загружаем сущности…" : "Сущностей не найдено";
+  const inputValue = combobox.dropdownOpened ? search : (selectedLabel ?? "");
+  const hasSelection = selected !== null && selected !== "";
+  const hasPrevious = page.offset > 0;
+  const hasPages = hasMore || hasPrevious;
+  const hasNoOptions = isEmptyArray(optionsData);
+  const pageLabel = `${page.offset + 1}–${Math.min(page.offset + 40, response.data?.total ?? 0)} из ${response.data?.total ?? 0}`;
   /** Сбрасывает продолжение при изменении серверного поиска. */
   const handleSearch = (text: string): void => {
     setSearch(text);
@@ -59,22 +77,102 @@ export const EntityPicker = (props: EntityPickerProps) => {
   };
   return (
     <Stack gap={4}>
-      <Select
-        {...fieldProps}
-        searchable
-        clearable
-        data={optionsData}
-        value={selectedAddress}
-        searchValue={search}
-        onSearchChange={handleSearch}
-        nothingFoundMessage={emptyMessage}
-        filter={({ options }) => options}
-        onChange={(address, option) => {
+      <Combobox
+        store={combobox}
+        onOptionSubmit={(address) => {
+          const option = optionsData.find((entry) => entry.value === address);
+          if (option === undefined) return;
           setLocalValue(address);
           setSelectedOption(option);
           onChange?.(address, option);
+          combobox.closeDropdown();
         }}
-      />
+      >
+        <Combobox.Target>
+          <InputBase
+            {...fieldProps}
+            value={inputValue}
+            autoComplete="off"
+            onChange={(event) => {
+              handleSearch(event.currentTarget.value);
+              combobox.openDropdown();
+              combobox.resetSelectedOption();
+            }}
+            onFocus={() => combobox.openDropdown()}
+            onClick={() => combobox.openDropdown()}
+            onBlur={(event) => {
+              if (
+                !(event.relatedTarget instanceof HTMLElement) ||
+                !event.relatedTarget.closest("[data-entity-picker-options]")
+              )
+                combobox.closeDropdown();
+              fieldProps.onBlur?.(event);
+            }}
+            rightSectionPointerEvents="all"
+            rightSection={
+              hasSelection && (
+                <CloseButton
+                  size="sm"
+                  aria-label="Очистить выбранную сущность"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setLocalValue(null);
+                    setSelectedOption(null);
+                    onChange?.(null, { value: "", label: "" });
+                  }}
+                />
+              )
+            }
+          />
+        </Combobox.Target>
+        <Combobox.Dropdown
+          data-entity-picker-options
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) combobox.closeDropdown();
+          }}
+        >
+          <ScrollArea.Autosize mah={240} type="auto">
+            <Combobox.Options>
+              {optionsData.map((option) => (
+                <Combobox.Option key={option.value} value={option.value}>
+                  <Text size="sm">{option.label}</Text>
+                </Combobox.Option>
+              ))}
+              {hasNoOptions && <Combobox.Empty>{emptyMessage}</Combobox.Empty>}
+            </Combobox.Options>
+          </ScrollArea.Autosize>
+          {hasPages && (
+            <Group justify="space-between" p="xs" onMouseDown={(event) => event.preventDefault()}>
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                disabled={!hasPrevious}
+                onClick={() =>
+                  setPage({
+                    offset: Math.max(0, page.offset - 40),
+                    version: response.data?.version,
+                  })
+                }
+              >
+                Назад
+              </Button>
+              <Text size="xs" c="dimmed">
+                {pageLabel}
+              </Text>
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                disabled={!hasMore}
+                onClick={() =>
+                  setPage({ offset: nextOffset ?? 0, version: response.data?.version })
+                }
+              >
+                Ещё варианты
+              </Button>
+            </Group>
+          )}
+        </Combobox.Dropdown>
+      </Combobox>
       {hasError && (
         <Stack gap={4}>
           <Text size="xs" c="red" role="alert">
@@ -84,15 +182,6 @@ export const EntityPicker = (props: EntityPickerProps) => {
             Обновить варианты
           </Button>
         </Stack>
-      )}
-      {hasMore && (
-        <Button
-          size="compact-xs"
-          variant="subtle"
-          onClick={() => setPage({ offset: nextOffset, version: response.data?.version })}
-        >
-          Следующая страница вариантов
-        </Button>
       )}
     </Stack>
   );

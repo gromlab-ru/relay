@@ -1,4 +1,4 @@
-import type { RelationEdge } from "domains/relations";
+import type { RelationEdge, RelationNode } from "domains/relations";
 /** Представление одного отношения и его действий. */
 export type RelationCardProps = {
   /** Отношение. */
@@ -7,6 +7,8 @@ export type RelationCardProps = {
   fromLabel: string;
   /** Подпись конечной сущности. */
   toLabel: string;
+  /** Сосед для компактного чтения прямого отношения. */
+  neighbor?: RelationNode;
   /** Выбирает корень контекста. */
   onSelect: (address: string) => void;
   /** Отзывает редактируемую связь. */

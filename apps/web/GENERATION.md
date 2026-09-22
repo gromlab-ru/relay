@@ -1,5 +1,17 @@
 # Журнал создания TSX
 
+## Инфраструктура проекта — 22 сентября 2026
+
+`pnpm --filter @relay/web run create ui-unit infrastructure src/compositions/screens`.
+Экран адаптирован в `infrastructure.screen.tsx`: самостоятельная заглушка раздела
+через `ui/state-panel`, единственный фасет `lazy.ts`. Начальные props и CSS удалены.
+
+## Исследователь связей — 22 сентября 2026
+
+Из корня выполнены команды `pnpm --filter @relay/web run create ui-component` для
+`entity-browser` и `relation-explorer` с владельцем `src/compositions/screens/project-relations/ui`.
+Оба компонента внутренние, без фасетов; каталог и группы связываются экраном через callbacks.
+
 ## Прогресс карточек приложений — 22 сентября 2026
 
 `pnpm --filter @relay/web run create ui-component application-progress src/compositions/screens/product-applications/ui`.

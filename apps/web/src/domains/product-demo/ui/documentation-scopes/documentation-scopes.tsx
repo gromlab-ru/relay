@@ -21,6 +21,7 @@ export const DocumentationScopes = (props: DocumentationScopesProps) => {
   const scopeItems = scopes.filter((scope) => scopeIds.includes(scope.id));
   const visibleItems = scopeItems.slice(0, limit).map((scope) => ({
     ...scope,
+    href: scope.href === undefined ? `${base}/documents` : `${base}/product${scope.href}`,
     Icon:
       scope.group === "application"
         ? AppWindow
@@ -52,7 +53,7 @@ export const DocumentationScopes = (props: DocumentationScopesProps) => {
               <span className={styles.context}>
                 {scope.kind} · {scope.path}
                 <Link
-                  to={`${base}/product${scope.href ?? "/documents"}`}
+                  to={scope.href}
                   state={{ returnTo: location.pathname }}
                   aria-label={`Открыть: ${scope.name}`}
                 >

@@ -1,12 +1,16 @@
 import clsx from "clsx";
-import { Fragment, useEffect, useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 import { Button, Divider, NavLink, Text } from "@mantine/core";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { Box, ChartNoAxesCombined, LayoutDashboard } from "lucide-react";
 import { useBoards } from "domains/boards";
 import { useBoardTask } from "domains/board-tasks";
 import { useProjectId } from "domains/project";
-import { PRODUCT_NAVIGATION, PROJECT_NAVIGATION } from "./config/navigation";
+import {
+  PRODUCT_NAVIGATION,
+  PROJECT_NAVIGATION,
+  PROJECT_RESOURCES_NAVIGATION,
+} from "./config/navigation";
 import type { ProjectNavigationProps } from "./types/project-navigation-props.type";
 import styles from "./styles/project-navigation.module.css";
 
@@ -26,7 +30,7 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
   const projectId = useProjectId();
   const boards = useBoards(projectId);
   const boardsNavigationId = useId();
-  const [isBoardsOpened, setBoardsOpened] = useState(true);
+  const [isBoardsOpened, setBoardsOpened] = useState(false);
   const taskReference = pathname.startsWith(`${basePath}/tasks/`)
     ? pathname.split("/").at(-1)
     : undefined;
@@ -44,7 +48,7 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
   const hasMoreBoards = boards.data?.at(-1)?.nextOffset != null;
   const hasBoardsError = boards.error !== undefined;
   const productNavigationId = useId();
-  const [isProductOpened, setProductOpened] = useState(true);
+  const [isProductOpened, setProductOpened] = useState(false);
   const productPath = `${basePath}/product`;
   const isProductRoute = pathname === productPath || pathname.startsWith(`${productPath}/`);
   const overviewPath = `${basePath}/`;
@@ -52,17 +56,11 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
     ...entry,
     href: `${productPath}/${entry.path}`,
   }));
-  const projectItems = PROJECT_NAVIGATION.map((entry) => ({
+  const projectItems = [...PROJECT_NAVIGATION, ...PROJECT_RESOURCES_NAVIGATION].map((entry) => ({
     ...entry,
     href: `${basePath}/${entry.path}`,
+    hasSeparator: entry.path === PROJECT_RESOURCES_NAVIGATION[0]?.path,
   }));
-
-  useEffect(() => {
-    if (isProductRoute) setProductOpened(true);
-  }, [pathname, isProductRoute]);
-  useEffect(() => {
-    if (isBoardsRoute) setBoardsOpened(true);
-  }, [pathname, isBoardsRoute]);
 
   return (
     <nav {...rootAttrs} className={clsx(styles.root, className)} aria-label="Разделы проекта">
@@ -184,16 +182,20 @@ export const ProjectNavigation = (props: ProjectNavigationProps) => {
         </div>
       </NavLink>
       {projectItems.map((entry) => (
-        <NavLink
-          key={entry.path}
-          component={RouterNavLink}
-          to={entry.href}
-          label={entry.label}
-          leftSection={<entry.Icon size={17} aria-hidden="true" />}
-          className={styles.link}
-          classNames={LINK_CLASSES}
-          onClick={onNavigate}
-        />
+        <Fragment key={entry.path}>
+          {entry.hasSeparator && (
+            <Divider my="xs" mx="xs" color="var(--tasks-border)" aria-hidden="true" />
+          )}
+          <NavLink
+            component={RouterNavLink}
+            to={entry.href}
+            label={entry.label}
+            leftSection={<entry.Icon size={17} aria-hidden="true" />}
+            className={styles.link}
+            classNames={LINK_CLASSES}
+            onClick={onNavigate}
+          />
+        </Fragment>
       ))}
     </nav>
   );

@@ -1,7 +1,10 @@
 import { useRef, useState } from "react";
-import { Alert, Autocomplete, Button, Group, Stack, Text, Textarea } from "@mantine/core";
+import { Alert, Button, Checkbox, Group, Select, Stack, Text, TextInput } from "@mantine/core";
+import { ArrowDown, ArrowDownUp } from "lucide-react";
 import { useForm } from "@mantine/form";
 import { getRelations, relationError, saveRelations } from "domains/relations";
+import { MarkdownField } from "ui/markdown-field";
+import { getRelationLabel } from "../../config/relation-presentation";
 import { EntityPicker } from "../entity-picker/entity-picker";
 import type { RelationEditorProps, RelationFormValues } from "./types/relation-editor-props.type";
 import styles from "./styles/relation-editor.module.css";
@@ -16,6 +19,7 @@ export const RelationEditor = (props: RelationEditorProps) => {
   const { projectId, root, onSaved, onCancel } = props;
   const [version, setVersion] = useState(props.version);
   const [error, setError] = useState<string | null>(null);
+  const [isCustomType, setCustomType] = useState(false);
   const request = useRef({ signature: "", id: crypto.randomUUID() });
   const form = useForm<RelationFormValues>({
     mode: "uncontrolled",
@@ -31,6 +35,23 @@ export const RelationEditor = (props: RelationEditorProps) => {
     },
   });
   const hasError = error !== null;
+  const typeItems = [
+    "references",
+    "contains",
+    "implements",
+    "affects",
+    "depends-on",
+    "part-of",
+    "verifies",
+    "related",
+  ].map((value) => ({ value, label: getRelationLabel(value) }));
+  /**
+   * Меняет направление целиком, сохраняя обе выбранные сущности.
+   */
+  const handleSwap = (): void => {
+    const { from, to } = form.getValues();
+    form.setValues({ from: to, to: from });
+  };
   /** Передаёт фокус первому незаполненному полю. */
   const handleValidationError = (errors: typeof form.errors): void => {
     const first = Object.keys(errors)[0];
@@ -75,42 +96,70 @@ export const RelationEditor = (props: RelationEditorProps) => {
     <form onSubmit={form.onSubmit(handleSubmit, handleValidationError)} noValidate>
       <fieldset className={styles.root} disabled={form.submitting}>
         <Stack gap="sm">
-          <Text fw={600}>Новая связь</Text>
+          <Text size="sm" c="dimmed">
+            Прочитайте сверху вниз: первая сущность выполняет выбранное отношение ко второй.
+          </Text>
           <EntityPicker
             key={form.key("from")}
             projectId={projectId}
-            label="Начало связи"
+            label="От какой сущности"
+            placeholder="Найдите по названию или ключу"
             required
             {...form.getInputProps("from")}
           />
-          <Autocomplete
-            key={form.key("type")}
-            label="Тип отношения"
-            description="Выберите подсказку или введите свой тип"
-            required
-            data={[
-              "references",
-              "contains",
-              "implements",
-              "affects",
-              "depends-on",
-              "part-of",
-              "related",
-            ]}
-            {...form.getInputProps("type")}
+          <Group justify="space-between">
+            <ArrowDown size={18} aria-hidden="true" />
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-xs"
+              leftSection={<ArrowDownUp size={14} aria-hidden="true" />}
+              onClick={handleSwap}
+            >
+              Поменять направление
+            </Button>
+          </Group>
+          {!isCustomType && (
+            <Select
+              key={form.key("type")}
+              label="Как связана"
+              required
+              allowDeselect={false}
+              data={typeItems}
+              {...form.getInputProps("type")}
+            />
+          )}
+          {isCustomType && (
+            <TextInput
+              key={form.key("type")}
+              label="Свой тип отношения"
+              description="Латинские буквы, цифры, точка, дефис или подчёркивание"
+              required
+              {...form.getInputProps("type")}
+            />
+          )}
+          <Checkbox
+            label="Указать свой тип отношения"
+            size="xs"
+            checked={isCustomType}
+            onChange={(event) => {
+              setCustomType(event.currentTarget.checked);
+              form.setFieldValue("type", "references");
+            }}
           />
           <EntityPicker
             key={form.key("to")}
             projectId={projectId}
-            label="Конец связи"
+            label="С какой сущностью"
+            placeholder="Выберите связанную сущность"
             required
             {...form.getInputProps("to")}
           />
-          <Textarea
+          <MarkdownField
             key={form.key("description")}
             label="Зачем нужна связь"
-            description="Необязательное пояснение в Markdown"
-            autosize
+            placeholder="Необязательно: поясните смысл связи. Поддерживается Markdown."
+            disabled={form.submitting}
             minRows={3}
             {...form.getInputProps("description")}
           />
@@ -131,7 +180,7 @@ export const RelationEditor = (props: RelationEditorProps) => {
               Сохранить связь
             </Button>
             <Button variant="default" onClick={onCancel}>
-              Отмена
+              Свернуть, сохранив ввод
             </Button>
           </Group>
         </Stack>

@@ -6,6 +6,7 @@ import {
   History,
   Layers3,
   Network,
+  Server,
   Sparkles,
 } from "lucide-react";
 
@@ -14,13 +15,18 @@ export const PRODUCT_NAVIGATION = [
   { path: "passport", label: "Паспорт", Icon: FileText },
   { path: "features", label: "Возможности", Icon: Sparkles },
   { path: "applications", label: "Приложения", Icon: AppWindow },
-  { path: "documents", label: "Документы", Icon: Files },
 ];
 
 /** Рабочие разделы проекта после продуктового контекста. */
 export const PROJECT_NAVIGATION = [
-  { path: "relations", label: "Связи проекта", Icon: Network },
   { path: "plans", label: "Планы", Icon: Flag },
   { path: "releases", label: "Релизы", Icon: Layers3 },
+];
+
+/** Общие материалы и сопровождение проекта после разделителя. */
+export const PROJECT_RESOURCES_NAVIGATION = [
+  { path: "documents", label: "Документы", Icon: Files },
+  { path: "infrastructure", label: "Инфраструктура", Icon: Server },
+  { path: "relations", label: "Связи проекта", Icon: Network },
   { path: "history", label: "История", Icon: History },
 ];

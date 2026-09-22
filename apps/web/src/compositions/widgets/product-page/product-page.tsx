@@ -20,7 +20,7 @@ export const ProductPage = (props: ProductPageProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const location = useLocation();
   useEffect(() => {
-    document.title = `${title} · Продукт · Relay`;
+    document.title = `${title} · Relay`;
     const target = document.getElementById(location.hash.slice(1));
     if (target !== null) {
       target.focus({ preventScroll: true });

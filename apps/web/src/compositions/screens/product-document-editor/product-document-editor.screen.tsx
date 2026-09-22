@@ -2,7 +2,8 @@ import { Button } from "@mantine/core";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useProductDemo } from "domains/product-demo";
 import type { ProductDocumentationInput } from "domains/product-demo";
-import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
+import { useProjectBasePath } from "domains/project";
+import { getProductReturn, ProductPage } from "compositions/widgets/product-page";
 import { StatePanel } from "ui/state-panel";
 import { DocumentationForm } from "./ui/documentation-form";
 
@@ -15,7 +16,7 @@ import { DocumentationForm } from "./ui/documentation-form";
 export const ProductDocumentEditorScreen = () => {
   const { documentId } = useParams();
   const { snapshot } = useProductDemo();
-  const base = useProductPath();
+  const base = useProjectBasePath();
   const location = useLocation();
   const documentData = snapshot.documentation.find((entry) => entry.id === documentId);
   const returnTo = getProductReturn(location.state, `${base}/documents`, base);
@@ -47,7 +48,7 @@ export const ProductDocumentEditorScreen = () => {
     <ProductPage
       title={title}
       description="Зафиксируйте требования, ожидаемое поведение или решение в Markdown."
-      eyebrow="ПРОДУКТ / ДОКУМЕНТЫ"
+      eyebrow="ДОКУМЕНТЫ"
       backTo={backTo}
       backLabel="Назад"
     >

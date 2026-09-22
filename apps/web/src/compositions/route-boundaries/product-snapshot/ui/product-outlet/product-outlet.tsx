@@ -15,24 +15,26 @@ export const ProductOutlet = () => {
   const { mode, notice, setMode, snapshot } = useProductDemo();
   const location = useLocation();
   const base = `${useProjectBasePath()}/product`;
+  const isProductRoute = location.pathname.startsWith(`${base}/`);
+  const loadingTitle = isProductRoute ? "Загружаем продукт" : "Загружаем документы";
+  const loadingDescription = isProductRoute
+    ? "Собираем паспорт, фичи и приложения."
+    : "Собираем библиотеку документов проекта.";
+  const errorTitle = isProductRoute
+    ? "Не удалось прочитать продукт"
+    : "Не удалось прочитать документы";
   const hasNotice = notice !== "";
   if (mode === "loading")
-    return (
-      <StatePanel
-        isLoading
-        title="Загружаем продукт"
-        description="Собираем паспорт, фичи и приложения."
-      />
-    );
+    return <StatePanel isLoading title={loadingTitle} description={loadingDescription} />;
   if (mode === "read-error")
     return (
       <StatePanel
-        title="Не удалось прочитать продукт"
+        title={errorTitle}
         description="Проверьте соединение с сервером. Несохранённый ввод остаётся в черновике."
         action={<Button onClick={() => setMode("filled")}>Повторить загрузку</Button>}
       />
     );
-  const parts = location.pathname.slice(base.length + 1).split("/");
+  const parts = isProductRoute ? location.pathname.slice(base.length + 1).split("/") : [];
   const collection = parts[0];
   const targets =
     collection === "features"
@@ -72,7 +74,7 @@ export const ProductOutlet = () => {
     const scenario = findProductEntry(feature.scenarios, parts[3]);
     if (scenario?.key !== undefined) parts[3] = scenario.key;
   }
-  const canonical = `${base}/${parts.join("/")}`;
+  const canonical = isProductRoute ? `${base}/${parts.join("/")}` : location.pathname;
   if (canonical !== location.pathname)
     return (
       <Navigate

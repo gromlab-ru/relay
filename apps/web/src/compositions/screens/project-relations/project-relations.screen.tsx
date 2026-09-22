@@ -1,239 +1,351 @@
 import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  ActionIcon,
   Alert,
-  Anchor,
+  Badge,
   Button,
   Group,
+  Modal,
   NumberInput,
-  Paper,
-  Select,
+  SegmentedControl,
+  Skeleton,
   Stack,
   Text,
+  ThemeIcon,
   Title,
+  Tooltip,
 } from "@mantine/core";
+import { ArrowLeft, GitFork, Plus, RefreshCw, Search } from "lucide-react";
 import { useProjectId } from "domains/project";
+import { useEntitySummary } from "domains/entities";
 import { relationAddress, relationError, saveRelations, useRelations } from "domains/relations";
-import { EntityPicker } from "./ui/entity-picker/entity-picker";
+import { EntityBrowser } from "./ui/entity-browser/entity-browser";
 import { RelationEditor } from "./ui/relation-editor/relation-editor";
-import { RelationCard } from "./ui/relation-card/relation-card";
+import { RelationExplorer } from "./ui/relation-explorer/relation-explorer";
+import { getEntityPresentation } from "./config/relation-presentation";
 import styles from "./styles/project-relations.module.css";
 
 /**
- * Связывает сущности проекта и восстанавливает объяснимое окружение выбранной сущности.
+ * Даёт человеку адресное рабочее место для исследования связей проекта.
  *
  * Используется для:
- *  - просмотра общего графа и его постраничного контекста
- *  - установки произвольных отношений и контекстных ссылок
+ *  - выбора сущности и последовательного восстановления её окружения
+ *  - добавления недостающих отношений с сохранением контекста
  */
 export const ProjectRelationsScreen = () => {
   const projectId = useProjectId();
+  const screenRef = useRef<HTMLElement>(null);
   const [params, setParams] = useSearchParams();
   const root = params.get("root");
-  const [depth, setDepth] = useState(4);
-  const [profile, setProfile] = useState<"all" | "context">("context");
-  const [page, setPage] = useState({ offset: 0, version: undefined as string | undefined });
+  const selection = useEntitySummary(projectId, root);
+  const selectedNode = selection.data;
+  const selectedAddress = selectedNode ? relationAddress(selectedNode.ref) : root;
+  const mode = params.get("view") === "chain" ? "chain" : "direct";
+  const depth = Math.trunc(Math.min(100, Math.max(2, Number(params.get("depth")) || 3)));
+  const [page, setPage] = useState({
+    scope: "",
+    offset: 0,
+    version: undefined as string | undefined,
+  });
+  const scope = `${root}:${mode}:${depth}`;
+  const currentPage = page.scope === scope ? page : { offset: 0, version: undefined };
   const [isEditorOpen, setEditorOpen] = useState(false);
+  const [editorData, setEditorData] = useState<{
+    root: string;
+    version: string;
+    key: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const request = useRef({ signature: "", id: crypto.randomUUID() });
-  const query = useRelations(projectId, {
-    ...page,
-    ...(root ? { root } : {}),
-    depth,
-    profile,
-    limit: 30,
-  });
+  const query = useRelations(
+    projectId,
+    root === null
+      ? null
+      : {
+          root,
+          depth: mode === "direct" ? 1 : depth,
+          profile: "all",
+          limit: 30,
+          offset: currentPage.offset,
+          version: currentPage.version,
+        },
+  );
   const graph = query.data;
   const version = graph?.version ?? "";
-  const nodesData = graph?.nodes ?? [];
-  const edgesData = graph?.edges ?? [];
-  const labelsMap = new Map(
-    [...nodesData, ...(graph?.endpoints ?? [])].map((node) => [
-      relationAddress(node.ref),
-      `${node.key} · ${node.title}`,
-    ]),
-  );
-  const pathsMap = new Map(
-    (graph?.paths ?? []).map((path) => [
-      relationAddress(path.target),
-      (
-        path.keys ??
-        path.nodes.map((ref) => labelsMap.get(relationAddress(ref)) ?? relationAddress(ref))
-      ).join(" → "),
-    ]),
-  );
-  const nodeItems = nodesData.map((node) => ({
-    ...node,
-    address: relationAddress(node.ref),
-    path: pathsMap.get(relationAddress(node.ref)) ?? "Прямая запись каталога",
-  }));
-  const edgeItems = edgesData.map((edge) => ({
-    edge,
-    fromLabel: labelsMap.get(relationAddress(edge.from)) ?? relationAddress(edge.from),
-    toLabel: labelsMap.get(relationAddress(edge.to)) ?? relationAddress(edge.to),
-  }));
-  const hasError = error !== null || query.error !== undefined;
-  const errorMessage = error ?? query.error?.message;
-  const isEmpty = graph?.totalNodes === 0;
-  const hasNoEdges = graph?.totalEdges === 0;
-  const hasMore = graph?.nextOffset !== undefined && graph.nextOffset !== null;
-  const hasBoundary = graph?.depthLimited === true;
-  const canEdit = version !== "" && query.error === undefined;
-  const shouldShowEditor = isEditorOpen && version !== "";
+  const hasSelection = root !== null;
+  const hasNoSelection = !hasSelection;
+  const isChain = mode === "chain";
+  const presentation = getEntityPresentation(selectedNode?.ref.kind ?? "project");
+  const hasError = error !== null || query.error !== undefined || selection.error !== undefined;
+  const errorMessage = error ?? query.error?.message ?? selection.error?.message;
+  const canEdit = version !== "" && !hasError && selectedNode !== undefined;
   const hasNotice = notice !== "";
-  /** Начинает новое согласованное чтение, не сбрасывая открытую форму. */
+  const hasGraph = graph !== undefined && selectedAddress !== null && !hasError;
+  const hasEditor = editorData !== null;
+  const hasBoundary = isChain && graph?.depthLimited === true;
+  const isLoading = query.isLoading || selection.isLoading;
+  const selectedTitle =
+    selectedNode?.title ??
+    (selection.error === undefined ? "Загружаем сущность…" : "Сущность недоступна");
+  /**
+   * Начинает новый снимок, сохраняя каталог и открытый черновик.
+   */
   const handleRefresh = (): void => {
-    setPage({ offset: 0, version: undefined });
+    setPage({ scope, offset: 0, version: undefined });
     setError(null);
     void query.mutate().catch(() => undefined);
+    void selection.mutate().catch(() => undefined);
   };
-  /** Сохраняет корень контекста в URL для агента и оператора. */
+  /**
+   * Открывает соседа отдельным шагом истории браузера.
+   */
   const handleSelect = (address: string | null): void => {
-    setParams(address ? { root: address } : {});
-    setPage({ offset: 0, version: undefined });
+    setParams(address === null ? {} : { root: address });
+    setError(null);
+    setNotice("");
+    screenRef.current?.scrollIntoView({ block: "start" });
   };
-  /** Отзывает только явно установленное ребро; неподтверждённый запрос повторяется безопасно. */
+  /**
+   * Сохраняет режим в URL, чтобы возврат восстанавливал область чтения.
+   */
+  const handleMode = (value: string): void => {
+    const nextParams = new URLSearchParams(params);
+    if (value === "chain") nextParams.set("view", "chain");
+    else nextParams.delete("view");
+    setParams(nextParams, { replace: true });
+  };
+  /**
+   * Создаёт форму один раз; сворачивание не уничтожает введённые поля.
+   */
+  const handleCreate = (): void => {
+    if (editorData === null && selectedAddress !== null) {
+      setEditorData({ root: selectedAddress, version, key: crypto.randomUUID() });
+    }
+    setEditorOpen(true);
+  };
+  /**
+   * Отзывает явно установленную связь с идемпотентным повтором.
+   */
   const handleRemove = async (id: string): Promise<void> => {
     const signature = JSON.stringify([id, version]);
     if (request.current.signature !== signature)
       request.current = { signature, id: crypto.randomUUID() };
     try {
       await saveRelations(projectId, [{ action: "remove", id }], version, request.current.id);
-      setNotice("Связь удалена; её история сохранена.");
+      setNotice("Связь удалена. Сущности и история сохранены.");
       handleRefresh();
     } catch (failure) {
       setError(relationError(failure).message);
     }
   };
-  /** Обновляет граф после подтверждённой записи формы. */
+  /**
+   * Возвращает к окружению после подтверждённой записи.
+   */
   const handleSaved = (): void => {
     setEditorOpen(false);
-    setNotice("Связь сохранена.");
+    setEditorData(null);
+    setNotice("Связь добавлена.");
     handleRefresh();
   };
+  const createLabel = hasEditor ? "Продолжить добавление" : "Добавить связь";
   return (
-    <section className={styles.root}>
-      <Group justify="space-between">
+    <section ref={screenRef} className={styles.root}>
+      <div className={styles.header}>
         <div>
-          <Title order={1}>Связи проекта</Title>
-          <Text c="dimmed" size="sm">
-            Сущности, отношения и причины включения в контекст
+          <Title order={1} size="h2">
+            Связи проекта
+          </Title>
+          <Text c="dimmed" size="sm" mt={4}>
+            Найдите сущность и проследите, как она связана с остальным проектом.
           </Text>
         </div>
-        <Button disabled={!canEdit} onClick={() => setEditorOpen(true)}>
-          Добавить связь
-        </Button>
-      </Group>
-      <div className={styles.filters}>
-        <EntityPicker
-          projectId={projectId}
-          label="Контекст сущности"
-          value={root}
-          onChange={handleSelect}
-        />
-        <Select
-          label="Область обхода"
-          value={profile}
-          data={[
-            { value: "context", label: "Контекст работы" },
-            { value: "all", label: "Все отношения" },
-          ]}
-          allowDeselect={false}
-          onChange={(value) => {
-            setProfile(value === "all" ? "all" : "context");
-            setPage({ offset: 0, version: undefined });
-          }}
-        />
-        <NumberInput
-          label="Глубина"
-          min={0}
-          max={100}
-          value={depth}
-          onChange={(value) => {
-            setDepth(Number(value));
-            setPage({ offset: 0, version: undefined });
-          }}
-        />
-      </div>
-      <Group>
-        <Button variant="default" onClick={handleRefresh}>
-          Обновить граф
-        </Button>
-        <Button variant="subtle" onClick={() => handleSelect(null)}>
-          Весь проект
-        </Button>
-        <Text size="sm" c="dimmed">
-          Сущностей: {graph?.totalNodes ?? 0} · Связей: {graph?.totalEdges ?? 0}
-        </Text>
-      </Group>
-      {hasNotice && <Text role="status">{notice}</Text>}
-      {shouldShowEditor && (
-        <RelationEditor
-          projectId={projectId}
-          version={version}
-          root={root}
-          onSaved={handleSaved}
-          onCancel={() => setEditorOpen(false)}
-        />
-      )}
-      {hasError && (
-        <Alert color="red" title="Не удалось обновить связи" role="alert">
-          {errorMessage}
-        </Alert>
-      )}
-      {query.isLoading && <Text role="status">Загружаем граф…</Text>}
-      {hasBoundary && (
-        <Alert title="За границей глубины есть ещё связи">
-          Увеличьте глубину или откройте окружение одной из показанных сущностей.
-        </Alert>
-      )}
-      <div className={styles.columns}>
-        <Stack gap="sm">
-          <Title order={2} size="h3">
-            Сущности и пути
-          </Title>
-          {isEmpty && <Text c="dimmed">Сущностей в этой области нет.</Text>}
-          {nodeItems.map((node) => (
-            <Paper key={node.address} withBorder p="sm" radius="md" className={styles.node}>
-              <Anchor component="button" ta="left" onClick={() => handleSelect(node.address)}>
-                {node.key} · {node.title}
-              </Anchor>
-              <Text size="xs" c="dimmed">
-                {node.address} · {node.status}
-              </Text>
-              <Text size="xs" mt={6}>
-                Почему включено: {node.path}
-              </Text>
-            </Paper>
-          ))}
-        </Stack>
-        <Stack gap="sm">
-          <Title order={2} size="h3">
-            Направленные отношения
-          </Title>
-          <Text size="xs" c="dimmed">
-            Предметные связи читаются из своих записей. Явные связи можно удалить здесь.
-          </Text>
-          {hasNoEdges && <Text c="dimmed">Отношений пока нет. Добавьте первую связь.</Text>}
-          {edgeItems.map((entry) => (
-            <RelationCard
-              key={entry.edge.id}
-              {...entry}
-              onSelect={handleSelect}
-              onRemove={handleRemove}
-            />
-          ))}
-        </Stack>
-      </div>
-      {hasMore && (
-        <Button
-          variant="default"
-          onClick={() => setPage({ offset: graph?.nextOffset ?? 0, version })}
+        <Tooltip
+          label="Обновить связи и выбранную сущность"
+          events={{ hover: true, focus: true, touch: false }}
         >
-          Следующая страница графа
-        </Button>
-      )}
+          <ActionIcon
+            variant="default"
+            size="lg"
+            aria-label="Обновить связи"
+            disabled={!hasSelection}
+            loading={query.isValidating}
+            onClick={handleRefresh}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+          </ActionIcon>
+        </Tooltip>
+      </div>
+      <div className={styles.workspace}>
+        <aside className={styles.catalog} data-hidden={hasSelection}>
+          <EntityBrowser projectId={projectId} selected={selectedAddress} onSelect={handleSelect} />
+        </aside>
+        <div className={styles.content}>
+          {hasNoSelection && (
+            <div className={styles.welcome}>
+              <ThemeIcon variant="light" color="gray" size={64} radius="xl">
+                <GitFork size={30} aria-hidden="true" />
+              </ThemeIcon>
+              <Title order={2} size="h3">
+                У каждой связи есть отправная точка
+              </Title>
+              <Text c="dimmed" size="sm" maw={420}>
+                Выберите сущность в каталоге. Здесь будут её зависимости, состав, реализации и
+                связанные материалы.
+              </Text>
+              <div className={styles.steps}>
+                <Group gap="sm">
+                  <Search size={16} aria-hidden="true" />
+                  <Text size="sm">Найдите по названию или ключу</Text>
+                </Group>
+                <Group gap="sm">
+                  <GitFork size={16} aria-hidden="true" />
+                  <Text size="sm">Исследуйте связи и переходите к соседям</Text>
+                </Group>
+                <Group gap="sm">
+                  <Plus size={16} aria-hidden="true" />
+                  <Text size="sm">Добавьте недостающую связь</Text>
+                </Group>
+              </div>
+            </div>
+          )}
+          {hasSelection && (
+            <Stack gap="lg">
+              <Button
+                variant="subtle"
+                color="gray"
+                size="compact-sm"
+                leftSection={<ArrowLeft size={15} aria-hidden="true" />}
+                onClick={() => handleSelect(null)}
+                className={styles.back}
+              >
+                К выбору сущности
+              </Button>
+              <section className={styles.focus} aria-label="Выбранная сущность">
+                <Group wrap="nowrap" align="flex-start">
+                  <ThemeIcon color={presentation.color} variant="light" radius="md" size={44}>
+                    <presentation.icon size={23} aria-hidden="true" />
+                  </ThemeIcon>
+                  <div className={styles.focusTitle}>
+                    <Group gap="xs">
+                      <Text size="xs" c="dimmed">
+                        {selectedNode?.key ?? root}
+                      </Text>
+                      <Badge size="sm" variant="light" color={presentation.color} tt="none">
+                        {presentation.label}
+                      </Badge>
+                    </Group>
+                    <Title order={2} size="h3" mt={7}>
+                      {selectedTitle}
+                    </Title>
+                  </div>
+                </Group>
+                <Button
+                  leftSection={<Plus size={16} aria-hidden="true" />}
+                  disabled={!canEdit && !hasEditor}
+                  onClick={handleCreate}
+                  className={styles.create}
+                >
+                  {createLabel}
+                </Button>
+              </section>
+              <div className={styles.viewBar}>
+                <SegmentedControl
+                  aria-label="Область связей"
+                  size="sm"
+                  value={mode}
+                  onChange={handleMode}
+                  data={[
+                    { value: "direct", label: "Связи сущности" },
+                    { value: "chain", label: "Цепочка связей" },
+                  ]}
+                />
+                {isChain && (
+                  <NumberInput
+                    aria-label="Глубина цепочки"
+                    prefix="Шагов: "
+                    min={2}
+                    max={100}
+                    allowDecimal={false}
+                    value={depth}
+                    w={130}
+                    onChange={(value) => {
+                      const nextParams = new URLSearchParams(params);
+                      nextParams.set("depth", String(value));
+                      setParams(nextParams, { replace: true });
+                    }}
+                  />
+                )}
+              </div>
+              {hasNotice && (
+                <Text size="sm" role="status" c="teal">
+                  {notice}
+                </Text>
+              )}
+              {hasError && (
+                <Alert color="red" title="Не удалось получить актуальные связи" role="alert">
+                  {errorMessage}
+                  <Button variant="subtle" onClick={handleRefresh}>
+                    Повторить с начала
+                  </Button>
+                </Alert>
+              )}
+              {isLoading && (
+                <Stack aria-label="Загрузка связей">
+                  <Skeleton h={100} />
+                  <Skeleton h={100} />
+                </Stack>
+              )}
+              {hasBoundary && (
+                <Text size="xs" c="dimmed">
+                  Показана цепочка до {depth} шагов. Чтобы идти дальше, выберите соседнюю сущность
+                  или увеличьте глубину.
+                </Text>
+              )}
+              {hasGraph && (
+                <RelationExplorer
+                  key={scope}
+                  graph={graph}
+                  root={selectedAddress}
+                  isChain={isChain}
+                  offset={currentPage.offset}
+                  onSelect={handleSelect}
+                  onRemove={handleRemove}
+                  onPage={(offset) => setPage({ scope, offset, version })}
+                />
+              )}
+            </Stack>
+          )}
+        </div>
+      </div>
+      <Modal.Root
+        opened={isEditorOpen}
+        onClose={() => setEditorOpen(false)}
+        size="lg"
+        centered
+        keepMounted
+      >
+        <Modal.Overlay />
+        <Modal.Content>
+          <Modal.Header role="presentation">
+            <Modal.Title>Добавить связь</Modal.Title>
+            <Modal.CloseButton aria-label="Свернуть форму связи" />
+          </Modal.Header>
+          <Modal.Body>
+            {hasEditor && (
+              <RelationEditor
+                key={editorData.key}
+                projectId={projectId}
+                version={editorData.version}
+                root={editorData.root}
+                onSaved={handleSaved}
+                onCancel={() => setEditorOpen(false)}
+              />
+            )}
+          </Modal.Body>
+        </Modal.Content>
+      </Modal.Root>
     </section>
   );
 };

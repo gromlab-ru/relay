@@ -45,6 +45,7 @@ export const appRouter = createBrowserRouter([
             lazy: () => import("compositions/layouts/product/lazy"),
             children: [
               { index: true, element: null },
+              { path: "documents/*", element: null },
               {
                 path: "scenarios/:entityRef",
                 handle: breadcrumbHandle({
@@ -118,30 +119,6 @@ export const appRouter = createBrowserRouter([
                     path: "applications",
                     handle: breadcrumbHandle(PRODUCT_CRUMBS.APPLICATIONS),
                     lazy: () => import("compositions/screens/product-applications/lazy"),
-                  },
-                  {
-                    path: "documents",
-                    handle: breadcrumbHandle(PRODUCT_CRUMBS.DOCUMENTS),
-                    lazy: () => import("compositions/screens/product-documents/lazy"),
-                  },
-                  {
-                    path: "documents/new",
-                    handle: breadcrumbHandle(PRODUCT_CRUMBS.DOCUMENTS, { label: "Новый документ" }),
-                    lazy: () => import("compositions/screens/product-document-editor/lazy"),
-                  },
-                  {
-                    path: "documents/:documentId",
-                    handle: breadcrumbHandle(PRODUCT_CRUMBS.DOCUMENTS, documentCrumb()),
-                    lazy: () => import("compositions/screens/product-document/lazy"),
-                  },
-                  {
-                    path: "documents/:documentId/edit",
-                    handle: breadcrumbHandle(
-                      PRODUCT_CRUMBS.DOCUMENTS,
-                      documentCrumb(),
-                      PRODUCT_CRUMBS.EDIT,
-                    ),
-                    lazy: () => import("compositions/screens/product-document-editor/lazy"),
                   },
                   {
                     path: "features/new",
@@ -220,6 +197,37 @@ export const appRouter = createBrowserRouter([
                 ],
               },
             ],
+          },
+          {
+            path: "documents",
+            handle: breadcrumbHandle(PRODUCT_CRUMBS.DOCUMENTS),
+            lazy: () => import("compositions/route-boundaries/product-snapshot/lazy"),
+            children: [
+              {
+                index: true,
+                lazy: () => import("compositions/screens/product-documents/lazy"),
+              },
+              {
+                path: "new",
+                handle: breadcrumbHandle({ label: "Новый документ" }),
+                lazy: () => import("compositions/screens/product-document-editor/lazy"),
+              },
+              {
+                path: ":documentId",
+                handle: breadcrumbHandle(documentCrumb()),
+                lazy: () => import("compositions/screens/product-document/lazy"),
+              },
+              {
+                path: ":documentId/edit",
+                handle: breadcrumbHandle(documentCrumb(), PRODUCT_CRUMBS.EDIT),
+                lazy: () => import("compositions/screens/product-document-editor/lazy"),
+              },
+            ],
+          },
+          {
+            path: "infrastructure",
+            lazy: () => import("compositions/screens/infrastructure/lazy"),
+            handle: breadcrumbHandle({ label: "Инфраструктура" }),
           },
           {
             path: "plans",

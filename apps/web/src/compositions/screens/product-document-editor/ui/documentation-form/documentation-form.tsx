@@ -18,7 +18,7 @@ import { Check, FileText } from "lucide-react";
 import { useBeforeUnload, useBlocker, useNavigate } from "react-router-dom";
 import { DOCUMENTATION_KIND_OPTIONS, useProductDemo } from "domains/product-demo";
 import type { ProductDocumentationInput } from "domains/product-demo";
-import { useProductPath } from "compositions/widgets/product-page";
+import { useProjectBasePath } from "domains/project";
 import { readSessionStored, removeSessionStored, writeSessionStored } from "infra/browser-storage";
 import { MarkdownField } from "ui/markdown-field";
 import { DocumentScopePicker } from "./ui/document-scope-picker";
@@ -36,9 +36,10 @@ import styles from "./styles/documentation-form.module.css";
 export const DocumentationForm = (props: DocumentationFormProps) => {
   const { initial, revision, draftScope, backTo, returnTo, className, ...rootAttrs } = props;
   const { saveDocumentation } = useProductDemo();
-  const base = useProductPath();
+  const base = useProjectBasePath();
   const navigate = useNavigate();
-  const draftKey = `relay:documentation-draft:${base}:${draftScope}`;
+  // Сохраняем прежний ключ, чтобы перенос раздела не потерял черновики вкладки.
+  const draftKey = `relay:documentation-draft:${base}/product:${draftScope}`;
   const [draftData] = useState(() =>
     DOCUMENTATION_DRAFT_SCHEMA.safeParse(readSessionStored(draftKey)),
   );
@@ -115,7 +116,7 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
         position: "top-center",
         autoClose: 2500,
         title: "Документ сохранён",
-        message: "Документ и его связи сохранены в продукте.",
+        message: "Документ и его связи сохранены в библиотеке проекта.",
         color: "gray",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
       });

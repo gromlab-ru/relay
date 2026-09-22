@@ -2,6 +2,7 @@ import { Anchor, Button, Text } from "@mantine/core";
 import { ArrowRight, Pencil, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getFeatureStatus, getRelatedDocuments, useProductDemo } from "domains/product-demo";
+import { useProjectBasePath } from "domains/project";
 import { ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
@@ -16,6 +17,7 @@ import styles from "./styles/product-passport.module.css";
 export const ProductPassportScreen = () => {
   const { snapshot } = useProductDemo();
   const base = useProductPath();
+  const projectBase = useProjectBasePath();
   const passportData = snapshot.passport;
   const isEmpty = passportData.name === "";
   const doneCount = snapshot.features.filter(
@@ -119,7 +121,7 @@ export const ProductPassportScreen = () => {
                   <Anchor
                     component={Link}
                     c="var(--mantine-color-text)"
-                    to={`${base}/documents/${document.id}`}
+                    to={`${projectBase}/documents/${document.id}`}
                   >
                     {document.name}
                   </Anchor>
