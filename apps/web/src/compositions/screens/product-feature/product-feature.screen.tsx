@@ -1,4 +1,4 @@
-import { Anchor, Button, Group, Text } from "@mantine/core";
+import { Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ProductKey } from "domains/product";
@@ -6,17 +6,15 @@ import { useProjectBasePath } from "domains/project";
 import { useProductRoute } from "compositions/widgets/product-page";
 import {
   getFeatureStatus,
-  getRelatedDocuments,
   ProductReadiness,
   useProductDemo,
 } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductRequirement } from "compositions/widgets/product-requirement";
 import { EntityDelete } from "compositions/widgets/entity-delete";
+import { EntityDocuments } from "compositions/widgets/entity-documents";
 import { StatePanel } from "ui/state-panel";
-import { isEmptyArray } from "shared/value-predicates";
 import { FeatureScenarios } from "./ui/feature-scenarios";
-import styles from "./styles/product-feature.module.css";
 
 /**
  * Представляет назначение фичи, вклад приложений и историю реализации.
@@ -32,12 +30,6 @@ export const ProductFeatureScreen = () => {
   const base = useProductPath();
   const projectBase = useProjectBasePath();
   const featureData = snapshot.features.find((feature) => feature.id === featureId);
-  const relatedDocuments = getRelatedDocuments(snapshot, [
-    JSON.stringify({ kind: "feature", id: featureId }),
-    ...(featureData?.scenarios ?? []).map((scenario) =>
-      JSON.stringify({ kind: "scenario", id: scenario.id }),
-    ),
-  ]);
   const backTo = getProductReturn(location.state, `${base}/features${location.search}`, base);
   const backLabel = backTo.startsWith(`${base}/applications/`)
     ? "Назад к приложению"
@@ -56,7 +48,6 @@ export const ProductFeatureScreen = () => {
         }
       />
     );
-  const hasNoDocuments = isEmptyArray(relatedDocuments);
   return (
     <ProductPage
       title={featureData.name}
@@ -112,30 +103,7 @@ export const ProductFeatureScreen = () => {
       >
         <FeatureScenarios key={featureData.id} feature={featureData} />
       </ProductRequirement>
-      <section className={styles.documents} aria-label="Документы фичи">
-        <Text component="h2" size="lg" fw={600} mt="xl" mb="sm">
-          Документы фичи и сценариев
-        </Text>
-        {hasNoDocuments && (
-          <Text size="sm" c="dimmed">
-            К фиче и её сценариям пока не прикреплены документы.
-          </Text>
-        )}
-        <ul>
-          {relatedDocuments.map((document) => (
-            <li key={document.id}>
-              <Anchor
-                component={Link}
-                c="var(--mantine-color-text)"
-                to={`${projectBase}/documents/${document.id}`}
-                state={{ returnTo: location.pathname }}
-              >
-                {document.name}
-              </Anchor>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div style={{ marginTop: "1.5rem" }}><EntityDocuments target={{ kind: "feature", id: featureData.id }} /></div>
     </ProductPage>
   );
 };

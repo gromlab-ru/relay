@@ -9,6 +9,7 @@ import {
   entityReferenceSchema,
 } from "../primitives.js";
 import { applicationSlugSchema, boardPrefixSchema } from "./board.js";
+import { documentKindSchema, documentMetadataShape } from "./document-library.js";
 
 export const productIdSchema = z
   .string()
@@ -87,9 +88,8 @@ export const productFieldsSchema = z.discriminatedUnion("kind", [
     name: title.describe("Однострочное название документа"),
     summary: text(4096).describe("Краткое обычное описание документа"),
     body: markdown.describe("Полный текст документа в Markdown"),
-    documentKind: z
-      .enum(["specification", "description", "rules", "decision"])
-      .describe("Тип материала: ТЗ, описание, правила или решение"),
+    documentKind: documentKindSchema,
+    ...documentMetadataShape,
     links: z
       .array(productReferenceSchema)
       .max(1000)

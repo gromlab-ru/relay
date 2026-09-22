@@ -13,6 +13,8 @@ import { wrap } from "./layout.js";
 import { renderMarkdown } from "./markdown.js";
 
 const labels = new Map(entityDefinitions.map((entry) => [entry.kind, entry.title]));
+const documentStates = { draft: "Черновик", active: "Действующий", archived: "Архив" };
+const documentKinds = { specification: "Техническое задание", description: "Описание", rules: "Правила", instruction: "Инструкция", proposal: "Проект решения", decision: "Решение", research: "Исследование" };
 const quote = (value: string) => `'${value.replaceAll("'", "'\"'\"'")}'`;
 type Page = { total: number; nextOffset: number | null; version: string };
 
@@ -23,7 +25,7 @@ export function entityContinuation(page: Page, command: string, query: object): 
     .filter(([, value]) => value !== undefined)
     .map(
       ([key, value]) =>
-        `--${key === "version" ? "snapshot-version" : key} ${(Array.isArray(value) ? value : [value]).map((part) => quote(String(part))).join(" ")}`,
+        `--${key === "version" ? "snapshot-version" : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)} ${(Array.isArray(value) ? value : [value]).map((part) => quote(String(part))).join(" ")}`,
     );
   return `Всего: ${page.total}.\nПродолжение: relay-cli entities ${command} ${args.join(" ")}`;
 }
@@ -39,7 +41,7 @@ export function entitiesText(page: EntitiesPage, query: object, options: TextOpt
     item.key,
     labels.get(item.ref.kind) ?? item.ref.kind,
     item.title,
-    item.status ?? "—",
+    item.document ? documentStates[item.document.status] : item.status ?? "—",
   ]);
   table.push(...rows.map((row) => row.map(safeText)));
   const content =
@@ -107,10 +109,14 @@ export function entityText(entity: EntityDetail, options: TextOptions): string {
     lines.push(
       `Приложение: ${address("application", data.applicationId)}\nФича: ${address("feature", data.featureId)}\nСценарий: ${address("scenario", data.scenarioId)}\nУчастие: ${data.active ? "активно" : "снято"}`,
     );
-  if (data.kind === "document")
+  if (data.kind === "document") {
     lines.push(
-      `Тип документа: ${data.documentKind}\nОбласти: ${data.links.map((link) => (link.kind === "product" ? "Продукт" : address(link.kind, link.id))).join(", ") || "не указаны"}`,
+      `Тип документа: ${documentKinds[data.documentKind]}\nСостояние: ${documentStates[data.documentStatus ?? "active"]}\nРаздел: ${safeText(entity.document?.sectionId ?? "Без раздела")}\nЗакреплён: ${data.pinned ? "да" : "нет"}`,
     );
+    const relations = [...data.links.map((link) => ({ target: { kind: link.kind, id: link.kind === "product" ? "passport" : link.id }, type: "documents", description: "" })), ...(data.relations ?? [])];
+    lines.push("Связи:", ...relations.map((link) => `${link.type === "documents" ? "Описывает" : "Контекст"}: ${address(link.target.kind, link.target.id)}${link.description ? `\n${renderMarkdown(link.description, options)}` : ""}`));
+    if (relations.length === 0) lines.push("Пока без связей.");
+  }
   if (data.kind === "task")
     lines.push(
       `Доска: ${address("board", data.boardId)}\nКолонка: ${data.column}\nРодитель: ${address("task", data.parentId)}\nРеализует: ${data.productLinks.map((link) => address(link.kind, link.id)).join(", ") || "—"}\nЗависит от: ${data.dependencies.map((id) => address("task", id)).join(", ") || "—"}\nСвязана с: ${data.related.map((id) => address("task", id)).join(", ") || "—"}`,

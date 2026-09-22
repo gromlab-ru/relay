@@ -24,6 +24,16 @@
 Ниже перечислены все действующие команды. Прежние корневые команды числовой доски
 и группа документов жизненного цикла удалены.
 
+### Известные ограничения текущей проверки
+
+В Playground 22 сентября 2026 воспроизведён конфликт `--version` для `boards` и
+`task list`: вместо страницы со снимком CLI печатает свою версию, даже с `--format json`.
+Чтение следующего offset без этого параметра работает, но не фиксирует снимок.
+Подсказки продолжения также не сохраняют выбранный workspace-проект — указывайте его явно.
+`product overview` на текущих данных `p2p-rental` требует увеличения `--max-bytes`
+до 32768. Это наблюдаемые отклонения, не изменение ожидаемого контракта.
+Воспроизведение и границы: [аудит агентского интерфейса](../work/agent-interface-usability/JOURNAL.md).
+
 ## Проект и реестр
 
 ### init
@@ -340,7 +350,9 @@ comment list. Возвращает события всех сохранённы�
 ### entities list
 
 Фильтры: `--kind`, `--q`, `--refs`, `--board`, `--application`, `--feature`, `--scenario`,
-`--target`, `--parent`, `--status`, `--active`, `--sort key|title`.
+`--target`, `--parent`, `--status`, `--active`, `--sort key|title|updated`.
+Для документов: `--section <id>` (none — без раздела), `--document-kind`,
+`--pinned true|false`, `--archived true|false`.
 
 ### entities get
 
@@ -368,6 +380,10 @@ comment list. Возвращает события всех сохранённы�
 `--description`, `--body`, `--feature`, `--application`, `--target`, `--board`, `--slug`,
 `--prefix`, `--type`, `--document-kind`, `--status`, `--column`, `--parent`, `--targets`,
 `--dependencies`, `--related`, `--json`, `--request-id`. Допустимость определяет вид.
+Поля библиотеки: `--document-status draft|active|archived`, `--section-id`, `--clear-section`,
+`--pinned true|false`, `--relations '<JSON>'` (продуктовые линки target/type/description),
+`--document-sections '<JSON>'` (разделы проекта id/name). Эти поля не создают рёбра графа
+без явной интеграции предметной операции с движком Core.
 
 ### entities update
 

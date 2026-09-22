@@ -71,7 +71,8 @@ export class EntityDeletionService {
       const data = entry.data;
       const isDetached =
         (data.kind === "document" &&
-          data.links.some((link) => link.kind !== "product" && has(link.kind, link.id))) ||
+          (data.links.some((link) => link.kind !== "product" && has(link.kind, link.id)) ||
+            data.relations?.some((link) => has(link.target.kind, link.target.id)))) ||
         (data.kind === "task" &&
           (has("task", data.parentId) ||
             [...data.dependencies, ...data.related].some((id) => has("task", id)) ||
@@ -175,6 +176,7 @@ export class EntityDeletionService {
           has(fields.kind, record.id) ||
           (fields.kind === "scope" && has("application", fields.applicationId));
         if (isDeleted) {
+          if (fields.kind === "document") add({ path: `product/.document-links/${record.id}.json`, after: null });
           for (const path of new Set([
             products.path(record),
             `${PRODUCT_DIRECTORIES[fields.kind]}/${record.id}.json`.replace(/^\//, ""),
@@ -187,10 +189,12 @@ export class EntityDeletionService {
           continue;
         }
         const next = structuredClone(record);
-        if (next.fields.kind === "document")
+        if (next.fields.kind === "document") {
           next.fields.links = next.fields.links.filter(
             (link) => link.kind === "product" || !has(link.kind, link.id),
           );
+          if (next.fields.relations) next.fields.relations = next.fields.relations.filter((link) => !has(link.target.kind, link.target.id));
+        }
         if (next.fields.kind === "scope") {
           for (const contract of next.fields.contracts.filter((entry) =>
             has("implementation", entry.id),

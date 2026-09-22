@@ -5,7 +5,7 @@ import { useForm } from "@mantine/form";
 import { getRelations, relationError, saveRelations } from "domains/relations";
 import { MarkdownField } from "ui/markdown-field";
 import { getRelationLabel } from "../../config/relation-presentation";
-import { EntityPicker } from "../entity-picker/entity-picker";
+import { EntityPicker } from "compositions/widgets/entity-picker";
 import type { RelationEditorProps, RelationFormValues } from "./types/relation-editor-props.type";
 import styles from "./styles/relation-editor.module.css";
 

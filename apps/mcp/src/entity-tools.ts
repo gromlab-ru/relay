@@ -72,7 +72,7 @@ export const entityTools: EntityTool[] = [
       const data = await backend.entities.get(entityGetQuerySchema.parse(input));
       return {
         data,
-        text: `${data.key} — ${data.title}\nВид: ${data.ref.kind}. Ревизия: ${data.revision}. Полные данные доступны в structuredContent.`,
+        text: `${data.key} — ${data.title}\nВид: ${data.ref.kind}. Ревизия: ${data.revision}.${data.document ? ` Документ: ${data.document.kind}; состояние: ${data.document.status}.` : ""} Полные данные доступны в structuredContent.`,
       };
     },
   },

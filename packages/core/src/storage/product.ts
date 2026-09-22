@@ -291,7 +291,7 @@ export class ProductRepository {
         typeof raw === "object" &&
         raw !== null &&
         "version" in raw &&
-        raw.version === 3 &&
+        raw.version === (record.fields.kind === "document" ? 4 : 3) &&
         (record.fields.kind !== "scope" || "storage" in raw)
       )
         continue;

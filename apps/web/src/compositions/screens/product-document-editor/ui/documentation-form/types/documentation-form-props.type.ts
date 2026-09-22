@@ -1,13 +1,15 @@
 import type { ComponentPropsWithoutRef } from "react";
-import type { ProductDocumentationInput } from "domains/product-demo";
+import type { DocumentInput } from "domains/documents";
 
 /** Параметры визуальной области. */
 export type DocumentationFormParams = {
   /** Исходное содержимое материала. */
-  initial: ProductDocumentationInput;
-  /** Ревизия моковой модели. */
+  initial: DocumentInput;
+  /** ID сохранённого документа; отсутствует при создании. */
+  documentId?: string | undefined;
+  /** Прочитанная ревизия документа. */
   revision: number;
-  /** Область черновика с эпохой сброса моков. */
+  /** Изолированная область локальной восстановительной копии. */
   draftScope: string;
   /** Возврат после отмены. */
   backTo: string;

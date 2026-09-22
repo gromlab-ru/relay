@@ -21,6 +21,9 @@ import {
 } from "./entities/board-task.js";
 import { boardSchema } from "./entities/board.js";
 import { projectDisplayNameSchema, projectSettingsSchema } from "./entities/project-settings.js";
+import { documentKindSchema, documentStatusSchema, documentSectionsSchema } from "./entities/document-library.js";
+export { documentKindSchema, documentStatusSchema, documentSectionsSchema, documentRelationSchema,
+  documentRelationsSchema, defaultDocumentSections } from "./entities/document-library.js";
 
 /** Основные виды; расширение происходит регистрацией определения и предметного обработчика. */
 export const entityKinds = [
@@ -99,6 +102,16 @@ export const entitySummarySchema = z.strictObject({
   revision: z.number().int().nonnegative().describe("Ревизия записи для следующего изменения"),
   status: z.string().nullable().describe("Текущее предметное состояние; null, когда неприменимо"),
   active: z.boolean().describe("Активная запись; снятая реализация сохраняет адрес"),
+  context: z.string().optional().describe("Приложение, доска или родитель для различения одинаковых названий"),
+  document: z.strictObject({
+    kind: documentKindSchema,
+    status: documentStatusSchema,
+    sectionId: z.string().nullable().describe("Эффективный раздел; удалённый раздел отображается как null"),
+    pinned: z.boolean().describe("Закрепление в проекте"),
+    updatedAt: timestampSchema,
+    linkCount: z.number().int().nonnegative().describe("Количество прямых отношений документа"),
+    excerpt: z.string().optional().describe("Фрагмент совпадения полнотекстового поиска"),
+  }).optional().describe("Компактные свойства документа без полного Markdown"),
 });
 export const entityDetailSchema = entitySummarySchema.extend({
   data: entityDataSchema.describe("Полные типизированные данные; Markdown передаётся строками"),
@@ -201,14 +214,20 @@ export const entitiesQuerySchema = entityPageQuerySchema.extend({
     .enum(["true", "false"])
     .optional()
     .describe("Активность реализации; прежние ссылки доступны без фильтра"),
+  section: z.string().max(64).optional().describe("Раздел документов; none — без раздела"),
+  documentKind: documentKindSchema.optional(),
+  pinned: z.enum(["true", "false"]).optional().describe("Только закреплённые либо незакреплённые документы"),
+  archived: z.enum(["true", "false"]).optional().describe("Включить только архив либо исключить архивные документы"),
   sort: z
-    .enum(["key", "title"])
+    .enum(["key", "title", "updated"])
     .default("key")
-    .describe("Сортировка по читаемому ключу или названию"),
+    .describe("Сортировка по ключу, названию или последнему обновлению"),
 });
 export type EntitiesQuery = z.input<typeof entitiesQuerySchema>;
 export const entitiesPageSchema = z.strictObject({
   items: z.array(entitySummarySchema).describe("Страница кратких карточек"),
+  libraryCounts: z.record(z.string(), z.number().int().nonnegative()).optional()
+    .describe("Счётчики библиотеки без поисковых фильтров: all, draft, pinned, archived, none и section:ID"),
   ...pageShape,
 });
 export type EntitiesPage = z.infer<typeof entitiesPageSchema>;
@@ -314,7 +333,8 @@ export type CreateEntity = z.input<typeof entityCreateSchema>;
 export const entityUpdateDataSchemas = {
   project: z.strictObject({
     kind: z.literal("project").describe("Изменить имя проекта"),
-    name: projectDisplayNameSchema,
+    name: projectDisplayNameSchema.optional(),
+    documentSections: documentSectionsSchema.optional(),
   }),
   product: entityCreateDataSchemas.product.partial().required({ kind: true }),
   feature: feature.partial().required({ kind: true }),
@@ -500,7 +520,7 @@ export const entityDefinitions: readonly EntityType[] = [
     title: "Документ",
     description: "Самостоятельный Markdown-материал: ТЗ, описание, правила или решение",
     keyPolicy: "DOC-<номер>; ключ не определяет область применимости",
-    filters: ["target"],
+    filters: ["target", "status", "section", "documentKind", "pinned", "archived"],
     actions: ["create", "update", "rename"],
   },
 ].map((definition) => ({ ...definition, kind: definition.kind as EntityKind, contractVersion: 1 }));

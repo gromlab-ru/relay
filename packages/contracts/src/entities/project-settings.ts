@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { entityKeySchema, recordEventSchema, recordRequestsSchema } from "../primitives.js";
+import { documentSectionsSchema } from "./document-library.js";
 
 /** Имя проекта — однострочный текст, независимый от паспорта продукта. */
 export const projectDisplayNameSchema = z
@@ -25,6 +26,7 @@ export const projectSlugSchema = z
 export const projectSettingsSchema = z.strictObject({
   name: projectDisplayNameSchema,
   slug: projectSlugSchema,
+  documentSections: documentSectionsSchema.optional(),
   revision: z
     .number()
     .int()
@@ -35,7 +37,7 @@ export const projectSettingsSchema = z.strictObject({
 
 /** Версия нового вложенного документа; внешний формат конфигурации совместим с версией 1. */
 export const storedProjectSettingsSchema = projectSettingsSchema.extend({
-  version: z.union([z.literal(1), z.literal(2)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   entityKey: entityKeySchema.optional(),
   aliases: z.array(entityKeySchema).optional(),
   requests: recordRequestsSchema.optional(),
@@ -43,7 +45,7 @@ export const storedProjectSettingsSchema = projectSettingsSchema.extend({
 });
 
 /** Полная идемпотентная замена редактируемых настроек. */
-export const saveProjectSettingsSchema = projectSettingsSchema.omit({ revision: true }).extend({
+export const saveProjectSettingsSchema = projectSettingsSchema.omit({ revision: true, documentSections: true }).extend({
   ifRevision: projectSettingsSchema.shape.revision.describe(
     "Исходная ревизия; конфликт возвращает REVISION_CONFLICT",
   ),

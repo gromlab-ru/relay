@@ -1,5 +1,16 @@
 # Журнал создания TSX
 
+## Библиотека документов — 22 сентября 2026
+
+На первом этапе генератором созданы `document-relations`, его `relation-picker`,
+`entity-documents`, `library-navigation` и `document-context`; фактический запуск
+зафиксирован в [журнале работы](../../docs/work/project-knowledge-library/JOURNAL.md).
+`entity-picker` перенесён из исследователя в общий widget целиком без повторной генерации.
+В этом продолжении выполнена команда
+`pnpm --filter @relay/web run create ui-unit entity-context src/compositions/widgets`,
+но созданный виджет удалён после уточнения границ: просмотр графа не входит в библиотеку.
+Последующие правки прикреплений и мобильного читателя изменяли существующие TSX.
+
 ## Инфраструктура проекта — 22 сентября 2026
 
 `pnpm --filter @relay/web run create ui-unit infrastructure src/compositions/screens`.

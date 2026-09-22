@@ -25,7 +25,7 @@ export const PROJECT_NAVIGATION = [
 
 /** Общие материалы и сопровождение проекта после разделителя. */
 export const PROJECT_RESOURCES_NAVIGATION = [
-  { path: "documents", label: "Документы", Icon: Files },
+  { path: "documents", label: "Библиотека знаний", Icon: Files },
   { path: "infrastructure", label: "Инфраструктура", Icon: Server },
   { path: "relations", label: "Связи проекта", Icon: Network },
   { path: "history", label: "История", Icon: History },

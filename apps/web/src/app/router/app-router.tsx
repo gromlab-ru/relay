@@ -201,7 +201,6 @@ export const appRouter = createBrowserRouter([
           {
             path: "documents",
             handle: breadcrumbHandle(PRODUCT_CRUMBS.DOCUMENTS),
-            lazy: () => import("compositions/route-boundaries/product-snapshot/lazy"),
             children: [
               {
                 index: true,

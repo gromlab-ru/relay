@@ -21,7 +21,7 @@ import type { EntityPickerProps } from "./types/entity-picker-props.type";
  * Выбирает сущность проекта по названию, ключу или адресу.
  *
  * Используется для:
- *  - ввода начала и конца связи и корня контекста
+ *  - ввода начала и конца связи и фильтрации библиотеки по сущности
  */
 export const EntityPicker = (props: EntityPickerProps) => {
   const { projectId, value, defaultValue, onChange, ...fieldProps } = props;

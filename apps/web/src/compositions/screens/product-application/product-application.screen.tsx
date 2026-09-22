@@ -1,14 +1,15 @@
-import { Accordion, Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import { Accordion, Badge, Button, Group, Text } from "@mantine/core";
 import { Pencil } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ProductKey } from "domains/product";
 import { useProjectBasePath } from "domains/project";
 import { useProductRoute } from "compositions/widgets/product-page";
-import { getRelatedDocuments, useProductDemo } from "domains/product-demo";
+import { useProductDemo } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
 import { EntityDelete } from "compositions/widgets/entity-delete";
+import { EntityDocuments } from "compositions/widgets/entity-documents";
 import { ApplicationFeatures } from "./ui/application-features";
 import styles from "./styles/product-application.module.css";
 
@@ -22,13 +23,9 @@ export const ProductApplicationScreen = () => {
   const { applicationId } = useProductRoute();
   const location = useLocation();
   const navigate = useNavigate();
-  const { snapshot, scopes } = useProductDemo();
+  const { snapshot } = useProductDemo();
   const base = useProductPath();
   const projectBase = useProjectBasePath();
-  const relatedScopeIds = scopes
-    .filter((scope) => scope.applicationId === applicationId)
-    .map((scope) => scope.id);
-  const relatedDocuments = getRelatedDocuments(snapshot, relatedScopeIds);
   const applicationData = snapshot.applications.find(
     (application) => application.id === applicationId,
   );
@@ -111,25 +108,7 @@ export const ProductApplicationScreen = () => {
         </Accordion>
         <ApplicationFeatures applicationId={applicationData.id} />
       </div>
-      <section aria-label="Документы приложения">
-        <Text component="h2" size="lg" fw={600} mt="xl" mb="sm">
-          Документы приложения и его реализаций
-        </Text>
-        <ul>
-          {relatedDocuments.map((document) => (
-            <li key={document.id}>
-              <Anchor
-                component={Link}
-                c="var(--mantine-color-text)"
-                to={`${projectBase}/documents/${document.id}`}
-                state={{ returnTo: location.pathname }}
-              >
-                {document.name}
-              </Anchor>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div style={{ marginTop: "1.5rem" }}><EntityDocuments target={{ kind: "application", id: applicationData.id }} /></div>
     </ProductPage>
   );
 };

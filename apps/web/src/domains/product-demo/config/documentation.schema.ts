@@ -1,12 +1,8 @@
 import { z } from "zod";
+import { documentKindSchema } from "@relay/contracts/entities";
 
 /** Виды материалов продуктовой библиотеки. */
-export const DOCUMENTATION_KIND_SCHEMA = z.enum([
-  "specification",
-  "description",
-  "rules",
-  "decision",
-]);
+export const DOCUMENTATION_KIND_SCHEMA = documentKindSchema;
 /** Самостоятельный Markdown-документ. Области — только визуальные моки связей. */
 export const DOCUMENTATION_SCHEMA = z.object({
   id: z.string(),

@@ -18,6 +18,7 @@ import { invariant } from "../../shared/errors.js";
 import { productState, validateProduct } from "../product/model.js";
 import { resolveAddress } from "./resolver.js";
 import { EntityDeletionRepository } from "../../storage/entity-deletion.js";
+import { defaultDocumentSections } from "@relay/contracts/entities";
 
 export type EntityEvent = { revision: number; actor: string; at: string; action: string };
 export type EntityEntry = Omit<EntityDetail, "references"> & {
@@ -38,7 +39,10 @@ export const entitySummary = ({
   revision,
   status,
   active,
-}: EntitySummary): EntitySummary => ({ ref, key, title, summary, revision, status, active });
+  context,
+  document,
+}: EntitySummary): EntitySummary => ({ ref, key, title, summary, revision, status, active,
+  ...(context === undefined ? {} : { context }), ...(document === undefined ? {} : { document }) });
 
 /** Разрешает назначенный адрес; строковый префикс никогда не определяет владельца записи. */
 export function resolveEntity(
@@ -91,7 +95,7 @@ export async function readEntityCatalog(
     revision: number,
     data: EntityData,
     options: Partial<
-      Pick<EntityEntry, "aliases" | "selectors" | "filters" | "status" | "active" | "events">
+      Pick<EntityEntry, "aliases" | "selectors" | "filters" | "status" | "active" | "events" | "document" | "context">
     > = {},
   ) => {
     entries.push({
@@ -118,7 +122,8 @@ export async function readEntityCatalog(
     settings.name,
     "Область данных и настроек выбранного проекта",
     settings.revision,
-    { kind: "project", name: settings.name, slug: settings.slug },
+    { kind: "project", name: settings.name, slug: settings.slug,
+      documentSections: config.projectSettings?.documentSections ?? defaultDocumentSections },
     {
       aliases: config.projectSettings?.aliases ?? [],
       selectors: [settings.slug],
@@ -187,15 +192,23 @@ export async function readEntityCatalog(
       fields.kind === "passport" ? { ...fields, kind: "product" } : fields,
       {
         aliases: record.reservedKeys ?? [],
-        status: readiness?.status ?? null,
+        status: fields.kind === "document" ? fields.documentStatus ?? "active" : readiness?.status ?? null,
+        ...(fields.kind !== "document" ? {} : { document: {
+          kind: fields.documentKind,
+          status: fields.documentStatus ?? "active",
+          sectionId: (config.projectSettings?.documentSections ?? defaultDocumentSections).some((section) => section.id === fields.sectionId) ? fields.sectionId ?? null : null,
+          pinned: fields.pinned ?? false,
+          updatedAt: record.updatedAt,
+          linkCount: fields.links.length + (fields.relations?.length ?? 0),
+        } }),
         filters:
           fields.kind === "scenario"
             ? { feature: fields.featureId }
             : fields.kind === "document"
               ? {
-                  target: fields.links.map((link) =>
+                  target: [...fields.links.map((link) =>
                     link.kind === "product" ? "passport" : link.id,
-                  ),
+                  ), ...(fields.relations ?? []).map((link) => link.target.id)],
                 }
               : {},
         events: source.records
@@ -272,6 +285,13 @@ export async function readEntityCatalog(
         events: task.events ?? [],
       },
     );
+  }
+  for (const entry of entries) {
+    const data = entry.data;
+    const parentId = data.kind === "implementation" ? data.applicationId
+      : data.kind === "task" ? data.boardId : data.kind === "scenario" ? data.featureId : null;
+    const parent = entries.find((candidate) => candidate.ref.id === parentId);
+    if (parent) entry.context = `${parent.key} · ${parent.title}`;
   }
   entries.sort((a, b) => entityAddress(a.ref).localeCompare(entityAddress(b.ref)));
   const reservedKeys = await new EntityDeletionRepository(workspace).reservedKeys();

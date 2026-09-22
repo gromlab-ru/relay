@@ -14,6 +14,7 @@ import { ProductReadiness } from "domains/product-demo";
 import { getProductReturn, ProductPage, useProductPath } from "compositions/widgets/product-page";
 import { ProductRequirement } from "compositions/widgets/product-requirement";
 import { EntityDelete } from "compositions/widgets/entity-delete";
+import { EntityDocuments } from "compositions/widgets/entity-documents";
 import { StatePanel } from "ui/state-panel";
 import { ImplementationEditor } from "./ui/implementation-editor/implementation-editor";
 import { ImplementationDetails } from "./ui/implementation-details/implementation-details";
@@ -312,6 +313,7 @@ export const ProductEntityScreen = () => {
         <Text size="xs" c="dimmed">
           Ревизия {entity.revision} · ID {entity.id}
         </Text>
+        {!isEditing && (<EntityDocuments target={{ kind: fields.kind, id: entity.id }} />)}
       </Stack>
     </ProductPage>
   );

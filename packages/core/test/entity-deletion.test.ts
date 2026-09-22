@@ -180,8 +180,9 @@ for (const kind of [
       }
     }
     await state.graph.read({});
-    if (kind === "document" || kind === "application" || kind === "task")
-      assert.equal(result.relations, 1);
+    if (kind === "document") assert.equal(result.relations, 3);
+    if (kind === "application") assert.equal(result.relations, 2);
+    if (kind === "task") assert.equal(result.relations, 1);
   });
 }
 

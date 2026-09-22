@@ -1,54 +1,164 @@
-import { Badge, Button, Group, Text } from "@mantine/core";
-import { Clock3, FileText, Link2, Pencil } from "lucide-react";
-import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
-import { DOCUMENTATION_KINDS, DocumentationScopes, useProductDemo } from "domains/product-demo";
-import { useProjectBasePath } from "domains/project";
+import { useCallback, useRef, useState } from "react";
+import { Alert, Badge, Button, Group, Menu, Skeleton, ActionIcon, Anchor } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import {
+  ArrowLeft,
+  Pencil,
+  PencilLine,
+  MoreHorizontal,
+  Pin,
+  Archive,
+  Copy,
+  Check,
+  FileText,
+} from "lucide-react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useProjectBasePath, useProjectId } from "domains/project";
+import {
+  useDocument,
+  useLibrarySettings,
+  saveDocument,
+  DOCUMENT_KINDS,
+  DOCUMENT_STATUSES,
+  DocumentAccessError,
+} from "domains/documents";
+import type { DocumentInput } from "domains/documents";
+import { useDeletionRefresh } from "domains/entities";
 import { getProductReturn, ProductPage } from "compositions/widgets/product-page";
+import { EntityDelete } from "compositions/widgets/entity-delete";
 import { MarkdownView } from "ui/markdown-view";
 import { StatePanel } from "ui/state-panel";
-import { EntityDelete } from "compositions/widgets/entity-delete";
+import { DocumentContext } from "./ui/document-context";
 import styles from "./styles/product-document.module.css";
 
 /**
- * Показывает Markdown-документ и примеры его продуктового контекста.
+ * Показывает назначение, состояние и связи документа до погружения в полный текст.
  *
  * Используется для:
- *  - спокойного чтения требований, описаний и решений
- *  - перехода к редактированию с возвратом в библиотеку
+ *  - чтения знаний и черновых проектов решений
+ *  - изменения связей и публикации без открытия текстового редактора
  */
 export const ProductDocumentScreen = () => {
   const { documentId } = useParams();
-  const { snapshot } = useProductDemo();
+  const projectId = useProjectId();
   const base = useProjectBasePath();
   const location = useLocation();
   const navigate = useNavigate();
-  const documentData = snapshot.documentation.find((entry) => entry.id === documentId);
+  const query = useDocument(projectId, documentId ?? null);
+  const settings = useLibrarySettings(projectId);
+  const refresh = useDeletionRefresh(projectId);
+  const requestsRef = useRef(new Map<string, string>());
+  const [error, setError] = useState("");
+  const [isSaving, setSaving] = useState(false);
+  const [outline, setOutline] = useState<{ id: string; title: string; level: number }[]>([]);
+  const documentData = query.data;
   const backTo = getProductReturn(location.state, `${base}/documents`, base);
-  if (documentData === undefined)
+  /** Берёт оглавление из настоящих заголовков Markdown, исключая содержимое блоков кода. */
+  const articleRef = useCallback((node: HTMLElement | null) => {
+    if (!node) return;
+    const headings = Array.from(node.querySelectorAll("h1, h2, h3"));
+    setOutline(
+      headings.map((heading, index) => {
+        const id = `document-heading-${index}`;
+        heading.id = id;
+        heading.setAttribute("tabindex", "-1");
+        return { id, title: heading.textContent ?? "", level: Number(heading.tagName.slice(1)) };
+      }),
+    );
+  }, []);
+  /** Записывает новую версию документа, не сбрасывая отношения при смене свойств. */
+  const handleSave = async (changes: Partial<DocumentInput>): Promise<void> => {
+    if (!documentData) return;
+    const input: DocumentInput = {
+      name: documentData.name,
+      summary: documentData.summary,
+      body: documentData.body,
+      documentKind: documentData.documentKind,
+      documentStatus: documentData.documentStatus,
+      sectionId: documentData.sectionId,
+      pinned: documentData.pinned,
+      relations: documentData.relations,
+      ...changes,
+    };
+    const fingerprint = JSON.stringify([input, documentData.revision]);
+    const requestId = requestsRef.current.get(fingerprint) ?? crypto.randomUUID();
+    requestsRef.current.set(fingerprint, requestId);
+    await saveDocument(projectId, input, requestId, documentData);
+    await refresh();
+    requestsRef.current.delete(fingerprint);
+  };
+  /** Показывает результат изменения свойств рядом с документом. */
+  const handleAction = async (changes: Partial<DocumentInput>): Promise<void> => {
+    setSaving(true);
+    setError("");
+    try {
+      await handleSave(changes);
+    } catch (failure) {
+      if (failure instanceof DocumentAccessError) setError(failure.message);
+      else throw failure;
+    } finally {
+      setSaving(false);
+    }
+  };
+  if (query.isLoading)
+    return (
+      <ProductPage title="Открываем документ" description="Загружаем содержание и связи">
+        <Skeleton height={300} />
+      </ProductPage>
+    );
+  if (!documentData)
     return (
       <StatePanel
-        title="Документ не найден"
-        description="Документ недоступен в этом проекте. Откройте материал из библиотеки."
+        title="Документ недоступен"
+        description={query.error?.message ?? "Материал не найден в этом проекте."}
         action={
-          <Button component={Link} to={`${base}/documents`}>
-            К документам
+          <Button variant="default" onClick={() => void query.mutate()}>
+            Повторить чтение
           </Button>
         }
       />
     );
-  const readingMinutes = Math.max(1, Math.ceil(documentData.body.trim().split(/\s+/).length / 180));
-  const dateLabel = new Date(documentData.updatedAt).toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const isDraft = documentData.documentStatus === "draft";
+  const isArchived = documentData.documentStatus === "archived";
+  const isProposal = documentData.documentKind === "proposal";
+  const statusColor = isDraft ? "yellow" : "gray";
+  const statusInk = isDraft ? "var(--tasks-warning-ink)" : "var(--tasks-muted)";
+  const updatedLabel = documentData.updatedAt
+    ? new Date(documentData.updatedAt).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+      })
+    : "";
+  const draftDescription = isProposal
+    ? "Проектируется, ещё не принято. Документ сохраняет варианты, вопросы и будущую реализацию."
+    : "Материал ещё готовится. Его содержание не считается принятым решением.";
+  const sectionName =
+    settings.data?.sections.find((section) => section.id === documentData.sectionId)?.name ??
+    "Без раздела";
+  const hasError = error !== "" || query.error !== undefined;
+  const errorMessage = error || query.error?.message;
+  const pinLabel = documentData.pinned ? "Открепить" : "Закрепить в библиотеке";
+  const publishLabel = isProposal ? "Принять решение" : "Сделать действующим";
+  const publishKind = isProposal ? "decision" : documentData.documentKind;
   return (
     <ProductPage
+      className={styles.page}
       title={documentData.name}
       description={documentData.summary}
-      eyebrow="ДОКУМЕНТЫ"
-      backTo={backTo}
-      backLabel="К документам"
+      meta={
+        <Group gap="xs" mt="sm">
+          <span className={styles.type}>
+            <FileText size={14} aria-hidden="true" />
+            {DOCUMENT_KINDS[documentData.documentKind]}
+          </span>
+          <Badge color={statusColor} c={statusInk} variant="light" tt="none" size="sm">
+            {DOCUMENT_STATUSES[documentData.documentStatus]}
+          </Badge>
+          <span className={styles.key}>{documentData.key}</span>
+          <span className={styles.type}>Обновлён {updatedLabel}</span>
+          {documentData.pinned && <Pin size={13} aria-label="Закреплён" />}
+        </Group>
+      }
       actions={
         <Group gap="xs">
           <Button
@@ -56,69 +166,116 @@ export const ProductDocumentScreen = () => {
             to={`${base}/documents/${documentData.id}/edit`}
             state={{ returnTo: backTo }}
             variant="default"
-            leftSection={<Pencil size={15} aria-hidden="true" />}
+            leftSection={<Pencil size={15} />}
           >
             Редактировать
           </Button>
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <ActionIcon
+                variant="default"
+                size="lg"
+                aria-label="Действия с документом"
+                loading={isSaving}
+              >
+                <MoreHorizontal size={18} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<Copy size={14} />}
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(window.location.href)
+                    .then(() => notifications.show({ message: "Ссылка скопирована" }))
+                    .catch(() => setError("Не удалось скопировать ссылку"));
+                }}
+              >
+                Скопировать ссылку
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<Pin size={14} />}
+                onClick={() => void handleAction({ pinned: !documentData.pinned })}
+              >
+                {pinLabel}
+              </Menu.Item>
+              {isDraft && (
+                <Menu.Item
+                  leftSection={<Check size={14} />}
+                  onClick={() =>
+                    void handleAction({ documentStatus: "active", documentKind: publishKind })
+                  }
+                >
+                  {publishLabel}
+                </Menu.Item>
+              )}
+              {!isDraft && (
+                <Menu.Item
+                  leftSection={<PencilLine size={14} />}
+                  onClick={() => void handleAction({ documentStatus: "draft" })}
+                >
+                  Вернуть в черновики
+                </Menu.Item>
+              )}
+              {!isArchived && (
+                <Menu.Item
+                  leftSection={<Archive size={14} />}
+                  onClick={() => void handleAction({ documentStatus: "archived" })}
+                >
+                  В архив
+                </Menu.Item>
+              )}
+            </Menu.Dropdown>
+          </Menu>
           <EntityDelete
-            key={documentData.id}
             kind="document"
             entityId={documentData.id}
             onDeleted={() => navigate(`${base}/documents`, { replace: true })}
           />
         </Group>
       }
-      meta={
-        <Group gap="sm">
-          <Button
-            component={Link}
-            variant="subtle"
-            size="xs"
-            to={`${base}/relations?root=document:${documentData.id}`}
-          >
-            Все связи и контекст
-          </Button>
-          <Badge color="gray" variant="light" tt="none" fw={500}>
-            {DOCUMENTATION_KINDS[documentData.kind]}
-          </Badge>
-          <Text size="xs" c="dimmed">
-            Обновлён {dateLabel}
-          </Text>
-        </Group>
-      }
     >
-      <div className={styles.root}>
-        <article className={styles.document} aria-label="Текст документа">
-          <div className={styles.documentHeader}>
-            <span className={styles.format}>
-              <FileText size={15} aria-hidden="true" />
-              Markdown
-            </span>
-            <span className={styles.reading}>
-              <Clock3 size={13} aria-hidden="true" />
-              {readingMinutes} мин на чтение
-            </span>
+      <Anchor component={Link} to={backTo} className={styles.back} c="dimmed">
+        <ArrowLeft size={14} aria-hidden="true" />
+        Назад
+      </Anchor>
+      {hasError && (
+        <Alert color="orange" mb="md">
+          {errorMessage}
+          <Button size="xs" variant="subtle" onClick={() => void query.mutate()}>
+            Обновить
+          </Button>
+        </Alert>
+      )}
+      {isDraft && (
+        <div className={styles.draftNotice}>
+          <PencilLine size={18} aria-hidden="true" />
+          <div>
+            <strong>Черновик</strong>
+            <p>{draftDescription}</p>
           </div>
+        </div>
+      )}
+      {isArchived && (
+        <Alert color="gray" title="Архивный документ" mb="lg">
+          Сохранён для восстановления контекста. Не используйте как действующую инструкцию.
+        </Alert>
+      )}
+      <div className={styles.root}>
+        <article
+          key={documentData.body}
+          ref={articleRef}
+          className={styles.document}
+          aria-label="Содержание документа"
+        >
           <MarkdownView text={documentData.body} />
         </article>
-        <aside className={styles.aside} aria-label="Контекст документа">
-          <div className={styles.contextHeader}>
-            <Link2 size={17} aria-hidden="true" />
-            <h2 className={styles.title}>Связи документа</h2>
-            <span className={styles.count}>{documentData.scopeIds.length}</span>
-          </div>
-          <Text size="xs" c="dimmed" lh={1.7} mb="md">
-            К каким частям продукта относится этот материал.
-          </Text>
-          <DocumentationScopes scopeIds={documentData.scopeIds} isDetailed />
-          <div className={styles.hint}>
-            <span className={styles.hintLabel}>Макет связей</span>
-            <p>
-              Показаны примеры продуктовых областей. Здесь будут связи с продуктом, фичами,
-              сценариями и их реализациями в приложениях.
-            </p>
-          </div>
-        </aside>
+        <DocumentContext
+          document={documentData}
+          sectionName={sectionName}
+          outline={outline}
+          onSave={handleSave}
+        />
       </div>
     </ProductPage>
   );

@@ -33,7 +33,7 @@ export async function saveProjectSettings(
     );
     const saved = parse(
       projectSettingsSchema,
-      { name: command.name, slug: command.slug, revision: previous.revision + 1 },
+      { ...previous, name: command.name, slug: command.slug, revision: previous.revision + 1 },
       "настройки проекта",
     );
     /** Проверяет обе блокировки непосредственно перед атомарной публикацией. */
@@ -47,7 +47,7 @@ export async function saveProjectSettings(
         ...config,
         projectSettings: {
           ...config.projectSettings,
-          version: 2,
+          version: config.projectSettings?.version === 3 ? 3 : 2,
           ...saved,
           events: [
             ...(config.projectSettings?.events ?? []),

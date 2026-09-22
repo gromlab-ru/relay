@@ -6,6 +6,9 @@ export const DOCUMENTATION_KINDS = {
   description: "Описание",
   rules: "Правила",
   decision: "Решение",
+  proposal: "Проект решения",
+  instruction: "Инструкция",
+  research: "Исследование",
 };
 /** Варианты поля вида документа. */
 export const DOCUMENTATION_KIND_OPTIONS = Object.entries(DOCUMENTATION_KINDS).map(

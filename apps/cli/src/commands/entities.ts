@@ -50,6 +50,12 @@ type Fields = {
   prefix?: string;
   type?: string;
   documentKind?: string;
+  documentStatus?: string;
+  sectionId?: string;
+  pinned?: boolean;
+  relations?: string;
+  documentSections?: string;
+  clearSection?: boolean;
   status?: string;
   column?: string;
   parent?: string;
@@ -81,8 +87,21 @@ function fieldOptions(command: Command) {
     .option("--type <type>", "Тип приложения: frontend, backend или internal")
     .option(
       "--document-kind <kind>",
-      "Тип документа: specification, description, rules или decision",
+      "Тип документа: specification, description, rules, instruction, proposal, decision, research",
     )
+    .option("--document-status <state>", "Состояние документа: draft, active или archived")
+    .option("--section-id <id>", "Постоянный ID раздела библиотеки")
+    .option("--clear-section", "Оставить документ без раздела")
+    .option("--pinned <value>", "Закрепление документа: true или false", (value) => {
+      if (value !== "true" && value !== "false")
+        throw new AppError("INVALID_ARGUMENT", "Ожидается true или false");
+      return value === "true";
+    })
+    .option(
+      "--relations <json>",
+      "Массив связей документа: target {kind,id}, type references/documents, description Markdown",
+    )
+    .option("--document-sections <json>", "Упорядоченный массив разделов проекта: id и name")
     .option("--status <status>", "Состояние реализации: none, partial или done")
     .option("--column <column>", "Начальная колонка задачи")
     .option("--parent <ref>", "Родитель задачи: ключ или ID")
@@ -106,13 +125,33 @@ function fields(kind: EntityKind, options: Fields, creating: boolean) {
     if (!source || typeof source !== "object" || Array.isArray(source))
       throw new AppError("INVALID_JSON", "Ожидается объект полей сущности");
   }
-  const { json: _json, requestId: _requestId, ifRevision: _revision, feature, ...values } = options;
+  const {
+    json: _json,
+    requestId: _requestId,
+    ifRevision: _revision,
+    feature,
+    relations,
+    documentSections,
+    clearSection,
+    ...values
+  } = options;
+  const arrays: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries({ relations, documentSections })) {
+    if (value === undefined) continue;
+    try {
+      arrays[name] = JSON.parse(value);
+    } catch {
+      throw new AppError("INVALID_JSON", `Поле ${name} должно содержать JSON-массив`);
+    }
+  }
   return {
     ...(creating && ["product", "feature", "application", "document"].includes(kind)
       ? { summary: "" }
       : {}),
     ...(source as object),
     ...Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)),
+    ...arrays,
+    ...(clearSection ? { sectionId: null } : {}),
     ...(feature === undefined ? {} : { featureId: feature }),
     kind,
   };
@@ -182,7 +221,11 @@ export function registerEntities(program: Command, runtime: Runtime): void {
         .option("--parent <ref>", "Родитель задачи: ключ или ID")
         .option("--status <status>", "Предметное состояние")
         .option("--active <value>", "Участие реализации: true или false")
-        .option("--sort <field>", "Сортировка: key или title"),
+        .option("--section <id>", "Раздел документов; none — без раздела")
+        .option("--document-kind <kind>", "Тип документа")
+        .option("--pinned <value>", "Закрепление документа: true или false")
+        .option("--archived <value>", "Только архив либо исключить архив: true или false")
+        .option("--sort <field>", "Сортировка: key, title или updated"),
     run: async (context, input) => {
       const query = pageQuery(input.options);
       const data = await context.backend.entities.list(query);

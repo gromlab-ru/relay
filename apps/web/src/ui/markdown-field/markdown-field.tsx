@@ -51,6 +51,7 @@ export const MarkdownField = (props: MarkdownFieldProps) => {
           view.keymap.of([...commands.defaultKeymap, ...commands.historyKeymap]),
           view.EditorView.lineWrapping,
           view.EditorView.contentAttributes.of({
+            tabindex: "0",
             "aria-labelledby": labelId,
             "aria-multiline": "true",
           }),

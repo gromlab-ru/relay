@@ -177,7 +177,7 @@ test("контекст: сохранённая цепочка проходит �
   }
 });
 
-test("движок: продуктовые линки не создают и не разрывают связи; только явная запись Core", async (t) => {
+test("движок: сценарий документа пишет свои связи, не присваивая независимые рёбра", async (t) => {
   const { workspace } = await fixture(t);
   const engine = new EntityEngine(workspace);
   const feature = await engine.create(
@@ -213,8 +213,10 @@ test("движок: продуктовые линки не создают и н�
   assert.ok(before.nodes.some((node) => node.ref.id === document.ref.id));
   assert.ok(before.nodes.some((node) => node.ref.kind === "project"));
   assert.ok(before.nodes.some((node) => node.ref.kind === "product"));
-  assert.equal(before.totalEdges, 0);
-  assert.equal((await graph.history()).total, 0);
+  assert.equal(before.totalEdges, 1);
+  assert.equal(before.edges[0]?.type, "documents");
+  assert.equal(before.edges[0]?.source, "graph");
+  assert.equal((await graph.history()).total, 1);
   const emptyContext = await graph.read({ root: task.key });
   assert.equal(emptyContext.totalNodes, 1);
   assert.equal(emptyContext.totalEdges, 0);
@@ -244,7 +246,7 @@ test("движок: продуктовые линки не создают и н�
   assert.equal(outgoing.edges[0]?.id, id);
   assert.equal(incoming.edges[0]?.id, id);
 
-  // Следующий этап интеграции должен явно связать эти два действия; движок не угадывает их.
+  // Сценарий снимает своё прикрепление, но сохраняет независимое ребро задачи.
   const detached = await engine.update(
     {
       ref: document.key,
@@ -255,6 +257,7 @@ test("движок: продуктовые линки не создают и н�
     "agent",
   );
   assert.equal((await fresh.read({ root: task.key })).edges[0]?.id, id);
+  assert.equal((await fresh.read()).edges.some((edge) => edge.type === "documents"), false);
   await fresh.mutate(
     {
       ifVersion: (await fresh.read()).version,
@@ -265,7 +268,7 @@ test("движок: продуктовые линки не создают и н�
   );
   assert.equal((await fresh.read({ root: task.key })).totalEdges, 0);
 
-  // Даже возврат продуктового линка и восстановление индекса не воскрешают отозванную связь.
+  // Возврат линка создаёт связь документа, но не воскрешает независимое отозванное ребро.
   await engine.update(
     {
       ref: document.key,
@@ -279,6 +282,7 @@ test("движок: продуктовые линки не создают и н�
     "agent",
   );
   await fresh.reindex();
+  assert.equal((await fresh.read()).totalEdges, 1);
   assert.equal((await fresh.read({ root: task.key })).totalEdges, 0);
   assert.deepEqual(
     (await fresh.history({ id })).items.map((event) => event.action),

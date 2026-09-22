@@ -1,46 +1,84 @@
-import clsx from "clsx";
-import { ArrowUpRight, FileText } from "lucide-react";
+import { Badge, Anchor } from "@mantine/core";
+import { FileText, PencilLine, Link2, Pin, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { DOCUMENTATION_KINDS, DocumentationScopes } from "domains/product-demo";
+import { DOCUMENT_KINDS } from "domains/documents";
 import type { DocumentCardProps } from "./types/document-card-props.type";
 import styles from "./styles/document-card.module.css";
 
 /**
- * Представляет документ как читаемый материал с контекстом и датой обновления.
+ * Показывает назначение и состояние документа без открытия полного текста.
  *
  * Используется для:
- *  - просмотра библиотеки и перехода к полному Markdown
+ *  - просмотра библиотеки и результатов поиска
  */
-export const DocumentCard = (props: DocumentCardProps) => {
-  const { document, href, returnTo, className, ...rootAttrs } = props;
-  const dateLabel = new Date(document.updatedAt).toLocaleDateString("ru-RU", {
+export const DocumentCard = ({ document, sectionName, href, returnTo }: DocumentCardProps) => {
+  const data = document.document;
+  if (!data) return null;
+  const isDraft = data.status === "draft";
+  const isArchived = data.status === "archived";
+  const hasSummary = document.summary !== "" || data.excerpt !== undefined;
+  const Icon = isDraft ? PencilLine : FileText;
+  const dateLabel = new Date(data.updatedAt).toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "short",
   });
+  const summary = data.excerpt ?? document.summary;
+  const linkWord = new Intl.PluralRules("ru").select(data.linkCount);
+  const linkLabel =
+    data.linkCount === 0
+      ? "Без прикреплений"
+      : `${data.linkCount} ${linkWord === "one" ? "прикрепление" : linkWord === "few" ? "прикрепления" : "прикреплений"}`;
   return (
-    <article {...rootAttrs} className={clsx(styles.root, className)}>
-      <Link to={href} state={{ returnTo }} className={styles.link}>
-        <div className={styles.header}>
-          <span className={styles.icon}>
-            <FileText size={21} strokeWidth={1.5} aria-hidden="true" />
-          </span>
-          <span className={styles.kind}>{DOCUMENTATION_KINDS[document.kind]}</span>
-          <span className={styles.format}>MD</span>
+    <article className={styles.root}>
+      <div className={styles.icon} data-draft={isDraft}>
+        <Icon size={20} strokeWidth={1.5} aria-hidden="true" />
+      </div>
+      <div className={styles.content}>
+        <div className={styles.heading}>
+          <Anchor
+            component={Link}
+            to={href}
+            state={{ returnTo }}
+            className={styles.title}
+            c="inherit"
+          >
+            {document.title}
+          </Anchor>
+          {data.pinned && <Pin size={13} className={styles.pin} aria-label="Закреплён" />}
+          {isDraft && (
+            <Badge variant="light" color="yellow" c="var(--tasks-warning-ink)" size="xs" tt="none">
+              Черновик
+            </Badge>
+          )}
+          {isArchived && (
+            <Badge variant="light" color="gray" size="xs" tt="none">
+              Архив
+            </Badge>
+          )}
         </div>
-        <h2 className={styles.title}>{document.name}</h2>
-        <p className={styles.summary}>{document.summary}</p>
-        <div className={styles.scopes}>
-          <DocumentationScopes scopeIds={document.scopeIds} limit={2} />
+        {hasSummary && <p className={styles.summary}>{summary}</p>}
+        <div className={styles.meta}>
+          <span>{DOCUMENT_KINDS[data.kind]}</span>
+          <span className={styles.dot} aria-hidden="true">
+            ·
+          </span>
+          <span>{sectionName}</span>
+          <Anchor
+            component={Link}
+            to={`${href}#context`}
+            state={{ returnTo }}
+            className={styles.relations}
+            c="dimmed"
+          >
+            <Link2 size={12} aria-hidden="true" />
+            {linkLabel}
+          </Anchor>
         </div>
-        <footer className={styles.footer}>
-          <span>
-            Обновлён <time dateTime={document.updatedAt}>{dateLabel}</time>
-          </span>
-          <span className={styles.open}>
-            Читать <ArrowUpRight size={14} aria-hidden="true" />
-          </span>
-        </footer>
-      </Link>
+      </div>
+      <div className={styles.trailing}>
+        <time dateTime={data.updatedAt}>{dateLabel}</time>
+        <ArrowUpRight size={15} aria-hidden="true" />
+      </div>
     </article>
   );
 };

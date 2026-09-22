@@ -1,16 +1,12 @@
-import type { ComponentPropsWithoutRef } from "react";
-import type { ProductDocumentation } from "domains/product-demo";
-
-/** Параметры визуальной области. */
-export type DocumentCardParams = {
-  /** Материал каталога. */
-  document: ProductDocumentation;
-  /** Адрес чтения. */
+import type { DocumentEntity } from "domains/documents";
+/** Компактная строка каталога. */
+export type DocumentCardProps = {
+  /** Серверная карточка без Markdown. */
+  document: DocumentEntity;
+  /** Название раздела. */
+  sectionName: string;
+  /** Прямой адрес чтения. */
   href: string;
-  /** Каталог вместе с текущими фильтрами. */
+  /** Возврат к текущей выборке. */
   returnTo: string;
 };
-/** Атрибуты корневого элемента. */
-type RootAttrs = Omit<ComponentPropsWithoutRef<"article">, "children">;
-/** Свойства визуальной области. */
-export type DocumentCardProps = RootAttrs & DocumentCardParams;

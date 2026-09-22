@@ -16,6 +16,7 @@ import { Maximize2, Minimize2, Link2, Check } from "lucide-react";
 import { useMediaQuery, useClipboard } from "@mantine/hooks";
 import { useBoardTask } from "domains/board-tasks";
 import { EntityDelete } from "compositions/widgets/entity-delete";
+import { EntityDocuments } from "compositions/widgets/entity-documents";
 import { TaskEditor } from "./ui/task-editor";
 import { TaskActivity } from "./ui/task-activity";
 import type { TaskModalProps } from "./types/task-modal-props.type";
@@ -140,6 +141,7 @@ export const TaskModal = (props: TaskModalProps) => {
               <Tabs.List aria-label="Разделы карточки" className={styles.tabList}>
                 <Tabs.Tab value="task">Задача</Tabs.Tab>
                 <Tabs.Tab value="comments">Обсуждения</Tabs.Tab>
+                <Tabs.Tab value="documents">Документы</Tabs.Tab>
                 <Tabs.Tab value="history">История</Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="task" className={styles.tabPanel}>
@@ -159,6 +161,9 @@ export const TaskModal = (props: TaskModalProps) => {
                   comments
                   active={tab === "comments"}
                 />
+              </Tabs.Panel>
+              <Tabs.Panel value="documents" className={styles.tabPanel}>
+                {tab === "documents" && (<EntityDocuments target={{ kind: "task", id: task.id }} onOpenedChange={setDeleteOpened} />)}
               </Tabs.Panel>
               <Tabs.Panel value="history" className={styles.tabPanel}>
                 <TaskActivity

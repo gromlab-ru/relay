@@ -245,7 +245,7 @@ const implementationHandler: EntityHandler = {
 /** Настройки и доски сохраняют ключ и квитанцию в одной атомарной записи владельца. */
 async function saveMetadata(
   entry: EntityEntry,
-  input: { key?: string; name?: string },
+  input: { key?: string; name?: string | undefined; documentSections?: { id: string; name: string }[] | undefined },
   revision: number,
   context: EntityOperationContext,
 ): Promise<Saved> {
@@ -281,9 +281,10 @@ async function saveMetadata(
     const result = { id: entry.ref.id, key, revision: previous.revision + 1 };
     config.projectSettings = storedProjectSettingsSchema.parse({
       ...previous,
-      version: 2,
+      version: 3,
       revision: result.revision,
       name: input.name ?? previous.name,
+      ...(input.documentSections === undefined ? {} : { documentSections: input.documentSections }),
       entityKey: key,
       aliases: [
         ...new Set([...(previous.aliases ?? []), ...(key === entry.key ? [] : [entry.key])]),
@@ -364,7 +365,7 @@ export const entityHandlers: Readonly<Record<EntityKind, EntityHandler>> = {
         "Ожидается изменение проекта",
         4,
       );
-      return saveMetadata(entry, { name: changes.name }, revision, context);
+      return saveMetadata(entry, { name: changes.name, documentSections: changes.documentSections }, revision, context);
     },
     rename: (entry, key, revision, context) => saveMetadata(entry, { key }, revision, context),
   },

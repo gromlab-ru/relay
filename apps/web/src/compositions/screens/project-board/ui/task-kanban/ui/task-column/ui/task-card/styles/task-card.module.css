@@ -160,12 +160,18 @@
   }
 
   &._feature {
-    background: var(--mantine-color-violet-light);
+    background: light-dark(
+      var(--mantine-color-violet-light),
+      color-mix(in srgb, var(--mantine-color-violet-3) 18%, var(--tasks-surface))
+    );
     color: light-dark(var(--mantine-color-violet-9), var(--mantine-color-violet-2));
   }
 
   &._scenario {
-    background: var(--mantine-color-teal-light);
+    background: light-dark(
+      var(--mantine-color-teal-light),
+      color-mix(in srgb, var(--mantine-color-teal-3) 18%, var(--tasks-surface))
+    );
     color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-2));
   }
 }

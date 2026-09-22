@@ -11,7 +11,7 @@ export const breadcrumbHandle = (...breadcrumbs: RouteBreadcrumb[]): BreadcrumbR
 export const PRODUCT_CRUMBS = {
   FEATURES: { label: "Фичи", path: "/product/features" },
   APPLICATIONS: { label: "Приложения", path: "/product/applications" },
-  DOCUMENTS: { label: "Документы", path: "/documents" },
+  DOCUMENTS: { label: "Библиотека знаний", path: "/documents" },
   PASSPORT: { label: "Паспорт", path: "/product/passport" },
   EDIT: { label: "Редактирование" },
   BOARDS: { label: "Доски и задачи", path: "/boards" },

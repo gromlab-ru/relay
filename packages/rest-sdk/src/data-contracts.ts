@@ -46,6 +46,33 @@ export interface EntityDeletionPreview {
     status: string | null;
     /** Активная запись; снятая реализация сохраняет адрес */
     active: boolean;
+    /** Приложение, доска или родитель для различения одинаковых названий */
+    context?: string;
+    /** Компактные свойства документа без полного Markdown */
+    document?: {
+      /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+      kind: EntityDeletionPreviewKindEnum1;
+      /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+      status: EntityDeletionPreviewStatusEnum;
+      /** Эффективный раздел; удалённый раздел отображается как null */
+      sectionId: string | null;
+      /** Закрепление в проекте */
+      pinned: boolean;
+      /**
+       * Момент времени в UTC
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /**
+       * Количество прямых отношений документа
+       * @min 0
+       * @max 9007199254740991
+       */
+      linkCount: number;
+      /** Фрагмент совпадения полнотекстового поиска */
+      excerpt?: string;
+    };
   };
   /** Версия состава удаления и связей для подтверждения */
   version: string;
@@ -54,39 +81,6 @@ export interface EntityDeletionPreview {
    * @maxItems 1000
    */
   deleted: {
-    /** Постоянный адрес в выбранном проекте */
-    ref: {
-      /** Вид основной сущности */
-      kind: EntityDeletionPreviewKindEnum1;
-      /**
-       * Постоянный ID; внутренние отношения сохраняют только этот адрес
-       * @minLength 1
-       * @maxLength 128
-       */
-      id: string;
-    };
-    /** Текущий читаемый ключ для человека и агента */
-    key: string;
-    /** Однострочное название */
-    title: string;
-    /** Краткое обычное описание без полного Markdown */
-    summary: string;
-    /**
-     * Ревизия записи для следующего изменения
-     * @min 0
-     * @max 9007199254740991
-     */
-    revision: number;
-    /** Текущее предметное состояние; null, когда неприменимо */
-    status: string | null;
-    /** Активная запись; снятая реализация сохраняет адрес */
-    active: boolean;
-  }[];
-  /**
-   * Сохраняемые сущности, у которых снимаются ссылки
-   * @maxItems 1000
-   */
-  detached: {
     /** Постоянный адрес в выбранном проекте */
     ref: {
       /** Вид основной сущности */
@@ -114,6 +108,93 @@ export interface EntityDeletionPreview {
     status: string | null;
     /** Активная запись; снятая реализация сохраняет адрес */
     active: boolean;
+    /** Приложение, доска или родитель для различения одинаковых названий */
+    context?: string;
+    /** Компактные свойства документа без полного Markdown */
+    document?: {
+      /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+      kind: EntityDeletionPreviewKindEnum3;
+      /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+      status: EntityDeletionPreviewStatusEnum1;
+      /** Эффективный раздел; удалённый раздел отображается как null */
+      sectionId: string | null;
+      /** Закрепление в проекте */
+      pinned: boolean;
+      /**
+       * Момент времени в UTC
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /**
+       * Количество прямых отношений документа
+       * @min 0
+       * @max 9007199254740991
+       */
+      linkCount: number;
+      /** Фрагмент совпадения полнотекстового поиска */
+      excerpt?: string;
+    };
+  }[];
+  /**
+   * Сохраняемые сущности, у которых снимаются ссылки
+   * @maxItems 1000
+   */
+  detached: {
+    /** Постоянный адрес в выбранном проекте */
+    ref: {
+      /** Вид основной сущности */
+      kind: EntityDeletionPreviewKindEnum4;
+      /**
+       * Постоянный ID; внутренние отношения сохраняют только этот адрес
+       * @minLength 1
+       * @maxLength 128
+       */
+      id: string;
+    };
+    /** Текущий читаемый ключ для человека и агента */
+    key: string;
+    /** Однострочное название */
+    title: string;
+    /** Краткое обычное описание без полного Markdown */
+    summary: string;
+    /**
+     * Ревизия записи для следующего изменения
+     * @min 0
+     * @max 9007199254740991
+     */
+    revision: number;
+    /** Текущее предметное состояние; null, когда неприменимо */
+    status: string | null;
+    /** Активная запись; снятая реализация сохраняет адрес */
+    active: boolean;
+    /** Приложение, доска или родитель для различения одинаковых названий */
+    context?: string;
+    /** Компактные свойства документа без полного Markdown */
+    document?: {
+      /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+      kind: EntityDeletionPreviewKindEnum5;
+      /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+      status: EntityDeletionPreviewStatusEnum2;
+      /** Эффективный раздел; удалённый раздел отображается как null */
+      sectionId: string | null;
+      /** Закрепление в проекте */
+      pinned: boolean;
+      /**
+       * Момент времени в UTC
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /**
+       * Количество прямых отношений документа
+       * @min 0
+       * @max 9007199254740991
+       */
+      linkCount: number;
+      /** Фрагмент совпадения полнотекстового поиска */
+      excerpt?: string;
+    };
   }[];
   /**
    * Количество отзываемых активных связей графа
@@ -556,7 +637,18 @@ export interface EntitiesQuery {
   /** Активность реализации; прежние ссылки доступны без фильтра */
   active?: EntitiesQueryActiveEnum;
   /**
-   * Сортировка по читаемому ключу или названию
+   * Раздел документов; none — без раздела
+   * @maxLength 64
+   */
+  section?: string;
+  /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+  documentKind?: EntitiesQueryDocumentKindEnum;
+  /** Только закреплённые либо незакреплённые документы */
+  pinned?: EntitiesQueryPinnedEnum;
+  /** Включить только архив либо исключить архивные документы */
+  archived?: EntitiesQueryArchivedEnum;
+  /**
+   * Сортировка по ключу, названию или последнему обновлению
    * @default "key"
    */
   sort?: EntitiesQuerySortEnum;
@@ -592,7 +684,36 @@ export interface EntitiesPage {
     status: string | null;
     /** Активная запись; снятая реализация сохраняет адрес */
     active: boolean;
+    /** Приложение, доска или родитель для различения одинаковых названий */
+    context?: string;
+    /** Компактные свойства документа без полного Markdown */
+    document?: {
+      /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+      kind: EntitiesPageKindEnum1;
+      /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+      status: EntitiesPageStatusEnum;
+      /** Эффективный раздел; удалённый раздел отображается как null */
+      sectionId: string | null;
+      /** Закрепление в проекте */
+      pinned: boolean;
+      /**
+       * Момент времени в UTC
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /**
+       * Количество прямых отношений документа
+       * @min 0
+       * @max 9007199254740991
+       */
+      linkCount: number;
+      /** Фрагмент совпадения полнотекстового поиска */
+      excerpt?: string;
+    };
   }[];
+  /** Счётчики библиотеки без поисковых фильтров: all, draft, pinned, archived, none и section:ID */
+  libraryCounts?: Partial<Record<string, number>>;
   /**
    * Полное число результатов выбранной области
    * @min 0
@@ -645,6 +766,33 @@ export interface EntitySummary {
   status: string | null;
   /** Активная запись; снятая реализация сохраняет адрес */
   active: boolean;
+  /** Приложение, доска или родитель для различения одинаковых названий */
+  context?: string;
+  /** Компактные свойства документа без полного Markdown */
+  document?: {
+    /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+    kind: EntitySummaryKindEnum1;
+    /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+    status: EntitySummaryStatusEnum;
+    /** Эффективный раздел; удалённый раздел отображается как null */
+    sectionId: string | null;
+    /** Закрепление в проекте */
+    pinned: boolean;
+    /**
+     * Момент времени в UTC
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /**
+     * Количество прямых отношений документа
+     * @min 0
+     * @max 9007199254740991
+     */
+    linkCount: number;
+    /** Фрагмент совпадения полнотекстового поиска */
+    excerpt?: string;
+  };
 }
 
 export interface EntityDetail {
@@ -675,6 +823,33 @@ export interface EntityDetail {
   status: string | null;
   /** Активная запись; снятая реализация сохраняет адрес */
   active: boolean;
+  /** Приложение, доска или родитель для различения одинаковых названий */
+  context?: string;
+  /** Компактные свойства документа без полного Markdown */
+  document?: {
+    /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+    kind: EntityDetailKindEnum1;
+    /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+    status: EntityDetailStatusEnum;
+    /** Эффективный раздел; удалённый раздел отображается как null */
+    sectionId: string | null;
+    /** Закрепление в проекте */
+    pinned: boolean;
+    /**
+     * Момент времени в UTC
+     * @format date-time
+     * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+     */
+    updatedAt: string;
+    /**
+     * Количество прямых отношений документа
+     * @min 0
+     * @max 9007199254740991
+     */
+    linkCount: number;
+    /** Фрагмент совпадения полнотекстового поиска */
+    excerpt?: string;
+  };
   /** Полные типизированные данные; Markdown передаётся строками */
   data:
     | {
@@ -692,6 +867,22 @@ export interface EntityDetail {
          * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
          */
         slug: string;
+        /**
+         * Разделы библиотеки в порядке отображения; пустой список допустим
+         * @maxItems 100
+         */
+        documentSections?: {
+          /**
+           * Постоянный ID раздела библиотеки
+           * @pattern ^[a-zA-Z0-9_-]{1,64}$
+           */
+          id: string;
+          /**
+           * Название раздела библиотеки
+           * @minLength 1
+           */
+          name: string;
+        }[];
         /** Настройки выбранного проекта */
         kind: "project";
       }
@@ -777,7 +968,7 @@ export interface EntityDetail {
         /** Описание вклада приложения в Markdown */
         description: string;
         /** Состояние вклада приложения */
-        status: EntityDetailStatusEnum;
+        status: EntityDetailStatusEnum1;
         active: boolean;
         basis: string;
         kind: "implementation";
@@ -821,7 +1012,7 @@ export interface EntityDetail {
          */
         productLinks: {
           /** Цель реализации: общая фича, сценарий или контракт приложения */
-          kind: EntityDetailKindEnum1;
+          kind: EntityDetailKindEnum2;
           /**
            * ID или ключ продуктовой цели; при записи нормализуется в постоянный ID
            * @minLength 1
@@ -859,8 +1050,34 @@ export interface EntityDetail {
         summary: string;
         /** Полный текст документа в Markdown */
         body: string;
-        /** Тип материала: ТЗ, описание, правила или решение */
+        /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
         documentKind: EntityDetailDocumentKindEnum;
+        /** Раздел; null — без раздела */
+        sectionId?: string | null;
+        /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+        documentStatus?: EntityDetailDocumentStatusEnum;
+        /** Закреплён для всех участников проекта */
+        pinned?: boolean;
+        /**
+         * Адресные связи документа; текст и связи сохраняются атомарно
+         * @maxItems 100
+         */
+        relations?: {
+          /** Связанная сущность проекта: вид и постоянный ID */
+          target: {
+            /** Вид связанной сущности проекта */
+            kind: EntityDetailKindEnum3;
+            /**
+             * Постоянный ID связанной сущности
+             * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+             */
+            id: string;
+          };
+          /** references — контекст для сущности; documents — документ описывает сущность */
+          type: EntityDetailTypeEnum1;
+          /** Когда и зачем читать документ: необязательное пояснение Markdown */
+          description: string;
+        }[];
         /**
          * Явные области применимости документа по постоянным ID
          * @maxItems 1000
@@ -898,7 +1115,7 @@ export interface EntityDetail {
     /** Постоянный адрес в выбранном проекте */
     ref: {
       /** Вид основной сущности */
-      kind: EntityDetailKindEnum2;
+      kind: EntityDetailKindEnum4;
       /**
        * Постоянный ID; внутренние отношения сохраняют только этот адрес
        * @minLength 1
@@ -922,6 +1139,33 @@ export interface EntityDetail {
     status: string | null;
     /** Активная запись; снятая реализация сохраняет адрес */
     active: boolean;
+    /** Приложение, доска или родитель для различения одинаковых названий */
+    context?: string;
+    /** Компактные свойства документа без полного Markdown */
+    document?: {
+      /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+      kind: EntityDetailKindEnum5;
+      /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+      status: EntityDetailStatusEnum2;
+      /** Эффективный раздел; удалённый раздел отображается как null */
+      sectionId: string | null;
+      /** Закрепление в проекте */
+      pinned: boolean;
+      /**
+       * Момент времени в UTC
+       * @format date-time
+       * @pattern ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+       */
+      updatedAt: string;
+      /**
+       * Количество прямых отношений документа
+       * @min 0
+       * @max 9007199254740991
+       */
+      linkCount: number;
+      /** Фрагмент совпадения полнотекстового поиска */
+      excerpt?: string;
+    };
   }[];
 }
 
@@ -1239,8 +1483,34 @@ export interface CreateEntity {
         summary: string;
         /** Полный текст документа в Markdown */
         body: string;
-        /** Тип материала: ТЗ, описание, правила или решение */
+        /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
         documentKind: CreateEntityDocumentKindEnum;
+        /** Раздел; null — без раздела */
+        sectionId?: string | null;
+        /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+        documentStatus?: CreateEntityDocumentStatusEnum;
+        /** Закреплён для всех участников проекта */
+        pinned?: boolean;
+        /**
+         * Адресные связи документа; текст и связи сохраняются атомарно
+         * @maxItems 100
+         */
+        relations?: {
+          /** Связанная сущность проекта: вид и постоянный ID */
+          target: {
+            /** Вид связанной сущности проекта */
+            kind: CreateEntityKindEnum;
+            /**
+             * Постоянный ID связанной сущности
+             * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+             */
+            id: string;
+          };
+          /** references — контекст для сущности; documents — документ описывает сущность */
+          type: CreateEntityTypeEnum1;
+          /** Когда и зачем читать документ: необязательное пояснение Markdown */
+          description: string;
+        }[];
         /**
          * Ключи или ID продуктовых областей документа
          * @maxItems 100
@@ -1293,7 +1563,20 @@ export interface UpdateEntity {
          * @maxLength 120
          * @pattern ^[^\p{Cc}]+$
          */
-        name: string;
+        name?: string;
+        /**
+         * Разделы библиотеки в порядке отображения; пустой список допустим
+         * @maxItems 100
+         */
+        documentSections?: {
+          /**
+           * Постоянный ID раздела библиотеки
+           * @pattern ^[a-zA-Z0-9_-]{1,64}$
+           */
+          id: string;
+          /** Название раздела библиотеки */
+          name: string;
+        }[];
       }
     | {
         /** Создать паспорт продукта */
@@ -1362,8 +1645,34 @@ export interface UpdateEntity {
         summary?: string;
         /** Полный текст документа в Markdown */
         body?: string;
-        /** Тип материала: ТЗ, описание, правила или решение */
+        /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
         documentKind?: UpdateEntityDocumentKindEnum;
+        /** Раздел; null — без раздела */
+        sectionId?: string | null;
+        /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+        documentStatus?: UpdateEntityDocumentStatusEnum;
+        /** Закреплён для всех участников проекта */
+        pinned?: boolean;
+        /**
+         * Адресные связи документа; текст и связи сохраняются атомарно
+         * @maxItems 100
+         */
+        relations?: {
+          /** Связанная сущность проекта: вид и постоянный ID */
+          target: {
+            /** Вид связанной сущности проекта */
+            kind: UpdateEntityKindEnum;
+            /**
+             * Постоянный ID связанной сущности
+             * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+             */
+            id: string;
+          };
+          /** references — контекст для сущности; documents — документ описывает сущность */
+          type: UpdateEntityTypeEnum1;
+          /** Когда и зачем читать документ: необязательное пояснение Markdown */
+          description: string;
+        }[];
         /**
          * Новый набор областей документа
          * @maxItems 100
@@ -1991,6 +2300,22 @@ export interface ProjectSettings {
    * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
    */
   slug: string;
+  /**
+   * Разделы библиотеки в порядке отображения; пустой список допустим
+   * @maxItems 100
+   */
+  documentSections?: {
+    /**
+     * Постоянный ID раздела библиотеки
+     * @pattern ^[a-zA-Z0-9_-]{1,64}$
+     */
+    id: string;
+    /**
+     * Название раздела библиотеки
+     * @minLength 1
+     */
+    name: string;
+  }[];
   /**
    * Ревизия настроек проекта для защиты от одновременного редактирования
    * @min 0
@@ -3110,8 +3435,34 @@ export interface ProductState {
           summary: string;
           /** Полный текст документа в Markdown */
           body: string;
-          /** Тип материала: ТЗ, описание, правила или решение */
+          /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
           documentKind: ProductStateDocumentKindEnum;
+          /** Раздел; null — без раздела */
+          sectionId?: string | null;
+          /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+          documentStatus?: ProductStateDocumentStatusEnum;
+          /** Закреплён для всех участников проекта */
+          pinned?: boolean;
+          /**
+           * Адресные связи документа; текст и связи сохраняются атомарно
+           * @maxItems 100
+           */
+          relations?: {
+            /** Связанная сущность проекта: вид и постоянный ID */
+            target: {
+              /** Вид связанной сущности проекта */
+              kind: ProductStateKindEnum;
+              /**
+               * Постоянный ID связанной сущности
+               * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+               */
+              id: string;
+            };
+            /** references — контекст для сущности; documents — документ описывает сущность */
+            type: ProductStateTypeEnum1;
+            /** Когда и зачем читать документ: необязательное пояснение Markdown */
+            description: string;
+          }[];
           /**
            * Явные области применимости документа по постоянным ID
            * @maxItems 1000
@@ -3404,8 +3755,34 @@ export type ProductEntity =
             summary: string;
             /** Полный текст документа в Markdown */
             body: string;
-            /** Тип материала: ТЗ, описание, правила или решение */
+            /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
             documentKind: ProductEntityDocumentKindEnum;
+            /** Раздел; null — без раздела */
+            sectionId?: string | null;
+            /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+            documentStatus?: ProductEntityDocumentStatusEnum;
+            /** Закреплён для всех участников проекта */
+            pinned?: boolean;
+            /**
+             * Адресные связи документа; текст и связи сохраняются атомарно
+             * @maxItems 100
+             */
+            relations?: {
+              /** Связанная сущность проекта: вид и постоянный ID */
+              target: {
+                /** Вид связанной сущности проекта */
+                kind: ProductEntityKindEnum;
+                /**
+                 * Постоянный ID связанной сущности
+                 * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+                 */
+                id: string;
+              };
+              /** references — контекст для сущности; documents — документ описывает сущность */
+              type: ProductEntityTypeEnum1;
+              /** Когда и зачем читать документ: необязательное пояснение Markdown */
+              description: string;
+            }[];
             /**
              * Явные области применимости документа по постоянным ID
              * @maxItems 1000
@@ -3690,8 +4067,34 @@ export interface ProductMutation {
         summary: string;
         /** Полный текст документа в Markdown */
         body: string;
-        /** Тип материала: ТЗ, описание, правила или решение */
+        /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
         documentKind: ProductMutationDocumentKindEnum;
+        /** Раздел; null — без раздела */
+        sectionId?: string | null;
+        /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+        documentStatus?: ProductMutationDocumentStatusEnum;
+        /** Закреплён для всех участников проекта */
+        pinned?: boolean;
+        /**
+         * Адресные связи документа; текст и связи сохраняются атомарно
+         * @maxItems 100
+         */
+        relations?: {
+          /** Связанная сущность проекта: вид и постоянный ID */
+          target: {
+            /** Вид связанной сущности проекта */
+            kind: ProductMutationKindEnum;
+            /**
+             * Постоянный ID связанной сущности
+             * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+             */
+            id: string;
+          };
+          /** references — контекст для сущности; documents — документ описывает сущность */
+          type: ProductMutationTypeEnum1;
+          /** Когда и зачем читать документ: необязательное пояснение Markdown */
+          description: string;
+        }[];
         /** @maxItems 1000 */
         links: (
           | {
@@ -4017,8 +4420,34 @@ export interface ProductContext {
             summary: string;
             /** Полный текст документа в Markdown */
             body: string;
-            /** Тип материала: ТЗ, описание, правила или решение */
+            /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
             documentKind: ProductContextDocumentKindEnum;
+            /** Раздел; null — без раздела */
+            sectionId?: string | null;
+            /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+            documentStatus?: ProductContextDocumentStatusEnum;
+            /** Закреплён для всех участников проекта */
+            pinned?: boolean;
+            /**
+             * Адресные связи документа; текст и связи сохраняются атомарно
+             * @maxItems 100
+             */
+            relations?: {
+              /** Связанная сущность проекта: вид и постоянный ID */
+              target: {
+                /** Вид связанной сущности проекта */
+                kind: ProductContextKindEnum;
+                /**
+                 * Постоянный ID связанной сущности
+                 * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+                 */
+                id: string;
+              };
+              /** references — контекст для сущности; documents — документ описывает сущность */
+              type: ProductContextTypeEnum1;
+              /** Когда и зачем читать документ: необязательное пояснение Markdown */
+              description: string;
+            }[];
             /**
              * Явные области применимости документа по постоянным ID
              * @maxItems 1000
@@ -4294,8 +4723,34 @@ export interface ProductList {
           summary: string;
           /** Полный текст документа в Markdown */
           body: string;
-          /** Тип материала: ТЗ, описание, правила или решение */
+          /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
           documentKind: ProductListDocumentKindEnum;
+          /** Раздел; null — без раздела */
+          sectionId?: string | null;
+          /** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+          documentStatus?: ProductListDocumentStatusEnum;
+          /** Закреплён для всех участников проекта */
+          pinned?: boolean;
+          /**
+           * Адресные связи документа; текст и связи сохраняются атомарно
+           * @maxItems 100
+           */
+          relations?: {
+            /** Связанная сущность проекта: вид и постоянный ID */
+            target: {
+              /** Вид связанной сущности проекта */
+              kind: ProductListKindEnum;
+              /**
+               * Постоянный ID связанной сущности
+               * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+               */
+              id: string;
+            };
+            /** references — контекст для сущности; documents — документ описывает сущность */
+            type: ProductListTypeEnum1;
+            /** Когда и зачем читать документ: необязательное пояснение Markdown */
+            description: string;
+          }[];
           /**
            * Явные области применимости документа по постоянным ID
            * @maxItems 1000
@@ -4450,12 +4905,28 @@ export interface ContextResponse {
        */
       slug: string;
       /**
+       * Разделы библиотеки в порядке отображения; пустой список допустим
+       * @maxItems 100
+       */
+      documentSections?: {
+        /**
+         * Постоянный ID раздела библиотеки
+         * @pattern ^[a-zA-Z0-9_-]{1,64}$
+         */
+        id: string;
+        /**
+         * Название раздела библиотеки
+         * @minLength 1
+         */
+        name: string;
+      }[];
+      /**
        * Ревизия настроек проекта для защиты от одновременного редактирования
        * @min 0
        * @max 9007199254740991
        */
       revision: number;
-      version: 1 | 2;
+      version: 1 | 2 | 3;
       /**
        * Читаемый ключ сущности; назначается ядром, может иметь прежние алиасы
        * @minLength 1
@@ -4737,17 +5208,18 @@ export type EntityDeletionPreviewKindEnum =
   | "task"
   | "document";
 
-/** Вид основной сущности */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type EntityDeletionPreviewKindEnum1 =
-  | "project"
-  | "product"
-  | "feature"
-  | "scenario"
-  | "application"
-  | "implementation"
-  | "board"
-  | "task"
-  | "document";
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntityDeletionPreviewStatusEnum = "draft" | "active" | "archived";
 
 /** Вид основной сущности */
 export type EntityDeletionPreviewKindEnum2 =
@@ -4760,6 +5232,44 @@ export type EntityDeletionPreviewKindEnum2 =
   | "board"
   | "task"
   | "document";
+
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntityDeletionPreviewKindEnum3 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntityDeletionPreviewStatusEnum1 = "draft" | "active" | "archived";
+
+/** Вид основной сущности */
+export type EntityDeletionPreviewKindEnum4 =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntityDeletionPreviewKindEnum5 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntityDeletionPreviewStatusEnum2 = "draft" | "active" | "archived";
 
 /** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
 export type DeleteEntityKindEnum =
@@ -4854,11 +5364,27 @@ export type EntitiesQueryKindEnum =
 /** Активность реализации; прежние ссылки доступны без фильтра */
 export type EntitiesQueryActiveEnum = "true" | "false";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntitiesQueryDocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Только закреплённые либо незакреплённые документы */
+export type EntitiesQueryPinnedEnum = "true" | "false";
+
+/** Включить только архив либо исключить архивные документы */
+export type EntitiesQueryArchivedEnum = "true" | "false";
+
 /**
- * Сортировка по читаемому ключу или названию
+ * Сортировка по ключу, названию или последнему обновлению
  * @default "key"
  */
-export type EntitiesQuerySortEnum = "key" | "title";
+export type EntitiesQuerySortEnum = "key" | "title" | "updated";
 
 /** Вид основной сущности */
 export type EntitiesPageKindEnum =
@@ -4871,6 +5397,19 @@ export type EntitiesPageKindEnum =
   | "board"
   | "task"
   | "document";
+
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntitiesPageKindEnum1 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntitiesPageStatusEnum = "draft" | "active" | "archived";
 
 /** Уточнение ожидаемого вида при разрешении адреса */
 export type EntityGetQueryKindEnum =
@@ -4896,6 +5435,19 @@ export type EntitySummaryKindEnum =
   | "task"
   | "document";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntitySummaryKindEnum1 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntitySummaryStatusEnum = "draft" | "active" | "archived";
+
 /** Вид основной сущности */
 export type EntityDetailKindEnum =
   | "project"
@@ -4908,11 +5460,24 @@ export type EntityDetailKindEnum =
   | "task"
   | "document";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntityDetailKindEnum1 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntityDetailStatusEnum = "draft" | "active" | "archived";
+
 /** Назначение приложения: клиентское, серверное или внутреннее */
 export type EntityDetailTypeEnum = "frontend" | "backend" | "internal";
 
 /** Состояние вклада приложения */
-export type EntityDetailStatusEnum = "none" | "partial" | "done";
+export type EntityDetailStatusEnum1 = "none" | "partial" | "done";
 
 /** Область доски: продукт, приложение или инфраструктура */
 export type EntityDetailScopeEnum =
@@ -4921,7 +5486,7 @@ export type EntityDetailScopeEnum =
   | "infrastructure";
 
 /** Цель реализации: общая фича, сценарий или контракт приложения */
-export type EntityDetailKindEnum1 = "feature" | "scenario" | "implementation";
+export type EntityDetailKindEnum2 = "feature" | "scenario" | "implementation";
 
 /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
 export type EntityDetailColumnEnum =
@@ -4932,15 +5497,21 @@ export type EntityDetailColumnEnum =
   | "done"
   | "cancelled";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type EntityDetailDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
 
-/** Вид основной сущности */
-export type EntityDetailKindEnum2 =
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntityDetailDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type EntityDetailKindEnum3 =
   | "project"
   | "product"
   | "feature"
@@ -4950,6 +5521,34 @@ export type EntityDetailKindEnum2 =
   | "board"
   | "task"
   | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type EntityDetailTypeEnum1 = "references" | "documents";
+
+/** Вид основной сущности */
+export type EntityDetailKindEnum4 =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type EntityDetailKindEnum5 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type EntityDetailStatusEnum2 = "draft" | "active" | "archived";
 
 /** Уточнение ожидаемого вида при разрешении адреса */
 export type EntityKeysQueryKindEnum =
@@ -5020,24 +5619,66 @@ export type CreateEntityColumnEnum =
   | "done"
   | "cancelled";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type CreateEntityDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type CreateEntityDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type CreateEntityKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type CreateEntityTypeEnum1 = "references" | "documents";
 
 /** Назначение приложения: клиентское, серверное или внутреннее */
 export type UpdateEntityTypeEnum = "frontend" | "backend" | "internal";
 
 export type UpdateEntityStatusEnum = "none" | "partial" | "done";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type UpdateEntityDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type UpdateEntityDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type UpdateEntityKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type UpdateEntityTypeEnum1 = "references" | "documents";
 
 /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
 export type MoveEntityTaskColumnEnum =
@@ -5213,12 +5854,33 @@ export type ProductStateTypeEnum = "frontend" | "backend" | "internal";
 /** Состояние вклада приложения */
 export type ProductStateStatusEnum = "none" | "partial" | "done";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type ProductStateDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type ProductStateDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type ProductStateKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type ProductStateTypeEnum1 = "references" | "documents";
 
 export type ProductStateStatusEnum1 = "none" | "partial" | "done";
 
@@ -5255,12 +5917,33 @@ export type ProductEntityTypeEnum = "frontend" | "backend" | "internal";
 /** Состояние вклада приложения */
 export type ProductEntityStatusEnum = "none" | "partial" | "done";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type ProductEntityDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type ProductEntityDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type ProductEntityKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type ProductEntityTypeEnum1 = "references" | "documents";
 
 /** Состояние вклада приложения */
 export type ProductEntityStatusEnum1 = "none" | "partial" | "done";
@@ -5273,12 +5956,33 @@ export type ProductMutationActionEnum = "create" | "update";
 /** Назначение приложения: клиентское, серверное или внутреннее */
 export type ProductMutationTypeEnum = "frontend" | "backend" | "internal";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type ProductMutationDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type ProductMutationDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type ProductMutationKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type ProductMutationTypeEnum1 = "references" | "documents";
 
 /** Состояние вклада приложения */
 export type ProductMutationStatusEnum = "none" | "partial" | "done";
@@ -5294,12 +5998,33 @@ export type ProductContextTypeEnum = "frontend" | "backend" | "internal";
 /** Состояние вклада приложения */
 export type ProductContextStatusEnum = "none" | "partial" | "done";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type ProductContextDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type ProductContextDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type ProductContextKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type ProductContextTypeEnum1 = "references" | "documents";
 
 export type ProductContextStatusEnum1 = "none" | "partial" | "done";
 
@@ -5311,12 +6036,33 @@ export type ProductListTypeEnum = "frontend" | "backend" | "internal";
 /** Состояние вклада приложения */
 export type ProductListStatusEnum = "none" | "partial" | "done";
 
-/** Тип материала: ТЗ, описание, правила или решение */
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
 export type ProductListDocumentKindEnum =
   | "specification"
   | "description"
   | "rules"
-  | "decision";
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Состояние публикации: черновик, действующий или архив; не подтверждает истинность текста */
+export type ProductListDocumentStatusEnum = "draft" | "active" | "archived";
+
+/** Вид связанной сущности проекта */
+export type ProductListKindEnum =
+  | "project"
+  | "product"
+  | "feature"
+  | "scenario"
+  | "application"
+  | "implementation"
+  | "board"
+  | "task"
+  | "document";
+
+/** references — контекст для сущности; documents — документ описывает сущность */
+export type ProductListTypeEnum1 = "references" | "documents";
 
 export type ProductListQueryKindEnum =
   | "passport"
@@ -5660,7 +6406,7 @@ export type GetBoardTaskOkEnum = true;
 
 export interface GetBoardTaskParams {
   /** Постоянный ID или текущий/прежний ключ задачи */
-  reference: string;
+  reference: any;
 }
 
 export type GetBoardTaskLinksOkEnum = true;
@@ -5715,7 +6461,7 @@ export interface GetBoardTaskLinksParams {
   /** Версия первой страницы; изменение требует начать чтение заново */
   version?: string;
   /** ID или ключ задачи для чтения графа */
-  reference: string;
+  reference: any;
 }
 
 /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
@@ -5758,7 +6504,7 @@ export type LinkBoardTaskOkEnum = true;
 
 export interface LinkBoardTaskParams {
   /** ID или ключ исходной задачи */
-  reference: string;
+  reference: any;
 }
 
 export type GetTaskCriteriaOkEnum = true;
@@ -5781,14 +6527,14 @@ export interface GetTaskCriteriaParams {
   /** Версия первой страницы; после изменения перечитайте список */
   version?: string;
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
 }
 
 export type ChangeTaskCriterionOkEnum = true;
 
 export interface ChangeTaskCriterionParams {
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
 }
 
 export type GetTaskCommentsOkEnum = true;
@@ -5817,23 +6563,23 @@ export interface GetTaskCommentsParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
 }
 
 export type PublishTaskCommentOkEnum = true;
 
 export interface PublishTaskCommentParams {
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
 }
 
 export type GetTaskCommentOkEnum = true;
 
 export interface GetTaskCommentParams {
-  /** ID или ключ задачи */
-  reference: string;
   /** Постоянный номер сообщения в ленте задачи */
-  entryId: string;
+  entryId: any;
+  /** ID или ключ задачи */
+  reference: any;
 }
 
 export type GetTaskHistoryOkEnum = true;
@@ -5862,39 +6608,39 @@ export interface GetTaskHistoryParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
 }
 
 export type GetTaskHistoryEventOkEnum = true;
 
 export interface GetTaskHistoryEventParams {
-  /** ID или ключ задачи */
-  reference: string;
   /** Постоянный номер события в ленте задачи */
-  entryId: string;
+  entryId: any;
+  /** ID или ключ задачи */
+  reference: any;
 }
 
 export type GetTaskCriterionOkEnum = true;
 
 export interface GetTaskCriterionParams {
-  /** ID или ключ задачи */
-  reference: string;
   /** Постоянный ID критерия приёмки */
-  criterionId: string;
+  criterionId: any;
+  /** ID или ключ задачи */
+  reference: any;
 }
 
 export type UpdateBoardTaskOkEnum = true;
 
 export interface UpdateBoardTaskParams {
   /** ID или ключ редактируемой задачи */
-  reference: string;
+  reference: any;
 }
 
 export type MoveBoardTaskOkEnum = true;
 
 export interface MoveBoardTaskParams {
   /** ID или ключ перемещаемой задачи */
-  reference: string;
+  reference: any;
 }
 
 export type GetGraphOkEnum = true;
@@ -6182,7 +6928,18 @@ export interface ListEntitiesParams {
   /** Активность реализации; прежние ссылки доступны без фильтра */
   active?: ActiveEnum1;
   /**
-   * Сортировка по читаемому ключу или названию
+   * Раздел документов; none — без раздела
+   * @maxLength 64
+   */
+  section?: string;
+  /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+  documentKind?: DocumentKindEnum;
+  /** Только закреплённые либо незакреплённые документы */
+  pinned?: PinnedEnum;
+  /** Включить только архив либо исключить архивные документы */
+  archived?: ArchivedEnum;
+  /**
+   * Сортировка по ключу, названию или последнему обновлению
    * @default "key"
    */
   sort?: SortEnum;
@@ -6203,11 +6960,27 @@ export type KindEnum4 =
 /** Активность реализации; прежние ссылки доступны без фильтра */
 export type ActiveEnum1 = "true" | "false";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type DocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Только закреплённые либо незакреплённые документы */
+export type PinnedEnum = "true" | "false";
+
+/** Включить только архив либо исключить архивные документы */
+export type ArchivedEnum = "true" | "false";
+
 /**
- * Сортировка по читаемому ключу или названию
+ * Сортировка по ключу, названию или последнему обновлению
  * @default "key"
  */
-export type SortEnum = "key" | "title";
+export type SortEnum = "key" | "title" | "updated";
 
 /** Вид основной сущности */
 export type ListEntitiesParams1KindEnum =
@@ -6224,11 +6997,27 @@ export type ListEntitiesParams1KindEnum =
 /** Активность реализации; прежние ссылки доступны без фильтра */
 export type ListEntitiesParams1ActiveEnum = "true" | "false";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type ListEntitiesParams1DocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Только закреплённые либо незакреплённые документы */
+export type ListEntitiesParams1PinnedEnum = "true" | "false";
+
+/** Включить только архив либо исключить архивные документы */
+export type ListEntitiesParams1ArchivedEnum = "true" | "false";
+
 /**
- * Сортировка по читаемому ключу или названию
+ * Сортировка по ключу, названию или последнему обновлению
  * @default "key"
  */
-export type ListEntitiesParams1SortEnum = "key" | "title";
+export type ListEntitiesParams1SortEnum = "key" | "title" | "updated";
 
 export type CreateEntityOkEnum = true;
 
@@ -6832,7 +7621,7 @@ export type GetBoardTaskForProjectOkEnum = true;
 
 export interface GetBoardTaskForProjectParams {
   /** Постоянный ID или текущий/прежний ключ задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6889,7 +7678,7 @@ export interface GetBoardTaskLinksForProjectParams {
   /** Версия первой страницы; изменение требует начать чтение заново */
   version?: string;
   /** ID или ключ задачи для чтения графа */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6938,7 +7727,7 @@ export type LinkBoardTaskForProjectOkEnum = true;
 
 export interface LinkBoardTaskForProjectParams {
   /** ID или ключ исходной задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6963,7 +7752,7 @@ export interface GetTaskCriteriaForProjectParams {
   /** Версия первой страницы; после изменения перечитайте список */
   version?: string;
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -6972,7 +7761,7 @@ export type ChangeTaskCriterionForProjectOkEnum = true;
 
 export interface ChangeTaskCriterionForProjectParams {
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7003,7 +7792,7 @@ export interface GetTaskCommentsForProjectParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7012,7 +7801,7 @@ export type PublishTaskCommentForProjectOkEnum = true;
 
 export interface PublishTaskCommentForProjectParams {
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7020,10 +7809,10 @@ export interface PublishTaskCommentForProjectParams {
 export type GetTaskCommentForProjectOkEnum = true;
 
 export interface GetTaskCommentForProjectParams {
-  /** ID или ключ задачи */
-  reference: string;
   /** Постоянный номер сообщения в ленте задачи */
-  entryId: string;
+  entryId: any;
+  /** ID или ключ задачи */
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7054,7 +7843,7 @@ export interface GetTaskHistoryForProjectParams {
   /** Тип действия, например update или comment-publish */
   action?: string;
   /** ID или ключ задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7062,10 +7851,10 @@ export interface GetTaskHistoryForProjectParams {
 export type GetTaskHistoryEventForProjectOkEnum = true;
 
 export interface GetTaskHistoryEventForProjectParams {
-  /** ID или ключ задачи */
-  reference: string;
   /** Постоянный номер события в ленте задачи */
-  entryId: string;
+  entryId: any;
+  /** ID или ключ задачи */
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7073,10 +7862,10 @@ export interface GetTaskHistoryEventForProjectParams {
 export type GetTaskCriterionForProjectOkEnum = true;
 
 export interface GetTaskCriterionForProjectParams {
-  /** ID или ключ задачи */
-  reference: string;
   /** Постоянный ID критерия приёмки */
-  criterionId: string;
+  criterionId: any;
+  /** ID или ключ задачи */
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7085,7 +7874,7 @@ export type UpdateBoardTaskForProjectOkEnum = true;
 
 export interface UpdateBoardTaskForProjectParams {
   /** ID или ключ редактируемой задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7094,7 +7883,7 @@ export type MoveBoardTaskForProjectOkEnum = true;
 
 export interface MoveBoardTaskForProjectParams {
   /** ID или ключ перемещаемой задачи */
-  reference: string;
+  reference: any;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }
@@ -7407,7 +8196,18 @@ export interface ListEntitiesForProjectParams {
   /** Активность реализации; прежние ссылки доступны без фильтра */
   active?: ActiveEnum3;
   /**
-   * Сортировка по читаемому ключу или названию
+   * Раздел документов; none — без раздела
+   * @maxLength 64
+   */
+  section?: string;
+  /** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+  documentKind?: DocumentKindEnum1;
+  /** Только закреплённые либо незакреплённые документы */
+  pinned?: PinnedEnum1;
+  /** Включить только архив либо исключить архивные документы */
+  archived?: ArchivedEnum1;
+  /**
+   * Сортировка по ключу, названию или последнему обновлению
    * @default "key"
    */
   sort?: SortEnum1;
@@ -7430,11 +8230,27 @@ export type KindEnum14 =
 /** Активность реализации; прежние ссылки доступны без фильтра */
 export type ActiveEnum3 = "true" | "false";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type DocumentKindEnum1 =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Только закреплённые либо незакреплённые документы */
+export type PinnedEnum1 = "true" | "false";
+
+/** Включить только архив либо исключить архивные документы */
+export type ArchivedEnum1 = "true" | "false";
+
 /**
- * Сортировка по читаемому ключу или названию
+ * Сортировка по ключу, названию или последнему обновлению
  * @default "key"
  */
-export type SortEnum1 = "key" | "title";
+export type SortEnum1 = "key" | "title" | "updated";
 
 /** Вид основной сущности */
 export type ListEntitiesForProjectParams1KindEnum =
@@ -7451,11 +8267,27 @@ export type ListEntitiesForProjectParams1KindEnum =
 /** Активность реализации; прежние ссылки доступны без фильтра */
 export type ListEntitiesForProjectParams1ActiveEnum = "true" | "false";
 
+/** Тип: ТЗ, описание, правила, инструкция, проект решения, решение или исследование */
+export type ListEntitiesForProjectParams1DocumentKindEnum =
+  | "specification"
+  | "description"
+  | "rules"
+  | "instruction"
+  | "proposal"
+  | "decision"
+  | "research";
+
+/** Только закреплённые либо незакреплённые документы */
+export type ListEntitiesForProjectParams1PinnedEnum = "true" | "false";
+
+/** Включить только архив либо исключить архивные документы */
+export type ListEntitiesForProjectParams1ArchivedEnum = "true" | "false";
+
 /**
- * Сортировка по читаемому ключу или названию
+ * Сортировка по ключу, названию или последнему обновлению
  * @default "key"
  */
-export type ListEntitiesForProjectParams1SortEnum = "key" | "title";
+export type ListEntitiesForProjectParams1SortEnum = "key" | "title" | "updated";
 
 export type CreateEntityForProjectOkEnum = true;
 

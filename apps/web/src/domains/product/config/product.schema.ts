@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { documentKindSchema } from "@relay/contracts/entities";
 
 /** Проверяемая граница постоянного продукта; Markdown остаётся строкой. */
 export const PRODUCT_STATUS_SCHEMA = z.enum(["none", "partial", "done"]);
@@ -59,7 +60,7 @@ export const PRODUCT_FIELDS_SCHEMA = z.discriminatedUnion("kind", [
     name: z.string(),
     summary: z.string(),
     body: z.string(),
-    documentKind: z.enum(["specification", "description", "rules", "decision"]),
+    documentKind: documentKindSchema,
     links: z.array(PRODUCT_LINK_SCHEMA),
   }),
 ]);

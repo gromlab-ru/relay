@@ -15,6 +15,7 @@ import { GraphTransaction } from "./graph-transaction.js";
 import { recoverGraphMigration } from "./graph-migration.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { EntityDeletionRepository } from "./entity-deletion.js";
+import { DocumentLinksRepository } from "./document-links.js";
 
 const lockContext = new AsyncLocalStorage<{
   root: string;
@@ -52,6 +53,10 @@ export class Workspace {
       const owned = { root: this.root, assertOwned, active: true };
       return lockContext.run(owned, async () => {
         try {
+          if (await new DocumentLinksRepository(this).readPending()) {
+            const { recoverDocumentLinks } = await import("../application/documents/link-workflow.js");
+            await recoverDocumentLinks(this, assertOwned);
+          }
           return await operation(assertOwned);
         } finally {
           owned.active = false;

@@ -10,18 +10,28 @@ import {
   Stack,
   Text,
   TextInput,
+  Textarea,
+  Select,
+  Switch,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useHotkeys } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { Check, FileText } from "lucide-react";
 import { useBeforeUnload, useBlocker, useNavigate } from "react-router-dom";
-import { DOCUMENTATION_KIND_OPTIONS, useProductDemo } from "domains/product-demo";
-import type { ProductDocumentationInput } from "domains/product-demo";
-import { useProjectBasePath } from "domains/project";
+import {
+  DOCUMENT_KIND_OPTIONS,
+  DOCUMENT_STATUS_OPTIONS,
+  saveDocument,
+  useLibrarySettings,
+  DocumentAccessError,
+} from "domains/documents";
+import type { DocumentInput } from "domains/documents";
+import { useProjectBasePath, useProjectId } from "domains/project";
+import { useDeletionRefresh } from "domains/entities";
 import { readSessionStored, removeSessionStored, writeSessionStored } from "infra/browser-storage";
 import { MarkdownField } from "ui/markdown-field";
-import { DocumentScopePicker } from "./ui/document-scope-picker";
+import { DocumentRelations } from "compositions/widgets/document-relations";
 import { DOCUMENTATION_DRAFT_SCHEMA } from "./config/documentation-draft.schema";
 import type { DocumentationFormProps } from "./types/documentation-form-props.type";
 import styles from "./styles/documentation-form.module.css";
@@ -34,12 +44,16 @@ import styles from "./styles/documentation-form.module.css";
  *  - сохранения ввода при переходе, ошибке и конфликте ревизии
  */
 export const DocumentationForm = (props: DocumentationFormProps) => {
-  const { initial, revision, draftScope, backTo, returnTo, className, ...rootAttrs } = props;
-  const { saveDocumentation } = useProductDemo();
+  const { initial, documentId, revision, draftScope, backTo, returnTo, className, ...rootAttrs } =
+    props;
+  const projectId = useProjectId();
+  const settings = useLibrarySettings(projectId);
+  const refresh = useDeletionRefresh(projectId);
+  const requestsRef = useRef(new Map<string, string>());
   const base = useProjectBasePath();
   const navigate = useNavigate();
-  // Сохраняем прежний ключ, чтобы перенос раздела не потерял черновики вкладки.
-  const draftKey = `relay:documentation-draft:${base}/product:${draftScope}`;
+  // Прежняя восстановительная копия остаётся нетронутой в старом ключе.
+  const draftKey = `relay:knowledge-draft:${draftScope}`;
   const [draftData] = useState(() =>
     DOCUMENTATION_DRAFT_SCHEMA.safeParse(readSessionStored(draftKey)),
   );
@@ -54,7 +68,7 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
   const [editorVersion, setEditorVersion] = useState(0);
   const canLeaveRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const form = useForm<ProductDocumentationInput>({
+  const form = useForm<DocumentInput>({
     mode: "uncontrolled",
     validateInputOnBlur: true,
     initialValues: draftData.success ? draftData.data.values : initial,
@@ -67,6 +81,11 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
       body: (body) => (body.trim() === "" ? "Добавьте текст документа" : null),
     },
   });
+  const relations = form.useWatchValue("relations");
+  const sectionItems = (settings.data?.sections ?? []).map((section) => ({
+    value: section.id,
+    label: section.name,
+  }));
   const isDirty = form.isDirty() || hasRestoredDraft;
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -102,14 +121,20 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
   /**
    * Сохраняет материал и открывает чтение только после успешной записи.
    */
-  const handleSubmit = async (values: ProductDocumentationInput): Promise<void> => {
+  const handleSubmit = async (values: DocumentInput): Promise<void> => {
     setSaveError("");
     try {
-      const result = await saveDocumentation({ ...values, id: initial.id }, baseRevision);
-      if (!result.isSaved) {
-        setSaveError(result.message);
-        return;
-      }
+      const fingerprint = JSON.stringify([values, baseRevision]);
+      const requestId = requestsRef.current.get(fingerprint) ?? crypto.randomUUID();
+      requestsRef.current.set(fingerprint, requestId);
+      const result = await saveDocument(
+        projectId,
+        values,
+        requestId,
+        documentId ? { id: documentId, revision: baseRevision } : undefined,
+      );
+      await refresh();
+      requestsRef.current.delete(fingerprint);
       canLeaveRef.current = true;
       removeSessionStored(draftKey);
       notifications.show({
@@ -120,9 +145,13 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
         color: "gray",
         closeButtonProps: { "aria-label": "Закрыть уведомление" },
       });
-      navigate(`${base}/documents/${result.id}`, { replace: true, state: { returnTo } });
-    } catch {
-      setDefect(new Error("Неожиданный сбой редактора документа"));
+      navigate(`${base}/documents/${result.ref.id}`, { replace: true, state: { returnTo } });
+    } catch (failure) {
+      if (failure instanceof DocumentAccessError) setSaveError(failure.message);
+      else
+        setDefect(
+          failure instanceof Error ? failure : new Error("Неожиданный сбой редактора документа"),
+        );
     }
   };
   /**
@@ -181,7 +210,8 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
     >
       {hasRestoredDraft && (
         <Alert color="gray" mb="md">
-          Восстановлен черновик этой вкладки.
+          Восстановлена локальная копия этой вкладки. Сохраните документ, чтобы правки стали
+          доступны всем.
         </Alert>
       )}
       {hasConflict && (
@@ -217,10 +247,12 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
               required
               {...form.getInputProps("name")}
             />
-            <TextInput
+            <Textarea
               key={form.key("summary")}
-              label="Краткое описание"
-              description="Одна-две фразы для карточки в библиотеке."
+              label="Когда читать этот документ"
+              description="Необязательно. Кратко объясните назначение — это увидят человек и агент в каталоге."
+              autosize
+              minRows={2}
               placeholder="О чём этот документ и когда к нему обращаться"
               {...form.getInputProps("summary")}
             />
@@ -239,17 +271,48 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
           <section className={styles.properties}>
             <h2 className={styles.title}>О документе</h2>
             <NativeSelect
-              key={form.key("kind")}
+              key={form.key("documentKind")}
               label="Тип документа"
-              data={DOCUMENTATION_KIND_OPTIONS}
+              data={DOCUMENT_KIND_OPTIONS}
               mt="md"
-              {...form.getInputProps("kind")}
+              {...form.getInputProps("documentKind")}
+            />
+            <Select
+              label="Раздел библиотеки"
+              placeholder="Без раздела"
+              clearable
+              data={sectionItems}
+              mt="md"
+              key={form.key("sectionId")}
+              {...form.getInputProps("sectionId")}
+            />
+            <NativeSelect
+              label="Состояние документа"
+              description="Черновик доступен команде, но ещё не является принятым решением."
+              data={DOCUMENT_STATUS_OPTIONS}
+              mt="md"
+              key={form.key("documentStatus")}
+              {...form.getInputProps("documentStatus")}
+            />
+            <Switch
+              label="Закрепить в библиотеке"
+              mt="lg"
+              key={form.key("pinned")}
+              {...form.getInputProps("pinned", { type: "checkbox" })}
             />
             <Text size="xs" c="dimmed" lh={1.7} mt="md">
-              Выберите формат, чтобы материал было проще найти в библиотеке.
+              Для проектирования будущей реализации выберите «Проект решения» и оставьте состояние
+              «Черновик».
             </Text>
           </section>
-          <DocumentScopePicker key={form.key("scopeIds")} {...form.getInputProps("scopeIds")} />
+          <div className={styles.properties}>
+            <DocumentRelations
+              value={relations}
+              documentId={documentId}
+              isDraft
+              onChange={(value) => form.setFieldValue("relations", value)}
+            />
+          </div>
         </aside>
       </fieldset>
       {hasSaveError && (
@@ -263,7 +326,7 @@ export const DocumentationForm = (props: DocumentationFormProps) => {
             {draftLabel}
           </Badge>
           <Text size="xs" c="dimmed" mt={5}>
-            Черновик в этой вкладке · Ctrl/⌘ + Enter
+            Локальная копия в этой вкладке · Ctrl/⌘ + Enter
           </Text>
         </div>
         <Group gap="xs">

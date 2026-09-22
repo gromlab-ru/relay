@@ -1,61 +1,75 @@
-import { Button } from "@mantine/core";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { useProductDemo } from "domains/product-demo";
-import type { ProductDocumentationInput } from "domains/product-demo";
-import { useProjectBasePath } from "domains/project";
+import { Button, Skeleton } from "@mantine/core";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { useDocument, DOCUMENT_INPUT_SCHEMA } from "domains/documents";
+import type { DocumentInput } from "domains/documents";
+import { useEntitySummary } from "domains/entities";
+import { useProjectBasePath, useProjectId } from "domains/project";
 import { getProductReturn, ProductPage } from "compositions/widgets/product-page";
 import { StatePanel } from "ui/state-panel";
 import { DocumentationForm } from "./ui/documentation-form";
 
 /**
- * Открывает редактор самостоятельного материала библиотеки.
+ * Открывает полноценный документ с заранее выбранным контекстом создания.
  *
  * Используется для:
- *  - создания Markdown-документа и изменения существующего материала
+ *  - записи знаний и чернового проектирования из библиотеки или сущности
  */
 export const ProductDocumentEditorScreen = () => {
   const { documentId } = useParams();
-  const { snapshot } = useProductDemo();
+  const projectId = useProjectId();
   const base = useProjectBasePath();
   const location = useLocation();
-  const documentData = snapshot.documentation.find((entry) => entry.id === documentId);
+  const [params] = useSearchParams();
+  const query = useDocument(projectId, documentId ?? null);
+  const target = useEntitySummary(projectId, documentId ? null : params.get("target"));
   const returnTo = getProductReturn(location.state, `${base}/documents`, base);
   const isNew = documentId === undefined;
-  if (!isNew && documentData === undefined)
+  const isLoading = query.isLoading || target.isLoading;
+  if (isLoading)
+    return (
+      <ProductPage title="Открываем редактор" description="Загружаем документ">
+        <Skeleton height={350} />
+      </ProductPage>
+    );
+  if ((!isNew && query.data === undefined) || target.error)
     return (
       <StatePanel
-        title="Документ не найден"
-        description="Откройте материал из библиотеки."
+        title="Не удалось открыть редактор"
+        description={query.error?.message ?? target.error?.message ?? "Документ не найден."}
         action={
-          <Button component={Link} to={`${base}/documents`}>
-            К документам
+          <Button component={Link} to={returnTo}>
+            Назад
           </Button>
         }
       />
     );
-  const initialData: ProductDocumentationInput = documentData ?? {
-    id: "",
-    name: "",
-    summary: "",
-    body: "",
-    kind: "description",
-    scopeIds: [],
-  };
+  const initialData: DocumentInput = query.data
+    ? DOCUMENT_INPUT_SCHEMA.parse(query.data)
+    : {
+        name: "",
+        summary: "",
+        body: "",
+        documentKind: "description",
+        documentStatus: "draft",
+        sectionId: params.get("section"),
+        pinned: false,
+        relations: target.data
+          ? [{ target: target.data.ref, type: "references", description: "" }]
+          : [],
+      };
   const backTo = isNew ? returnTo : `${base}/documents/${documentId}`;
-  const draftScope = `${snapshot.epoch}:${initialData.id || "new"}`;
   const title = isNew ? "Новый документ" : "Редактирование документа";
+  const draftScope = `${projectId}:${documentId ?? `new:${params.get("target") ?? "library"}`}`;
   return (
     <ProductPage
       title={title}
-      description="Зафиксируйте требования, ожидаемое поведение или решение в Markdown."
-      eyebrow="ДОКУМЕНТЫ"
-      backTo={backTo}
-      backLabel="Назад"
+      description="Сохраните знание или начните проектировать решение. Связи помогут найти его в нужный момент."
     >
       <DocumentationForm
         key={draftScope}
         initial={initialData}
-        revision={snapshot.revision}
+        documentId={documentId}
+        revision={query.data?.revision ?? 0}
         draftScope={draftScope}
         backTo={backTo}
         returnTo={returnTo}

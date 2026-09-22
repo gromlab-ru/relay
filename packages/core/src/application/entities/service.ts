@@ -126,9 +126,13 @@ export class EntityEngine {
       status,
       active,
       sort,
+      section,
+      documentKind,
+      pinned,
+      archived,
       ...pagination
     } = query;
-    const filters = { board, application, feature, scenario, target, parent, status, active };
+    const filters = { board, application, feature, scenario, target, parent, status, active, section, documentKind, pinned, archived };
     if (kind) {
       const available = entityDefinitions.find((entry) => entry.kind === kind)!.filters;
       for (const [name, value] of Object.entries(filters))
@@ -164,11 +168,15 @@ export class EntityEngine {
             (!kind || entry.ref.kind === kind) &&
             (!selected || selected.has(entityAddress(entry.ref))) &&
             (!needle ||
-              `${entry.key} ${entry.aliases.join(" ")} ${entityAddress(entry.ref)} ${entry.title} ${entry.summary}`
+              `${entry.key} ${entry.aliases.join(" ")} ${entityAddress(entry.ref)} ${entry.title} ${entry.summary} ${entry.context ?? ""} ${entry.data.kind === "document" ? entry.data.body : ""}`
                 .toLocaleLowerCase()
                 .includes(needle)) &&
             (status === undefined || entry.status === status) &&
             (active === undefined || entry.active === (active === "true")) &&
+            (section === undefined || (entry.document?.sectionId ?? "none") === section) &&
+            (documentKind === undefined || entry.document?.kind === documentKind) &&
+            (pinned === undefined || entry.document?.pinned === (pinned === "true")) &&
+            (archived === undefined || (entry.document?.status === "archived") === (archived === "true")) &&
             Object.entries(resolved).every(([name, value]) =>
               Array.isArray(entry.filters[name])
                 ? entry.filters[name].includes(value)
@@ -177,11 +185,32 @@ export class EntityEngine {
         )
         .sort(
           (a, b) =>
-            a[sort].localeCompare(b[sort], "ru", { numeric: true }) ||
+            (sort === "updated" ? (b.document?.updatedAt ?? "").localeCompare(a.document?.updatedAt ?? "")
+              : a[sort].localeCompare(b[sort], "ru", { numeric: true })) ||
             entityAddress(a.ref).localeCompare(entityAddress(b.ref)),
         )
-        .map(entitySummary);
-      return this.page(items, pagination, catalog.version);
+        .map((entry) => {
+          const summary = entitySummary(entry);
+          if (needle && entry.data.kind === "document" && summary.document) {
+            const match = entry.data.body.toLocaleLowerCase().indexOf(needle);
+            if (match >= 0) summary.document.excerpt = entry.data.body.slice(Math.max(0, match - 50), match + needle.length + 100);
+          }
+          return summary;
+        });
+      const page = this.page(items, pagination, catalog.version);
+      if (kind !== "document") return page;
+      const counts: Record<string, number> = { all: 0, draft: 0, pinned: 0, archived: 0, none: 0 };
+      for (const entry of catalog.entries) {
+        const document = entry.document;
+        if (!document) continue;
+        if (document.status === "archived") { counts.archived!++; continue; }
+        counts.all!++;
+        if (document.status === "draft") counts.draft!++;
+        if (document.pinned) counts.pinned!++;
+        const section = document.sectionId === null ? "none" : `section:${document.sectionId}`;
+        counts[section] = (counts[section] ?? 0) + 1;
+      }
+      return { ...page, libraryCounts: counts };
     });
   }
   async get(input: EntityGetQuery): Promise<EntityDetail> {
@@ -202,6 +231,7 @@ export class EntityEngine {
         refs.push({ kind: "application", id: data.applicationId });
       if (data.kind === "document")
         refs.push(
+          ...(data.relations ?? []).map((relation) => relation.target),
           ...data.links.map((link) =>
             link.kind === "product" ? { kind: "product", id: "passport" } : link,
           ),
