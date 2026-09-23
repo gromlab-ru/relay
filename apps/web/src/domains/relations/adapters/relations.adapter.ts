@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { getProjectApi, ApiError } from "infra/tasks-api";
-import { RELATIONS_PAGE_SCHEMA } from "../types/relations.type";
+import { RELATIONS_PAGE_SCHEMA, ENTITY_CONTEXT_SCHEMA } from "../types/relations.type";
 import type {
   EntityRef,
   RelationOperation,
   RelationsPage,
   RelationsQuery,
+  EntityContext,
 } from "../types/relations.type";
 
 const GRAPH_FAILURE_SCHEMA = z.object({ error: z.object({ code: z.string() }) });
@@ -22,6 +23,18 @@ export const relationError = (error: unknown): Error => {
   if (error instanceof ApiError) {
     const failure = GRAPH_FAILURE_SCHEMA.safeParse(error.error);
     const code = failure.success ? failure.data.error.code : undefined;
+    if (code === "GRAPH_CHANGED")
+      return new Error(
+        "Граф изменился. Обновите просмотр, чтобы прочитать все раскрытые области в одной версии. Выбор и фильтры сохранены.",
+      );
+    if (code === "RELATION_MANAGED")
+      return new Error(
+        "Эта связь сохраняется предметным действием. Измените прикрепление документа, цель, родителя или зависимость в редакторе сущности.",
+      );
+    if (code === "CONTEXT_TOO_LARGE" || code === "RESPONSE_TOO_LARGE")
+      return new Error(
+        "Полный контекст превышает бюджет ответа. Частичный граф не показан; используйте диагностический раздел «Связи проекта» для адресного исследования.",
+      );
     if (code === "GRAPH_MIGRATION_REQUIRED")
       return new Error(
         "Для записи нужен перенос хранилища. В каталоге проекта выполните relay-cli --local graph migrate, затем обновите граф. Ввод сохранён.",
@@ -58,6 +71,18 @@ export const getRelations = async (
   try {
     const response = await getProjectApi(projectId).graph.getGraph(query);
     return RELATIONS_PAGE_SCHEMA.parse(response.data);
+  } catch (error) {
+    throw relationError(error);
+  }
+};
+
+/**
+ * Читает всю сохранённую компоненту одним запросом; неполный ответ не принимается.
+ */
+export const getEntityContext = async (projectId: string, root: string): Promise<EntityContext> => {
+  try {
+    const response = await getProjectApi(projectId).graph.getFullContext({ root });
+    return ENTITY_CONTEXT_SCHEMA.parse(response.data);
   } catch (error) {
     throw relationError(error);
   }

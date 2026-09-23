@@ -4,14 +4,11 @@ import {
   entitiesPageSchema,
   entitySummarySchema,
   entityDefinitions,
+  entityDetailSchema,
 } from "@relay/contracts/entities";
-import type {
-  EntitiesQuery,
-  EntitiesPage,
-  EntitySummary,
-  EntityKind,
-} from "@relay/contracts/entities";
+import type { EntitiesQuery, EntitiesPage, EntitySummary } from "@relay/contracts/entities";
 import { getProjectApi, ApiError } from "infra/tasks-api";
+import type { EntityContent } from "../types/entity-content.type";
 
 const FAILURE_SCHEMA = z.object({ error: z.object({ message: z.string() }) });
 
@@ -66,6 +63,28 @@ export const getEntitySummary = async (projectId: string, ref: string): Promise<
   }
 };
 
-/** Человекочитаемое название берётся из определения вида, общего с Core и MCP. */
-export const entityKindLabel = (kind: EntityKind): string =>
+/**
+ * Адресно читает полный текст узла; карточки графа не подменяют Markdown сущности.
+ */
+export const getEntityContent = async (projectId: string, ref: string): Promise<EntityContent> => {
+  try {
+    const response = await getProjectApi(projectId).entities.getEntity({ ref });
+    const entry = entityDetailSchema.parse(response.data);
+    const fields = entry.data;
+    const markdown =
+      fields.kind === "document" ? fields.body : "description" in fields ? fields.description : "";
+    return {
+      title: entry.title,
+      markdown,
+      boardSlug: fields.kind === "board" ? fields.slug : undefined,
+    };
+  } catch (failure) {
+    return throwEntityFailure(failure);
+  }
+};
+
+/**
+ * Возвращает русское название зарегистрированного вида и сохраняет имя расширенного вида.
+ */
+export const entityKindLabel = (kind: string): string =>
   entityDefinitions.find((definition) => definition.kind === kind)?.title ?? kind;

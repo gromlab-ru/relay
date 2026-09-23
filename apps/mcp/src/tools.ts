@@ -268,7 +268,7 @@ export function createTools(projects: Projects): Server {
       comments ? "task_comment_get" : "task_history_get",
       comments
         ? "Прочитать полный Markdown сообщения с автором и временем публикации"
-        : "Прочитать подробное событие: значения до/после, Markdown и идентификатор общей операции",
+        : "Прочитать событие: изменения статусов и связей, факт изменения Markdown и адрес общей операции; опубликованные сообщения доступны полностью",
       { ...selector, ...boardTask, entryId: taskActivityIdSchema },
       true,
       async (backend, input) => ({

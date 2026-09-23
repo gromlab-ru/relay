@@ -190,7 +190,7 @@ export class StorageTransaction {
           ? 5
           : path.startsWith(".indexes/")
             ? 3
-            : path.startsWith("operations/")
+            : path.startsWith("operations/") || path.startsWith("history/")
               ? 2
               : path.startsWith("relations/")
                 ? 1

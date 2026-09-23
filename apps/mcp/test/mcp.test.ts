@@ -51,6 +51,104 @@ async function setup(t: TestContext) {
   return { root, clients, servers, connect, start };
 }
 
+test("MCP: предметные линковки и снятие сразу видны в полном графе", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const feature = entitySavedSchema.parse(
+    (
+      await call(client, "entity_feature_create", {
+        name: "Поиск",
+        summary: "",
+        description: "## Требования\n\nНайти товар",
+        actor: "agent",
+        requestId: "f",
+      })
+    ).data,
+  );
+  const task = entitySavedSchema.parse(
+    (
+      await call(client, "entity_task_create", {
+        board: "BOARD-PRODUCT",
+        title: "Реализовать поиск",
+        targets: [feature.key],
+        actor: "agent",
+        requestId: "t",
+      })
+    ).data,
+  );
+  const doc = entitySavedSchema.parse(
+    (
+      await call(client, "entity_document_create", {
+        name: "ТЗ",
+        summary: "",
+        body: "## Проверка\n\nПроверить поиск",
+        documentKind: "specification",
+        relations: [{ type: "references", target: task.ref, description: "Прочитать" }],
+        actor: "agent",
+        requestId: "d",
+      })
+    ).data,
+  );
+  const context = fullContextSchema.parse(
+    (await call(client, "entity_context", { ref: feature.key })).data,
+  );
+  assert.ok(context.nodes.some((node) => node.ref.id === doc.ref.id));
+  assert.ok(
+    context.edges.some(
+      (edge) =>
+        edge.from.id === task.ref.id && edge.to.id === doc.ref.id && edge.type === "references",
+    ),
+  );
+  const update = {
+    ref: task.key,
+    targets: [],
+    ifRevision: task.revision,
+    requestId: "clear",
+    actor: "agent",
+  };
+  const saved = await call(client, "entity_task_update", update);
+  assert.equal(saved.ok, true);
+  assert.deepEqual((await call(client, "entity_task_update", update)).data, saved.data);
+  assert.equal(
+    (await call(client, "entity_task_update", { ...update, requestId: "stale" })).error?.code,
+    "REVISION_CONFLICT",
+  );
+  const detached = fullContextSchema.parse(
+    (await call(client, "entity_context", { ref: feature.key })).data,
+  );
+  assert.equal(detached.nodes.length, 3);
+  assert.equal(detached.edges.length, 2);
+  assert.ok(
+    !detached.nodes.some((node) => node.ref.id === task.ref.id || node.ref.id === doc.ref.id),
+  );
+  assert.ok(
+    detached.edges.some(
+      (edge) =>
+        edge.type === "part-of" && edge.from.id === feature.ref.id && edge.to.kind === "product",
+    ),
+  );
+  assert.ok(
+    detached.edges.some(
+      (edge) =>
+        edge.type === "part-of" && edge.from.kind === "product" && edge.to.kind === "project",
+    ),
+  );
+  const documentChange = {
+    ref: doc.key,
+    relations: [],
+    ifRevision: 1,
+    requestId: "detach",
+    actor: "agent",
+  };
+  assert.equal((await call(client, "entity_document_update", documentChange)).ok, true);
+  assert.equal(
+    fullContextSchema.parse((await call(client, "entity_context", { ref: doc.key })).data).edges
+      .length,
+    0,
+  );
+});
+
 async function call(client: Client, name: string, args: Record<string, unknown> = {}) {
   const result = CallToolResultSchema.parse(await client.callTool({ name, arguments: args }));
   const body = z

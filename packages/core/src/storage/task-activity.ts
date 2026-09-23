@@ -47,6 +47,7 @@ const storedEventSchema = taskHistoryEventSchema.extend({
       format: z.enum(["text", "markdown"]),
       before: z.union([z.string(), z.array(z.string()), z.null()]),
       after: z.union([z.string(), z.array(z.string()), z.null()]),
+      contentOmitted: z.literal(true).optional(),
     }),
   ),
 });

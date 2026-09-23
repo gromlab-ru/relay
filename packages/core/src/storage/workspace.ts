@@ -48,7 +48,7 @@ export class Workspace {
     readonly root: string,
     readonly config: Config,
   ) {
-    this.runtime = runtimeDirectory(root);
+    this.runtime = root === dirname(configPath) ? join(root, "runtime") : runtimeDirectory(root);
   }
   path(...parts: string[]): string {
     return join(this.root, ...parts);
@@ -219,7 +219,11 @@ async function locateConfig(cwd: string, explicit?: string): Promise<string> {
   let current = resolve(cwd);
   while (true) {
     const candidate = join(current, CONFIG_NAME);
-    if (await exists(candidate)) return candidate;
+    if (
+      (await exists(candidate)) ||
+      (await exists(join(dirname(candidate), "transactions/pending.json")))
+    )
+      return candidate;
     const parent = dirname(current);
     if (parent === current)
       throw new AppError(
@@ -234,6 +238,11 @@ async function locateConfig(cwd: string, explicit?: string): Promise<string> {
 /** Обычное чтение настроек не пишет данные; незавершённый переход восстанавливается до чтения. */
 export async function readWorkspaceConfig(cwd: string, explicit?: string) {
   const located = await locateConfig(cwd, explicit);
+  if (
+    !(await exists(located)) &&
+    (await exists(join(dirname(located), "transactions/pending.json")))
+  )
+    await EntityStore.open(dirname(located), workspaceStorageRegistry());
   let config = parse(configSchema, await readJson(located), located);
   const configPath = join(await realpath(dirname(located)), basename(located));
   const directory = await realpath(dirname(configPath));
@@ -277,6 +286,14 @@ export async function readWorkspaceConfig(cwd: string, explicit?: string) {
 
 export async function openWorkspace(cwd: string, explicit?: string): Promise<Workspace> {
   const { configPath, config } = await readWorkspaceConfig(cwd, explicit);
+  const dataRoot = dirname(configPath);
+  if (await exists(join(dataRoot, "storage.json"))) {
+    const workspace = new Workspace(configPath, dataRoot, config);
+    workspace.storageProductId = storageManifestSchema.parse(
+      await readJson(join(dataRoot, "storage.json")),
+    ).productId;
+    return workspace;
+  }
   const storage = resolve(dirname(configPath), config.storageDir);
   await mkdir(dirname(storage), { recursive: true });
   const root = (await exists(storage))
@@ -327,6 +344,13 @@ export async function initialize(
   );
   const root = resolve(dirname(configPath), storageDir);
   await mkdir(dirname(configPath), { recursive: true });
+  if (!options.legacy) {
+    const directory = await realpath(dirname(configPath));
+    const workspace = new Workspace(join(directory, basename(configPath)), directory, config);
+    const { StorageService } = await import("../application/storage/service.js");
+    await new StorageService(workspace).initialize();
+    return workspace;
+  }
   await mkdir(root, { recursive: true });
   await prepareRuntime(await realpath(root));
   const workspace = new Workspace(configPath, await realpath(root), config);
@@ -339,10 +363,6 @@ export async function initialize(
     if (isErrno(error, "EEXIST"))
       throw new AppError("ALREADY_INITIALIZED", "Конфигурация уже создана другим процессом", 4);
     throw error;
-  }
-  if (!options.legacy) {
-    const { StorageService } = await import("../application/storage/service.js");
-    await new StorageService(workspace).migrate();
   }
   return workspace;
 }

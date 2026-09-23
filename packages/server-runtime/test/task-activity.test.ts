@@ -43,4 +43,26 @@ test("HTTP: обсуждения и история, авторство, повт
   const schema = (await app.inject("/api/openapi.json")).json();
   assert.ok(schema.paths["/api/v1/projects/{project}/board-tasks/{reference}/history"].get);
   assert.ok(schema.components.schemas.PublishTaskComment.required.includes("actor"));
+  await tasks.update(
+    task.id,
+    { description: "## Новое описание", ifRevision: 1, requestId: "edit-text" },
+    "agent",
+  );
+  const timeline = (await app.inject(`${base}/history?limit=1`)).json().data;
+  const detail = (await app.inject(`${base}/history/${timeline.items[0].id}`)).json().data;
+  assert.deepEqual(
+    detail.changes.find((change: { field: string }) => change.field === "description"),
+    {
+      field: "description",
+      label: "Описание",
+      format: "markdown",
+      before: null,
+      after: null,
+      contentOmitted: true,
+    },
+  );
+  assert.equal(
+    (await app.inject(`${base}/comments/${saved.commentId}`)).json().data.description,
+    payload.description,
+  );
 });

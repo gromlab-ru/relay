@@ -10,7 +10,10 @@ test("HTTP графа: новые связи, контекст, CAS, повто�
   assert.equal(graph.statusCode, 200, graph.body);
   const page = graph.json().data;
   assert.ok(page.nodes.length >= 3);
-  assert.equal(page.totalEdges, 0);
+  assert.equal(page.totalEdges, 1);
+  assert.equal(page.edges[0].type, "part-of");
+  assert.equal(page.edges[0].from.kind, "product");
+  assert.equal(page.edges[0].to.kind, "project");
   const payload = {
     ifVersion: page.version,
     requestId: "graph-http",
@@ -42,7 +45,7 @@ test("HTTP графа: новые связи, контекст, CAS, повто�
     read,
   );
   assert.ok(read.paths.some((path: { edges: string[] }) => path.edges.length === 1));
-  assert.equal((await app.inject(`${url}/history`)).json().data.total, 1);
+  assert.equal((await app.inject(`${url}/history`)).json().data.total, 2);
   assert.equal((await app.inject("/api/v1/projects/missing/graph")).statusCode, 404);
   const schema = (await app.inject("/api/openapi.json")).json();
   assert.ok(schema.paths["/api/v1/graph"].post);

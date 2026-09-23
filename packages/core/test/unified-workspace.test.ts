@@ -16,6 +16,12 @@ test("новый init: единая база и одна блокировка п
   const root = await mkdtemp(join(tmpdir(), "relay-native-init-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const first = await initialize(root, "../old-anchor/tasks");
+  const initialContext = await new GraphService(first).context({ root: "PRODUCT" });
+  assert.equal(initialContext.edges.length, 1);
+  assert.equal(initialContext.edges[0]!.type, "part-of");
+  assert.deepEqual(initialContext.edges[0]!.from, { kind: "product", id: "passport" });
+  assert.deepEqual(initialContext.edges[0]!.to, { kind: "project", id: first.config.projectId });
+  assert.equal(initialContext.nodes.find((node) => node.ref.kind === "product")!.revision, 0);
   assert.equal(
     JSON.parse(await readFile(join(root, ".relay/storage.json"), "utf8")).format,
     "relay-entities",

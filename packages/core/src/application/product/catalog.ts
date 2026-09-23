@@ -20,7 +20,9 @@ const catalogSchema = z.strictObject({
 /** Восстанавливаемый краткий индекс: запросы задач не читают полные описания продукта. */
 async function storedProductCatalog(workspace: Workspace, assertOwned: () => void) {
   const repository = new ProductRepository(workspace);
-  const path = join(repository.root, ".indexes", "catalog.json");
+  const path = workspace.storageSession
+    ? join(workspace.dataRoot, ".indexes", "product-catalog.json")
+    : join(repository.root, ".indexes", "catalog.json");
   const fingerprint = await repository.fingerprint();
   if (await exists(path)) {
     const value = await readJson(path, 32 * 1024 * 1024).catch((error: unknown) => {

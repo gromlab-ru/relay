@@ -39,4 +39,44 @@ test("CLI обсуждений: публикация, повтор, Markdown, с
   const history = await invokeRaw(app.root, ["task", "history", "list", task.id, "--limit", "1"]);
   assert.equal(history.code, 0, history.stderr);
   assert.match(history.stdout, /--cursor/);
+  successful(
+    await app.run([
+      "task",
+      "update",
+      task.id,
+      "--description",
+      "## Изменённое описание",
+      "--if-revision",
+      "1",
+    ]),
+  );
+  const page = successful(
+    await app.run<{ items: { id: string }[] }>([
+      "task",
+      "history",
+      "list",
+      task.id,
+      "--limit",
+      "1",
+    ]),
+  ).data;
+  const address = ["task", "history", "get", task.id, page.items[0]!.id];
+  const compact = await invokeRaw(app.root, address);
+  assert.equal(compact.code, 0, compact.stderr);
+  assert.match(compact.stdout, /Содержимое изменено/);
+  assert.doesNotMatch(compact.stdout, /До:|После:|Изменённое описание/);
+  const event = successful(
+    await app.run<{
+      changes: {
+        field: string;
+        contentOmitted?: boolean;
+        before: string | null;
+        after: string | null;
+      }[];
+    }>(address),
+  ).data;
+  assert.equal(
+    event.changes.find((change) => change.field === "description")?.contentOmitted,
+    true,
+  );
 });

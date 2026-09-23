@@ -97,7 +97,8 @@ export const RelationEditor = (props: RelationEditorProps) => {
       <fieldset className={styles.root} disabled={form.submitting}>
         <Stack gap="sm">
           <Text size="sm" c="dimmed">
-            Прочитайте сверху вниз: первая сущность выполняет выбранное отношение ко второй.
+            Диагностическое ребро сохраняется только в графе. Для прикрепления документа, цели или
+            зависимости задачи используйте редактор соответствующей сущности.
           </Text>
           <EntityPicker
             key={form.key("from")}

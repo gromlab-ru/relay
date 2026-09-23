@@ -26,6 +26,13 @@ import { EntityStorageRegistry } from "./registry.js";
 import type { EntityRecord } from "./registry.js";
 import { STATE_PATH, EMPTY_STATE, stateSchema, RECORD_BYTES, digest, jsonValue } from "./format.js";
 import type { StoreState, FileChange } from "./format.js";
+import {
+  Journal,
+  indexedEventSchema,
+  receiptKey,
+  historyBucket,
+  compactHistoryValue,
+} from "./journal.js";
 
 const candidateSchema = z.strictObject({
   ref: entityRefSchema,
@@ -37,21 +44,8 @@ const candidatesSchema = z.array(candidateSchema);
 const postingIdsSchema = z.array(z.string());
 const postingPointerSchema = z.strictObject({ root: z.string() });
 const postingValueSchema = z.union([postingIdsSchema, postingPointerSchema]);
-const indexedEventSchema = z.strictObject({
-  kind: z.literal("indexed"),
-  index: z.string(),
-  key: z.string(),
-  value: z.json(),
-  groups: z.array(
-    z.strictObject({
-      index: z.string(),
-      key: z.string(),
-      member: z.string().nullable().default(null),
-    }),
-  ),
-});
 const eventPointerSchema = z.strictObject({
-  operationId: z.uuid(),
+  operationId: z.string(),
   offset: z.number().int().nonnegative(),
 });
 const commandSchema = z.strictObject({
@@ -76,13 +70,12 @@ const operationSchema = z.strictObject({
   ),
   events: z.array(z.json()),
 });
-const receiptKey = (command: Pick<StorageCommand, "namespace" | "actor" | "requestId">) =>
-  JSON.stringify([command.namespace, command.actor, command.requestId]);
 const sameRef = (a: EntityRef, b: EntityRef) => a.kind === b.kind && a.id === b.id;
 const refOf = (record: StoredRecord) => ({ kind: record.kind, id: record.id });
 
 /** Низкоуровневый владелец одной базы. Предметные сценарии вызывают run после своих проверок. */
 export class EntityStore {
+  formatVersion: 1 | 2 = 2;
   readonly metrics = {
     entityReads: 0,
     operationReads: 0,
@@ -132,7 +125,7 @@ export class EntityStore {
         await transaction.publish(
           [
             { path: STATE_PATH, after: { ...EMPTY_STATE, version: randomUUID() } },
-            { path: "storage.json", after: { format: "relay-entities", schemaVersion: 1 } },
+            { path: "storage.json", after: { format: "relay-entities", schemaVersion: 2 } },
           ],
           owned,
         );
@@ -162,7 +155,9 @@ export class EntityStore {
       root,
       async (owned) => {
         await transaction.recover(owned);
-        storageManifestSchema.parse(await readJson(join(root, "storage.json")));
+        store.formatVersion = storageManifestSchema.parse(
+          await readJson(join(root, "storage.json")),
+        ).schemaVersion;
       },
       transaction.runtime,
     );
@@ -174,6 +169,9 @@ export class EntityStore {
       this.root,
       async (owned) => {
         await new StorageTransaction(this.root).recover(owned);
+        this.formatVersion = storageManifestSchema.parse(
+          await readJson(join(this.root, "storage.json")),
+        ).schemaVersion;
         const result = await fn(owned);
         owned();
         return result;
@@ -220,33 +218,11 @@ export class EntityStore {
     fn: (transaction: StorageSession) => Promise<T>,
   ): Promise<T> {
     const command = commandSchema.parse(input);
-    const requestHash = digest(command.request);
     return this.locked(async (owned) => {
       const session = new StorageSession(this, await this.state(), true);
-      const key = receiptKey(command);
-      const prior = await session.indexGet("receipts", key);
-      if (prior !== undefined) {
-        const ids = postingIdsSchema.parse(prior);
-        invariant(
-          ids.length === 1,
-          "IDEMPOTENCY_CONFLICT",
-          "После слияния обнаружены разные квитанции одного запроса",
-          4,
-        );
-        this.metrics.operationReads++;
-        const operation = operationSchema.parse(
-          await readJson(join(this.root, `operations/${ids[0]}.json`), RECORD_BYTES),
-        );
-        invariant(
-          operation.id === ids[0] &&
-            receiptKey(operation) === key &&
-            operation.requestHash === requestHash,
-          "IDEMPOTENCY_CONFLICT",
-          "Ключ запроса уже использован с другим содержимым",
-          4,
-        );
-        return structuredClone(operation.result) as T;
-      }
+      const prior = await this.savedCommand(session, command);
+      if (prior) return structuredClone(prior.result) as T;
+      await session.prepareJournal(owned);
       const result = jsonValue(await fn(session)) as T;
       await this.commitSession(session, command, result, owned);
       return structuredClone(result);
@@ -265,7 +241,10 @@ export class EntityStore {
     const transaction = new StorageTransaction(store.root);
     await transaction.prepareDirectories();
     await transaction.recover(owned);
-    if (!initialize) storageManifestSchema.parse(await readJson(join(store.root, "storage.json")));
+    if (!initialize)
+      store.formatVersion = storageManifestSchema.parse(
+        await readJson(join(store.root, "storage.json")),
+      ).schemaVersion;
     return store;
   }
 
@@ -281,8 +260,21 @@ export class EntityStore {
         ? structuredClone(EMPTY_STATE)
         : await this.state();
     const session = new StorageSession(this, state, true);
+    if (this.formatVersion === 2) await session.prepareJournal(owned);
     const result = await fn(session);
     if (session.changed) {
+      if (
+        session.files.size === 0 &&
+        session.events.length === 0 &&
+        session.command === undefined
+      ) {
+        await new StorageTransaction(this.root, this.probe).publish(
+          await session.prepare(randomUUID()),
+          owned,
+        );
+        session.index.published();
+        return result;
+      }
       const command = session.command ?? {
         input: {
           namespace: "storage-maintenance",
@@ -313,9 +305,10 @@ export class EntityStore {
       "Обнаружены разные квитанции одного запроса",
       4,
     );
-    const operation = operationSchema.parse(
-      await readJson(join(this.root, `operations/${ids[0]}.json`), RECORD_BYTES),
-    );
+    const operation =
+      this.formatVersion === 2
+        ? await session.journal.operation(ids[0]!)
+        : await this.operation(ids[0]!);
     invariant(
       operation.id === ids[0] &&
         receiptKey(operation) === key &&
@@ -333,44 +326,32 @@ export class EntityStore {
     result: JsonValue,
     owned: () => void,
   ) {
-    const key = receiptKey(command);
-    const requestHash = digest(command.request);
-    const id = session.operationId;
-    const changes = [...session.files].map(([path, after]) => ({
-      path,
-      before: session.originals.get(path) ?? null,
-      after,
-    }));
-    const operation = operationSchema.parse({
-      schemaVersion: 1,
-      id,
+    invariant(
+      this.formatVersion === 2,
+      "STORAGE_MIGRATION_REQUIRED",
+      "Для записи выполните storage migrate: требуется компактный формат истории",
+      4,
+    );
+    await session.journal.append({
       at: new Date().toISOString(),
       actor: command.actor,
       namespace: command.namespace,
       requestId: command.requestId,
-      requestHash,
+      requestHash: digest(command.request),
       result,
-      changes,
       events: session.events,
       refs: [...session.touched].sort().map((address) => {
         const [kind, id] = address.split(":");
-        return { kind, id };
+        return entityRefSchema.parse({ kind, id });
       }),
     });
-    session.indexSet("file-hashes", `operations/${id}.json`, digest(operation));
-    session.indexSet("receipts", key, [id]);
-    for (const address of session.touched)
-      await session.addPosting("history", address, `${operation.at}/${id}`);
     const prepared = await session.prepare(randomUUID());
-    const state = prepared.pop()!;
-    await new StorageTransaction(this.root, this.probe).publish(
-      [...prepared, { path: `operations/${id}.json`, after: operation }, state],
-      owned,
-    );
+    await new StorageTransaction(this.root, this.probe).publish(prepared, owned);
     session.index.published();
   }
 
   async operation(id: string) {
+    if (id.includes(":")) return this.read((session) => session.journal.operation(id));
     z.uuid().parse(id);
     this.metrics.operationReads++;
     return operationSchema.parse(
@@ -403,21 +384,24 @@ export class EntityStore {
         "История изменилась. Начните чтение заново",
         4,
       );
-      const ids = await snapshot.postings("history", entityAddress(ref));
-      const items = [];
-      for (const pointer of ids.slice(offset, offset + limit)) {
-        const id = pointer.split("/").at(-1)!;
-        this.metrics.operationReads++;
-        items.push(
-          operationSchema.parse(
-            await readJson(join(this.root, `operations/${id}.json`), RECORD_BYTES),
+      if (this.formatVersion === 1) {
+        const ids = await snapshot.postings("history", entityAddress(ref));
+        return {
+          items: await Promise.all(
+            ids
+              .slice(offset, offset + limit)
+              .map((pointer) => this.operation(pointer.split("/").at(-1)!)),
           ),
-        );
+          total: ids.length,
+          nextOffset: offset + limit < ids.length ? offset + limit : null,
+          version: snapshot.state.version,
+        };
       }
+      const all = await snapshot.journal.history(entityAddress(ref));
       return {
-        items,
-        total: ids.length,
-        nextOffset: offset + limit < ids.length ? offset + limit : null,
+        items: all.slice(offset, offset + limit),
+        total: all.length,
+        nextOffset: offset + limit < all.length ? offset + limit : null,
         version: snapshot.state.version,
       };
     });
@@ -476,55 +460,77 @@ export class EntityStore {
         storedKeySpaceSchema.parse(raw);
         snapshot.indexSet("file-hashes", path, digest(raw));
       }
-      for (const filename of await jsonFiles(join(this.root, "operations"))) {
-        this.metrics.operationReads++;
-        const operation = operationSchema.parse(
-          await readJson(join(this.root, "operations", filename), RECORD_BYTES),
-        );
-        snapshot.indexSet("file-hashes", `operations/${filename}`, digest(operation));
-        invariant(
-          filename === `${operation.id}.json`,
-          "INVALID_DATA",
-          "Неверный ID журнала операции",
-          5,
-        );
-        const key = receiptKey(operation);
-        const receipts = z
-          .array(z.string())
-          .parse((await snapshot.indexGet("receipts", key)) ?? []);
-        snapshot.indexSet("receipts", key, [...receipts, operation.id]);
-        for (const ref of operation.refs)
-          await snapshot.addPosting(
-            "history",
-            entityAddress(ref),
-            `${operation.at}/${operation.id}`,
-          );
-        for (const [offset, event] of operation.events.entries()) {
-          if (
-            event === null ||
-            typeof event !== "object" ||
-            Array.isArray(event) ||
-            event.kind !== "indexed"
-          )
-            continue;
-          const indexed = indexedEventSchema.parse(event);
-          const prior = await snapshot.indexGet(indexed.index, indexed.key);
-          if (prior !== undefined) {
-            const old = await snapshot.value(indexed.index, indexed.key);
+      if (this.formatVersion === 2) {
+        for (const stream of await directories(join(this.root, "history"))) {
+          z.uuid().parse(stream);
+          let end = 0;
+          for (const filename of (await jsonFiles(join(this.root, "history", stream))).sort()) {
+            const path = `history/${stream}/${filename}`;
+            const segment = await snapshot.journal.segment(path);
             invariant(
-              digest(old!) === digest(indexed.value),
+              segment.first > end,
               "STORAGE_INDEX_CONFLICT",
-              "После слияния обнаружены разные значения одной исторической записи",
+              "Пересекаются диапазоны сегментов истории",
               4,
             );
-          } else
-            snapshot.indexSet(indexed.index, indexed.key, { operationId: operation.id, offset });
-          for (const group of indexed.groups)
-            await snapshot.addPosting(group.index, group.key, group.member ?? indexed.key);
-          if (indexed.index === "reserved-key") await snapshot.indexNumber(indexed.key);
+            end = segment.first + segment.entries.length - 1;
+            snapshot.indexSet("file-hashes", path, digest(segment));
+            for (const [offset, entry] of segment.entries.entries()) {
+              await snapshot.journal.indexEntry(path, segment.first + offset, entry);
+              operations++;
+            }
+          }
         }
-        operations++;
-      }
+      } else
+        for (const filename of await jsonFiles(join(this.root, "operations"))) {
+          this.metrics.operationReads++;
+          const operation = operationSchema.parse(
+            await readJson(join(this.root, "operations", filename), RECORD_BYTES),
+          );
+          snapshot.indexSet("file-hashes", `operations/${filename}`, digest(operation));
+          invariant(
+            filename === `${operation.id}.json`,
+            "INVALID_DATA",
+            "Неверный ID журнала операции",
+            5,
+          );
+          const key = receiptKey(operation);
+          const receipts = z
+            .array(z.string())
+            .parse((await snapshot.indexGet("receipts", key)) ?? []);
+          snapshot.indexSet("receipts", key, [...receipts, operation.id]);
+          for (const ref of operation.refs)
+            await snapshot.addPosting(
+              "history",
+              entityAddress(ref),
+              `${operation.at}/${operation.id}`,
+            );
+          for (const [offset, event] of operation.events.entries()) {
+            if (
+              event === null ||
+              typeof event !== "object" ||
+              Array.isArray(event) ||
+              event.kind !== "indexed"
+            )
+              continue;
+            const indexed = indexedEventSchema.parse(event);
+            const prior = await snapshot.indexGet(indexed.index, indexed.key);
+            if (prior !== undefined) {
+              const old = await snapshot.value(indexed.index, indexed.key);
+              invariant(
+                digest(old!) === digest(indexed.value),
+                "STORAGE_INDEX_CONFLICT",
+                "После слияния обнаружены разные значения одной исторической записи",
+                4,
+              );
+            } else
+              snapshot.indexSet(indexed.index, indexed.key, { operationId: operation.id, offset });
+            for (const group of indexed.groups)
+              await snapshot.addPosting(group.index, group.key, group.member ?? indexed.key);
+            if (indexed.index === "reserved-key") await snapshot.indexNumber(indexed.key);
+          }
+          operations++;
+        }
       await snapshot.rebuildRelations();
       const version = randomUUID();
       const changes = await snapshot.prepare(version);
@@ -548,11 +554,102 @@ export class EntityStore {
     };
     return externalOwned ? rebuild(externalOwned) : this.locked(rebuild);
   }
+
+  /** Явный атомарный переход: технические снимки не переносятся в постоянную историю. */
+  async migrateHistory(owned: () => void) {
+    const manifest = storageManifestSchema.parse(await readJson(join(this.root, "storage.json")));
+    if (manifest.schemaVersion === 2)
+      return {
+        migrated: false,
+        format: "relay-entities",
+        schemaVersion: 2,
+        entities: 0,
+        operations: 0,
+      };
+    const state = await this.state();
+    const oldIndex = new StorageSession(this, state, false);
+    const expected = new Map(
+      (await oldIndex.indexEntries("file-hashes")).filter(([path]) =>
+        path.startsWith("operations/"),
+      ),
+    );
+    const sources = [];
+    const removedIndexes = new Set(["history", "receipts"]);
+    for (const filename of await jsonFiles(join(this.root, "operations"))) {
+      const path = `operations/${filename}`;
+      const operation = operationSchema.parse(await readJson(join(this.root, path), RECORD_BYTES));
+      invariant(
+        expected.get(path) === digest(operation),
+        "STORAGE_INDEX_STALE",
+        "Прежний журнал изменён вне Core. Выполните storage reindex перед переносом",
+        4,
+        { path },
+      );
+      invariant(
+        filename === `${operation.id}.json`,
+        "INVALID_DATA",
+        "Неверный ID прежней операции",
+        5,
+      );
+      for (const raw of operation.events) {
+        const event = indexedEventSchema.parse(raw);
+        removedIndexes.add(event.index);
+        for (const group of event.groups) removedIndexes.add(group.index);
+      }
+      sources.push({ path, operation });
+    }
+    invariant(
+      expected.size === sources.length,
+      "STORAGE_INDEX_CORRUPT",
+      "Потеряны записи прежней истории; восстановите файлы до переноса",
+      5,
+    );
+    invariant(
+      (await directories(join(this.root, "history"))).length === 0,
+      "STORAGE_MIGRATION_CONFLICT",
+      "В прежней базе уже есть неизвестные сегменты истории",
+      4,
+    );
+    this.formatVersion = 2;
+    const snapshot = new StorageSession(
+      this,
+      {
+        ...state,
+        roots: Object.fromEntries(
+          Object.entries(state.roots).filter(([name]) => !removedIndexes.has(name)),
+        ),
+      },
+      true,
+    );
+    await snapshot.prepareJournal(owned);
+    for (const source of sources.sort(
+      (a, b) =>
+        a.operation.at.localeCompare(b.operation.at) ||
+        a.operation.id.localeCompare(b.operation.id),
+    )) {
+      const { id: _id, schemaVersion: _version, changes: _changes, ...entry } = source.operation;
+      await snapshot.journal.append(entry);
+      await snapshot.writeFile(source.path, null);
+    }
+    await snapshot.writeFile("storage.json", jsonValue({ ...manifest, schemaVersion: 2 }));
+    const changes = await snapshot.prepare(randomUUID());
+    // Удалённые корни не должны вернуться из прежнего снимка.
+    await new StorageTransaction(this.root, this.probe).publish(changes, owned);
+    snapshot.index.published();
+    return {
+      migrated: true,
+      format: "relay-entities",
+      schemaVersion: 2,
+      entities: (await snapshot.indexEntries("records")).length,
+      operations: sources.length,
+    };
+  }
 }
 
 /** Рабочий пакет. Непубликуемые предметные записи доступны следующим явным шагам сценария. */
 export class StorageSession {
-  readonly operationId = randomUUID();
+  operationId = "";
+  readonly journal = new Journal(this);
   readonly index: HashIndex;
   readonly files = new Map<string, JsonValue | null>();
   readonly originals = new Map<string, JsonValue | null>();
@@ -569,6 +666,16 @@ export class StorageSession {
     this.index = new HashIndex(store.root);
   }
 
+  async prepareJournal(owned: () => void) {
+    invariant(
+      this.store.formatVersion === 2,
+      "STORAGE_MIGRATION_REQUIRED",
+      "Для записи выполните storage migrate",
+      4,
+    );
+    this.operationId = await this.journal.prepare(owned);
+  }
+
   get changed() {
     return (
       this.files.size > 0 ||
@@ -578,13 +685,15 @@ export class StorageSession {
     );
   }
 
-  /** Большие события и квитанции принадлежат операции; индекс содержит только указатель. */
+  /** Постоянные события и квитанции; исторические значения индексируются группами сегментов. */
   async appendValue(
     index: string,
     key: string,
     value: JsonValue,
     groups: { index: string; key: string; member?: string }[] = [],
   ): Promise<void> {
+    invariant(this.writable, "READ_ONLY_SNAPSHOT", "Снимок доступен только для чтения", 5);
+    if (this.store.formatVersion === 2) value = compactHistoryValue(index, value);
     const prior = await this.value(index, key);
     if (prior !== undefined) {
       invariant(
@@ -597,17 +706,26 @@ export class StorageSession {
     }
     const offset = this.events.length;
     this.events.push(indexedEventSchema.parse({ kind: "indexed", index, key, value, groups }));
-    this.indexSet(index, key, { operationId: this.operationId, offset });
-    for (const group of groups) await this.addPosting(group.index, group.key, group.member ?? key);
+    if (this.store.formatVersion === 1 || historyBucket(index, key) === undefined)
+      this.indexSet(index, key, { operationId: this.operationId, offset });
+    if (this.store.formatVersion === 1)
+      for (const group of groups)
+        await this.addPosting(group.index, group.key, group.member ?? key);
   }
 
   async value(index: string, key: string): Promise<JsonValue | undefined> {
+    for (const raw of this.events) {
+      const event = indexedEventSchema.parse(raw);
+      if (event.index === index && event.key === key) return structuredClone(event.value);
+    }
+    if (this.store.formatVersion === 2 && historyBucket(index, key) !== undefined)
+      return this.journal.value(index, key);
     const pointer = await this.indexGet(index, key);
     if (pointer === undefined) return undefined;
     const { operationId, offset } = eventPointerSchema.parse(pointer);
     const events =
-      operationId === this.operationId
-        ? this.events
+      this.store.formatVersion === 2
+        ? (await this.journal.operation(operationId)).events
         : (await this.store.operation(operationId)).events;
     const event = indexedEventSchema.parse(events[offset]);
     invariant(
@@ -722,7 +840,7 @@ export class StorageSession {
     invariant(this.writable, "READ_ONLY_SNAPSHOT", "Снимок доступен только для чтения", 5);
     const before = await this.readFile(path);
     if (digest(before) !== digest(value)) this.files.set(path, structuredClone(value));
-    if (/^(entities|relations|keyspaces|operations)\//.test(path))
+    if (/^(entities|relations|keyspaces|operations|history)\//.test(path))
       this.indexSet("file-hashes", path, value === null ? undefined : digest(value));
   }
   async get(ref: EntityRef): Promise<EntityRecord> {
@@ -983,6 +1101,13 @@ export class StorageSession {
 
   /** Короткие списки размещаются вместе в сегменте; длинные получают делимое дерево. */
   async postings(name: string, key: string): Promise<string[]> {
+    if (this.store.formatVersion === 2) {
+      const history = await this.journal.postings(name, key);
+      if (history !== undefined) return history;
+    }
+    return this.indexPostings(name, key);
+  }
+  async indexPostings(name: string, key: string): Promise<string[]> {
     const value = await this.indexGetParsed(name, key, postingValueSchema);
     if (value === undefined) return [];
     if (Array.isArray(value)) return value;

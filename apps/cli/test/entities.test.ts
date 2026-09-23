@@ -48,7 +48,19 @@ test("CLI движка: определения, ключи вместо ID, со
     await app.run<FullContext>(["graph", "context", created.key]),
   ).data;
   assert.equal(graphBefore.complete, true);
-  assert.equal(graphBefore.edges.length, 2);
+  assert.equal(graphBefore.edges.length, 4);
+  assert.ok(
+    graphBefore.edges.some(
+      (edge) =>
+        edge.type === "part-of" && edge.from.id === feature.ref.id && edge.to.kind === "product",
+    ),
+  );
+  assert.ok(
+    graphBefore.edges.some(
+      (edge) =>
+        edge.type === "part-of" && edge.from.kind === "product" && edge.to.kind === "project",
+    ),
+  );
   successful(
     await app.run([
       "graph",
@@ -103,4 +115,44 @@ test("CLI движка: определения, ключи вместо ID, со
   const contract = await invokeRaw(app.root, ["entities", "type", "task"]);
   assert.match(contract.stdout, /Ключи:/);
   assert.match(contract.stdout, /targets/);
+  const doc = successful(
+    await app.run<EntitySaved>([
+      "entities",
+      "create",
+      "document",
+      "--name",
+      "Правила",
+      "--body",
+      "## Правила\n\nПроверить поиск",
+      "--document-kind",
+      "rules",
+      "--relations",
+      JSON.stringify([{ type: "references", target: created.ref, description: "Прочитать" }]),
+      "--request-id",
+      "doc",
+    ]),
+  ).data;
+  const context = successful(await app.run<FullContext>(["graph", "context", created.key])).data;
+  assert.ok(context.edges.some((edge) => edge.type === "references" && edge.to.id === doc.ref.id));
+  const unlink = [
+    "entities",
+    "update",
+    doc.key,
+    "--relations",
+    "[]",
+    "--if-revision",
+    "1",
+    "--request-id",
+    "unlink-doc",
+  ];
+  const detached = successful(await app.run<EntitySaved>(unlink)).data;
+  assert.deepEqual(successful(await app.run<EntitySaved>(unlink)).data, detached);
+  assert.equal(
+    successful(await app.run<FullContext>(["graph", "context", doc.key])).data.edges.length,
+    0,
+  );
+  const humanContext = await invokeRaw(app.root, ["graph", "context", doc.key]);
+  assert.equal(humanContext.code, 0, humanContext.stderr);
+  assert.match(humanContext.stdout, /Правила/);
+  assert.doesNotMatch(humanContext.stdout, /"nodes":/);
 });

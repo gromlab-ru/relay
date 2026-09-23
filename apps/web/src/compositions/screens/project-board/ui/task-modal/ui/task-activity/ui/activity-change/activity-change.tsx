@@ -6,13 +6,22 @@ import type { ActivityChangeProps } from "./types/activity-change-props.type";
 import styles from "./styles/activity-change.module.css";
 
 /**
- * Сравнивает полные значения изменённого поля.
+ * Показывает предметное изменение поля или факт изменения длинного текста.
  *
  * Используется для:
- *  - чтения прежнего и нового содержания без обрезания Markdown
+ *  - сравнения значимых значений и чтения компактной истории
  */
 export const ActivityChange = (props: ActivityChangeProps) => {
   const { change, className, ...rootAttrs } = props;
+  if (change.contentOmitted === true)
+    return (
+      <div {...rootAttrs} className={clsx(styles.root, className)}>
+        <Text size="xs" c="dimmed" mb={4}>
+          {change.label}
+        </Text>
+        <Text size="sm">Содержимое изменено. Редакции текста в истории не сохраняются.</Text>
+      </div>
+    );
   const valuesData = [
     { label: "До", value: change.before },
     { label: "После", value: change.after },

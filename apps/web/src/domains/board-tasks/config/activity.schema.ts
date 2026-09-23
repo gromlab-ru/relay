@@ -22,6 +22,7 @@ export const ACTIVITY_CHANGE_SCHEMA = z.object({
   format: z.enum(["text", "markdown"]),
   before: z.string().nullable(),
   after: z.string().nullable(),
+  contentOmitted: z.literal(true).optional(),
 });
 /** Полное событие либо сообщение обсуждения. */
 export const ACTIVITY_EVENT_SCHEMA = ACTIVITY_SUMMARY_SCHEMA.extend({

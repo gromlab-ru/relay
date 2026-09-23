@@ -422,7 +422,7 @@ for (const stage of ["intent", "entity", "relation", "segment", "operation", "st
           ((stage === "entity" && path?.startsWith("entities/")) ||
             (stage === "relation" && path?.startsWith("relations/")) ||
             (stage === "segment" && path?.startsWith(".indexes/segments/")) ||
-            (stage === "operation" && path?.startsWith("operations/")) ||
+            (stage === "operation" && path?.startsWith("history/")) ||
             (stage === "state" && path === ".indexes/state.json")));
       if (matches) throw new Error("Имитированное прерывание");
     });

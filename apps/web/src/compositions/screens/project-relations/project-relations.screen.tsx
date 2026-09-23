@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ActionIcon,
   Alert,
@@ -17,7 +17,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { ArrowLeft, GitFork, Plus, RefreshCw, Search } from "lucide-react";
-import { useProjectId } from "domains/project";
+import { useProjectId, useProjectBasePath } from "domains/project";
 import { useEntitySummary } from "domains/entities";
 import { relationAddress, relationError, saveRelations, useRelations } from "domains/relations";
 import { EntityBrowser } from "./ui/entity-browser/entity-browser";
@@ -35,6 +35,7 @@ import styles from "./styles/project-relations.module.css";
  */
 export const ProjectRelationsScreen = () => {
   const projectId = useProjectId();
+  const base = useProjectBasePath();
   const screenRef = useRef<HTMLElement>(null);
   const [params, setParams] = useSearchParams();
   const root = params.get("root");
@@ -149,7 +150,9 @@ export const ProjectRelationsScreen = () => {
     setNotice("Связь добавлена.");
     handleRefresh();
   };
-  const createLabel = hasEditor ? "Продолжить добавление" : "Добавить связь";
+  const createLabel = hasEditor ? "Продолжить диагностику" : "Диагностическое ребро";
+  const visualizationHref = `${base}/relations/context?${new URLSearchParams({ root: selectedAddress ?? "" })}`;
+  const canVisualize = selectedNode !== undefined;
   return (
     <section ref={screenRef} className={styles.root}>
       <div className={styles.header}>
@@ -205,7 +208,7 @@ export const ProjectRelationsScreen = () => {
                 </Group>
                 <Group gap="sm">
                   <Plus size={16} aria-hidden="true" />
-                  <Text size="sm">Добавьте недостающую связь</Text>
+                  <Text size="sm">Проверьте сохранённые предметные отношения</Text>
                 </Group>
               </div>
             </div>
@@ -241,14 +244,26 @@ export const ProjectRelationsScreen = () => {
                     </Title>
                   </div>
                 </Group>
-                <Button
-                  leftSection={<Plus size={16} aria-hidden="true" />}
-                  disabled={!canEdit && !hasEditor}
-                  onClick={handleCreate}
-                  className={styles.create}
-                >
-                  {createLabel}
-                </Button>
+                <Group gap="xs" className={styles.create}>
+                  {canVisualize && (
+                    <Button
+                      component={Link}
+                      to={visualizationHref}
+                      variant="light"
+                      leftSection={<GitFork size={16} aria-hidden="true" />}
+                    >
+                      Смотреть визуализацию связей
+                    </Button>
+                  )}
+                  <Button
+                    leftSection={<Plus size={16} aria-hidden="true" />}
+                    disabled={!canEdit && !hasEditor}
+                    onClick={handleCreate}
+                    variant="default"
+                  >
+                    {createLabel}
+                  </Button>
+                </Group>
               </section>
               <div className={styles.viewBar}>
                 <SegmentedControl
@@ -329,7 +344,7 @@ export const ProjectRelationsScreen = () => {
         <Modal.Overlay />
         <Modal.Content>
           <Modal.Header role="presentation">
-            <Modal.Title>Добавить связь</Modal.Title>
+            <Modal.Title>Добавить диагностическое ребро</Modal.Title>
             <Modal.CloseButton aria-label="Свернуть форму связи" />
           </Modal.Header>
           <Modal.Body>

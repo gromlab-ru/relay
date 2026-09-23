@@ -37,8 +37,7 @@ export const RelationCard = ({
   const [isExpanded, setExpanded] = useState(false);
   const [isConfirming, setConfirming] = useState(false);
   const [isRemoving, setRemoving] = useState(false);
-  const canRemove = edge.source === "graph";
-  const sourceLabel = canRemove ? "Добавлена вручную" : "Из данных сущности";
+  const sourceLabel = "Сохранена в Core";
   const hasDescription = edge.description !== "";
   const hasNeighbor = neighbor !== undefined;
   const isIndirect = !hasNeighbor;
@@ -48,7 +47,7 @@ export const RelationCard = ({
   const address = relationAddress(neighbor?.ref ?? edge.to);
   const DetailsIcon = isExpanded ? ChevronUp : ChevronDown;
   const detailsLabel = `Подробности связи: ${keyLabel}`;
-  const shouldShowRemove = canRemove && !isConfirming;
+  const shouldShowRemove = !isConfirming;
   /**
    * Блокирует повтор и сохраняет подтверждение при ошибке записи.
    */
@@ -121,12 +120,10 @@ export const RelationCard = ({
           <Text size="xs" c="dimmed">
             {sourceLabel} · {edge.type} · {edge.createdBy} · ревизия {edge.revision}
           </Text>
-          {!canRemove && (
-            <Text size="xs" c="dimmed">
-              Это отношение задано в самой сущности. Чтобы исправить его, измените её состав или
-              зависимости.
-            </Text>
-          )}
+          <Text size="xs" c="dimmed">
+            Предметные связи изменяются в редакторе их владельца. Здесь можно отозвать отдельное
+            диагностическое ребро.
+          </Text>
           {isIndirect && (
             <Text size="xs" c="dimmed">
               Связь между другими сущностями окружения; не прямая связь выбранной записи.
@@ -140,12 +137,15 @@ export const RelationCard = ({
               onClick={() => setConfirming(true)}
               className={styles.remove}
             >
-              Удалить связь…
+              Отозвать диагностическое ребро…
             </Button>
           )}
           {isConfirming && (
             <Stack gap="xs">
-              <Text size="sm">Удалить только эту связь? Обе сущности сохранятся.</Text>
+              <Text size="sm">
+                Отозвать диагностическое ребро? Сущности сохранятся; предметный линк меняется в
+                своём редакторе.
+              </Text>
               <Group gap="xs">
                 <Button
                   size="xs"
@@ -153,7 +153,7 @@ export const RelationCard = ({
                   loading={isRemoving}
                   onClick={() => void handleRemove()}
                 >
-                  Удалить связь
+                  Отозвать ребро
                 </Button>
                 <Button
                   size="xs"

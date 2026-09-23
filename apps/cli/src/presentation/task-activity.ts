@@ -47,6 +47,8 @@ export function taskActivityText(
 /** Полные сообщения и сравнение полей: Markdown рендерится, обычный текст экранируется. */
 export function taskActivityEventText(event: TaskHistoryEvent, options: TextOptions): string {
   const values = event.changes.map((change) => {
+    if (change.contentOmitted)
+      return `${safeText(change.label)}\n\nСодержимое изменено. Редакции текста в истории не сохраняются.`;
     const render = (value: string | null) =>
       value === null
         ? "Отсутствует"

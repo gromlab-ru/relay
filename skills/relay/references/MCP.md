@@ -43,6 +43,10 @@ maxBytes — 128 МиБ; по умолчанию действует бюджет
 
 Продуктовые линки не создают рёбра при чтении. В едином формате штатные предметные
 операции отдельно сохраняют нужные связи Core; старые базы переносятся явно.
+Создание, изменение и снятие линков в едином формате уже включает согласование связей
+в той же операции. Пустой массив явно снимает линки, отсутствие поля сохраняет их.
+Для существующей единой базы после обновления предусмотрен локальный
+`storage reconcile-relations`; ручное дублирование рёбер из MCP не требуется.
 
 - `entity_product_create`, `entity_product_update` — паспорт продукта: name, summary, description.
 - `entity_feature_create`, `entity_feature_update` — фича: name, summary, description.
@@ -74,13 +78,13 @@ entity_context({project: "app", ref: "WEB-24", maxBytes: 1048576})
 
 ### Обсуждения и история
 
-| Инструмент             | Аргументы и назначение                                                                        |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `task_comment_publish` | reference, title, description (Markdown), actor, actorRole, requestId: опубликовать сообщение |
-| `task_comments_list`   | reference, limit?, cursor?, after?, actor?, action?: компактные сообщения                     |
-| `task_comment_get`     | reference, entryId: полный Markdown одного сообщения                                          |
-| `task_history_list`    | reference, limit?, cursor?, after?, actor?, action?: хронология изменений                     |
-| `task_history_get`     | reference, entryId: полные значения до/после события                                          |
+| Инструмент             | Аргументы и назначение                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `task_comment_publish` | reference, title, description (Markdown), actor, actorRole, requestId: опубликовать сообщение       |
+| `task_comments_list`   | reference, limit?, cursor?, after?, actor?, action?: компактные сообщения                           |
+| `task_comment_get`     | reference, entryId: полный Markdown одного сообщения                                                |
+| `task_history_list`    | reference, limit?, cursor?, after?, actor?, action?: хронология изменений                           |
+| `task_history_get`     | reference, entryId: предметные изменения; Markdown-правки отмечены contentOmitted, сообщения полные |
 
 Общие project/maxBytes сохраняются. Actor — собственное имя агента, actorRole —
 operator/orchestrator/worker. Web подписывается «Оператор». Публикация не требует

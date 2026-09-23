@@ -90,7 +90,10 @@ test(
         "cli-agent",
       );
       await stream.next((event) => event.type === "changed" && event.data.source === "storage");
-      assert.equal((await app.inject("/api/v1/graph")).json().data.totalEdges, 1);
+      assert.equal(
+        (await app.inject("/api/v1/graph")).json().data.totalEdges,
+        graph.totalEdges + 1,
+      );
     } finally {
       await stream.close();
     }

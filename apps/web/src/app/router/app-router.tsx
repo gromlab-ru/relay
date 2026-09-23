@@ -40,6 +40,14 @@ export const appRouter = createBrowserRouter([
             handle: breadcrumbHandle({ label: "Связи" }),
           },
           {
+            path: "relations/context",
+            lazy: () => import("compositions/screens/relation-context/lazy"),
+            handle: breadcrumbHandle(
+              { label: "Связи", path: "/relations" },
+              { label: "Контекст сущности" },
+            ),
+          },
+          {
             path: "product",
             handle: breadcrumbHandle({ label: "Продукт", path: "/product" }),
             lazy: () => import("compositions/layouts/product/lazy"),

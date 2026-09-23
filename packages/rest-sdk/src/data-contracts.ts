@@ -402,7 +402,7 @@ export interface TaskHistoryEvent {
   legacy: boolean;
   /** Названия изменённых полей без полных значений */
   fields: string[];
-  /** Полные изменения до и после */
+  /** Изменения полей; Markdown отмечается фактом изменения без копий текста */
   changes: {
     /** Постоянный адрес изменённого поля */
     field: string;
@@ -410,10 +410,12 @@ export interface TaskHistoryEvent {
     label: string;
     /** Обычный текст или Markdown */
     format: TaskHistoryEventFormatEnum;
-    /** Прежнее полное значение; null при добавлении */
+    /** Прежнее значение; null при добавлении или сокращённом содержании */
     before: string | null;
-    /** Новое полное значение; null при удалении */
+    /** Новое значение; null при удалении или сокращённом содержании */
     after: string | null;
+    /** Сохранён факт изменения текста; прежняя и новая редакции не записываются в историю */
+    contentOmitted?: true;
   }[];
   /** Полный Markdown опубликованного сообщения */
   description?: string;

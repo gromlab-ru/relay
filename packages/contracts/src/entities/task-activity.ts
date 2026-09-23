@@ -43,8 +43,18 @@ export const taskHistoryChangeSchema = z.strictObject({
   field: z.string().describe("Постоянный адрес изменённого поля"),
   label: z.string().describe("Русское название изменения"),
   format: z.enum(["text", "markdown"]).describe("Обычный текст или Markdown"),
-  before: z.string().nullable().describe("Прежнее полное значение; null при добавлении"),
-  after: z.string().nullable().describe("Новое полное значение; null при удалении"),
+  before: z
+    .string()
+    .nullable()
+    .describe("Прежнее значение; null при добавлении или сокращённом содержании"),
+  after: z
+    .string()
+    .nullable()
+    .describe("Новое значение; null при удалении или сокращённом содержании"),
+  contentOmitted: z
+    .literal(true)
+    .optional()
+    .describe("Сохранён факт изменения текста; прежняя и новая редакции не записываются в историю"),
 });
 export const taskHistorySummarySchema = z.strictObject({
   id: taskActivityIdSchema,
@@ -61,7 +71,9 @@ export const taskHistorySummarySchema = z.strictObject({
   fields: z.array(z.string()).describe("Названия изменённых полей без полных значений"),
 });
 export const taskHistoryEventSchema = taskHistorySummarySchema.extend({
-  changes: z.array(taskHistoryChangeSchema).describe("Полные изменения до и после"),
+  changes: z
+    .array(taskHistoryChangeSchema)
+    .describe("Изменения полей; Markdown отмечается фактом изменения без копий текста"),
   description: z.string().optional().describe("Полный Markdown опубликованного сообщения"),
 });
 export const taskActivityPageSchema = z.strictObject({

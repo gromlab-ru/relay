@@ -1,5 +1,26 @@
 # Журнал создания TSX
 
+## Визуализация контекста — 23 сентября 2026
+
+Из `apps/web` выполнены:
+
+```bash
+pnpm run create ui-unit relation-context src/compositions/screens
+pnpm run create ui-unit context-canvas src/compositions/screens/relation-context/ui
+pnpm run create ui-component context-inspector src/compositions/screens/relation-context/ui
+pnpm run create ui-component context-list src/compositions/screens/relation-context/ui
+pnpm run create ui-component context-explorer src/compositions/screens/relation-context/ui
+pnpm run create ui-component context-node src/compositions/screens/relation-context/ui/context-canvas/ui
+pnpm run create ui-component context-edge src/compositions/screens/relation-context/ui/context-canvas/ui
+pnpm run create ui-component context-ports-sync src/compositions/screens/relation-context/ui/context-canvas/ui
+```
+
+Экран переименован в `relation-context.screen.tsx`, оставлен только lazy-фасет.
+Canvas — вложенный юнит экрана, владеет раскладкой и камерой. Карточка и линия —
+внутренние компоненты Canvas; инспектор, список и координация — внутренняя реализация
+экрана. Компоненты не создают отношения, адаптер и согласованный снимок принадлежат
+`domains/relations`. [Досье и проверки](../../docs/work/context-visualization/README.md).
+
 ## Библиотека документов — 22 сентября 2026
 
 На первом этапе генератором созданы `document-relations`, его `relation-picker`,

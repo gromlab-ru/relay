@@ -34,4 +34,14 @@ test("CLI хранилища: явный перенос, читаемый пов
   assert.equal(context.complete, true);
   assert.equal(context.nodes.length, 2);
   assert.equal(context.edges.length, 1);
+  const command = ["--local", "storage", "reconcile-relations", "--request-id", "relations"];
+  const repaired = successful(
+    await invoke<{ added: number; updated: number; removed: number }>(root, command),
+  );
+  assert.deepEqual(repaired.data, { added: 0, updated: 0, removed: 0, requestId: "relations" });
+  const human = await invokeRaw(root, command);
+  assert.equal(human.code, 0, human.stderr);
+  assert.match(human.stdout, /Предметные связи согласованы/);
+  assert.match(human.stdout, /Добавлено: 0/);
+  assert.doesNotMatch(human.stdout, /"added"/);
 });

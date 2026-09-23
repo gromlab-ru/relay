@@ -3,6 +3,8 @@ import { StorageService } from "@relay/core/application/storage/service";
 import { AppError } from "@relay/core/shared/errors";
 import { commandGroup, registerCommand } from "../command.js";
 import type { Runtime } from "../context.js";
+import { author } from "../context.js";
+import { randomUUID } from "node:crypto";
 
 /** Явное обслуживание выбранной файловой базы, с собственным результатом для человека. */
 export function registerStorage(program: Command, runtime: Runtime): void {
@@ -21,9 +23,9 @@ export function registerStorage(program: Command, runtime: Runtime): void {
   });
   registerCommand(group, runtime, {
     name: "migrate",
-    description: "Перенести существующие сущности, связи, историю и квитанции в единый формат",
+    description: "Перенести базу в единый формат с компактной сегментированной историей",
     details:
-      "Перед переносом остановите старые версии клиентов. ID, ключи, Markdown, ревизии и сохранённые события переносятся; незавершённый WAL восстанавливается. Повтор завершённого переноса ничего не дублирует.",
+      "Перед переносом остановите старые версии клиентов. ID, ключи, текущие тексты, ревизии, комментарии и квитанции сохраняются. Полные технические снимки удаляются; для прежних изменений Markdown остаётся факт изменения. Журнал группируется в сегменты. Незавершённый WAL восстанавливается; повтор переноса не дублирует данные.",
     examples: [
       [
         "relay-cli --local --config .relay/config.json storage migrate",
@@ -42,7 +44,7 @@ export function registerStorage(program: Command, runtime: Runtime): void {
         data,
         text: data.migrated
           ? `Единое хранилище готово.\nПеренесено записей: ${data.entities}\nФормат: ${data.format}`
-          : "Проект уже использует единое хранилище. Перенос не требуется.",
+          : "Проект уже использует компактное единое хранилище. Перенос не требуется.",
       };
     },
   });
@@ -63,6 +65,36 @@ export function registerStorage(program: Command, runtime: Runtime): void {
       return {
         data,
         text: `Индексы единого хранилища восстановлены.\nДействующих связей: ${data.edges}\nСобытий связей: ${data.events}\nРевизия графа: ${data.revision}`,
+      };
+    },
+  });
+  registerCommand<{ requestId?: string }>(group, runtime, {
+    name: "reconcile-relations",
+    description: "Согласовать сохранённые связи Core с предметными линками существующих сущностей",
+    details:
+      "Явное обслуживание единого формата после обновления: добавляет недостающие и отзывает лишние связи предметных групп. Сохраняет ID неизменённых связей, независимые диагностические рёбра и ревизии сущностей. Все изменения публикуются одной транзакцией. После потери ответа повторите с тем же request-id.",
+    examples: [
+      [
+        "relay-cli --local --actor agent storage reconcile-relations --request-id relations-v1",
+        "Согласовать предметные связи проекта",
+      ],
+    ],
+    configure: (command) =>
+      command.option("--request-id <id>", "Ключ безопасного повтора; по умолчанию генерируется"),
+    run: async (context, input) => {
+      const workspace = context.backend.localWorkspace;
+      if (!workspace)
+        throw new AppError(
+          "LOCAL_REQUIRED",
+          "Для обслуживания укажите --local и проектный --config",
+        );
+      const data = await new StorageService(workspace).reconcileRelations(
+        { requestId: input.options.requestId ?? randomUUID() },
+        author(context),
+      );
+      return {
+        data,
+        text: `Предметные связи согласованы.\nДобавлено: ${data.added}\nОбновлено: ${data.updated}\nОтозвано: ${data.removed}\nКлюч повтора: ${data.requestId}`,
       };
     },
   });

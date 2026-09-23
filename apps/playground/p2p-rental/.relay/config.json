@@ -1,10 +1,12 @@
 {
   "version": 1,
   "mode": "local",
-  "projectId": "88481f85-4286-49c8-a4b0-02de1795ad4c",
+  "projectId": "rKtPfGYu",
   "storageDir": "tasks",
   "defaultStatus": "todo",
-  "readyStatuses": ["todo"],
+  "readyStatuses": [
+    "todo"
+  ],
   "statuses": {
     "todo": {
       "terminal": false,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, access } from "node:fs/promises";
 import { join } from "node:path";
 import { fixture, invoke, successful } from "./helpers/cli.js";
 import { paginate } from "../src/queries/pagination.js";
@@ -50,11 +50,12 @@ test("явный конфиг обеспечивает общее хранили
 
 test("пустое хранилище открывается после Git-клонирования без пустых каталогов", async (t) => {
   const app = await fixture(t);
-  await rm(join(app.root, ".relay/tasks"), { recursive: true });
+  await assert.rejects(access(join(app.root, ".relay/tasks")), { code: "ENOENT" });
   assert.deepEqual(
     successful(await app.run<{ items: unknown[] }>(["task", "list"])).data.items,
     [],
   );
   await app.create("Первая задача после клонирования");
   successful(await app.run(["validate"]));
+  await assert.rejects(access(join(app.root, ".relay/tasks")), { code: "ENOENT" });
 });

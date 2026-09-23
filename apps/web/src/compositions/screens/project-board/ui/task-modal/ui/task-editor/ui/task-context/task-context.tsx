@@ -19,10 +19,11 @@ import {
   useProductEntities,
   useProductEntity,
   useProductTargetSearch,
-  useProductContext,
   getProductTargetOptions,
   ProductKey,
 } from "domains/product";
+import { useEntityContext, relationAddress } from "domains/relations";
+import { useEntityContent, entityKindLabel } from "domains/entities";
 import { useDebouncedValue } from "@mantine/hooks";
 import { BoardTaskError, updateBoardTask, useBoardTaskRefresh } from "domains/board-tasks";
 import { MarkdownView } from "ui/markdown-view";
@@ -44,6 +45,7 @@ export const TaskContext = (props: TaskContextProps) => {
   const [search, setSearch] = useState("");
   const [isContextOpen, setContextOpen] = useState(false);
   const [visibleLinks, setVisibleLinks] = useState(5);
+  const [visibleContext, setVisibleContext] = useState(30);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -78,7 +80,13 @@ export const TaskContext = (props: TaskContextProps) => {
         }
       : null,
   );
-  const context = useProductContext(projectId, isContextOpen ? selectedId : null);
+  const context = useEntityContext(projectId, isContextOpen ? selectedId : null);
+  const canReadContent =
+    isContextOpen &&
+    selectedId !== null &&
+    documentId !== null &&
+    context.data?.nodes.some((node) => relationAddress(node.ref) === documentId) === true;
+  const content = useEntityContent(projectId, canReadContent ? documentId : null);
   const details = useProductEntity(projectId, selectedId);
   const refresh = useBoardTaskRefresh(projectId);
   const form = useForm({
@@ -135,40 +143,16 @@ export const TaskContext = (props: TaskContextProps) => {
                 : detailFields.description,
         };
   const entryItems =
-    context.data?.records.flatMap(({ record, reasons }) => {
-      const fields = record.fields;
-      const labels: Record<string, string> = {
-        product: "продукт",
-        feature: "фичу",
-        scenario: "сценарий",
-        application: "приложение",
-        implementation: "реализацию",
-      };
-      const explanation = reasons
-        .map((reason) => {
-          const kind = /^Связь: ([a-z]+)/.exec(reason)?.[1];
-          return kind === undefined ? reason : `Через ${labels[kind] ?? kind}`;
-        })
-        .join(" · ");
-      if (fields.kind === "scope")
-        return fields.contracts
-          .filter((contract) => contract.id === selectedId)
-          .map((contract) => ({
-            id: contract.id,
-            title: contract.title,
-            text: contract.description,
-            explanation,
-          }));
-      return [
-        {
-          id: record.id,
-          title: fields.name,
-          text: fields.kind === "document" ? fields.body : fields.description,
-          explanation,
-        },
-      ];
-    }) ?? [];
-  const current = entryItems.find((entry) => entry.id === documentId);
+    context.data?.nodes.map((node) => ({
+      id: relationAddress(node.ref),
+      title: node.title,
+      explanation: `${node.key} · ${entityKindLabel(node.ref.kind)}`,
+    })) ?? [];
+  const visibleEntries = entryItems.slice(0, visibleContext);
+  const hasMoreContext = entryItems.length > visibleContext;
+  const hasContext = context.data !== undefined;
+  const hasContentError = content.error !== undefined;
+  const current = canReadContent ? content.data : undefined;
   const hasCurrent = current !== undefined;
   const hasSelection = selectedId !== null;
   const shouldShowMaterials = hasSelection && !isChoosing;
@@ -183,7 +167,6 @@ export const TaskContext = (props: TaskContextProps) => {
     !product.isValidating &&
     product.error === undefined;
   const hasError = error !== "";
-  const hasStale = context.data?.readiness.some((item) => item.stale > 0) === true;
   const isBusy = form.submitting || isRemoving;
   const handleSave = async (
     links: typeof task.productLinks,
@@ -284,6 +267,7 @@ export const TaskContext = (props: TaskContextProps) => {
               onClick={() => {
                 setSelectedId(item.id);
                 setDocumentId(null);
+                setVisibleContext(30);
               }}
             >
               <Text size="xs" c="dimmed">
@@ -372,6 +356,7 @@ export const TaskContext = (props: TaskContextProps) => {
                       onClick={() => {
                         setSelectedId(item.id);
                         setDocumentId(null);
+                        setVisibleContext(30);
                       }}
                     >
                       <Text size="sm" fw={600}>
@@ -496,15 +481,10 @@ export const TaskContext = (props: TaskContextProps) => {
           {context.isLoading && <Text role="status">Загружаем требования…</Text>}
           {context.error !== undefined && (
             <Alert color="red">
-              Не удалось прочитать контекст.{" "}
+              {context.error.message}{" "}
               <Button variant="subtle" onClick={() => void context.mutate().catch(() => undefined)}>
                 Повторить
               </Button>
-            </Alert>
-          )}
-          {hasStale && (
-            <Alert color="orange" mb="sm">
-              Требования изменились: есть устаревшие подтверждения реализации.
             </Alert>
           )}
           {selected !== undefined && (
@@ -515,11 +495,17 @@ export const TaskContext = (props: TaskContextProps) => {
           )}
           {!isContextOpen && (
             <Button variant="subtle" size="sm" mt="sm" onClick={() => setContextOpen(true)}>
-              Показать связанные требования и документы
+              Показать полный контекст
             </Button>
           )}
           <Stack gap="xs" mt="md">
-            {entryItems.map((entry) => (
+            {hasContext && (
+              <Text size="xs" c="dimmed">
+                Контекст загружен полностью. Сущностей: {entryItems.length}; связей:{" "}
+                {context.data?.edges.length}. Показано сущностей: {visibleEntries.length}.
+              </Text>
+            )}
+            {visibleEntries.map((entry) => (
               <UnstyledButton
                 key={entry.id}
                 className={styles.option}
@@ -537,6 +523,22 @@ export const TaskContext = (props: TaskContextProps) => {
               </UnstyledButton>
             ))}
           </Stack>
+          {hasMoreContext && (
+            <Button variant="subtle" onClick={() => setVisibleContext(visibleContext + 30)}>
+              Показать ещё сущности
+            </Button>
+          )}
+          {content.isLoading && (
+            <Text role="status">Загружаем полный текст выбранной сущности…</Text>
+          )}
+          {hasContentError && (
+            <Alert color="red" mt="sm">
+              {content.error?.message}
+              <Button variant="subtle" onClick={() => void content.mutate()}>
+                Повторить
+              </Button>
+            </Alert>
+          )}
           {hasCurrent && (
             <Stack gap="md" mt="md">
               <Button
@@ -547,7 +549,7 @@ export const TaskContext = (props: TaskContextProps) => {
                 Свернуть материал
               </Button>
               <Text fw={600}>{current.title}</Text>
-              <MarkdownView text={current.text} emptyText="Описание не заполнено." />
+              <MarkdownView text={current.markdown} emptyText="У сущности нет полного описания." />
             </Stack>
           )}
         </section>

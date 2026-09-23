@@ -6,7 +6,9 @@ import { entitySummarySchema } from "./entities.js";
 /** Переносимые схемы нового дискового формата; не DTO предметных операций. */
 export const storageManifestSchema = z.strictObject({
   format: z.literal("relay-entities").describe("Маркер единого ID-хранилища"),
-  schemaVersion: z.literal(1).describe("Версия физического формата"),
+  schemaVersion: z
+    .union([z.literal(1), z.literal(2)])
+    .describe("Версия физического формата: 2 — сегментированная история"),
   productId: z
     .string()
     .optional()

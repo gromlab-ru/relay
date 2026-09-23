@@ -1,5 +1,5 @@
 import type { Workspace } from "../../storage/workspace.js";
-import type { ProductRecord } from "../../domain/product.js";
+import type { ProductRecord, ProductContract } from "../../domain/product.js";
 import type { ProductImplementation } from "../../domain/product-implementation.js";
 import type { BoardTaskRecord } from "../../domain/board-task.js";
 import type { Board } from "../../domain/board.js";
@@ -7,6 +7,28 @@ import { ProductRepository } from "../../storage/product.js";
 import { BoardRepository } from "../../storage/boards.js";
 import { replaceOwnedRelations } from "../../storage/entity-store/relations.js";
 import type { DesiredRelation } from "../../storage/entity-store/relations.js";
+import { invariant } from "../../shared/errors.js";
+
+/** Сохраняет обязательную принадлежность единственного продукта проекту, включая пустой паспорт. */
+export async function syncProductRootRelations(workspace: Workspace, actor: string): Promise<void> {
+  const tx = workspace.storageSession;
+  if (!tx) return;
+  const owner = { kind: "product", id: "passport" };
+  await replaceOwnedRelations(
+    tx,
+    owner,
+    "product-links",
+    [
+      {
+        type: "part-of",
+        from: owner,
+        to: { kind: "project", id: workspace.config.projectId ?? "project" },
+        description: "",
+      },
+    ],
+    actor,
+  );
+}
 
 export async function syncTaskRelations(
   workspace: Workspace,
@@ -78,9 +100,29 @@ export async function syncImplementationRelations(
   workspace: Workspace,
   record: ProductImplementation,
   actor?: string,
+  contracts?: readonly ProductContract[],
 ) {
   if (!workspace.storageSession) return;
   const owner = { kind: "implementation", id: record.id };
+  let parentId: string | undefined;
+  if (record.fields.scenarioId !== null) {
+    const scope =
+      contracts ??
+      (await new ProductRepository(workspace).all()).flatMap((entry) =>
+        entry.fields.kind === "scope" && entry.fields.applicationId === record.fields.applicationId
+          ? entry.fields.contracts
+          : [],
+      );
+    parentId = scope.find(
+      (entry) => entry.featureId === record.fields.featureId && entry.scenarioId === null,
+    )?.id;
+    invariant(
+      parentId || !record.fields.active,
+      "INVALID_REFERENCE",
+      "У активной сценарной реализации отсутствует реализация фичи",
+      4,
+    );
+  }
   await replaceOwnedRelations(
     workspace.storageSession,
     owner,
@@ -100,6 +142,16 @@ export async function syncImplementationRelations(
           : { kind: "feature", id: record.fields.featureId },
         description: "",
       },
+      ...(parentId
+        ? [
+            {
+              type: "part-of",
+              from: owner,
+              to: { kind: "implementation", id: parentId },
+              description: "",
+            },
+          ]
+        : []),
     ],
     actor ?? record.updatedBy,
   );
@@ -113,7 +165,18 @@ export async function syncProductRelations(
   const tx = workspace.storageSession;
   if (!tx) return;
   const fields = record.fields;
-  if (fields.kind === "scenario") {
+  if (fields.kind === "passport" || fields.kind === "feature")
+    await syncProductRootRelations(workspace, actor ?? record.updatedBy);
+  if (fields.kind === "feature") {
+    const owner = { kind: "feature", id: record.id };
+    await replaceOwnedRelations(
+      tx,
+      owner,
+      "feature-links",
+      [{ type: "part-of", from: owner, to: { kind: "product", id: "passport" }, description: "" }],
+      actor ?? record.updatedBy,
+    );
+  } else if (fields.kind === "scenario") {
     const owner = { kind: "scenario", id: record.id };
     await replaceOwnedRelations(
       tx,
@@ -162,6 +225,7 @@ export async function syncProductRelations(
           contract.scenarioId !== null,
         ),
         actor,
+        fields.contracts,
       );
   } else if (fields.kind === "application") {
     await syncBoardRelations(
@@ -172,5 +236,4 @@ export async function syncProductRelations(
       actor,
     );
   }
-  // Проектная изоляция productId не является продуктовым линком: фиктивные рёбра к проекту не добавляются.
 }

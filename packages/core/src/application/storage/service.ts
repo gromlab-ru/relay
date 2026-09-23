@@ -1,5 +1,5 @@
 import { dirname, join, relative } from "node:path";
-import { readdir } from "node:fs/promises";
+import { readdir, rmdir, unlink } from "node:fs/promises";
 import type { Workspace } from "../../storage/workspace.js";
 import { ProductRepository } from "../../storage/product.js";
 import { BoardRepository } from "../../storage/boards.js";
@@ -19,17 +19,115 @@ import { writeOwnedRelations, appendGraphEvent } from "../../storage/entity-stor
 import {
   syncBoardRelations,
   syncProductRelations,
+  syncProductRootRelations,
   syncTaskRelations,
 } from "../entities/owned-relations.js";
 import { refreshEntityCards } from "../entities/storage-projection.js";
-import { invariant } from "../../shared/errors.js";
+import { invariant, isErrno } from "../../shared/errors.js";
 import { GraphService } from "../graph/service.js";
 import { atomicJson } from "../../storage/files.js";
 import { digest } from "../../storage/entity-store/format.js";
+import { actorSchema, requestIdSchema } from "@relay/contracts/primitives";
+import { validateProduct } from "../product/model.js";
 
 /** Только явное обслуживание меняет физический формат существующего проекта. */
 export class StorageService {
   constructor(readonly workspace: Workspace) {}
+
+  /** Новый проект сразу публикуется в актуальном формате, без промежуточных каталогов. */
+  async initialize() {
+    const workspace = this.workspace;
+    await workspace.withEntityStorage(async (store, owned) => {
+      invariant(
+        !(await exists(workspace.configPath)) && !(await exists(join(store.root, "storage.json"))),
+        "ALREADY_INITIALIZED",
+        "Конфигурация уже существует",
+        4,
+      );
+      workspace.storageProductId = workspace.config.projectId!;
+      await store.transaction(
+        owned,
+        (tx) =>
+          workspace.inStorageSession(tx, owned, async () => {
+            const { projectSettings: _settings, ...config } = workspace.config;
+            await tx.writeFile(relative(store.root, workspace.configPath), unified.json(config));
+            await unified.saveSettings(workspace, workspace.config.projectSettings!, true);
+            const at = new Date().toISOString();
+            await tx.importRecord({
+              schemaVersion: 1,
+              dataVersion: 1,
+              kind: "product",
+              id: "passport",
+              revision: 0,
+              key: "PRODUCT",
+              aliases: [],
+              data: { name: "", summary: "", description: "" },
+              createdAt: at,
+              updatedAt: at,
+              createdBy: "relay",
+              updatedBy: "relay",
+            });
+            await new BoardRepository(workspace).initialize(owned);
+            for (const [kind, prefix] of [
+              ["feature", "FEATURE"],
+              ["scenario", "SCENARIO"],
+              ["document", "DOC"],
+            ] as const)
+              await tx.saveKeySpace({
+                schemaVersion: 1,
+                id: `global-${kind}`,
+                entityKind: kind,
+                owner: { kind: "project", id: workspace.config.projectId! },
+                prefix,
+                format: "{prefix}-{number}",
+              });
+            await syncProductRootRelations(workspace, "relay");
+            await refreshEntityCards(workspace, owned);
+            await tx.writeFile("storage.json", {
+              format: "relay-entities",
+              schemaVersion: 2,
+              productId: workspace.storageProductId!,
+            });
+          }),
+        true,
+      );
+    }, true);
+  }
+
+  /** Явно согласует предметные группы, сохраняя независимые рёбра и ревизии сущностей. */
+  async reconcileRelations(input: { requestId: string }, actor: string) {
+    const requestId = requestIdSchema.parse(input.requestId);
+    const author = actorSchema.parse(actor);
+    return this.workspace.mutate("reconcile-relations", { requestId }, author, async (owned) => {
+      invariant(
+        this.workspace.storageSession,
+        "STORAGE_MIGRATION_REQUIRED",
+        "Для согласования предметных связей сначала выполните relay-cli --local storage migrate",
+        4,
+      );
+      const products = await new ProductRepository(this.workspace).all();
+      validateProduct(products);
+      const boards = await new BoardRepository(this.workspace).all();
+      const tasks = await new BoardTaskRepository(this.workspace).all();
+      const graph = new GraphRepository(this.workspace);
+      const before = (await graph.open(owned)).index.entries;
+      await syncProductRootRelations(this.workspace, author);
+      await syncBoardRelations(this.workspace, boards, author);
+      for (const record of products) await syncProductRelations(this.workspace, record, author);
+      await syncTaskRelations(this.workspace, tasks, author);
+      const after = (await graph.open(owned)).index.entries;
+      let added = 0,
+        updated = 0,
+        removed = 0;
+      for (const [id, edge] of after) {
+        const previous = before.get(id);
+        if (edge.active && !previous?.active) added++;
+        else if (!edge.active && previous?.active) removed++;
+        else if (edge.active && previous && edge.revision !== previous.revision) updated++;
+      }
+      return { added, updated, removed, requestId };
+    });
+  }
 
   async reindex() {
     invariant(
@@ -45,7 +143,7 @@ export class StorageService {
   async checkExternalChanges(paths: readonly string[]): Promise<void> {
     const selected = [...new Set(paths)].filter(
       (path) =>
-        /^(entities|relations|keyspaces|operations)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.json$/.test(
+        /^(entities|relations|keyspaces|operations|history)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.json$/.test(
           path,
         ) && !path.split("/").some((part) => part === "." || part === ".." || part === ".indexes"),
     );
@@ -83,7 +181,14 @@ export class StorageService {
   }
 
   async migrate() {
-    return this.workspace.locked(async (owned) => {
+    if (await this.workspace.hasUnifiedStorage()) {
+      return this.workspace.withEntityStorage(async (store, owned) => {
+        const result = await store.migrateHistory(owned);
+        await cleanupLegacyDirectories(dirname(this.workspace.configPath));
+        return result;
+      });
+    }
+    const result = await this.workspace.locked(async (owned) => {
       if (this.workspace.storageSession)
         return { migrated: false, format: "relay-entities", entities: 0 };
       const workspace = this.workspace,
@@ -237,6 +342,7 @@ export class StorageService {
                     format: "{prefix}-{number}",
                   });
                 // Это явный этап импорта продуктовых линков. Уже сохранённые ID прикреплений не заменяются.
+                await syncProductRootRelations(workspace, "relay");
                 await syncBoardRelations(workspace, boards, "relay");
                 for (const record of productSource.records)
                   await syncProductRelations(workspace, record, "relay");
@@ -247,7 +353,7 @@ export class StorageService {
                 await tx.writeFile(relative(root, workspace.configPath), unified.json(config));
                 await tx.writeFile("storage.json", {
                   format: "relay-entities",
-                  schemaVersion: 1,
+                  schemaVersion: 2,
                   productId: products.productId,
                 });
               }),
@@ -267,7 +373,25 @@ export class StorageService {
           (productSource.records.some((record) => record.fields.kind === "passport") ? 0 : 1),
       };
     });
+    await cleanupLegacyDirectories(dirname(this.workspace.configPath));
+    return result;
   }
+}
+
+/** Удаляются только известный производный кеш и пустые прежние каталоги. */
+async function cleanupLegacyDirectories(root: string) {
+  await unlink(join(root, "product/.indexes/catalog.json")).catch((error: unknown) => {
+    if (!isErrno(error, "ENOENT")) throw error;
+  });
+  const prune = async (path: string): Promise<void> => {
+    if (!(await exists(path))) return;
+    for (const entry of await readdir(path, { withFileTypes: true }))
+      if (entry.isDirectory()) await prune(join(path, entry.name));
+    await rmdir(path).catch((error: unknown) => {
+      if (!isErrno(error, "ENOTEMPTY") && !isErrno(error, "ENOENT")) throw error;
+    });
+  };
+  for (const name of ["boards", "tasks", "product", "operations"]) await prune(join(root, name));
 }
 
 async function jsonTree(root: string): Promise<string[]> {

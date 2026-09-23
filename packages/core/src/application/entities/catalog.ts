@@ -20,6 +20,7 @@ import { resolveAddress } from "./resolver.js";
 import { EntityDeletionRepository } from "../../storage/entity-deletion.js";
 import { defaultDocumentSections } from "@relay/contracts/entities";
 import { storedProjectSettingsSchema } from "../../domain/project-settings.js";
+import { relative } from "node:path";
 
 export type EntityEvent = { revision: number; actor: string; at: string; action: string };
 export type EntityEntry = Omit<EntityDetail, "references"> & {
@@ -87,7 +88,15 @@ export async function readEntityCatalog(
   workspace: Workspace,
   owned: () => void,
 ): Promise<EntityCatalog> {
-  const config = parse(configSchema, await readJson(workspace.configPath), "конфигурация проекта");
+  const config = parse(
+    configSchema,
+    workspace.storageSession
+      ? await workspace.storageSession.readFile(
+          relative(workspace.storageSession.store.root, workspace.configPath),
+        )
+      : await readJson(workspace.configPath),
+    "конфигурация проекта",
+  );
   if (workspace.storageSession)
     config.projectSettings = storedProjectSettingsSchema.parse(
       await workspace.storageSession.indexGet("configuration", "project"),

@@ -43,8 +43,8 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
   assert.ok(
     context.json().data.nodes.some((entry: { key: string }) => entry.key === "TASK-WEB-23"),
   );
-  assert.equal(context.json().data.totalNodes, 3);
-  assert.equal(context.json().data.totalEdges, 2);
+  assert.equal(context.json().data.totalNodes, 5);
+  assert.equal(context.json().data.totalEdges, 4);
   assert.ok(
     context
       .json()
@@ -56,7 +56,7 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
   const full = await app.inject(`/api/v1/graph/context?root=${task.key}`);
   assert.equal(full.statusCode, 200, full.body);
   assert.equal(full.json().data.complete, true);
-  assert.equal(full.json().data.edges.length, 2);
+  assert.equal(full.json().data.edges.length, 4);
   const linked = await app.inject({
     method: "POST",
     url: "/api/v1/graph",
@@ -85,4 +85,97 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
   );
   assert.equal((await backend.entities.types()).total, 9);
   assert.equal((await backend.graph.context({ root: task.key })).complete, true);
+});
+
+test("HTTP предметных операций: product, entities и канбан сохраняют граф без второго клиентского запроса", async (t) => {
+  const { app } = await fixture(t);
+  await app.listen(0, "127.0.0.1");
+  const backend = await createHttpBackend(await app.getUrl());
+  const feature = await backend.product.mutate(
+    {
+      action: "create",
+      requestId: "f-http",
+      fields: { kind: "feature", name: "Поиск", summary: "", description: "Требования поиска" },
+    },
+    "agent",
+  );
+  const scenario = await backend.entities.create(
+    {
+      requestId: "s-http",
+      data: {
+        kind: "scenario",
+        featureId: feature.id,
+        name: "Найти товар",
+        description: "Поведение",
+      },
+    },
+    "agent",
+  );
+  const task = await backend.boardTasks.create(
+    {
+      board: "product",
+      requestId: "t-http",
+      title: "Реализовать",
+      productLinks: [{ kind: "scenario", id: scenario.ref.id }],
+    },
+    "agent",
+  );
+  const document = await backend.entities.create(
+    {
+      requestId: "d-http",
+      data: {
+        kind: "document",
+        name: "Правила",
+        summary: "",
+        body: "## Проверка\n",
+        documentKind: "rules",
+        relations: [
+          { type: "references", target: { kind: "task", id: task.id }, description: "Прочитать" },
+        ],
+      },
+    },
+    "agent",
+  );
+  const context = await backend.graph.context({ root: feature.id });
+  assert.equal(context.complete, true);
+  assert.ok(
+    context.edges.some(
+      (edge) =>
+        edge.type === "part-of" && edge.from.id === feature.id && edge.to.kind === "product",
+    ),
+  );
+  assert.ok(
+    context.edges.some(
+      (edge) =>
+        edge.type === "part-of" && edge.from.kind === "product" && edge.to.kind === "project",
+    ),
+  );
+  for (const id of [feature.id, scenario.ref.id, task.id, document.ref.id])
+    assert.ok(context.nodes.some((node) => node.ref.id === id));
+  const savedLink = context.edges.find((edge) => edge.to.id === document.ref.id)!;
+  const denied = await app.inject({
+    method: "POST",
+    url: "/api/v1/graph",
+    payload: {
+      ifVersion: context.version,
+      requestId: "direct-unlink",
+      operations: [{ action: "remove", id: savedLink.id }],
+    },
+  });
+  assert.equal(denied.statusCode, 409, denied.body);
+  assert.equal(denied.json().error.code, "RELATION_MANAGED");
+  const update = {
+    ref: document.key,
+    requestId: "detach-http",
+    ifRevision: document.revision,
+    changes: { kind: "document" as const, relations: [] },
+  };
+  const detached = await backend.entities.update(update, "agent");
+  assert.deepEqual(await backend.entities.update(update, "agent"), detached);
+  assert.equal((await backend.graph.context({ root: document.key })).edges.length, 0);
+  const clearTask = { requestId: "clear-http", ifRevision: task.revision, productLinks: [] };
+  await backend.boardTasks.update(task.key, clearTask, "agent");
+  const remaining = await backend.graph.context({ root: feature.id });
+  assert.ok(!remaining.nodes.some((node) => node.ref.id === task.id));
+  assert.equal((await backend.entities.get({ ref: document.key })).revision, detached.revision);
 });

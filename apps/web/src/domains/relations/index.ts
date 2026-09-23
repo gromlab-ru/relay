@@ -1,6 +1,19 @@
-export { useRelations } from "./hooks/use-relations.hook";
+export { useRelations, useEntityContext } from "./hooks/use-relations.hook";
+export { getRelationLabel, RELATION_LABELS } from "./helpers/get-relation-label";
+export { useRelationDiagram } from "./hooks/use-relation-diagram.hook";
+export {
+  RELATION_DIAGRAM_MAX_PAGES,
+  RELATION_DIAGRAM_PAGE_SIZE,
+} from "./config/relation-diagram.config";
+export type {
+  RelationDiagram,
+  RelationDiagramFilter,
+  RelationDiagramRegion,
+  RelationDiagramRequest,
+} from "./types/relation-diagram.type";
 export {
   getRelations,
+  getEntityContext,
   saveRelations,
   relationAddress,
   relationError,
@@ -12,4 +25,5 @@ export type {
   RelationsPage,
   RelationsQuery,
   RelationOperation,
+  EntityContext,
 } from "./types/relations.type";

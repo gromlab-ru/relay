@@ -35,7 +35,7 @@ test("CLI графа: контекстный документ, путь, без�
     ]),
   ).data;
   const initial = successful(await app.run<GraphPage>(["graph", "list"])).data;
-  assert.equal(initial.totalEdges, 1);
+  assert.equal(initial.totalEdges, 2);
   const link = [
     "graph",
     "link",

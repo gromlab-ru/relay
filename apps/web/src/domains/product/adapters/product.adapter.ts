@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getProjectApi, ApiError } from "infra/tasks-api";
-import { PRODUCT_STATE_SCHEMA, PRODUCT_CONTEXT_SCHEMA } from "../config/product.schema";
+import { PRODUCT_STATE_SCHEMA } from "../config/product.schema";
 import type { ProductCommand, ProductState } from "../types/product.type";
 
 /**
@@ -9,12 +9,6 @@ import type { ProductCommand, ProductState } from "../types/product.type";
 export const getProduct = async (projectId: string): Promise<ProductState> => {
   const response = await getProjectApi(projectId).product.getProductState();
   return PRODUCT_STATE_SCHEMA.parse(response.data);
-};
-
-/** Читает общие требования, реализации и документы выбранной области. */
-export const getProductContext = async (projectId: string, id: string) => {
-  const response = await getProjectApi(projectId).product.getProductContext({ id });
-  return PRODUCT_CONTEXT_SCHEMA.parse(response.data);
 };
 
 /**

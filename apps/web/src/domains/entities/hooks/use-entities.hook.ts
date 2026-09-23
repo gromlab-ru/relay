@@ -3,7 +3,13 @@ import useSWR, { useSWRConfig } from "swr";
 import type { SWRResponse } from "swr";
 import type { EntitiesQuery, EntitiesPage, EntitySummary } from "@relay/contracts/entities";
 import { subscribeWorkspace } from "infra/workspace-events";
-import { getEntities, getEntitySummary, EntityAccessError } from "../adapters/entities.adapter";
+import {
+  getEntities,
+  getEntitySummary,
+  getEntityContent,
+  EntityAccessError,
+} from "../adapters/entities.adapter";
+import type { EntityContent } from "../types/entity-content.type";
 
 /**
  * Перечитывает проекции каскада во всех доменах только выбранного проекта.
@@ -50,6 +56,24 @@ export const useEntitySummary = (
   const response = useSWR<EntitySummary, Error>(
     ref === null ? null : ["entity-summary", projectId, ref],
     () => getEntitySummary(projectId, ref ?? ""),
+    { shouldRetryOnError: false },
+  );
+  useEntityRefresh(projectId, response.mutate);
+  if (response.error !== undefined && !(response.error instanceof EntityAccessError))
+    throw response.error;
+  return response;
+};
+
+/**
+ * Загружает полный текст только выбранного узла и обновляет его по событиям проекта.
+ */
+export const useEntityContent = (
+  projectId: string,
+  ref: string | null,
+): SWRResponse<EntityContent, Error> => {
+  const response = useSWR<EntityContent, Error>(
+    ref === null ? null : ["entity-content", projectId, ref],
+    () => getEntityContent(projectId, ref ?? ""),
     { shouldRetryOnError: false },
   );
   useEntityRefresh(projectId, response.mutate);

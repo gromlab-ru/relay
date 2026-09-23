@@ -44,6 +44,7 @@ import {
 import { refreshEntityCards } from "../entities/storage-projection.js";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import { z } from "zod";
 
 const versions = new Map<string, string>();
 const contextReaders = new Map<string, FullContextReader>();
@@ -365,6 +366,16 @@ export class GraphService {
           const existing =
             records.get(operation.id) ?? (await this.repository.get(operation.id, store));
           invariant(existing?.active, "NOT_FOUND", "Сохранённая активная связь не найдена", 3);
+          if (this.workspace.storageSession) {
+            const binding = await this.workspace.storageSession.indexGet("edges", operation.id);
+            invariant(
+              binding === undefined ||
+                z.object({ slot: z.string() }).parse(binding).slot === "diagnostic",
+              "RELATION_MANAGED",
+              "Связь принадлежит предметному сценарию. Измените линк у документа, задачи или реализации; для восстановления выполните storage reconcile-relations.",
+              4,
+            );
+          }
           previousEdge = existing.edge;
           record = {
             active: operation.action !== "remove",

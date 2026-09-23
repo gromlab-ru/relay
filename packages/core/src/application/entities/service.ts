@@ -242,6 +242,9 @@ export class EntityEngine {
       const entry = resolveEntity(catalog, query.ref, query.kind);
       const refs: { kind: string; id: string }[] = [];
       const data = entry.data;
+      if (data.kind === "product")
+        refs.push({ kind: "project", id: this.workspace.config.projectId ?? "project" });
+      if (data.kind === "feature") refs.push({ kind: "product", id: "passport" });
       if (data.kind === "scenario") refs.push({ kind: "feature", id: data.featureId });
       if (data.kind === "implementation") {
         refs.push(

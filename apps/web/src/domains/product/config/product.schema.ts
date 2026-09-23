@@ -126,13 +126,3 @@ export const PRODUCT_ENTITY_SCHEMA = z.object({
     }),
   ]),
 });
-
-/** Контекст с причинами включения, собранный общим ядром продукта. */
-export const PRODUCT_CONTEXT_SCHEMA = z.object({
-  productId: z.string(),
-  version: z.string(),
-  records: z.array(
-    z.object({ record: PRODUCT_STATE_SCHEMA.shape.records.element, reasons: z.array(z.string()) }),
-  ),
-  readiness: PRODUCT_STATE_SCHEMA.shape.readiness,
-});
