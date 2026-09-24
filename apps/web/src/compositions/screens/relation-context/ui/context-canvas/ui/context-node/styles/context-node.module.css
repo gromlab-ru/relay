@@ -17,6 +17,14 @@
     outline-offset: 3px;
     background: var(--tasks-selected);
   }
+
+  &._dimmed {
+    filter: grayscale(1);
+  }
+}
+
+.additional {
+  color: light-dark(var(--mantine-color-blue-9), var(--mantine-color-blue-3));
 }
 
 .key {

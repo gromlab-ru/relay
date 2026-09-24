@@ -16,7 +16,7 @@ export type ContextLayoutPlan = {
   graph: ElkNode;
   /** Ближайшие расстояния от корня по показанным связям. */
   distances: Map<string, number>;
-  /** Объясняющее остовное дерево; остальные связи также передаются ELK. */
+  /** Объясняющее остовное дерево; остальные связи доступны в полном графе. */
   parents: Map<string, ContextParent>;
   /** Назначение каждого порта по его постоянному ID. */
   ports: Map<string, ContextPort>;
@@ -34,6 +34,10 @@ export type ContextLayoutNode = {
 
 /** Маршрут одного ребра, включая петли и параллельные отношения. */
 export type ContextLayoutEdge = {
+  /** Порт начала в согласованной раскладке. */
+  sourcePortId: string;
+  /** Порт конца в согласованной раскладке. */
+  targetPortId: string;
   /** Ломаная от from к to в общих координатах. */
   points: XYPosition[];
   /** Место краткой подписи. */
@@ -44,7 +48,7 @@ export type ContextLayoutEdge = {
 export type ContextLayout = {
   /** Карточки по постоянным адресам. */
   nodes: Map<string, ContextLayoutNode>;
-  /** Геометрия всех полученных рёбер по их ID. */
+  /** Геометрия рёбер текущего представления по их сохранённым ID. */
   edges: Map<string, ContextLayoutEdge>;
   /** Расстояния для объяснения последовательности чтения. */
   distances: Map<string, number>;

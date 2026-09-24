@@ -28,6 +28,10 @@ export type ContextFlowNode = Node<
     distance: number | null;
     /** Карточка за пределами выбранного пути и непосредственного окружения. */
     isDimmed: boolean;
+    /** Число отношений вне основного дерева, включая повторные пути и циклы. */
+    additionalCount: number;
+    /** Число сохранённых петель этой сущности. */
+    loopCount: number;
     /** Порты позволяют различать параллельные отношения. */
     ports: ContextPort[];
   },

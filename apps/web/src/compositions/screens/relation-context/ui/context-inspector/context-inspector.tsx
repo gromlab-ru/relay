@@ -24,6 +24,7 @@ import { useProjectBasePath } from "domains/project";
 import { MarkdownView } from "ui/markdown-view";
 import { isDefined } from "shared/value-predicates";
 import { getContextEntityHref } from "../../helpers/get-context-entity-href";
+import { ContextNodeRelations } from "./ui/context-node-relations/context-node-relations";
 import type { ContextInspectorProps } from "./types/context-inspector-props.type";
 import styles from "./styles/context-inspector.module.css";
 
@@ -39,6 +40,7 @@ export const ContextInspector = ({
   node,
   edge,
   nodes,
+  edges,
   isRoot,
   canExpand,
   hasPath,
@@ -47,6 +49,7 @@ export const ContextInspector = ({
   onRoot,
   onPath,
   onNodeSelect,
+  onEdgeSelect,
 }: ContextInspectorProps) => {
   const base = useProjectBasePath();
   const location = useLocation();
@@ -185,6 +188,13 @@ export const ContextInspector = ({
           </Button>
         )}
       </Stack>
+      <ContextNodeRelations
+        key={address}
+        address={address}
+        nodes={nodes}
+        edges={edges}
+        onSelect={onEdgeSelect}
+      />
       <Divider label="Полное описание" labelPosition="left" />
       {content.isLoading && (
         <Group gap="xs" role="status">

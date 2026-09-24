@@ -16,6 +16,7 @@ import { getRelationLabel, RELATION_LABELS } from "domains/relations";
 import { StatePanel } from "ui/state-panel";
 import { ContextExplorer } from "./ui/context-explorer/context-explorer";
 import { readContextOptions } from "./helpers/read-context-options";
+import { readContextMode } from "./helpers/read-context-mode";
 import styles from "./styles/relation-context.module.css";
 
 /**
@@ -23,7 +24,7 @@ import styles from "./styles/relation-context.module.css";
  *
  * Используется для:
  *  - сохранения корня и фильтров исследования в URL
- *  - переключения диаграммы и последовательного списка
+ *  - переключения дерева, графа и последовательного списка
  */
 export const RelationContextScreen = () => {
   const projectId = useProjectId();
@@ -32,7 +33,7 @@ export const RelationContextScreen = () => {
   const [discoveredTypes, setDiscoveredTypes] = useState<string[]>([]);
   const root = params.get("root")?.trim() ?? "";
   const options = readContextOptions(params);
-  const mode = params.get("mode") === "list" ? "list" : "diagram";
+  const mode = readContextMode(params);
   const scope = JSON.stringify([projectId, root, options]);
   const typeItems = [
     ...new Set([...Object.keys(RELATION_LABELS), ...discoveredTypes, options.type ?? ""]),
@@ -99,7 +100,8 @@ export const RelationContextScreen = () => {
           value={mode}
           onChange={(value) => handleParam("mode", value)}
           data={[
-            { value: "diagram", label: "Диаграмма" },
+            { value: "tree", label: "Дерево" },
+            { value: "graph", label: "Граф" },
             { value: "list", label: "Список" },
           ]}
         />

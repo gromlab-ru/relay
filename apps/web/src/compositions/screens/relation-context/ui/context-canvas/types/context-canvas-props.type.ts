@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef } from "react";
-import type { RelationNode, RelationEdge } from "domains/relations";
+import type { RelationNode, RelationEdge, RelationDiagramFilter } from "domains/relations";
 
 /** Вход согласованной проекции графа, без операций записи. */
 export type ContextCanvasParams = {
@@ -9,6 +9,10 @@ export type ContextCanvasParams = {
   edges: RelationEdge[];
   /** Постоянный адрес исходной сущности. */
   root: string;
+  /** Дерево основных путей либо все сохранённые связи загруженной области. */
+  view: "tree" | "graph";
+  /** Направление поиска путей от исходной сущности. */
+  direction: RelationDiagramFilter["direction"];
   /** Выбранная карточка. */
   selectedNodeId: string | null;
   /** Выбранное отношение. */

@@ -1,5 +1,5 @@
 /** Геометрия карточки для ELK и React Flow без повторного измерения. */
-export const CONTEXT_NODE_SIZE = { width: 300, height: 148 };
+export const CONTEXT_NODE_SIZE = { width: 300, height: 176 };
 
 /** Русские инструкции встроенного клавиатурного управления React Flow. */
 export const CONTEXT_ARIA_LABELS = {

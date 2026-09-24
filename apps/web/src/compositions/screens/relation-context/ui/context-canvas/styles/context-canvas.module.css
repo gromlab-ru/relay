@@ -23,6 +23,8 @@
 
 .legend {
   display: flex;
+  flex-wrap: wrap;
+  max-width: calc(100% - 32px);
   gap: var(--mantine-spacing-md);
   padding: 7px 10px;
   border-radius: var(--mantine-radius-sm);

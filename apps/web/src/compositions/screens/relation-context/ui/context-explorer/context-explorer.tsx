@@ -44,6 +44,12 @@ export const ContextExplorer = ({
   const [edgeId, setEdgeId] = useState<string | null>(null);
   const [isPathShown, setPathShown] = useState(false);
   const [isInspectorOpen, setInspectorOpen] = useState(false);
+  const [canvasView, setCanvasView] = useState<"tree" | "graph">(
+    mode === "graph" ? "graph" : "tree",
+  );
+  useEffect(() => {
+    if (mode !== "list") setCanvasView(mode);
+  }, [mode]);
   const isWide = useMediaQuery("(min-width: 75em)");
   const query = useRelationDiagram(projectId, request, refreshKey);
   const graph = query.data;
@@ -91,7 +97,8 @@ export const ContextExplorer = ({
   const isEmpty = hasGraph && isEmptyArray(graph.edges) && !hasMore;
   const isFiltered = options.type !== undefined || options.direction !== "both";
   const emptyLabel = isFiltered ? "В выбранных условиях связей нет" : "Связей пока нет";
-  const isDiagram = mode === "diagram";
+  const isDiagram = mode !== "list";
+  const isTree = mode === "tree";
   const isList = mode === "list";
   const hasNoGraphLoading = !hasGraph && query.isLoading;
   const hasNoBudget = !hasBudget;
@@ -159,6 +166,7 @@ export const ContextExplorer = ({
     node: selectedNode,
     edge: selectedEdge,
     nodes: graph?.nodes ?? [],
+    edges: graph?.edges ?? [],
     isRoot,
     canExpand,
     hasPath,
@@ -167,6 +175,7 @@ export const ContextExplorer = ({
     onRoot,
     onPath: handlePath,
     onNodeSelect: handleNodeSelect,
+    onEdgeSelect: handleEdgeSelect,
   };
 
   return (
@@ -249,6 +258,12 @@ export const ContextExplorer = ({
               </Text>
             )}
           </div>
+          {isTree && (
+            <Text size="xs" c="dimmed">
+              Один путь к каждой сущности. Дополнительные связи и циклы — в сведениях о выбранной
+              карточке; все линии — в режиме «Граф». Стрелки сохраняют направление отношений.
+            </Text>
+          )}
           {isEmpty && (
             <Text size="sm" c="dimmed" role="status">
               {emptyLabel}. Исходная сущность остаётся доступна.
@@ -280,6 +295,8 @@ export const ContextExplorer = ({
                   nodes={graph.nodes}
                   edges={graph.edges}
                   root={rootAddress}
+                  view={canvasView}
+                  direction={options.direction}
                   selectedNodeId={selectedNodeId}
                   selectedEdgeId={edgeId}
                   pathEdgeIds={pathEdgeIds}

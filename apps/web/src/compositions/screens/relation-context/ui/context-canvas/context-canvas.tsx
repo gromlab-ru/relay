@@ -11,7 +11,7 @@ import {
   Tooltip,
   useComputedColorScheme,
 } from "@mantine/core";
-import { Focus, Maximize, Minus, Plus } from "lucide-react";
+import { Focus, LocateFixed, Maximize, Minus, Plus, RotateCcw } from "lucide-react";
 import { isDefined, isNonEmptyArray } from "shared/value-predicates";
 import { useContextLayout } from "./hooks/use-context-layout.hook";
 import { buildContextFlow } from "./helpers/build-context-flow";
@@ -41,6 +41,8 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
     nodes,
     edges,
     root,
+    view,
+    direction,
     selectedNodeId,
     selectedEdgeId,
     pathEdgeIds,
@@ -50,7 +52,9 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
     className,
     ...rootAttrs
   } = props;
-  const layout = useContextLayout(nodes, edges);
+  const layout = useContextLayout(nodes, edges, root, selectedNodeId, view, direction);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const colorScheme = useComputedColorScheme("light");
   const [instance, setInstance] = useState<ReactFlowInstance<
     ContextFlowNode,
@@ -64,6 +68,8 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
           nodes,
           edges,
           root,
+          view,
+          direction,
           selectedNodeId,
           selectedEdgeId,
           pathEdgeIds,
@@ -71,19 +77,23 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
           onNodeSelect,
           onEdgeSelect,
         },
-        layout.positions,
+        layout.layout,
+        hoveredEdgeId,
       ),
     [
       nodes,
       edges,
       root,
+      view,
+      direction,
       selectedNodeId,
       selectedEdgeId,
       pathEdgeIds,
       boundaryIds,
       onNodeSelect,
       onEdgeSelect,
-      layout.positions,
+      layout.layout,
+      hoveredEdgeId,
     ],
   );
 
@@ -91,23 +101,40 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
    * Возвращает камеру к исходному узлу, не сбрасывая раскрытие и локальную раскладку.
    */
   const handleCenter = useCallback((): void => {
-    const position = layout.positions.get(root);
+    const position = layout.layout.nodes.get(root)?.position;
     if (!isDefined(instance) || !isDefined(position)) return;
+    const zoom = 0.85;
+    void instance.setViewport({
+      x: 32 - position.x * zoom,
+      y:
+        (canvasRef.current?.clientHeight ?? 470) / 2 -
+        (position.y + CONTEXT_NODE_SIZE.height / 2) * zoom,
+      zoom,
+    });
+  }, [instance, layout.layout.nodes, root]);
+
+  /**
+   * Возвращает выбранную карточку в читаемый масштаб после обзора большой области.
+   */
+  const handleFocus = (): void => {
+    const position = layout.layout.nodes.get(selectedNodeId ?? root)?.position;
+    if (!instance || !position) return;
     void instance.setCenter(
       position.x + CONTEXT_NODE_SIZE.width / 2,
       position.y + CONTEXT_NODE_SIZE.height / 2,
-      { zoom: 0.85 },
+      { zoom: 0.9 },
     );
-  }, [instance, layout.positions, root]);
+  };
 
   useEffect(() => {
-    if (hasCentered.current || layout.isPending || !instance || !layout.positions.has(root)) return;
+    if (hasCentered.current || layout.isPending || !instance || !layout.layout.nodes.has(root))
+      return;
     const frame = requestAnimationFrame(() => {
       handleCenter();
       hasCentered.current = true;
     });
     return () => cancelAnimationFrame(frame);
-  }, [instance, layout.isPending, layout.positions, root, handleCenter]);
+  }, [instance, layout.isPending, layout.layout.nodes, root, handleCenter]);
 
   /**
    * Разрешает только локальную геометрию и выбор; удаление и подключение отсутствуют.
@@ -132,17 +159,24 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
   };
   const hasError = layout.error !== null;
   const isCameraDisabled = !isDefined(instance) || layout.isPending;
+  const canFocusSelection = !isCameraDisabled && selectedNodeId !== null;
+  const isTree = view === "tree";
+  const regionLabel = isTree ? "Дерево контекста" : "Граф контекста";
+  const additionalCount = edges.length - layout.layout.edges.size;
+  const hasAdditionalRelations = isTree && additionalCount > 0 && !layout.isPending;
   const portsSignature = flow.nodes
     .map(
-      (node) => `${node.id};${node.data.ports.map((port) => `${port.id}:${port.top}`).join(",")}`,
+      (node) =>
+        `${node.id};${node.data.ports.map((port) => `${port.id}:${port.position}:${port.x}:${port.y}`).join(",")}`,
     )
     .join("|");
 
   return (
     <div
       {...rootAttrs}
+      ref={canvasRef}
       className={clsx(styles.root, className)}
-      aria-label="Диаграмма контекста"
+      aria-label={regionLabel}
       role="region"
     >
       <ReactFlow<ContextFlowNode, ContextFlowEdge>
@@ -155,6 +189,9 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
         onEdgesChange={handleEdgesChange}
         onNodeClick={(_event, node) => onNodeSelect(node.id)}
         onEdgeClick={(_event, edge) => onEdgeSelect(edge.id)}
+        onEdgeMouseEnter={(_event, edge) => setHoveredEdgeId(edge.id)}
+        onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+        nodesDraggable={!isTree}
         nodesConnectable={false}
         edgesReconnectable={false}
         deleteKeyCode={null}
@@ -182,6 +219,20 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
                 onClick={handleCenter}
               >
                 <Focus size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip
+              label="К выбранной сущности"
+              events={{ hover: true, focus: true, touch: false }}
+            >
+              <ActionIcon
+                variant="default"
+                size="lg"
+                aria-label="К выбранной сущности"
+                disabled={!canFocusSelection}
+                onClick={handleFocus}
+              >
+                <LocateFixed size={18} />
               </ActionIcon>
             </Tooltip>
             <Tooltip label="Вписать в экран" events={{ hover: true, focus: true, touch: false }}>
@@ -213,6 +264,20 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
             >
               <Minus size={18} />
             </ActionIcon>
+            <Tooltip
+              label="Восстановить раскладку"
+              events={{ hover: true, focus: true, touch: false }}
+            >
+              <ActionIcon
+                variant="default"
+                size="lg"
+                aria-label="Восстановить раскладку"
+                disabled={isCameraDisabled}
+                onClick={layout.onRetry}
+              >
+                <RotateCcw size={18} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </Panel>
         {layout.isPending && (
@@ -235,6 +300,11 @@ export const ContextCanvas = (props: ContextCanvasProps) => {
         <Panel position="bottom-left" className={styles.legend}>
           <span className={styles.origin}>Исходная</span>
           <span className={styles.selected}>Выбранная / путь</span>
+          {hasAdditionalRelations && (
+            <span title="Сохранённые связи вне основных путей дерева. Выберите сущность для просмотра.">
+              Доп. связей: {additionalCount} · в сведениях
+            </span>
+          )}
         </Panel>
       </ReactFlow>
     </div>
