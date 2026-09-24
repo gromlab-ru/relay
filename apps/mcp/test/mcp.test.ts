@@ -16,6 +16,7 @@ import { initializeRegistry, registerProject } from "@relay/project-runtime/regi
 import { startMcp } from "../dist/server.js";
 import { entitySavedSchema, entityDetailSchema } from "@relay/contracts/entities";
 import { fullContextSchema } from "@relay/contracts/entities/graph";
+import { taskProgressSchema, productProgressSchema } from "@relay/contracts/progress";
 
 async function setup(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), "tasks-mcp-"));
@@ -50,6 +51,54 @@ async function setup(t: TestContext) {
   };
   return { root, clients, servers, connect, start };
 }
+
+test("MCP: прогресс задачи и продукта, discovery, продолжение и изоляция", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const tools = (await client.listTools()).tools;
+  for (const kind of ["task", "implementation", "scenario", "feature", "application", "product"]) {
+    const tool = tools.find((entry) => entry.name === `${kind}_progress`);
+    assert.ok(tool);
+    assert.equal(tool.annotations?.readOnlyHint, true);
+    assert.ok(tool.inputSchema.properties?.version);
+  }
+  const saved = await call(client, "board_task_create", {
+    board: "product",
+    title: "Проверить",
+    requestId: "progress",
+    actor: "agent",
+    acceptanceCriteria: [{ title: "Первый" }, { title: "Второй" }],
+  });
+  const task = taskProgressSchema.parse(
+    (await call(client, "task_progress", { ref: saved.data?.id, limit: 1 })).data,
+  );
+  assert.equal(task.completed, false);
+  assert.equal(task.reasons.nextOffset, 1);
+  const next = taskProgressSchema.parse(
+    (
+      await call(client, "task_progress", {
+        ref: task.entity.id,
+        limit: 1,
+        offset: 1,
+        version: task.version,
+      })
+    ).data,
+  );
+  assert.equal(next.reasons.items[0]?.code, "CRITERION_INCOMPLETE");
+  assert.equal(
+    (await call(client, "task_progress", { ref: task.entity.id, offset: 1 })).error?.code,
+    "INVALID_ARGUMENT",
+  );
+  assert.equal(
+    (await call(client, "task_progress", { ref: task.entity.id, project: "missing" })).ok,
+    false,
+  );
+  assert.equal(
+    productProgressSchema.parse((await call(client, "product_progress")).data).completed,
+    false,
+  );
+});
 
 test("MCP: предметные линковки и снятие сразу видны в полном графе", async (t) => {
   const app = await setup(t);
@@ -190,6 +239,8 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
     (/^entity_.*(?:create|update|move|link|rename_key)$/.test(name) || name === "entity_get")
   ) {
     assert.match(content, /Ревизия/);
+  } else if (body.ok && name.endsWith("_progress")) {
+    assert.match(content, /выполнено|не выполнено/);
   } else assert.deepEqual(JSON.parse(content), result.structuredContent);
   return { ...body, isError: result.isError };
 }

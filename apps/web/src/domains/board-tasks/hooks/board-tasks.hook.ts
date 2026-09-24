@@ -14,12 +14,13 @@ import {
   getTaskActivityEvent,
   getProductTaskProgress,
   getApplicationTaskProgress,
+  getTaskExecutionProgress,
 } from "../adapters/board-tasks.adapter";
 import type { CreateTaskInput } from "../types/board-tasks.type";
 import type { BoardTask, TaskFilters, TasksPage, TaskLinksPage } from "../types/board-tasks.type";
 import type { CriteriaPage, CriterionView } from "../types/acceptance.type";
 import type { ActivityPage, ActivityEvent } from "../types/activity.type";
-import type { ProductTaskProgress } from "../types/board-tasks.type";
+import type { ProductGoalProgress, TaskExecutionProgress } from "../types/board-tasks.type";
 import type { ApplicationTaskProgress } from "../types/board-tasks.type";
 import type { SWRResponse } from "swr";
 
@@ -29,12 +30,14 @@ import type { SWRResponse } from "swr";
 export const useProductTaskProgress = (
   project: string,
   targetId: string | null,
-): SWRResponse<ProductTaskProgress, Error> => {
-  const query = useSWR<ProductTaskProgress, Error>(
-    targetId === null ? null : ["product-task-progress", project, targetId],
+  offset = 0,
+  version?: string,
+): SWRResponse<ProductGoalProgress, Error> => {
+  const query = useSWR<ProductGoalProgress, Error>(
+    targetId === null ? null : ["product-task-progress", project, targetId, offset, version],
     () => {
       if (targetId === null) throw new Error("Продуктовая цель не выбрана");
-      return getProductTaskProgress(project, targetId);
+      return getProductTaskProgress(project, targetId, offset, version);
     },
   );
   useKanbanSync(project, query.mutate);
@@ -51,6 +54,23 @@ export const useApplicationTaskProgress = (
   const query = useSWR<ApplicationTaskProgress, Error>(
     ["application-task-progress", project, board],
     () => getApplicationTaskProgress(project, board),
+  );
+  useKanbanSync(project, query.mutate);
+  return query;
+};
+
+/**
+ * Сверяет фактическое выполнение с сервером после изменения обязательств, не меняя черновик задачи.
+ */
+export const useTaskExecutionProgress = (
+  project: string,
+  reference: string,
+  offset = 0,
+  version?: string,
+): SWRResponse<TaskExecutionProgress, Error> => {
+  const query = useSWR<TaskExecutionProgress, Error>(
+    ["task-execution-progress", project, reference, offset, version],
+    () => getTaskExecutionProgress(project, reference, offset, version),
   );
   useKanbanSync(project, query.mutate);
   return query;

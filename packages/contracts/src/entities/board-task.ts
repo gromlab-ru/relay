@@ -82,7 +82,9 @@ export const boardTaskSchema = z.strictObject({
   dependencies: z
     .array(boardTaskIdSchema)
     .max(200)
-    .describe("Прямые зависимости по постоянным ID; только done выполняет зависимость"),
+    .describe(
+      "Прямые зависимости по ID; выполнение требует done, критериев и рекурсивного выполнения обязательств",
+    ),
   related: z
     .array(boardTaskIdSchema)
     .max(200)

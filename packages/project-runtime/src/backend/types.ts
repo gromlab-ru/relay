@@ -6,6 +6,7 @@ import type { BoardTasksService } from "@relay/core/application/board-tasks/serv
 import type { BoardsService } from "@relay/core/application/boards/service";
 import type { GraphService } from "@relay/core/application/graph/service";
 import type { EntityEngine } from "@relay/core/application/entities/service";
+import type { ProgressService } from "@relay/core/application/progress/service";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -13,6 +14,10 @@ export interface WorkspaceInfo {
   root: string;
 }
 export interface Backend {
+  progress: Pick<
+    ProgressService,
+    "task" | "implementation" | "scenario" | "feature" | "application" | "product"
+  >;
   entities: Pick<
     EntityEngine,
     | "types"

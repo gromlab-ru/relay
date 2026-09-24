@@ -13,6 +13,7 @@
   "documents": {
     "docs/reference/CONFIGURATION.md": "references/CONFIGURATION.md",
     "docs/reference/MCP.md": "references/MCP.md",
+    "docs/reference/PROGRESS.md": "references/PROGRESS.md",
     "docs/reference/PRODUCT.md": "references/PRODUCT.md",
     "docs/reference/BOARDS.md": "references/BOARDS.md",
     "docs/reference/KANBAN.md": "references/KANBAN.md",
@@ -46,6 +47,9 @@
     "apps/mcp/src/schema-documentation.ts",
     "packages/core/src/domain/product.ts",
     "packages/core/src/application/product",
+    "packages/core/src/application/progress",
+    "packages/core/src/application/board-tasks/completion.ts",
+    "packages/contracts/src/progress.ts",
     "packages/core/src/domain/config.ts",
     "packages/core/src/domain/entity-graph.ts",
     "packages/core/src/application/graph",

@@ -14,6 +14,8 @@ import { deleteEntityForProject } from "./operations/delete-entity-for-project.j
 import { deleteEntity } from "./operations/delete-entity.js";
 import { describeEntityTypeForProject } from "./operations/describe-entity-type-for-project.js";
 import { describeEntityType } from "./operations/describe-entity-type.js";
+import { getApplicationProgressForProject } from "./operations/get-application-progress-for-project.js";
+import { getApplicationProgress } from "./operations/get-application-progress.js";
 import { getBoardBySlugForProject } from "./operations/get-board-by-slug-for-project.js";
 import { getBoardBySlug } from "./operations/get-board-by-slug.js";
 import { getBoardTaskForProject } from "./operations/get-board-task-for-project.js";
@@ -34,6 +36,8 @@ import { getEntityKeySpaces } from "./operations/get-entity-key-spaces.js";
 import { getEntityKeysForProject } from "./operations/get-entity-keys-for-project.js";
 import { getEntityKeys } from "./operations/get-entity-keys.js";
 import { getEntity } from "./operations/get-entity.js";
+import { getFeatureProgressForProject } from "./operations/get-feature-progress-for-project.js";
+import { getFeatureProgress } from "./operations/get-feature-progress.js";
 import { getFullContextForProject } from "./operations/get-full-context-for-project.js";
 import { getFullContext } from "./operations/get-full-context.js";
 import { getGraphForProject } from "./operations/get-graph-for-project.js";
@@ -41,6 +45,8 @@ import { getGraphHistoryForProject } from "./operations/get-graph-history-for-pr
 import { getGraphHistory } from "./operations/get-graph-history.js";
 import { getGraph } from "./operations/get-graph.js";
 import { getHealth } from "./operations/get-health.js";
+import { getImplementationProgressForProject } from "./operations/get-implementation-progress-for-project.js";
+import { getImplementationProgress } from "./operations/get-implementation-progress.js";
 import { getProductContextForProject } from "./operations/get-product-context-for-project.js";
 import { getProductContext } from "./operations/get-product-context.js";
 import { getProductEntitiesForProject } from "./operations/get-product-entities-for-project.js";
@@ -49,6 +55,8 @@ import { getProductEntityForProject } from "./operations/get-product-entity-for-
 import { getProductEntity } from "./operations/get-product-entity.js";
 import { getProductOverviewForProject } from "./operations/get-product-overview-for-project.js";
 import { getProductOverview } from "./operations/get-product-overview.js";
+import { getProductProgressForProject } from "./operations/get-product-progress-for-project.js";
+import { getProductProgress } from "./operations/get-product-progress.js";
 import { getProductRecordsForProject } from "./operations/get-product-records-for-project.js";
 import { getProductRecords } from "./operations/get-product-records.js";
 import { getProductStateForProject } from "./operations/get-product-state-for-project.js";
@@ -56,6 +64,8 @@ import { getProductState } from "./operations/get-product-state.js";
 import { getProjectSettingsForProject } from "./operations/get-project-settings-for-project.js";
 import { getProjectSettings } from "./operations/get-project-settings.js";
 import { getProjects } from "./operations/get-projects.js";
+import { getScenarioProgressForProject } from "./operations/get-scenario-progress-for-project.js";
+import { getScenarioProgress } from "./operations/get-scenario-progress.js";
 import { getServerContext } from "./operations/get-server-context.js";
 import { getTaskCommentForProject } from "./operations/get-task-comment-for-project.js";
 import { getTaskComment } from "./operations/get-task-comment.js";
@@ -69,6 +79,8 @@ import { getTaskHistoryEventForProject } from "./operations/get-task-history-eve
 import { getTaskHistoryEvent } from "./operations/get-task-history-event.js";
 import { getTaskHistoryForProject } from "./operations/get-task-history-for-project.js";
 import { getTaskHistory } from "./operations/get-task-history.js";
+import { getTaskProgressForProject } from "./operations/get-task-progress-for-project.js";
+import { getTaskProgress } from "./operations/get-task-progress.js";
 import { linkBoardTaskForProject } from "./operations/link-board-task-for-project.js";
 import { linkBoardTask } from "./operations/link-board-task.js";
 import { linkEntityTaskForProject } from "./operations/link-entity-task-for-project.js";
@@ -150,6 +162,20 @@ export const operationsTree = {
     getProductRecordsForProject: getProductRecordsForProject,
     mutateProductForProject: mutateProductForProject,
     getProductContextForProject: getProductContextForProject,
+  },
+  progress: {
+    getTaskProgress: getTaskProgress,
+    getImplementationProgress: getImplementationProgress,
+    getScenarioProgress: getScenarioProgress,
+    getFeatureProgress: getFeatureProgress,
+    getApplicationProgress: getApplicationProgress,
+    getProductProgress: getProductProgress,
+    getTaskProgressForProject: getTaskProgressForProject,
+    getImplementationProgressForProject: getImplementationProgressForProject,
+    getScenarioProgressForProject: getScenarioProgressForProject,
+    getFeatureProgressForProject: getFeatureProgressForProject,
+    getApplicationProgressForProject: getApplicationProgressForProject,
+    getProductProgressForProject: getProductProgressForProject,
   },
   boards: {
     getBoards: getBoards,

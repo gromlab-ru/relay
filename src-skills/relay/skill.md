@@ -63,7 +63,8 @@ scenario, application, implementation, board, task, document. `entity_type_get` 
 `boards_list`, `board_tasks_list`, `board_task_get/create/update/move/link/links`;
 CLI: `boards`, `task list|get|create|update|move|link|links`. Задача получает постоянный
 ID и ключ вроде PRODUCT-1; перенос меняет ключ, сохраняя ID и связи.
-Колонки: inbox, ready, in-progress, review, done, cancelled. Только done выполняет зависимость.
+Колонки: inbox, ready, in-progress, review, done, cancelled. Выполнение требует done,
+отмеченных критериев и фактического выполнения всех подзадач и зависимостей.
 Родительство задаёт декомпозицию, зависимости — порядок. `readiness=ready` выбирает
 работу без блокеров; `completion=unfinished` исключает готовые/отменённые до пагинации.
 На продуктовой доске цели — фичи и сценарии продукта; на доске приложения — только
@@ -85,6 +86,13 @@ CLI — `task criterion list|get|add|update|complete|reopen|remove`.
 не мешают начать работу, но все должны быть выполнены перед done; задача закрывается явно.
 
 ## Роли и достоверность
+
+Для актуального выполнения вызывай `task_progress`, `implementation_progress`,
+`scenario_progress`, `feature_progress`, `application_progress`, `product_progress`;
+CLI — `progress <вид> <ref>` (для продукта без ref). Не выводи готовность только из колонки.
+Невыполненная инфраструктурная зависимость снимает выполнение по всей цепочке, не перемещая
+карточки. Раскрывай source причин адресным запросом. Списки по 20, максимум 100;
+для продолжения сохраняй version и limit. [Контракт прогресса](references/PROGRESS.md).
 
 Обсуждение задачи: `task_comment_publish` принимает reference, обязательные title и
 description (Markdown), собственное имя actor, actorRole (orchestrator/worker) и requestId.

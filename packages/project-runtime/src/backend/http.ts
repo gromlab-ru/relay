@@ -1,6 +1,16 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import {
+  progressQuerySchema,
+  progressPageQuerySchema,
+  taskProgressSchema,
+  implementationProgressSchema,
+  scenarioProgressSchema,
+  featureProgressSchema,
+  applicationProgressSchema,
+  productProgressSchema,
+} from "@relay/contracts/progress";
+import {
   entityPageQuerySchema,
   entitiesQuerySchema,
   entityGetQuerySchema,
@@ -182,6 +192,48 @@ export async function createHttpBackend(url: string, project?: string): Promise<
   };
   return {
     kind: "http",
+    progress: {
+      task: async (input) =>
+        decode(
+          taskProgressSchema,
+          await call(() => api.progress.getTaskProgress(defined(progressQuerySchema.parse(input)))),
+        ),
+      implementation: async (input) =>
+        decode(
+          implementationProgressSchema,
+          await call(() =>
+            api.progress.getImplementationProgress(defined(progressQuerySchema.parse(input))),
+          ),
+        ),
+      scenario: async (input) =>
+        decode(
+          scenarioProgressSchema,
+          await call(() =>
+            api.progress.getScenarioProgress(defined(progressQuerySchema.parse(input))),
+          ),
+        ),
+      feature: async (input) =>
+        decode(
+          featureProgressSchema,
+          await call(() =>
+            api.progress.getFeatureProgress(defined(progressQuerySchema.parse(input))),
+          ),
+        ),
+      application: async (input) =>
+        decode(
+          applicationProgressSchema,
+          await call(() =>
+            api.progress.getApplicationProgress(defined(progressQuerySchema.parse(input))),
+          ),
+        ),
+      product: async (input = {}) =>
+        decode(
+          productProgressSchema,
+          await call(() =>
+            api.progress.getProductProgress(defined(progressPageQuerySchema.parse(input))),
+          ),
+        ),
+    },
     entities: {
       types: async (input = {}) =>
         decode(

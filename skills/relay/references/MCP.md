@@ -10,6 +10,15 @@
 Один процесс обслуживает оркестратора и субагентов через **Streamable HTTP**.
 Все операции проекта выполняются через общий `@relay/rest-sdk` и REST API.
 
+## Предметный прогресс
+
+[Контракт прогресса](PROGRESS.md): чтение фактического выполнения и адресных причин.
+Инструменты `task_progress`, `implementation_progress`, `scenario_progress`,
+`feature_progress`, `application_progress`, `product_progress` имеют собственные ответы.
+Аргументы: `ref` (кроме продукта), `offset` (0), `limit` (20, максимум 100), `version`
+(обязательна для продолжения), общие `project` и `maxBytes`. Итоги относятся ко всему составу.
+После `PROGRESS_CHANGED` перечитайте первую страницу. Раскрывайте прогресс источников причин.
+
 ## Движок основных сущностей
 
 [Контракт сущностей](ENTITIES.md). Виды: project, product, feature, scenario, application,

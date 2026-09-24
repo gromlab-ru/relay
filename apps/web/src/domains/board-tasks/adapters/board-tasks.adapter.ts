@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { getProjectApi, ApiError } from "infra/tasks-api";
+import {
+  GOAL_PROGRESS_SCHEMA,
+  GOAL_ADDRESS_SCHEMA,
+  APPLICATION_BOARD_SCHEMA,
+  APPLICATION_PROGRESS_SCHEMA,
+  TASK_EXECUTION_SCHEMA,
+} from "../config/progress.schema";
+import { progressSourcePath } from "../helpers/progress-source-path";
 import { CRITERIA_PAGE_SCHEMA, CRITERION_VIEW_SCHEMA } from "../config/acceptance.schema";
 import {
   ACTIVITY_PAGE_SCHEMA,
@@ -27,7 +35,8 @@ import type {
   TaskFilters,
   CreateTaskInput,
   EditTaskInput,
-  ProductTaskProgress,
+  ProductGoalProgress,
+  TaskExecutionProgress,
   ApplicationTaskProgress,
   MoveTaskInput,
   LinkTaskInput,
@@ -171,63 +180,84 @@ export const listBoardTasks = (
 export const getProductTaskProgress = async (
   project: string,
   targetId: string,
-): Promise<ProductTaskProgress> => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      const all = await listBoardTasks(project, { productTarget: targetId }, 0, undefined, 1);
-      const completed = await listBoardTasks(
-        project,
-        { productTarget: targetId, column: "done" },
-        0,
-        all.version,
-        1,
-      );
-      return { total: all.total, completed: completed.total };
-    } catch (error) {
-      if (!(error instanceof BoardTaskError) || error.code !== "BOARD_CHANGED" || attempt >= 2)
-        throw error;
-    }
-  }
+  offset = 0,
+  version?: string,
+): Promise<ProductGoalProgress> => {
+  const api = getProjectApi(project);
+  const goal = await request(
+    () => api.entities.resolveEntity({ ref: targetId }),
+    GOAL_ADDRESS_SCHEMA,
+  );
+  const operations = {
+    feature: api.progress.getFeatureProgress,
+    scenario: api.progress.getScenarioProgress,
+    implementation: api.progress.getImplementationProgress,
+  };
+  const progress = await request(
+    () => operations[goal.ref.kind]({ ref: goal.ref.id, offset, version, limit: 20 }),
+    GOAL_PROGRESS_SCHEMA,
+  );
+  return {
+    ...progress.counts,
+    isComplete: progress.completed,
+    version: progress.version,
+    nextOffset: progress.reasons.nextOffset,
+    reasonCount: progress.reasons.total,
+    reasons: progress.reasons.items.map((reason) => ({
+      message: reason.message,
+      path: progressSourcePath(reason.source),
+    })),
+  };
 };
 
 /**
- * Считает всю доску на одной версии; в памяти остаются только текущая порция и счётчики.
+ * Читает фактическое выполнение задачи и ограниченную страницу причин с адресами.
+ */
+export const getTaskExecutionProgress = async (
+  project: string,
+  reference: string,
+  offset = 0,
+  version?: string,
+): Promise<TaskExecutionProgress> => {
+  const progress = await request(
+    () =>
+      getProjectApi(project).progress.getTaskProgress({
+        ref: reference,
+        offset,
+        version,
+        limit: 20,
+      }),
+    TASK_EXECUTION_SCHEMA,
+  );
+  return {
+    isComplete: progress.completed,
+    version: progress.version,
+    nextOffset: progress.reasons.nextOffset,
+    reasonCount: progress.reasons.total,
+    reasons: progress.reasons.items.map((reason) => ({
+      message: reason.message,
+      path: progressSourcePath(reason.source),
+    })),
+  };
+};
+
+/**
+ * Получает полные показатели приложения с сервера, не восстанавливает выполнение по колонкам.
  */
 export const getApplicationTaskProgress = async (
   project: string,
   board: string,
 ): Promise<ApplicationTaskProgress> => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      const progress: ApplicationTaskProgress = {
-        business: { total: 0, completed: 0 },
-        overall: { total: 0, completed: 0 },
-      };
-      let offset: number | null = 0;
-      let version: string | undefined;
-      do {
-        const page = await listBoardTasks(project, { board }, offset, version, 100);
-        for (const task of page.items) {
-          const isCompleted = task.column === "done";
-          const isBusiness = task.productLinks.some((link) =>
-            ["feature", "scenario", "implementation"].includes(link.kind),
-          );
-          progress.overall.total++;
-          if (isCompleted) progress.overall.completed++;
-          if (isBusiness) {
-            progress.business.total++;
-            if (isCompleted) progress.business.completed++;
-          }
-        }
-        version = page.version;
-        offset = page.nextOffset;
-      } while (offset !== null);
-      return progress;
-    } catch (error) {
-      if (!(error instanceof BoardTaskError) || error.code !== "BOARD_CHANGED" || attempt >= 2)
-        throw error;
-    }
-  }
+  const api = getProjectApi(project);
+  const owner = await request(
+    () => api.boards.getBoardBySlug({ slug: board }),
+    APPLICATION_BOARD_SCHEMA,
+  );
+  const progress = await request(
+    () => api.progress.getApplicationProgress({ ref: owner.applicationId, limit: 1 }),
+    APPLICATION_PROGRESS_SCHEMA,
+  );
+  return { business: progress.businessTasks, overall: progress.allTasks };
 };
 
 /** Как на прежней доске: единая согласованная проекция запрошенного объёма, с ограниченным повтором версии. */

@@ -1,5 +1,15 @@
 import { z } from "zod";
 import {
+  progressQuerySchema,
+  progressPageQuerySchema,
+  taskProgressSchema,
+  implementationProgressSchema,
+  scenarioProgressSchema,
+  featureProgressSchema,
+  applicationProgressSchema,
+  productProgressSchema,
+} from "@relay/contracts/progress";
+import {
   entityPageQuerySchema,
   entityTypeQuerySchema,
   entityTypesSchema,
@@ -103,6 +113,14 @@ const serverEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const schemas = {
+  ProgressQuery: progressQuerySchema,
+  ProgressPageQuery: progressPageQuerySchema,
+  TaskProgress: taskProgressSchema,
+  ImplementationProgress: implementationProgressSchema,
+  ScenarioProgress: scenarioProgressSchema,
+  FeatureProgress: featureProgressSchema,
+  ApplicationProgress: applicationProgressSchema,
+  ProductProgress: productProgressSchema,
   EntityDeletionQuery: entityDeletionQuerySchema,
   EntityDeletionPreview: entityDeletionPreviewSchema,
   DeleteEntity: deleteEntitySchema,

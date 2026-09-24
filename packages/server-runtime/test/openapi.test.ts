@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 103);
+    assert.equal(operations.size, 115);
     for (const path of [
       "/api/v1/tasks",
       "/api/v1/board",
@@ -212,6 +212,59 @@ for (const scoped of [false, true])
     await request("GET", "/api/v1/product/overview");
     await request("GET", "/api/v1/product/records");
     await request("GET", "/api/v1/product/context");
+    const feature = await request("POST", "/api/v1/product/records", undefined, {
+      action: "create",
+      requestId: "progress-feature",
+      fields: { kind: "feature", name: "Фича", summary: "", description: "Описание" },
+    });
+    const scenario = await request("POST", "/api/v1/product/records", undefined, {
+      action: "create",
+      requestId: "progress-scenario",
+      fields: {
+        kind: "scenario",
+        featureId: feature.data.id,
+        name: "Сценарий",
+        description: "Описание",
+      },
+    });
+    const application = await request("POST", "/api/v1/product/records", undefined, {
+      action: "create",
+      requestId: "progress-app",
+      fields: {
+        kind: "application",
+        name: "API",
+        slug: "api",
+        type: "backend",
+        summary: "",
+        description: "Описание",
+      },
+    });
+    const state = await request("GET", "/api/v1/product/state");
+    await request("POST", "/api/v1/product/records", undefined, {
+      action: "create",
+      requestId: "progress-scope",
+      ifVersion: state.data.version,
+      fields: {
+        kind: "scope",
+        applicationId: application.data.id,
+        contracts: [null, scenario.data.id].map((scenarioId) => ({
+          featureId: feature.data.id,
+          scenarioId,
+          title: "Вклад",
+          description: "Описание",
+          status: "none",
+        })),
+      },
+    });
+    for (const [kind, ref] of [
+      ["task", card.data.id],
+      ["implementation", "API-FI-1"],
+      ["scenario", scenario.data.id],
+      ["feature", feature.data.id],
+      ["application", application.data.id],
+    ])
+      await request("GET", `/api/v1/progress/${kind}`, `/api/v1/progress/${kind}?ref=${ref}`);
+    await request("GET", "/api/v1/progress/product");
     await request("GET", "/api/v1/entities/types");
     await request("GET", "/api/v1/entities/type", "/api/v1/entities/type?kind=task");
     const entity = await request("POST", "/api/v1/entities", undefined, {
@@ -300,7 +353,7 @@ for (const scoped of [false, true])
       undefined,
       404,
     );
-    assert.equal(visited.size, 50);
+    assert.equal(visited.size, 56);
     const sse = operations.get("GET /api/v1/events")!.responses[200]!;
     assert(!("$ref" in sse) && sse.content?.["text/event-stream"]);
     const updateSchema = document.components!.schemas!.UpdateBoardTask as SchemaObject;

@@ -11,9 +11,30 @@ import { fixture } from "./helpers/workspace.js";
 
 test("одинаковый ID разных видов целей не смешивает готовность", () => {
   const statuses = productTaskStatuses([
-    { column: "done", productLinks: [{ kind: "feature", id: "same" }] },
-    { column: "review", productLinks: [{ kind: "scenario", id: "same" }] },
-    { column: "cancelled", productLinks: [{ kind: "implementation", id: "same" }] },
+    {
+      id: "a",
+      parentId: null,
+      dependencies: [],
+      acceptanceCriteria: [],
+      column: "done",
+      productLinks: [{ kind: "feature", id: "same" }],
+    },
+    {
+      id: "b",
+      parentId: null,
+      dependencies: [],
+      acceptanceCriteria: [],
+      column: "review",
+      productLinks: [{ kind: "scenario", id: "same" }],
+    },
+    {
+      id: "c",
+      parentId: null,
+      dependencies: [],
+      acceptanceCriteria: [],
+      column: "cancelled",
+      productLinks: [{ kind: "implementation", id: "same" }],
+    },
   ]);
   assert.equal(statuses.get("feature:same"), "done");
   assert.equal(statuses.get("scenario:same"), "partial");

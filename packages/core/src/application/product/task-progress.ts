@@ -1,6 +1,7 @@
 import type { BoardTaskRecord } from "../../domain/board-task.js";
 import type { ProductContract, ProductStatus } from "../../domain/product.js";
 import type { EntityRef } from "../../domain/entity-graph.js";
+import { taskCompletions, type CompletionTask } from "../board-tasks/completion.js";
 
 /** Минимальные сведения для подъёма готовности от реализации к её требованию. */
 type ImplementationTarget = Pick<ProductContract, "id" | "featureId" | "scenarioId" | "active"> & {
@@ -80,18 +81,19 @@ export function productTaskTargets(
  * Отмена не выполняет обязательство; одна задача учитывается для каждой цели только один раз.
  */
 export function productTaskStatuses(
-  tasks: Pick<BoardTaskRecord, "column" | "productLinks">[],
+  tasks: (CompletionTask & Pick<BoardTaskRecord, "productLinks">)[],
   implementations: ImplementationTarget[] = [],
   scenarios: ScenarioTarget[] = [],
 ): Map<string, ProductStatus> {
   const directStatuses = new Map<string, ProductStatus>();
+  const completion = taskCompletions(tasks, "blocked");
   for (const task of tasks) {
     for (const link of task.productLinks) {
       const address = `${link.kind}:${link.id}`;
       const previous = directStatuses.get(address);
       directStatuses.set(
         address,
-        task.column === "done" && previous !== "partial" ? "done" : "partial",
+        completion.get(task.id)!.completed && previous !== "partial" ? "done" : "partial",
       );
     }
   }

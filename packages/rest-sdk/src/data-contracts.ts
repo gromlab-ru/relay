@@ -4,6 +4,801 @@
  * https://github.com/gromlab-ru/rest-api-codegen
  */
 
+export interface ProgressQuery {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+}
+
+export interface ProgressPageQuery {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+}
+
+export interface TaskProgress {
+  /** Адрес выбранной сущности */
+  entity: {
+    /** Вид предметного прогресса */
+    kind: TaskProgressKindEnum;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Фактически выполнен весь обязательный состав */
+  completed: boolean;
+  /** Версия согласованного чтения для продолжения этого запроса */
+  version: string;
+  /** Причины невыполнения или отсутствия работ */
+  reasons: {
+    /** Строки текущей страницы */
+    items: {
+      /** Машинный код причины */
+      code: TaskProgressCodeEnum;
+      /** Понятное объяснение причины */
+      message: string;
+      /** Сущность, чей прогресс следует раскрыть */
+      source: {
+        /** Вид предметного прогресса */
+        kind: TaskProgressKindEnum1;
+        /** Постоянный ID сущности */
+        id: string;
+        /** Читаемый ключ, если назначен */
+        key: string | null;
+        /** Однострочное название */
+        title: string;
+      };
+      /** ID невыполненного критерия задачи */
+      criterionId?: string;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Прогресс задачи */
+  kind: "task";
+  /** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+  column: TaskProgressColumnEnum;
+  /** Выполнены обязательства; колонка может ещё не быть done */
+  canComplete: boolean;
+  /** Полный состав критериев приёмки */
+  acceptance: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Критерии без полного Markdown */
+  criteria: {
+    /** Строки текущей страницы */
+    items: {
+      /** ID критерия */
+      id: string;
+      /** Название критерия */
+      title: string;
+      /** Отметка выполнения критерия */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Прямые подзадачи */
+  children: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: TaskProgressKindEnum2;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+      /** Сохранённая колонка; не заменяет фактическое выполнение */
+      column: TaskProgressColumnEnum1;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Прямые обязательные зависимости любых досок проекта */
+  dependencies: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: TaskProgressKindEnum3;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+      /** Сохранённая колонка; не заменяет фактическое выполнение */
+      column: TaskProgressColumnEnum2;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+}
+
+export interface ImplementationProgress {
+  /** Адрес выбранной сущности */
+  entity: {
+    /** Вид предметного прогресса */
+    kind: ImplementationProgressKindEnum;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Фактически выполнен весь обязательный состав */
+  completed: boolean;
+  /** Версия согласованного чтения для продолжения этого запроса */
+  version: string;
+  /** Причины невыполнения или отсутствия работ */
+  reasons: {
+    /** Строки текущей страницы */
+    items: {
+      /** Машинный код причины */
+      code: ImplementationProgressCodeEnum;
+      /** Понятное объяснение причины */
+      message: string;
+      /** Сущность, чей прогресс следует раскрыть */
+      source: {
+        /** Вид предметного прогресса */
+        kind: ImplementationProgressKindEnum1;
+        /** Постоянный ID сущности */
+        id: string;
+        /** Читаемый ключ, если назначен */
+        key: string | null;
+        /** Однострочное название */
+        title: string;
+      };
+      /** ID невыполненного критерия задачи */
+      criterionId?: string;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Уникальные задачи собственного продуктового состава; внешние обязательства не добавляются */
+  counts: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Прогресс реализации */
+  kind: "implementation";
+  /** Вклад в фичу либо сценарий */
+  implementationKind: ImplementationProgressImplementationKindEnum;
+  /** Приложение-владелец */
+  application: {
+    /** Вид предметного прогресса */
+    kind: ImplementationProgressKindEnum2;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Проектная фича либо сценарий */
+  target: {
+    /** Вид предметного прогресса */
+    kind: ImplementationProgressKindEnum3;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Участие реализации в текущем составе */
+  active: boolean;
+  /** Прямые собственные задачи; вложенные обязательства раскрываются через прогресс задачи */
+  tasks: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: ImplementationProgressKindEnum4;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+      /** Сохранённая колонка; не заменяет фактическое выполнение */
+      column: ImplementationProgressColumnEnum;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Для FI — активные SI той же фичи и приложения; для SI — пустой список */
+  implementations: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: ImplementationProgressKindEnum5;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+}
+
+export interface ScenarioProgress {
+  /** Адрес выбранной сущности */
+  entity: {
+    /** Вид предметного прогресса */
+    kind: ScenarioProgressKindEnum;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Фактически выполнен весь обязательный состав */
+  completed: boolean;
+  /** Версия согласованного чтения для продолжения этого запроса */
+  version: string;
+  /** Причины невыполнения или отсутствия работ */
+  reasons: {
+    /** Строки текущей страницы */
+    items: {
+      /** Машинный код причины */
+      code: ScenarioProgressCodeEnum;
+      /** Понятное объяснение причины */
+      message: string;
+      /** Сущность, чей прогресс следует раскрыть */
+      source: {
+        /** Вид предметного прогресса */
+        kind: ScenarioProgressKindEnum1;
+        /** Постоянный ID сущности */
+        id: string;
+        /** Читаемый ключ, если назначен */
+        key: string | null;
+        /** Однострочное название */
+        title: string;
+      };
+      /** ID невыполненного критерия задачи */
+      criterionId?: string;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Уникальные задачи собственного продуктового состава; внешние обязательства не добавляются */
+  counts: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Прогресс сценария */
+  kind: "scenario";
+  /** Прямые собственные задачи; вложенные обязательства раскрываются через прогресс задачи */
+  tasks: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: ScenarioProgressKindEnum2;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+      /** Сохранённая колонка; не заменяет фактическое выполнение */
+      column: ScenarioProgressColumnEnum;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Обязательные активные реализации; прогресс каждой читается отдельно */
+  implementations: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: ScenarioProgressKindEnum3;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+}
+
+export interface FeatureProgress {
+  /** Адрес выбранной сущности */
+  entity: {
+    /** Вид предметного прогресса */
+    kind: FeatureProgressKindEnum;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Фактически выполнен весь обязательный состав */
+  completed: boolean;
+  /** Версия согласованного чтения для продолжения этого запроса */
+  version: string;
+  /** Причины невыполнения или отсутствия работ */
+  reasons: {
+    /** Строки текущей страницы */
+    items: {
+      /** Машинный код причины */
+      code: FeatureProgressCodeEnum;
+      /** Понятное объяснение причины */
+      message: string;
+      /** Сущность, чей прогресс следует раскрыть */
+      source: {
+        /** Вид предметного прогресса */
+        kind: FeatureProgressKindEnum1;
+        /** Постоянный ID сущности */
+        id: string;
+        /** Читаемый ключ, если назначен */
+        key: string | null;
+        /** Однострочное название */
+        title: string;
+      };
+      /** ID невыполненного критерия задачи */
+      criterionId?: string;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Уникальные задачи собственного продуктового состава; внешние обязательства не добавляются */
+  counts: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Прогресс фичи */
+  kind: "feature";
+  /** Прямые собственные задачи; вложенные обязательства раскрываются через прогресс задачи */
+  tasks: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: FeatureProgressKindEnum2;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+      /** Сохранённая колонка; не заменяет фактическое выполнение */
+      column: FeatureProgressColumnEnum;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Активные FI фичи */
+  implementations: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: FeatureProgressKindEnum3;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Все проектные сценарии фичи, включая не выбранные приложениями */
+  scenarios: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: FeatureProgressKindEnum4;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+}
+
+export interface ApplicationProgress {
+  /** Адрес выбранной сущности */
+  entity: {
+    /** Вид предметного прогресса */
+    kind: ApplicationProgressKindEnum;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Фактически выполнен весь обязательный состав */
+  completed: boolean;
+  /** Версия согласованного чтения для продолжения этого запроса */
+  version: string;
+  /** Причины невыполнения или отсутствия работ */
+  reasons: {
+    /** Строки текущей страницы */
+    items: {
+      /** Машинный код причины */
+      code: ApplicationProgressCodeEnum;
+      /** Понятное объяснение причины */
+      message: string;
+      /** Сущность, чей прогресс следует раскрыть */
+      source: {
+        /** Вид предметного прогресса */
+        kind: ApplicationProgressKindEnum1;
+        /** Постоянный ID сущности */
+        id: string;
+        /** Читаемый ключ, если назначен */
+        key: string | null;
+        /** Однострочное название */
+        title: string;
+      };
+      /** ID невыполненного критерия задачи */
+      criterionId?: string;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Уникальные задачи собственного продуктового состава; внешние обязательства не добавляются */
+  counts: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Прогресс заявленного состава приложения, не подтверждение поставки */
+  kind: "application";
+  /** Обязательные активные реализации; прогресс каждой читается отдельно */
+  implementations: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: ApplicationProgressKindEnum2;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Задачи досок приложения с продуктовыми целями */
+  businessTasks: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Все задачи досок приложения, включая работу без продуктовой цели */
+  allTasks: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+}
+
+export interface ProductProgress {
+  /** Адрес выбранной сущности */
+  entity: {
+    /** Вид предметного прогресса */
+    kind: ProductProgressKindEnum;
+    /** Постоянный ID сущности */
+    id: string;
+    /** Читаемый ключ, если назначен */
+    key: string | null;
+    /** Однострочное название */
+    title: string;
+  };
+  /** Фактически выполнен весь обязательный состав */
+  completed: boolean;
+  /** Версия согласованного чтения для продолжения этого запроса */
+  version: string;
+  /** Причины невыполнения или отсутствия работ */
+  reasons: {
+    /** Строки текущей страницы */
+    items: {
+      /** Машинный код причины */
+      code: ProductProgressCodeEnum;
+      /** Понятное объяснение причины */
+      message: string;
+      /** Сущность, чей прогресс следует раскрыть */
+      source: {
+        /** Вид предметного прогресса */
+        kind: ProductProgressKindEnum1;
+        /** Постоянный ID сущности */
+        id: string;
+        /** Читаемый ключ, если назначен */
+        key: string | null;
+        /** Однострочное название */
+        title: string;
+      };
+      /** ID невыполненного критерия задачи */
+      criterionId?: string;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+  /** Уникальные задачи собственного продуктового состава; внешние обязательства не добавляются */
+  counts: {
+    /**
+     * Полный уникальный состав, независимо от страницы
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /**
+     * Фактически выполненная часть полного состава
+     * @min 0
+     * @max 9007199254740991
+     */
+    completed: number;
+  };
+  /** Прогресс продукта по его фичам */
+  kind: "product";
+  /** Фичи продукта с адресами и готовностью */
+  features: {
+    /** Строки текущей страницы */
+    items: {
+      /** Вид предметного прогресса */
+      kind: ProductProgressKindEnum2;
+      /** Постоянный ID сущности */
+      id: string;
+      /** Читаемый ключ, если назначен */
+      key: string | null;
+      /** Однострочное название */
+      title: string;
+      /** Фактическое выполнение с учётом всех обязательств */
+      completed: boolean;
+    }[];
+    /**
+     * Полное число строк списка
+     * @min 0
+     * @max 9007199254740991
+     */
+    total: number;
+    /** Следующее смещение или null */
+    nextOffset: number | null;
+  };
+}
+
 export interface EntityDeletionQuery {
   /**
    * Ключ или постоянный адрес удаляемой сущности
@@ -1027,7 +1822,7 @@ export interface EntityDetail {
         /** Порядок внутри колонки */
         rank: number;
         /**
-         * Прямые зависимости по постоянным ID; только done выполняет зависимость
+         * Прямые зависимости по ID; выполнение требует done, критериев и рекурсивного выполнения обязательств
          * @maxItems 200
          */
         dependencies: string[];
@@ -2500,7 +3295,7 @@ export interface BoardTaskView {
    */
   revision: number;
   /**
-   * Прямые зависимости по постоянным ID; только done выполняет зависимость
+   * Прямые зависимости по ID; выполнение требует done, критериев и рекурсивного выполнения обязательств
    * @maxItems 200
    */
   dependencies: string[];
@@ -2853,7 +3648,7 @@ export interface BoardTaskSaved {
      */
     revision: number;
     /**
-     * Прямые зависимости по постоянным ID; только done выполняет зависимость
+     * Прямые зависимости по ID; выполнение требует done, критериев и рекурсивного выполнения обязательств
      * @maxItems 200
      */
     dependencies: string[];
@@ -2961,7 +3756,7 @@ export interface BoardTasksPage {
      */
     revision: number;
     /**
-     * Прямые зависимости по постоянным ID; только done выполняет зависимость
+     * Прямые зависимости по ID; выполнение требует done, критериев и рекурсивного выполнения обязательств
      * @maxItems 200
      */
     dependencies: string[];
@@ -3075,7 +3870,7 @@ export interface BoardTaskLinksPage {
        */
       revision: number;
       /**
-       * Прямые зависимости по постоянным ID; только done выполняет зависимость
+       * Прямые зависимости по ID; выполнение требует done, критериев и рекурсивного выполнения обязательств
        * @maxItems 200
        */
       dependencies: string[];
@@ -5292,6 +6087,348 @@ export interface ApiFailure {
   };
 }
 
+/** Вид предметного прогресса */
+export type TaskProgressKindEnum =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Машинный код причины */
+export type TaskProgressCodeEnum =
+  | "NOT_DONE"
+  | "CRITERION_INCOMPLETE"
+  | "CHILD_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "COMPONENT_INCOMPLETE"
+  | "NO_WORK"
+  | "INACTIVE";
+
+/** Вид предметного прогресса */
+export type TaskProgressKindEnum1 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Колонка: inbox, ready, in-progress, review, done; cancelled — отмена */
+export type TaskProgressColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Вид предметного прогресса */
+export type TaskProgressKindEnum2 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Сохранённая колонка; не заменяет фактическое выполнение */
+export type TaskProgressColumnEnum1 =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Вид предметного прогресса */
+export type TaskProgressKindEnum3 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Сохранённая колонка; не заменяет фактическое выполнение */
+export type TaskProgressColumnEnum2 =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Вид предметного прогресса */
+export type ImplementationProgressKindEnum =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Машинный код причины */
+export type ImplementationProgressCodeEnum =
+  | "NOT_DONE"
+  | "CRITERION_INCOMPLETE"
+  | "CHILD_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "COMPONENT_INCOMPLETE"
+  | "NO_WORK"
+  | "INACTIVE";
+
+/** Вид предметного прогресса */
+export type ImplementationProgressKindEnum1 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вклад в фичу либо сценарий */
+export type ImplementationProgressImplementationKindEnum = "FI" | "SI";
+
+/** Вид предметного прогресса */
+export type ImplementationProgressKindEnum2 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ImplementationProgressKindEnum3 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ImplementationProgressKindEnum4 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Сохранённая колонка; не заменяет фактическое выполнение */
+export type ImplementationProgressColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Вид предметного прогресса */
+export type ImplementationProgressKindEnum5 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ScenarioProgressKindEnum =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Машинный код причины */
+export type ScenarioProgressCodeEnum =
+  | "NOT_DONE"
+  | "CRITERION_INCOMPLETE"
+  | "CHILD_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "COMPONENT_INCOMPLETE"
+  | "NO_WORK"
+  | "INACTIVE";
+
+/** Вид предметного прогресса */
+export type ScenarioProgressKindEnum1 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ScenarioProgressKindEnum2 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Сохранённая колонка; не заменяет фактическое выполнение */
+export type ScenarioProgressColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Вид предметного прогресса */
+export type ScenarioProgressKindEnum3 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type FeatureProgressKindEnum =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Машинный код причины */
+export type FeatureProgressCodeEnum =
+  | "NOT_DONE"
+  | "CRITERION_INCOMPLETE"
+  | "CHILD_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "COMPONENT_INCOMPLETE"
+  | "NO_WORK"
+  | "INACTIVE";
+
+/** Вид предметного прогресса */
+export type FeatureProgressKindEnum1 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type FeatureProgressKindEnum2 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Сохранённая колонка; не заменяет фактическое выполнение */
+export type FeatureProgressColumnEnum =
+  | "inbox"
+  | "ready"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "cancelled";
+
+/** Вид предметного прогресса */
+export type FeatureProgressKindEnum3 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type FeatureProgressKindEnum4 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ApplicationProgressKindEnum =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Машинный код причины */
+export type ApplicationProgressCodeEnum =
+  | "NOT_DONE"
+  | "CRITERION_INCOMPLETE"
+  | "CHILD_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "COMPONENT_INCOMPLETE"
+  | "NO_WORK"
+  | "INACTIVE";
+
+/** Вид предметного прогресса */
+export type ApplicationProgressKindEnum1 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ApplicationProgressKindEnum2 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ProductProgressKindEnum =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Машинный код причины */
+export type ProductProgressCodeEnum =
+  | "NOT_DONE"
+  | "CRITERION_INCOMPLETE"
+  | "CHILD_INCOMPLETE"
+  | "DEPENDENCY_INCOMPLETE"
+  | "COMPONENT_INCOMPLETE"
+  | "NO_WORK"
+  | "INACTIVE";
+
+/** Вид предметного прогресса */
+export type ProductProgressKindEnum1 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
+/** Вид предметного прогресса */
+export type ProductProgressKindEnum2 =
+  | "task"
+  | "implementation"
+  | "scenario"
+  | "feature"
+  | "application"
+  | "product";
+
 /** Вид удаляемой сущности; проект, паспорт и системные доски не удаляются */
 export type EntityDeletionQueryKindEnum =
   | "feature"
@@ -6382,6 +7519,167 @@ export interface GetProductContextParams {
    * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
    */
   applicationId?: string;
+}
+
+export type GetTaskProgressOkEnum = true;
+
+export interface GetTaskProgressParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+}
+
+export type GetImplementationProgressOkEnum = true;
+
+export interface GetImplementationProgressParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+}
+
+export type GetScenarioProgressOkEnum = true;
+
+export interface GetScenarioProgressParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+}
+
+export type GetFeatureProgressOkEnum = true;
+
+export interface GetFeatureProgressParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+}
+
+export type GetApplicationProgressOkEnum = true;
+
+export interface GetApplicationProgressParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+}
+
+export type GetProductProgressOkEnum = true;
+
+export interface GetProductProgressParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
 }
 
 export type GetBoardsOkEnum = true;
@@ -7594,6 +8892,179 @@ export interface GetProductContextForProjectParams {
    * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
    */
   applicationId?: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetTaskProgressForProjectOkEnum = true;
+
+export interface GetTaskProgressForProjectParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetImplementationProgressForProjectOkEnum = true;
+
+export interface GetImplementationProgressForProjectParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetScenarioProgressForProjectOkEnum = true;
+
+export interface GetScenarioProgressForProjectParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetFeatureProgressForProjectOkEnum = true;
+
+export interface GetFeatureProgressForProjectParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetApplicationProgressForProjectOkEnum = true;
+
+export interface GetApplicationProgressForProjectParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
+  /**
+   * Ключ, ID или kind:ID сущности выбранного проекта
+   * @minLength 1
+   * @maxLength 257
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+   */
+  ref: string;
+  /** Slug, имя из реестра или постоянный идентификатор проекта */
+  project: string;
+}
+
+export type GetProductProgressForProjectOkEnum = true;
+
+export interface GetProductProgressForProjectParams {
+  /**
+   * Смещение каждого списка составляющих и причин
+   * @min 0
+   * @max 9007199254740991
+   * @default 0
+   */
+  offset?: number;
+  /**
+   * Размер страницы каждого списка: 20 по умолчанию, максимум 100
+   * @min 1
+   * @max 100
+   * @default 20
+   */
+  limit?: number;
+  /** Версия первой страницы этого прогресса; обязательна при offset > 0 */
+  version?: string;
   /** Slug, имя из реестра или постоянный идентификатор проекта */
   project: string;
 }

@@ -5,6 +5,36 @@
 через Core либо HTTP. [Конфигурация](CONFIGURATION.md) определяет поиск и приоритеты.
 Чтение не требует автора; запись требует `--actor` или `RELAY_ACTOR`.
 
+## Предметный прогресс
+
+### progress task
+
+`progress task <ref> [--offset <n>] [--limit <n>] [--snapshot-version <version>]` — фактическое
+выполнение, критерии, подзадачи и зависимости. [Контракт прогресса](PROGRESS.md).
+
+### progress implementation
+
+`progress implementation <ref>` — задачи реализации, SI/FI и участие. Общие параметры
+страниц прогресса: `--offset`, `--limit`, `--snapshot-version` (не глобальная версия CLI).
+
+### progress scenario
+
+`progress scenario <ref>` — реализации сценария и прямые задачи; параметры страниц прогресса.
+
+### progress feature
+
+`progress feature <ref>` — сценарии, FI и прямые задачи; параметры страниц прогресса.
+
+### progress application
+
+`progress application <ref>` — состав и раздельные счётчики досок; параметры страниц прогресса.
+
+### progress product
+
+`progress product` — готовность и страница фич; параметры страниц прогресса. Итоги полные;
+после конфликта версии перечитайте первую страницу. Человек получает таблицы/причины,
+`--format json` — строгую схему. У всех команд сохраняется выбранный проект.
+
 ## Общие параметры
 
 | Параметр                      | Назначение                                    |

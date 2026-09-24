@@ -2,6 +2,7 @@ import { Command, Option } from "commander";
 import { registerProject } from "./commands/project.js";
 import { registerProjects } from "./commands/projects.js";
 import { registerProduct } from "./commands/product.js";
+import { registerProgress } from "./commands/progress.js";
 import { registerBoardTasks } from "./commands/board-tasks.js";
 import { registerGraph } from "./commands/graph.js";
 import { registerEntities } from "./commands/entities.js";
@@ -43,6 +44,7 @@ export function createProgram(runtime: Runtime): Command {
   registerProject(program, runtime);
   registerProjects(program, runtime);
   registerProduct(program, runtime);
+  registerProgress(program, runtime);
   registerBoardTasks(program, runtime);
   registerGraph(program, runtime);
   registerEntities(program, runtime);

@@ -9,6 +9,7 @@ import type { WorkspaceOptions } from "./modules/workspace/workspace.module.js";
 import { ProjectModule } from "./modules/project/project.module.js";
 import { ServerModule } from "./modules/workspace/server.module.js";
 import { ProductModule } from "./modules/product/product.module.js";
+import { ProgressModule } from "./modules/progress/progress.module.js";
 import { BoardsModule } from "./modules/boards/boards.module.js";
 import { BoardTasksModule } from "./modules/board-tasks/board-tasks.module.js";
 import { GraphModule } from "./modules/graph/graph.module.js";
@@ -34,6 +35,7 @@ export class AppModule {
         ContextModule,
         ProjectModule,
         ProductModule,
+        ProgressModule,
         BoardsModule,
         BoardTasksModule,
         GraphModule,

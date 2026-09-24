@@ -5,6 +5,7 @@ import type { ApiFailure } from "@relay/contracts";
 import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
+  "PROGRESS_CHANGED",
   "ENTITIES_CHANGED",
   "ENTITY_KEY_CONFLICT",
   "ENTITY_KIND_MISMATCH",

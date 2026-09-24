@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useProjectBasePath } from "domains/project";
 import {
   Alert,
+  Anchor,
   Badge,
   Button,
   Group,
@@ -21,6 +24,7 @@ import {
   updateBoardTask,
   moveBoardTask,
   useBoardTaskRefresh,
+  useTaskExecutionProgress,
 } from "domains/board-tasks";
 import { readSessionStored, writeSessionStored, removeSessionStored } from "infra/browser-storage";
 import { MarkdownField } from "ui/markdown-field";
@@ -42,6 +46,43 @@ import styles from "./styles/task-editor.module.css";
  */
 export const TaskEditor = (props: TaskEditorProps) => {
   const { projectId, task, startEditing, onOpen } = props;
+  const base = useProjectBasePath();
+  const [progressPage, setProgressPage] = useState({
+    taskId: task.id,
+    offset: 0,
+    version: undefined as string | undefined,
+  });
+  const progressOffset = progressPage.taskId === task.id ? progressPage.offset : 0;
+  const progressVersion = progressPage.taskId === task.id ? progressPage.version : undefined;
+  const execution = useTaskExecutionProgress(projectId, task.id, progressOffset, progressVersion);
+  const executionData = execution.data;
+  const hasExecutionError = isDefined(execution.error);
+  const hasExecution = isDefined(executionData) && !hasExecutionError;
+  const executionLabel = executionData?.isComplete
+    ? "Фактически выполнена"
+    : "Фактически не выполнена";
+  const executionReasons =
+    executionData?.reasons.map((reason) => ({ ...reason, href: `${base}${reason.path}` })) ?? [];
+  const hasMoreExecutionReasons = isDefined(executionData) && executionData.nextOffset !== null;
+  const canResetExecution = progressOffset > 0;
+  /**
+   * Раскрывает следующую страницу причин того же снимка.
+   */
+  const handleMoreExecution = (): void => {
+    if (!isDefined(executionData) || executionData.nextOffset === null) return;
+    setProgressPage({
+      taskId: task.id,
+      offset: executionData.nextOffset,
+      version: executionData.version,
+    });
+  };
+  /**
+   * Перечитывает актуальное выполнение, не затрагивая редактируемый Markdown.
+   */
+  const handleResetExecution = (): void => {
+    setProgressPage({ taskId: task.id, offset: 0, version: undefined });
+    void execution.mutate();
+  };
   const draftKey = `relay:kanban:${projectId}:${task.id}`;
   const [draft] = useState(() => TASK_DRAFT_SCHEMA.safeParse(readSessionStored(draftKey)));
   const [isEditing, setEditing] = useState(startEditing || draft.success);
@@ -326,6 +367,44 @@ export const TaskEditor = (props: TaskEditorProps) => {
               <section className={styles.section}>
                 <TaskRelations projectId={projectId} task={task} onOpen={onOpen} />
               </section>
+              <Stack gap="xs" className={styles.section}>
+                <Text fw={600}>Фактическое выполнение</Text>
+                {execution.isLoading && (
+                  <Text size="sm" role="status">
+                    Считаем выполнение…
+                  </Text>
+                )}
+                {hasExecution && <Text size="sm">{executionLabel}</Text>}
+                {hasExecution &&
+                  executionReasons.map((reason, index) => (
+                    <Anchor
+                      key={`${reason.href}-${index}`}
+                      component={Link}
+                      to={reason.href}
+                      size="sm"
+                    >
+                      {reason.message}
+                    </Anchor>
+                  ))}
+                {hasMoreExecutionReasons && (
+                  <Button variant="subtle" size="compact-sm" onClick={handleMoreExecution}>
+                    Следующие причины
+                  </Button>
+                )}
+                {hasExecutionError && (
+                  <Alert color="orange">
+                    Не удалось прочитать актуальное выполнение.{" "}
+                    <Button variant="subtle" size="compact-sm" onClick={handleResetExecution}>
+                      Перечитать
+                    </Button>
+                  </Alert>
+                )}
+                {canResetExecution && (
+                  <Button variant="subtle" size="compact-sm" onClick={handleResetExecution}>
+                    К первой странице причин
+                  </Button>
+                )}
+              </Stack>
               <TaskAcceptance
                 className={styles.section}
                 projectId={projectId}

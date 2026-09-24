@@ -37,7 +37,14 @@ const SCENARIOS = [
 
 /** Создаёт только сведения задачи, необходимые для предметной проекции. */
 function task(id: string, column: BoardTaskRecord["column"] = "done") {
-  return { column, productLinks: [{ kind: "implementation" as const, id }] };
+  return {
+    id,
+    parentId: null,
+    dependencies: [],
+    acceptanceCriteria: [],
+    column,
+    productLinks: [{ kind: "implementation" as const, id }],
+  };
 }
 
 test("FI не завершена при 0/2 или 1/2 сценариях; SI без прямых FI-задач поднимают готовность", () => {

@@ -32,19 +32,20 @@ HTTP-статус и код процесса различаются. API пер�
 
 ## Объекты и конкурентность
 
-| Код                                               | Действие                                                           |
-| ------------------------------------------------- | ------------------------------------------------------------------ |
-| NOT_FOUND, PRODUCT_RECORD_NOT_FOUND               | Проверьте ключ/ID и проект                                         |
-| AMBIGUOUS_ENTITY_REFERENCE, AMBIGUOUS_PRODUCT_KEY | Уточните вид и постоянный ID                                       |
-| ENTITY_KEY_CONFLICT                               | Выберите свободный ключ, учитывая алиасы                           |
-| PROJECT_SLUG_TAKEN                                | Выберите свободный адрес проекта                                   |
-| TASK_BLOCKED                                      | Перечитайте task links и выполните зависимости                     |
-| TASK_ACCEPTANCE_INCOMPLETE                        | Прочитайте task criterion list и выполните оставшиеся критерии     |
-| TASK_ACCEPTANCE_LOCKED                            | Верните задачу из done перед изменением критериев                  |
-| REVISION_CONFLICT                                 | Перечитайте запись и согласуйте изменение                          |
-| IDEMPOTENCY_CONFLICT                              | Восстановите исходный запрос с тем же ключом                       |
-| BOARD_CHANGED, GRAPH_CHANGED                      | Начните чтение снимка заново                                       |
-| STORAGE_BUSY, LOCK_LOST                           | Проверьте завершение конкурентной операции и перечитайте состояние |
+| Код                                               | Действие                                                                    |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| NOT_FOUND, PRODUCT_RECORD_NOT_FOUND               | Проверьте ключ/ID и проект                                                  |
+| AMBIGUOUS_ENTITY_REFERENCE, AMBIGUOUS_PRODUCT_KEY | Уточните вид и постоянный ID                                                |
+| ENTITY_KEY_CONFLICT                               | Выберите свободный ключ, учитывая алиасы                                    |
+| PROJECT_SLUG_TAKEN                                | Выберите свободный адрес проекта                                            |
+| TASK_BLOCKED                                      | Перечитайте task links и выполните зависимости                              |
+| TASK_ACCEPTANCE_INCOMPLETE                        | Прочитайте task criterion list и выполните оставшиеся критерии              |
+| TASK_ACCEPTANCE_LOCKED                            | Верните задачу из done перед изменением критериев                           |
+| REVISION_CONFLICT                                 | Перечитайте запись и согласуйте изменение                                   |
+| IDEMPOTENCY_CONFLICT                              | Восстановите исходный запрос с тем же ключом                                |
+| BOARD_CHANGED, GRAPH_CHANGED                      | Начните чтение снимка заново                                                |
+| PROGRESS_CHANGED                                  | Перечитайте прогресс с offset=0; продолжите с новой version и прежним limit |
+| STORAGE_BUSY, LOCK_LOST                           | Проверьте завершение конкурентной операции и перечитайте состояние          |
 
 ## Целостность и миграция
 

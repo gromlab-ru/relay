@@ -43,6 +43,7 @@ import { prepareTaskHistory, taskBaseline } from "./history.js";
 import { productTaskTargets } from "../product/task-progress.js";
 import { syncTaskRelations } from "../entities/owned-relations.js";
 import { resolveAddress } from "../entities/resolver.js";
+import { taskCompletions } from "./completion.js";
 
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const versionOf = (tasks: BoardTaskRecord[]) => hash(tasks.map((task) => [task.id, task.revision]));
@@ -207,18 +208,16 @@ function view(task: BoardTaskRecord, tasks: BoardTaskRecord[], boards: Board[]):
     total: acceptanceCriteria.length,
     completed: acceptanceCriteria.filter((criterion) => criterion.completed).length,
   };
-  const requirements = new Set([
-    ...task.dependencies,
-    ...tasks.filter((entry) => entry.parentId === task.id).map((entry) => entry.id),
-  ]);
-  const blockers = [...requirements].filter(
-    (id) => tasks.find((entry) => entry.id === id)?.column !== "done",
-  );
+  const completion = taskCompletions(
+    [...tasks.filter((entry) => entry.id !== task.id), task],
+    "blocked",
+  ).get(task.id)!;
+  const { blockers } = completion;
   const board = resolveBoard(boards, task.boardId);
   return {
     ...data,
     acceptance,
-    canComplete: blockers.length === 0 && acceptance.completed === acceptance.total,
+    canComplete: completion.canComplete,
     boardSlug: board.slug,
     blockers,
     blocked: blockers.length > 0,
@@ -985,7 +984,7 @@ export class BoardTasksService {
           task.parentId = null;
         } else {
           invariant(
-            target.column !== "done" || task.column === "done",
+            target.column !== "done" || taskCompletions(tasks).get(task.id)!.completed,
             "TASK_BLOCKED",
             "Сначала верните родительскую задачу из готовых: подзадача ещё не выполнена",
             4,
@@ -1006,7 +1005,7 @@ export class BoardTasksService {
           task.column !== "done" ||
             field !== "dependencies" ||
             command.remove ||
-            target.column === "done",
+            taskCompletions(tasks).get(target.id)!.completed,
           "TASK_BLOCKED",
           "Сначала верните задачу из готовых: зависимость ещё не выполнена",
           4,

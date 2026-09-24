@@ -156,7 +156,7 @@ export function validateProduct(records: ProductRecord[]): void {
 export function productState(
   productId: string,
   records: ProductRecord[],
-  tasks: Pick<BoardTaskRecord, "column" | "productLinks">[] = [],
+  tasks: BoardTaskRecord[] = [],
 ): ProductState {
   const contracts = records.flatMap((record) => {
     const fields = record.fields;

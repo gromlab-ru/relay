@@ -29,6 +29,13 @@ export const ProductTasks = (props: ProductTasksProps) => {
   const project = useProjectId();
   const base = useProjectBasePath();
   const [isOpen, setOpen] = useState(false);
+  const [reasonPage, setReasonPage] = useState({
+    target: targetId,
+    offset: 0,
+    version: undefined as string | undefined,
+  });
+  const reasonOffset = reasonPage.target === targetId ? reasonPage.offset : 0;
+  const reasonVersion = reasonPage.target === targetId ? reasonPage.version : undefined;
   const canRead = project !== undefined && targetId !== undefined;
   const shouldShowTasks = isExpanded || isOpen;
   const query = useBoardTasks(
@@ -36,15 +43,43 @@ export const ProductTasks = (props: ProductTasksProps) => {
     { productTarget: targetId },
     canRead && shouldShowTasks,
   );
-  const progress = useProductTaskProgress(project, isExpanded ? (targetId ?? null) : null);
+  const progress = useProductTaskProgress(
+    project,
+    isExpanded ? (targetId ?? null) : null,
+    reasonOffset,
+    reasonVersion,
+  );
   const progressData = progress.data;
   const hasProgress = progressData !== undefined && progress.error === undefined;
   const progressValue =
     progressData === undefined || progressData.total === 0
       ? 0
-      : Math.round((progressData.completed / progressData.total) * 100);
+      : Math.floor((progressData.completed / progressData.total) * 100);
   const progressLabel = `${progressData?.completed ?? 0} из ${progressData?.total ?? 0} завершено`;
   const hasProgressError = progress.error !== undefined;
+  const readinessLabel = progressData?.isComplete
+    ? "Обязательный состав выполнен"
+    : "Обязательный состав ещё не выполнен";
+  const reasonItems =
+    progressData?.reasons.map((reason) => ({ ...reason, href: `${base}${reason.path}` })) ?? [];
+  const hasMoreReasons = progressData !== undefined && progressData.nextOffset !== null;
+  const canResetReasons = reasonOffset > 0;
+  /**
+   * Продолжает тот же снимок; при изменении пользователь явно возвращается к первой странице.
+   */
+  const handleNextReasons = (): void => {
+    if (progressData === undefined || progressData.nextOffset === null) return;
+    setReasonPage({
+      target: targetId,
+      offset: progressData.nextOffset,
+      version: progressData.version,
+    });
+  };
+  /**
+   * Перечитывает причины после смены снимка, сохраняя состояние списка задач.
+   */
+  const handleResetReasons = (): void =>
+    setReasonPage({ target: targetId, offset: 0, version: undefined });
   const isProgressLoading = isExpanded && progressData === undefined && !hasProgressError;
   const items =
     query.data
@@ -52,8 +87,17 @@ export const ProductTasks = (props: ProductTasksProps) => {
       .map((task) => ({
         ...task,
         label: task.title || "Без названия",
-        columnLabel: TASK_COLUMNS.find((entry) => entry.value === task.column)?.label,
-        color: task.column === "done" ? "green" : task.column === "cancelled" ? "gray" : "blue",
+        columnLabel:
+          task.column === "done" && task.canComplete === false
+            ? "Не выполнена"
+            : TASK_COLUMNS.find((entry) => entry.value === task.column)?.label,
+        columnTitle: `Сохранённая колонка: ${task.column}. Фактическое выполнение учитывает обязательства.`,
+        color:
+          task.column === "done" && task.canComplete !== false
+            ? "green"
+            : task.column === "cancelled"
+              ? "gray"
+              : "blue",
         href: `${base}/boards/${task.boardSlug}/${task.id}`,
       })) ?? [];
   const hasMore = query.data !== undefined && query.data.at(-1)?.nextOffset !== null;
@@ -99,6 +143,17 @@ export const ProductTasks = (props: ProductTasksProps) => {
                 </Text>
               </Group>
               <Progress value={progressValue} color="green" size={6} aria-label={progressLabel} />
+              <Text size="sm">{readinessLabel}</Text>
+              {reasonItems.map((reason, index) => (
+                <Anchor key={`${reason.href}-${index}`} component={Link} to={reason.href} size="sm">
+                  {reason.message}
+                </Anchor>
+              ))}
+              {hasMoreReasons && (
+                <Button variant="subtle" size="compact-sm" onClick={handleNextReasons}>
+                  Следующие причины
+                </Button>
+              )}
             </Stack>
           )}
           {hasProgressError && (
@@ -108,6 +163,11 @@ export const ProductTasks = (props: ProductTasksProps) => {
                 Повторить
               </Button>
             </Alert>
+          )}
+          {canResetReasons && (
+            <Button variant="subtle" size="compact-sm" onClick={handleResetReasons}>
+              Перечитать прогресс с начала
+            </Button>
           )}
         </header>
       )}
@@ -144,7 +204,13 @@ export const ProductTasks = (props: ProductTasksProps) => {
                 </Text>
                 <ArrowUpRight size={15} aria-hidden="true" />
               </Anchor>
-              <Badge variant="light" color={task.color} c="var(--mantine-color-text)" size="sm">
+              <Badge
+                variant="light"
+                color={task.color}
+                c="var(--mantine-color-text)"
+                size="sm"
+                title={task.columnTitle}
+              >
                 {task.columnLabel}
               </Badge>
             </div>

@@ -18,9 +18,24 @@ export type TasksPage = z.infer<typeof TASKS_PAGE_SCHEMA>;
 export type ProductTaskProgress = {
   /** Всего задач с обязательством. */
   total: number;
-  /** Задачи в колонке done. */
+  /** Фактически выполненные задачи с учётом всех обязательств. */
   completed: number;
 };
+/** Готовность цели и страница причин, полученные из предметного расчёта. */
+export type TaskExecutionProgress = {
+  /** Выполнен весь обязательный состав, включая пустые реализации. */
+  isComplete: boolean;
+  /** Версия выбранной страницы причин. */
+  version: string;
+  /** Следующая страница причин. */
+  nextOffset: number | null;
+  /** Полное число причин. */
+  reasonCount: number;
+  /** Причины с адресами дальнейшего раскрытия. */
+  reasons: { /** Объяснение. */ message: string; /** Путь внутри проекта. */ path: string }[];
+};
+/** Итоги задач вместе с готовностью продуктовой цели и причинами. */
+export type ProductGoalProgress = ProductTaskProgress & TaskExecutionProgress;
 /** Выполнение бизнес-задач и всех задач одной доски приложения. */
 export type ApplicationTaskProgress = {
   /** Задачи с явными связями с требованиями, без повторов по числу связей. */

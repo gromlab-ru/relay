@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { progressQuerySchema, progressPageQuerySchema } from "@relay/contracts/progress";
 import {
   productEntitiesQuerySchema,
   productEntityQuerySchema,
@@ -180,6 +181,34 @@ export function createTools(projects: Projects): Server {
         return tool.run(backend, fields);
       },
     );
+
+  for (const kind of ["task", "implementation", "scenario", "feature", "application"] as const)
+    projectTool(
+      `${kind}_progress`,
+      `Прогресс ${{ task: "задачи с критериями и обязательствами", implementation: "реализации с собственными задачами", scenario: "сценария и его реализаций", feature: "фичи и её сценариев", application: "приложения и задач его досок" }[kind]}; причины и адреса для раскрытия. Итоги полные, списки ограничены; для продолжения нужны offset и version`,
+      { ...selector, ...progressQuerySchema.shape },
+      true,
+      async (backend, input) => {
+        const data = await backend.progress[kind](progressQuerySchema.strip().parse(input));
+        return {
+          data,
+          text: `${data.entity.title}: ${data.completed ? "выполнено" : "не выполнено"}. Причин: ${data.reasons.total}. ${data.reasons.items.map((reason) => reason.message).join("; ")}`,
+        };
+      },
+    );
+  projectTool(
+    "product_progress",
+    "Прогресс продукта и страница фич с адресами; итог по всему составу, продолжение через offset и version",
+    { ...selector, ...progressPageQuerySchema.shape },
+    true,
+    async (backend, input) => {
+      const data = await backend.progress.product(progressPageQuerySchema.strip().parse(input));
+      return {
+        data,
+        text: `${data.entity.title}: ${data.completed ? "выполнено" : "не выполнено"}. Задачи: ${data.counts.completed}/${data.counts.total}. Фич: ${data.features.total}.`,
+      };
+    },
+  );
 
   projectTool(
     "boards_list",

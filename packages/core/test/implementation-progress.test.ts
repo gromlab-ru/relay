@@ -10,6 +10,10 @@ import { fixture } from "./helpers/workspace.js";
 
 test("реализация учитывает полный набор задач, отмену и тип ссылки", () => {
   const tasks = Array.from({ length: 101 }, (_, index) => ({
+    id: String(index),
+    parentId: null,
+    dependencies: [],
+    acceptanceCriteria: [],
     column: index === 100 ? ("review" as const) : ("done" as const),
     productLinks: [{ kind: "implementation" as const, id: "target" }],
   }));
@@ -18,13 +22,27 @@ test("реализация учитывает полный набор задач
   assert.equal(productTaskStatuses([]).size, 0);
   assert.equal(
     productTaskStatuses([
-      { column: "done", productLinks: [{ kind: "feature", id: "target" }] },
+      {
+        id: "a",
+        parentId: null,
+        dependencies: [],
+        acceptanceCriteria: [],
+        column: "done",
+        productLinks: [{ kind: "feature", id: "target" }],
+      },
     ]).get("implementation:target"),
     undefined,
   );
   assert.equal(
     productTaskStatuses([
-      { column: "cancelled", productLinks: [{ kind: "implementation", id: "target" }] },
+      {
+        id: "a",
+        parentId: null,
+        dependencies: [],
+        acceptanceCriteria: [],
+        column: "cancelled",
+        productLinks: [{ kind: "implementation", id: "target" }],
+      },
     ]).get("implementation:target"),
     "partial",
   );
