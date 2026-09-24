@@ -1,5 +1,7 @@
 import { BookOpen, Compass, ScanLine } from "lucide-react";
 import { MarkdownView } from "ui/markdown-view";
+import { EntityDocuments } from "compositions/widgets/entity-documents";
+import { EntityHistory } from "compositions/widgets/entity-history";
 import type { PlanOverviewProps } from "./types/plan-overview-props.type";
 import styles from "./styles/plan-overview.module.css";
 
@@ -32,11 +34,17 @@ export const PlanOverview = (props: PlanOverviewProps) => {
           <BookOpen size={16} />
           Материалы плана
         </h2>
-        <p className={styles.empty}>Документы пока не прикреплены.</p>
-        <p className={styles.hint}>
-          Здесь будут требования, решения и инструкции, на которые опирается работа.
-        </p>
+        <EntityDocuments target={{ kind: "work-plan", id: plan.id }} />
       </section>
+      <section className={styles.section}>
+        <h2 className={styles.title}>Ожидаемый результат</h2>
+        <MarkdownView
+          text={plan.expectedResult}
+          compact
+          emptyText="Ожидаемый результат отдельно не описан."
+        />
+      </section>
+      <EntityHistory reference={`work-plan:${plan.id}`} />
     </div>
   );
 };

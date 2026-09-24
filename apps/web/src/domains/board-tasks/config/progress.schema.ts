@@ -27,7 +27,12 @@ export const APPLICATION_PROGRESS_SCHEMA = z.object({
   allTasks: PROGRESS_COUNTS_SCHEMA,
 });
 /** Фактическое выполнение задачи без подмены сохранённой колонки. */
-export const TASK_EXECUTION_SCHEMA = GOAL_PROGRESS_SCHEMA.omit({ counts: true });
+export const TASK_EXECUTION_SCHEMA = GOAL_PROGRESS_SCHEMA.omit({ counts: true }).extend({
+  planning: z
+    .object({ planId: z.string(), planKey: z.string(), stageTitle: z.string() })
+    .nullable()
+    .optional(),
+});
 /** Разрешённый вид цели для выбора предметного обработчика. */
 export const GOAL_ADDRESS_SCHEMA = z.object({
   ref: z.object({ kind: z.enum(["feature", "scenario", "implementation"]), id: z.string() }),

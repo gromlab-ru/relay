@@ -3,11 +3,14 @@ import type { PlanFormValues } from "../types/plan-form-props.type";
 
 const MARKDOWN = z.array(z.string()).transform((lines) => lines.join("\n"));
 const DRAFT_SCHEMA = z.object({
+  revision: z.number().int().nonnegative(),
   title: z.string(),
   summary: z.string(),
   goal: MARKDOWN,
   rationale: MARKDOWN,
   boundaries: MARKDOWN,
+  expectedResult: MARKDOWN,
+  participants: z.array(z.string()),
   scope: z.array(z.string()),
 });
 
@@ -19,7 +22,7 @@ export const readPlanDraft = (
   fallback: PlanFormValues,
 ): { values: PlanFormValues; error: string | null } => {
   try {
-    const raw = sessionStorage.getItem(key) ?? sessionStorage.getItem(key.replace(":v2:", ":v1:"));
+    const raw = sessionStorage.getItem(key);
     if (raw === null) return { values: fallback, error: null };
     const content: unknown = JSON.parse(raw);
     if (z.object({ kind: z.literal("release") }).safeParse(content).success)
@@ -50,6 +53,7 @@ export const writePlanDraft = (key: string, values: PlanFormValues): string | nu
         goal: values.goal.split("\n"),
         rationale: values.rationale.split("\n"),
         boundaries: values.boundaries.split("\n"),
+        expectedResult: values.expectedResult.split("\n"),
       }),
     );
     return null;
@@ -63,8 +67,4 @@ export const writePlanDraft = (key: string, values: PlanFormValues): string | nu
  */
 export const clearPlanDraft = (key: string): void => {
   sessionStorage.removeItem(key);
-  const legacyKey = key.replace(":v2:", ":v1:");
-  const raw = sessionStorage.getItem(legacyKey);
-  if (raw !== null && z.object({ kind: z.literal("work") }).safeParse(JSON.parse(raw)).success)
-    sessionStorage.removeItem(legacyKey);
 };

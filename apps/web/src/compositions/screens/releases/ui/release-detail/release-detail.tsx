@@ -2,13 +2,12 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Badge, Button } from "@mantine/core";
 import { ArrowLeft, Check, Pencil } from "lucide-react";
-import {
-  getReleaseSummary,
-  RELEASE_STATUS_LABELS,
-  RELEASE_STATUS_COLORS,
-} from "domains/releases-demo";
+import { getReleaseSummary, RELEASE_STATUS_LABELS, RELEASE_STATUS_COLORS } from "domains/releases";
 import { MarkdownView } from "ui/markdown-view";
 import { ReleaseContent } from "./ui/release-content/release-content";
+import { ReleaseSnapshot } from "./ui/release-snapshot/release-snapshot";
+import { EntityDocuments } from "compositions/widgets/entity-documents";
+import { EntityHistory } from "compositions/widgets/entity-history";
 import type { ReleaseDetailProps } from "./types/release-detail-props.type";
 import styles from "./styles/release-detail.module.css";
 
@@ -16,13 +15,14 @@ import styles from "./styles/release-detail.module.css";
  * Показывает версию, собственный статус и выбранные результаты одного выпуска.
  *
  * Используется для:
- *  - чтения запланированного релиза и неизменяемого состава выпущенного примера
+ *  - чтения запланированного релиза и неизменяемого состава состоявшегося выпуска
  */
 export const ReleaseDetail = (props: ReleaseDetailProps) => {
-  const { release, work, basePath, onEdit } = props;
+  const { release, basePath, onEdit } = props;
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const summary = getReleaseSummary(release, work);
+  const summary = getReleaseSummary(release);
   const isReleased = release.status === "released";
+  const materialsTitle = isReleased ? "Текущие прикреплённые материалы" : "Материалы релиза";
   const canEdit = !isReleased;
   const canRelease = release.status === "planned" && summary.canRelease;
   const hasDescription = release.description.trim() !== "";
@@ -40,10 +40,10 @@ export const ReleaseDetail = (props: ReleaseDetailProps) => {
       ? "Не зафиксирован"
       : dateFormatter.format(new Date(release.releasedAt));
   const hasMissing = summary.missing > 0;
-  const hasSnapshot = release.snapshot !== null;
+  const hasSnapshot = release.snapshotId !== null;
   const snapshotDescription = hasSnapshot
     ? "Показан сохранённый состав. Изменения исходных планов не переписывают этот результат."
-    : "У прежнего примера не было снимка. Ниже показано текущее состояние выбранных планов.";
+    : "Снимок выпуска недоступен; перечитайте релиз. Текущие планы не заменяют исторический результат.";
 
   useEffect(() => {
     document.title = `${release.title} · Relay`;
@@ -109,8 +109,9 @@ export const ReleaseDetail = (props: ReleaseDetailProps) => {
         )}
       </dl>
       {isReleased && (
-        <Alert color="gray" mb="lg" title="Выпуск зафиксирован в прототипе">
+        <Alert color="gray" mb="lg" title="Выпуск зафиксирован">
           {snapshotDescription}
+          <p>Автор: {release.releasedBy}</p>
         </Alert>
       )}
       {hasMissing && (
@@ -123,7 +124,19 @@ export const ReleaseDetail = (props: ReleaseDetailProps) => {
           <MarkdownView text={release.description} compact />
         </section>
       )}
-      <ReleaseContent release={release} work={work} basePath={basePath} onEdit={() => onEdit()} />
+      <ReleaseContent release={release} basePath={basePath} onEdit={() => onEdit()} />
+      {hasSnapshot && <ReleaseSnapshot releaseId={release.id} />}
+      <section className={styles.description}>
+        <h2>{materialsTitle}</h2>
+        {isReleased && (
+          <p>
+            Текущая библиотека может изменяться. Зафиксированные тексты доступны в снимке выпуска
+            выше.
+          </p>
+        )}
+        <EntityDocuments target={{ kind: "release", id: release.id }} />
+      </section>
+      <EntityHistory reference={`release:${release.id}`} />
     </div>
   );
 };

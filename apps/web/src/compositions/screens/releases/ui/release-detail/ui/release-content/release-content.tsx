@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Badge, Button, Progress } from "@mantine/core";
+import { Alert, Badge, Button, Progress } from "@mantine/core";
 import { ArrowUpRight, CheckCircle2, Flag, Pencil, Rocket } from "lucide-react";
-import { PLAN_STATUS_LABELS, PLAN_STATUS_COLORS } from "domains/planning-demo";
-import { getReleasePlans, getReleaseSummary } from "domains/releases-demo";
+import { PLAN_STATUS_LABELS, PLAN_STATUS_COLORS } from "domains/planning";
+import { useReleasePlans, getReleaseSummary } from "domains/releases";
+import { useProjectId } from "domains/project";
 import { MarkdownView } from "ui/markdown-view";
-import { isEmptyArray } from "shared/value-predicates";
+import { isDefined, isEmptyArray } from "shared/value-predicates";
 import type { ReleaseContentProps } from "./types/release-content-props.type";
 import styles from "./styles/release-content.module.css";
 
@@ -16,19 +17,21 @@ import styles from "./styles/release-content.module.css";
  *  - чтения текущего либо зафиксированного состава самостоятельного релиза
  */
 export const ReleaseContent = (props: ReleaseContentProps) => {
-  const { release, work, basePath, onEdit } = props;
+  const { release, basePath, onEdit } = props;
+  const projectId = useProjectId();
   const [limit, setLimit] = useState(12);
-  const allPlans = getReleasePlans(release, work);
-  const summary = getReleaseSummary(release, work);
-  const planItems = allPlans.slice(0, limit).map((plan) => ({
+  const query = useReleasePlans(projectId, release.id, limit);
+  const summary = query.data?.readiness ?? getReleaseSummary(release);
+  const planItems = (query.data?.items ?? []).map((plan) => ({
     ...plan,
-    canOpen: work.plans.some((candidate) => candidate.id === plan.id),
+    canOpen: !plan.isMissing,
     hasResult: plan.result !== "",
   }));
-  const isEmpty = isEmptyArray(allPlans);
+  const hasReadError = isDefined(query.error);
+  const isEmpty = !query.isLoading && !hasReadError && isEmptyArray(planItems);
   const canEdit = release.status !== "released";
-  const hasMore = allPlans.length > limit;
-  const hasSnapshot = release.snapshot !== null;
+  const hasMore = isDefined(query.data?.nextOffset);
+  const hasSnapshot = release.snapshotId !== null;
   const heading = hasSnapshot ? "Состав на момент выпуска" : "Состав релиза";
   return (
     <div className={styles.root}>
@@ -50,6 +53,15 @@ export const ReleaseContent = (props: ReleaseContentProps) => {
         </strong>
         <span>планов завершено</span>
       </div>
+      {query.isLoading && <p role="status">Загружаем состав…</p>}
+      {hasReadError && (
+        <Alert color="red">
+          {query.error?.message}
+          <Button size="xs" variant="subtle" onClick={() => void query.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
       {isEmpty && (
         <div className={styles.empty}>
           <Rocket size={26} strokeWidth={1.3} />
@@ -76,7 +88,7 @@ export const ReleaseContent = (props: ReleaseContentProps) => {
           <h3 className={styles.planTitle}>{included.title}</h3>
           {included.canOpen && (
             <Link to={`${basePath}/plans/${included.id}`} className={styles.currentLink}>
-              Открыть план
+              Открыть текущий план
               <ArrowUpRight size={13} />
             </Link>
           )}
@@ -103,8 +115,13 @@ export const ReleaseContent = (props: ReleaseContentProps) => {
         </article>
       ))}
       {hasMore && (
-        <Button variant="default" fullWidth onClick={() => setLimit(limit + 12)}>
-          Показать ещё · {planItems.length} из {allPlans.length}
+        <Button
+          variant="default"
+          fullWidth
+          loading={query.isValidating}
+          onClick={() => setLimit(limit + 12)}
+        >
+          Показать ещё · {planItems.length} из {query.data?.total}
         </Button>
       )}
     </div>

@@ -1,4 +1,4 @@
-import type { PlanningTask } from "domains/planning-demo";
+import type { PlanningTask } from "domains/planning";
 
 /** Параметры визуальной области. */
 export type PlanTaskProps = {

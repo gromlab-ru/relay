@@ -7,11 +7,15 @@ import { BoardsService } from "@relay/core/application/boards/service";
 import { GraphService } from "@relay/core/application/graph/service";
 import { EntityEngine } from "@relay/core/application/entities/service";
 import { ProgressService } from "@relay/core/application/progress/service";
+import { PlanningService } from "@relay/core/application/planning/service";
+import { ReleasesService } from "@relay/core/application/releases/service";
 
 export async function createLocalBackend(cwd: string, config?: string): Promise<Backend> {
   const workspace = await openWorkspace(cwd, config);
   return {
     kind: "local",
+    plans: new PlanningService(workspace),
+    releases: new ReleasesService(workspace),
     progress: new ProgressService(workspace),
     entities: new EntityEngine(workspace),
     graph: new GraphService(workspace),

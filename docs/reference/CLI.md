@@ -7,6 +7,164 @@
 
 ## Предметный прогресс
 
+### progress work-plan
+
+`progress work-plan <ref>` — полное выполнение состава плана, этапы, препятствия,
+условия начала/завершения и расхождение закрытого плана с текущими задачами.
+Страницы: `--offset`, `--limit`, `--snapshot-version`.
+
+### progress release
+
+`progress release <ref>` — готовность планов либо исторический результат выпущенного релиза.
+Состояние выпуска и текущая готовность различаются. Те же параметры страниц.
+
+## Планы и релизы
+
+Правила: [планы](PLANNING.md), [релизы](RELEASES.md). Все записи принимают `--request-id`;
+после потери ответа повторяют исходный запрос. Изменения требуют `--if-revision`.
+Автор задаётся глобально через `--actor`. Страницы используют `--offset`, `--limit`
+и `--snapshot-version`, сохраняя фильтры. Человеческий Markdown/таблицы — по умолчанию,
+машинный ответ — `--format json`.
+
+### plan list
+
+`plan list [--q <текст>] [--status draft|active|completed|cancelled]` — каталог с полными
+показателями. Порция по умолчанию 12, максимум 100.
+
+### plan get
+
+`plan get <reference>` — полные тексты, область, ревизия и показатели плана.
+
+### plan candidates
+
+`plan candidates [--q <текст>] [--board <доска>] [--stage <этап>]
+[--available-only true|false]` — серверный поиск задач для включения. Свободные и
+текущие задачи выбранного этапа видны при true; false показывает также занятые/отменённые.
+Поддержаны общие параметры страниц.
+
+### plan create
+
+`plan create --title <название> [--goal <Markdown>]` — новый черновик. Дополнительные поля:
+`--summary` — краткий текст, `--rationale` — обоснование, `--boundaries` — границы,
+`--expected-result` — ожидаемый результат, `--scope <адреса...>` — реальные области,
+`--participants <авторы...>` — участники. Полные тексты принимают Markdown напрямую.
+
+### plan update
+
+`plan update <reference> --if-revision <n>` — только заданные поля из `plan create`.
+`--clear-scope` явно очищает область. Отсутствующее поле сохраняет прежнее значение.
+
+### plan stages
+
+`plan stages <reference>` — страница этапов с полными счётчиками задач.
+
+### plan tasks
+
+`plan tasks <reference> <stage>` — актуальные задачи одного этапа. Полное описание
+задачи читается через `task get`; подзадачи и зависимости не добавляются в состав автоматически.
+
+### plan memberships
+
+`plan memberships <reference>` — текущее и историческое участие задачи.
+
+### plan stage create
+
+`plan stage create <reference> --title <название> --if-revision <n>` — создать этап.
+`--summary` — краткий текст, `--outcome` — ожидаемый результат в Markdown,
+`--completion-conditions` — описанные условия завершения в Markdown.
+
+### plan stage update
+
+`plan stage update <reference> <stage> --if-revision <n>` — изменить заданные поля этапа.
+Ревизия относится к плану, включая его состав. Поля совпадают с созданием этапа.
+
+### plan stage remove
+
+`plan stage remove <reference> <stage> --if-revision <n>` — удалить пустой этап без внешних связей.
+
+### plan stage move
+
+`plan stage move <reference> <stage> --if-revision <n> [--before <id>]` — переместить
+перед выбранным этапом; отсутствие `--before` означает конец полного списка.
+
+### plan include
+
+`plan include <reference> <stage> --tasks <задачи...> --if-revision <n>` — добавить задачи,
+сохранив остальные включения. Допускается до 2000 задач в этапе.
+
+### plan exclude
+
+`plan exclude <reference> <stage> --tasks <задачи...> --if-revision <n>` — снять выбранные
+включения и их связи; задачи сохраняются.
+
+### plan transfer
+
+`plan transfer <reference> <task> <targetStage> --if-revision <n> --target-revision <n>
+--reason <Markdown>` — явный перенос с ревизиями исходного и целевого планов и причиной.
+
+### plan start
+
+`plan start <reference> --if-revision <n>` — начать черновик с целью и непустым составом.
+
+### plan complete
+
+`plan complete <reference> --if-revision <n> --result <Markdown>` — завершить начатый
+план с итогом после серверной проверки всех обязательств задач.
+
+### plan cancel
+
+`plan cancel <reference> --if-revision <n> --result <Markdown>` — отменить с причиной,
+сохранив историческое участие задач.
+
+### release list
+
+`release list [--q <текст>] [--status planned|released|cancelled]` — каталог выпусков.
+
+### release get
+
+`release get <reference>` — реквизиты, готовность, дата и автор выпуска.
+
+### release preview
+
+`release preview [--plans <планы...>]` — прочитать готовность выбранного состава без
+создания релиза. Пустой выбор возвращает неготовность. Поддержаны параметры страниц;
+команда продолжения сохраняет весь выбранный набор.
+
+### release create
+
+`release create --title <название> --release-version <обозначение> --plans <планы...>` —
+создать самостоятельный релиз. `--summary`, `--description`, `--planned-for YYYY-MM-DD`
+и `--status` задают описание, дату и состояние. `released` выполняет полную фиксацию снимка.
+
+### release update
+
+`release update <reference> --if-revision <n>` — изменить заданные реквизиты из создания.
+`--plans` заменяет полный состав, пустая строка `--planned-for` очищает дату.
+
+### release plan
+
+`release plan <reference> --if-revision <n>` — явно перепланировать отменённый релиз.
+
+### release cancel
+
+`release cancel <reference> --if-revision <n>` — отменить будущий выпуск; планы не отменяются.
+
+### release publish
+
+`release publish <reference> --if-revision <n>` — проверить готовность и сохранить
+самодостаточный снимок, автора и дату. Это фиксация сведений, не запуск CI/CD.
+
+### release plans
+
+`release plans <reference>` — страница текущего или архивного состава планов.
+
+### release snapshot
+
+`release snapshot <reference>` — страница полных сохранённых текстов. Для большого
+содержания уменьшите `--limit` либо явно увеличьте `--max-bytes`.
+
+## Прогресс существующих сущностей
+
 ### progress task
 
 `progress task <ref> [--offset <n>] [--limit <n>] [--snapshot-version <version>]` — фактическое

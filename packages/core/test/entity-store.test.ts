@@ -110,7 +110,7 @@ test("добавление вида — только регистрация; в�
   assert.equal(context.nodes.length, 1);
   assert.deepEqual(context.edges, []);
   const builtins = createEntityStorageRegistry();
-  assert.equal(builtins.definitions().length, 9);
+  assert.equal(builtins.definitions().length, 12);
   assert.equal(
     builtins.path({ kind: "implementation", id: "implementation_old" }),
     "entities/implementations/implementation_old.json",

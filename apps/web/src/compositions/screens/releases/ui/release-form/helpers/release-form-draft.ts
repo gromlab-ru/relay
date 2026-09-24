@@ -3,6 +3,7 @@ import type { ReleaseFormValues } from "../types/release-form-props.type";
 
 const MARKDOWN = z.array(z.string()).transform((lines) => lines.join("\n"));
 const DRAFT_SCHEMA = z.object({
+  revision: z.number().int().nonnegative(),
   title: z.string(),
   version: z.string(),
   summary: z.string(),
@@ -11,27 +12,6 @@ const DRAFT_SCHEMA = z.object({
   status: z.enum(["planned", "released", "cancelled"]),
   planIds: z.array(z.string()),
 });
-const LEGACY_DRAFT_SCHEMA = z.object({
-  kind: z.literal("release"),
-  title: z.string(),
-  version: z.string(),
-  summary: z.string(),
-  goal: MARKDOWN,
-  rationale: MARKDOWN,
-  boundaries: MARKDOWN,
-});
-
-/**
- * Распознаёт пригодный прежний ввод без изменения исходной записи.
- */
-const parseLegacyDraft = (raw: string | null): unknown => {
-  if (raw === null) return undefined;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
-};
 
 /** Результат восстановления черновика. */
 type DraftResult = {
@@ -42,14 +22,9 @@ type DraftResult = {
 };
 
 /**
- * Восстанавливает собственный черновик либо прежний ввод релизного типа без его удаления.
+ * Восстанавливает серверный черновик с исходной ревизией; примеры не импортируются.
  */
-export const readReleaseDraft = (
-  key: string,
-  projectId: string,
-  scope: string,
-  fallback: ReleaseFormValues,
-): DraftResult => {
+export const readReleaseDraft = (key: string, fallback: ReleaseFormValues): DraftResult => {
   try {
     const raw = sessionStorage.getItem(key);
     if (raw !== null) {
@@ -60,33 +35,7 @@ export const readReleaseDraft = (
         error: "Черновик релиза имеет неизвестный формат. Сбросьте его явно, чтобы продолжить.",
       };
     }
-    const legacyRaw = sessionStorage.getItem(`relay:planning-form:v1:${projectId}:${scope}`);
-    const legacy = LEGACY_DRAFT_SCHEMA.safeParse(parseLegacyDraft(legacyRaw));
-    const values = legacy.success
-      ? {
-          ...fallback,
-          title: legacy.data.title,
-          version: legacy.data.version,
-          summary: legacy.data.summary,
-          description: [legacy.data.goal, legacy.data.rationale, legacy.data.boundaries]
-            .filter((text) => text !== "")
-            .join("\n\n"),
-        }
-      : { ...fallback, planIds: [...fallback.planIds] };
-    const selectedRaw = sessionStorage.getItem(
-      `relay:planning-release-selection:v1:${projectId}:${scope}`,
-    );
-    if (selectedRaw !== null) {
-      const selection = z.array(z.string()).safeParse(parseLegacyDraft(selectedRaw));
-      if (selection.success)
-        values.planIds = [
-          ...new Set([
-            ...selection.data,
-            ...fallback.planIds.filter((id) => id.startsWith("release-work-")),
-          ]),
-        ];
-    }
-    return { values, error: null };
+    return { values: { ...fallback, planIds: [...fallback.planIds] }, error: null };
   } catch {
     return {
       values: fallback,
@@ -111,13 +60,8 @@ export const writeReleaseDraft = (key: string, values: ReleaseFormValues): strin
 };
 
 /**
- * Очищает собственный и успешно перенесённый старый черновик; ввод плана работ не затрагивается.
+ * Очищает подтверждённый либо явно отброшенный черновик этого редактора.
  */
-export const clearReleaseDraft = (key: string, projectId: string, scope: string): void => {
+export const clearReleaseDraft = (key: string): void => {
   sessionStorage.removeItem(key);
-  const legacyKey = `relay:planning-form:v1:${projectId}:${scope}`;
-  const raw = sessionStorage.getItem(legacyKey);
-  if (raw !== null && LEGACY_DRAFT_SCHEMA.safeParse(parseLegacyDraft(raw)).success)
-    sessionStorage.removeItem(legacyKey);
-  sessionStorage.removeItem(`relay:planning-release-selection:v1:${projectId}:${scope}`);
 };

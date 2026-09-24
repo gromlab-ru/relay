@@ -88,6 +88,11 @@ export function progressText(
     if (progress.criteria.nextOffset !== null) continuations.add(progress.criteria.nextOffset);
     list("Подзадачи", progress.children);
     list("Обязательные зависимости", progress.dependencies);
+  } else if (progress.kind === "release") {
+    parts.push(
+      `Готово планов: ${progress.readiness.ready}/${progress.readiness.total}\nСостояние: ${progress.status}\nИсточник: ${progress.historical ? "снимок выпуска" : "текущий состав"}`,
+    );
+    list("Планы", progress.plans);
   } else {
     parts.push(`Уникальные задачи состава: ${progress.counts.completed}/${progress.counts.total}`);
     if (progress.kind === "implementation")
@@ -102,6 +107,26 @@ export function progressText(
     if ("implementations" in progress) list("Реализации", progress.implementations);
     if (progress.kind === "feature") list("Сценарии", progress.scenarios);
     if (progress.kind === "product") list("Фичи", progress.features);
+    if (progress.kind === "work-plan") {
+      parts.push(
+        `Состояние: ${progress.status}\nМожно начать: ${progress.canStart ? "да" : "нет"}\nМожно завершить: ${progress.canComplete ? "да" : "нет"}\nРасхождение с завершением: ${progress.diverged ? "есть" : "нет"}`,
+      );
+      parts.push(
+        section(
+          `Этапы · всего ${progress.stages.total}`,
+          progress.stages.items
+            .map((stage) =>
+              wrap(
+                `${stage.key} · ${safeText(stage.title)} · ${stage.counts.completed}/${stage.counts.total}`,
+                options.width,
+              ),
+            )
+            .join("\n") || "Этапов на странице нет.",
+          options,
+        ),
+      );
+      if (progress.stages.nextOffset !== null) continuations.add(progress.stages.nextOffset);
+    }
   }
   parts.push(
     section(

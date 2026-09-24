@@ -242,6 +242,18 @@ export class EntityEngine {
       const entry = resolveEntity(catalog, query.ref, query.kind);
       const refs: { kind: string; id: string }[] = [];
       const data = entry.data;
+      if (data.kind === "work-plan")
+        refs.push({ kind: "project", id: data.projectId }, ...data.scope);
+      if (data.kind === "plan-stage")
+        refs.push(
+          { kind: "work-plan", id: data.planId },
+          ...data.taskIds.map((id) => ({ kind: "task", id })),
+        );
+      if (data.kind === "release")
+        refs.push(
+          { kind: "project", id: data.projectId },
+          ...data.planIds.map((id) => ({ kind: "work-plan", id })),
+        );
       if (data.kind === "product")
         refs.push({ kind: "project", id: this.workspace.config.projectId ?? "project" });
       if (data.kind === "feature") refs.push({ kind: "product", id: "passport" });
@@ -351,13 +363,26 @@ export class EntityEngine {
                   feature: "FEATURE",
                   scenario: "SCENARIO",
                   document: "DOC",
-                }[kind as "project" | "product" | "feature" | "scenario" | "document"],
+                  "work-plan": "PLN",
+                  "plan-stage": "STG",
+                  release: "REL",
+                }[
+                  kind as
+                    | "project"
+                    | "product"
+                    | "feature"
+                    | "scenario"
+                    | "document"
+                    | "work-plan"
+                    | "plan-stage"
+                    | "release"
+                ],
                 pattern:
                   kind === "project"
                     ? "PROJECT"
                     : kind === "product"
                       ? "PRODUCT"
-                      : `${kind === "document" ? "DOC" : kind.toUpperCase()}-<номер>`,
+                      : `${kind === "document" ? "DOC" : kind === "work-plan" ? "PLN" : kind === "plan-stage" ? "STG" : kind === "release" ? "REL" : kind.toUpperCase()}-<номер>`,
               },
             ];
       return this.page(items, page, entityDigest(items));
@@ -367,7 +392,11 @@ export class EntityEngine {
     const { ref, kind, ...page } = parse(entityKeysQuerySchema, input, "история сущности");
     return this.read((catalog) => {
       const entry = resolveEntity(catalog, ref, kind);
-      return this.page(entry.events, page, entityDigest(entry.events));
+      return this.page(
+        entry.events,
+        page,
+        entityDigest([this.workspace.config.projectId, entry.ref, page.limit ?? 40, entry.events]),
+      );
     });
   }
   async create(input: CreateEntity, actor: string) {

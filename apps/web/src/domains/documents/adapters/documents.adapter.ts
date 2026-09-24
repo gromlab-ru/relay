@@ -138,6 +138,8 @@ export const documentEntityHref = (base: string, entity: DocumentEntity): string
   const { kind, id } = entity.ref;
   const key = encodeURIComponent(entity.key);
   if (kind === "document") return `${base}/documents/${id}`;
+  if (kind === "work-plan") return `${base}/plans/${id}`;
+  if (kind === "release") return `${base}/releases/${id}`;
   if (kind === "task") return `${base}/tasks/${id}`;
   if (kind === "feature") return `${base}/product/features/${key}`;
   if (kind === "scenario") return `${base}/product/scenarios/${key}`;

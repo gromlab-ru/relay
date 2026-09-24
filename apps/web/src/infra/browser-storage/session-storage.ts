@@ -10,6 +10,30 @@ export const readSessionStored = (key: string): unknown => {
   }
 };
 
+/** Результат чтения, отличающий отсутствие черновика от повреждения. */
+type SessionReadResult = {
+  /** Разобранное значение; undefined при отсутствии записи. */
+  value: unknown;
+  /** Понятная причина отказа чтения. */
+  error: string | null;
+};
+
+/**
+ * Читает черновик без молчаливой подмены повреждённого JSON пустым вводом.
+ */
+export const readSessionValue = (key: string): SessionReadResult => {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return { value: raw === null ? undefined : JSON.parse(raw), error: null };
+  } catch {
+    return {
+      value: undefined,
+      error:
+        "Не удалось восстановить черновик. Проверьте хранилище вкладки или явно отбросьте повреждённый ввод.",
+    };
+  }
+};
+
 /**
  * Сохраняет локальный снимок и сообщает об отказе браузерного хранилища.
  */

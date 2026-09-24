@@ -3,6 +3,7 @@ import type { Workspace } from "../storage/workspace.js";
 import { readEntityCatalog } from "./entities/catalog.js";
 import { BoardTasksService } from "./board-tasks/service.js";
 import { GraphService } from "./graph/service.js";
+import { readPlanningState } from "./planning/model.js";
 
 /** Проверяет действующие записи и связи под единой блокировкой проекта. */
 export async function validateWorkspace(workspace: Workspace) {
@@ -20,6 +21,7 @@ export async function validateWorkspace(workspace: Workspace) {
     const catalog = await check(() => readEntityCatalog(workspace, owned));
     const tasks = await check(() => new BoardTasksService(workspace).list({ limit: 1 }));
     await check(() => new GraphService(workspace).read({ limit: 1 }));
+    if (workspace.storageSession) await check(() => readPlanningState(workspace));
     invariant(
       issues.length === 0,
       "VALIDATION_FAILED",

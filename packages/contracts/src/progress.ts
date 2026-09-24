@@ -1,9 +1,20 @@
 import { z } from "zod";
 import { entityReferenceSchema } from "./primitives.js";
 import { kanbanColumnSchema } from "./entities/board-task.js";
+import { planMembershipSchema, planStatusSchema, planningCountsSchema } from "./planning.js";
+import { releaseStatusSchema, releaseReadinessSchema } from "./releases.js";
 
 export const progressKindSchema = z
-  .enum(["task", "implementation", "scenario", "feature", "application", "product"])
+  .enum([
+    "task",
+    "implementation",
+    "scenario",
+    "feature",
+    "application",
+    "product",
+    "work-plan",
+    "release",
+  ])
   .describe("Вид предметного прогресса");
 export const progressPageQuerySchema = z.strictObject({
   offset: z.coerce
@@ -48,6 +59,10 @@ export const progressReasonSchema = z.strictObject({
       "COMPONENT_INCOMPLETE",
       "NO_WORK",
       "INACTIVE",
+      "PLAN_NOT_COMPLETED",
+      "PLAN_CANCELLED",
+      "STATE_DIVERGED",
+      "MISSING_PLAN",
     ])
     .describe("Машинный код причины"),
   message: z.string().describe("Понятное объяснение причины"),
@@ -86,6 +101,12 @@ const implementations = page(progressItemSchema).describe(
   "Обязательные активные реализации; прогресс каждой читается отдельно",
 );
 export const taskProgressSchema = z.strictObject({
+  planning: planMembershipSchema
+    .nullable()
+    .optional()
+    .describe(
+      "Текущее участие в плане; null — задача свободна, поле отсутствует у старого сервера",
+    ),
   ...base,
   kind: z.literal("task").describe("Прогресс задачи"),
   column: kanbanColumnSchema,
@@ -146,6 +167,38 @@ export const productProgressSchema = z.strictObject({
   kind: z.literal("product").describe("Прогресс продукта по его фичам"),
   features: page(progressItemSchema).describe("Фичи продукта с адресами и готовностью"),
 });
+export const workPlanProgressSchema = z.strictObject({
+  ...base,
+  kind: z.literal("work-plan").describe("Прогресс плана работ"),
+  status: planStatusSchema,
+  counts: planningCountsSchema,
+  canStart: z.boolean().describe("Черновик имеет цель и непустой состав"),
+  canComplete: z.boolean().describe("Начатый план имеет фактически выполненный непустой состав"),
+  diverged: z.boolean().describe("Сохранённое завершение расходится с текущим выполнением задач"),
+  stages: page(
+    z.strictObject({
+      id: z.string().describe("ID этапа"),
+      key: z.string().describe("Ключ этапа"),
+      title: z.string().describe("Название этапа"),
+      counts: planningCountsSchema,
+      completed: z.boolean().describe("Все задачи непустого этапа фактически выполнены"),
+    }),
+  ).describe("Страница этапов в предметном порядке"),
+  tasks,
+});
+export const releaseProgressSchema = z.strictObject({
+  ...base,
+  kind: z
+    .literal("release")
+    .describe("Готовность планового либо исторический результат состоявшегося выпуска"),
+  status: releaseStatusSchema,
+  readiness: releaseReadinessSchema,
+  plans: page(progressItemSchema.extend({ status: planStatusSchema })).describe(
+    "Выбранные планы: текущие до выпуска, архивные после фиксации",
+  ),
+  historical: z.boolean().describe("Результат прочитан из неизменяемого снимка выпуска"),
+  snapshotId: z.string().nullable().describe("ID снимка либо null"),
+});
 export type ProgressKind = z.infer<typeof progressKindSchema>;
 export type ProgressQuery = z.input<typeof progressQuerySchema>;
 export type ProgressPageQuery = z.input<typeof progressPageQuerySchema>;
@@ -157,6 +210,8 @@ export type ScenarioProgress = z.infer<typeof scenarioProgressSchema>;
 export type FeatureProgress = z.infer<typeof featureProgressSchema>;
 export type ApplicationProgress = z.infer<typeof applicationProgressSchema>;
 export type ProductProgress = z.infer<typeof productProgressSchema>;
+export type WorkPlanProgress = z.infer<typeof workPlanProgressSchema>;
+export type ReleaseProgress = z.infer<typeof releaseProgressSchema>;
 /** Только для представлений: публичные операции сохраняют отдельные строгие схемы. */
 export type Progress =
   | TaskProgress
@@ -164,4 +219,6 @@ export type Progress =
   | ScenarioProgress
   | FeatureProgress
   | ApplicationProgress
-  | ProductProgress;
+  | ProductProgress
+  | WorkPlanProgress
+  | ReleaseProgress;

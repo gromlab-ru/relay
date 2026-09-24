@@ -17,6 +17,7 @@ import { startMcp } from "../dist/server.js";
 import { entitySavedSchema, entityDetailSchema } from "@relay/contracts/entities";
 import { fullContextSchema } from "@relay/contracts/entities/graph";
 import { taskProgressSchema, productProgressSchema } from "@relay/contracts/progress";
+import { planningSavedSchema } from "@relay/contracts/planning";
 
 async function setup(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), "tasks-mcp-"));
@@ -51,6 +52,121 @@ async function setup(t: TestContext) {
   };
   return { root, clients, servers, connect, start };
 }
+
+test("MCP планирования: discovery, запись состава, повтор, конфликты и выпуск", async (t) => {
+  const app = await setup(t);
+  const server = await app.start(join(app.root, "a/.relay/config.json"));
+  const client = await app.connect(server.url);
+  const tools = (await client.listTools()).tools;
+  for (const name of [
+    "plan_create",
+    "plan_stage_create",
+    "plan_tasks_include",
+    "release_create",
+    "release_publish",
+  ])
+    assert(tools.find((tool) => tool.name === name)?.inputSchema.required?.includes("actor"));
+  assert(tools.find((tool) => tool.name === "plan_stage_create")?.inputSchema.properties?.title);
+  const input = {
+    title: "План агента",
+    goal: "Постоянный результат",
+    actor: "agent",
+    requestId: "plan",
+  };
+  const plan = planningSavedSchema.parse((await call(client, "plan_create", input)).data);
+  assert.deepEqual((await call(client, "plan_create", input)).data, plan);
+  const stage = planningSavedSchema.parse(
+    (
+      await call(client, "plan_stage_create", {
+        ref: plan.id,
+        title: "Этап",
+        ifRevision: plan.revision,
+        actor: "agent",
+        requestId: "stage",
+      })
+    ).data,
+  );
+  const task = await call(client, "board_task_create", {
+    title: "Готовый результат",
+    board: "product",
+    column: "done",
+    actor: "agent",
+    requestId: "task",
+  });
+  let saved = planningSavedSchema.parse(
+    (
+      await call(client, "plan_tasks_include", {
+        ref: plan.id,
+        stage: stage.stageId,
+        tasks: [task.data?.id],
+        ifRevision: stage.revision,
+        actor: "agent",
+        requestId: "include",
+      })
+    ).data,
+  );
+  assert.equal(
+    (
+      await call(client, "plan_update", {
+        ref: plan.id,
+        title: "Конфликт",
+        ifRevision: 1,
+        actor: "agent",
+        requestId: "stale",
+      })
+    ).error?.code,
+    "REVISION_CONFLICT",
+  );
+  saved = planningSavedSchema.parse(
+    (
+      await call(client, "plan_start", {
+        ref: plan.id,
+        ifRevision: saved.revision,
+        actor: "agent",
+        requestId: "start",
+      })
+    ).data,
+  );
+  saved = planningSavedSchema.parse(
+    (
+      await call(client, "plan_complete", {
+        ref: plan.id,
+        ifRevision: saved.revision,
+        result: "Проверено",
+        actor: "agent",
+        requestId: "complete",
+      })
+    ).data,
+  );
+  assert.equal((await call(client, "work_plan_progress", { ref: plan.id })).data?.completed, true);
+  const release = planningSavedSchema.parse(
+    (
+      await call(client, "release_create", {
+        title: "Релиз",
+        version: "1.0",
+        planIds: [plan.id],
+        actor: "agent",
+        requestId: "release",
+      })
+    ).data,
+  );
+  assert.equal(
+    (
+      await call(client, "release_publish", {
+        ref: release.id,
+        ifRevision: release.revision,
+        actor: "agent",
+        requestId: "publish",
+      })
+    ).ok,
+    true,
+  );
+  assert.equal(
+    (await call(client, "release_snapshot", { ref: release.id, limit: 1 })).data?.nextOffset,
+    1,
+  );
+  assert.equal((await call(client, "plans_list", { project: "missing" })).ok, false);
+});
 
 test("MCP: прогресс задачи и продукта, discovery, продолжение и изоляция", async (t) => {
   const app = await setup(t);
@@ -239,6 +355,18 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
     (/^entity_.*(?:create|update|move|link|rename_key)$/.test(name) || name === "entity_get")
   ) {
     assert.match(content, /Ревизия/);
+  } else if (
+    body.ok &&
+    /^(plan_|release_)/.test(name) &&
+    (name.endsWith("_create") ||
+      name.endsWith("_update") ||
+      name.endsWith("_include") ||
+      name.endsWith("_publish") ||
+      name.endsWith("_start") ||
+      name.endsWith("_complete"))
+  ) {
+    assert.match(content, /Ревизия:/);
+    assert.match(content, /Ключ повтора:/);
   } else if (body.ok && name.endsWith("_progress")) {
     assert.match(content, /выполнено|не выполнено/);
   } else assert.deepEqual(JSON.parse(content), result.structuredContent);
@@ -321,7 +449,7 @@ test("MCP движка: discovery из контрактов, публичные 
   for (const name of ["board", "title", "targets", "dependencies", "actor", "requestId"])
     assert.match(properties[name]?.description ?? "", /[А-Яа-яЁё]/);
   assert.equal("data" in properties, false);
-  assert.equal((await call(client, "entity_types")).data?.total, 9);
+  assert.equal((await call(client, "entity_types")).data?.total, 12);
   const args = {
     board: "BOARD-PRODUCT",
     title: "Проверить движок",

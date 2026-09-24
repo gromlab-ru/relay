@@ -26,7 +26,14 @@ import {
   Target,
 } from "lucide-react";
 import { z } from "zod";
-import { getPlanSummary, PLAN_STATUS_COLORS, PLAN_STATUS_LABELS } from "domains/planning-demo";
+import {
+  getPlanSummary,
+  PLAN_STATUS_COLORS,
+  PLAN_STATUS_LABELS,
+  transitionPlan,
+  usePlanningRefresh,
+  PlanningError,
+} from "domains/planning";
 import { MarkdownView } from "ui/markdown-view";
 import { MarkdownField } from "ui/markdown-field";
 import { useProjectId } from "domains/project";
@@ -45,23 +52,35 @@ import styles from "./styles/plan-detail.module.css";
  *  - чтения оснований и результата работы
  */
 export const PlanDetail = (props: PlanDetailProps) => {
-  const { plan, data: demoData, basePath, onEdit, onSave } = props;
+  const { plan, basePath, onEdit } = props;
   const [searchParams, setSearchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [transitionMode, setTransitionMode] = useState<"complete" | "cancel" | null>(null);
   const projectId = useProjectId();
-  const outcomeKey = `relay:planning-outcome:v1:${projectId}:${plan.id}`;
+  const refresh = usePlanningRefresh(projectId);
+  const [isStarting, setIsStarting] = useState(false);
+  const outcomeKey = `relay:planning-outcome:server-v1:${projectId}:${plan.id}`;
   const [outcomeDraft] = useState(() =>
-    z.array(z.string()).safeParse(readSessionStored(outcomeKey)),
+    z
+      .object({ result: z.array(z.string()), revision: z.number() })
+      .safeParse(readSessionStored(outcomeKey)),
+  );
+  const [transitionRevision, setTransitionRevision] = useState(
+    outcomeDraft.success ? outcomeDraft.data.revision : plan.revision,
   );
   const outcomeForm = useForm({
     mode: "uncontrolled",
-    initialValues: { result: outcomeDraft.success ? outcomeDraft.data.join("\n") : plan.result },
+    initialValues: {
+      result: outcomeDraft.success ? outcomeDraft.data.result.join("\n") : plan.result,
+    },
     validate: {
       result: (result) => (result.trim() === "" ? "Опишите результат или причину отмены" : null),
     },
     onValuesChange: (values) => {
-      writeSessionStored(outcomeKey, values.result.split("\n"));
+      writeSessionStored(outcomeKey, {
+        result: values.result.split("\n"),
+        revision: transitionRevision,
+      });
     },
   });
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -70,9 +89,10 @@ export const PlanDetail = (props: PlanDetailProps) => {
   const isDraft = plan.status === "draft";
   const isActive = plan.status === "active";
   const canEdit = isDraft || isActive;
-  const summaryData = getPlanSummary(plan, demoData.tasks);
+  const summaryData = getPlanSummary(plan);
   const statusLabel = PLAN_STATUS_LABELS[plan.status];
-  const canFinish = summaryData.total > 0 && summaryData.done === summaryData.total;
+  const canFinish = plan.isReady;
+  const hasDivergence = isCompleted && !plan.isReady;
   const canStart = summaryData.total > 0 && plan.goal.trim() !== "";
   const actionLabel = isDraft ? "Начать план" : "Завершить план";
   const ActionIcon = isDraft ? Play : Check;
@@ -91,17 +111,13 @@ export const PlanDetail = (props: PlanDetailProps) => {
   const hasResult = plan.result !== "";
   const hasScope = isNonEmptyArray(plan.scope);
   const resultLabel = isCancelled ? "ПРИЧИНА ОТМЕНЫ" : "ИТОГ ПЛАНА";
-  const nextTask = demoData.tasks.find(
-    (task) =>
-      plan.stages.some((stage) => stage.taskIds.includes(task.id)) && task.status !== "done",
-  );
   const nextTitle = isCancelled
     ? "План отменён"
     : isCompleted
       ? "Результат зафиксирован"
       : isDraft
         ? "Подготовьте состав"
-        : (nextTask?.title ?? "Проверьте результат");
+        : (plan.nextStageTitle ?? "Проверьте результат");
   const nextDescription = isCancelled
     ? "Основание выполнения снято. Причина сохранена в плане."
     : isCompleted
@@ -132,26 +148,42 @@ export const PlanDetail = (props: PlanDetailProps) => {
   };
 
   /**
-   * Показывает локальный результат перехода прототипа.
+   * Выполняет начало либо открывает подтверждение с исходной ревизией.
    */
-  const handleTransition = () => {
+  const handleTransition = async () => {
     if (isDraft) {
-      setError(onSave({ ...plan, status: "active" }));
+      setIsStarting(true);
+      try {
+        await transitionPlan(projectId, plan.id, plan.revision, "start");
+        void refresh().catch(() => undefined);
+        setError(null);
+      } catch (error) {
+        if (error instanceof PlanningError) setError(error.message);
+        else throw error;
+      } finally {
+        setIsStarting(false);
+      }
       return;
     }
+    setTransitionRevision(outcomeDraft.success ? outcomeDraft.data.revision : plan.revision);
     setTransitionMode("complete");
   };
 
   /**
-   * Фиксирует итог локального примера отдельно от процентов выполнения.
+   * Фиксирует итог только после повторной серверной проверки состава.
    */
-  const handleOutcome = (values: typeof outcomeForm.values) => {
-    const status = transitionMode === "cancel" ? "cancelled" : "completed";
-    const outcome = onSave({ ...plan, status, result: values.result });
-    setError(outcome);
-    if (outcome !== null) return;
-    removeSessionStored(outcomeKey);
-    setTransitionMode(null);
+  const handleOutcome = async (values: typeof outcomeForm.values) => {
+    const action = transitionMode === "cancel" ? "cancel" : "complete";
+    try {
+      await transitionPlan(projectId, plan.id, transitionRevision, action, values.result);
+      void refresh().catch(() => undefined);
+      removeSessionStored(outcomeKey);
+      setError(null);
+      setTransitionMode(null);
+    } catch (error) {
+      if (error instanceof PlanningError) setError(error.message);
+      else throw error;
+    }
   };
 
   return (
@@ -185,6 +217,7 @@ export const PlanDetail = (props: PlanDetailProps) => {
           {canEdit && (
             <Button
               disabled={isActionDisabled}
+              loading={isStarting}
               title={actionTitle}
               leftSection={<ActionIcon size={14} />}
               onClick={handleTransition}
@@ -207,7 +240,12 @@ export const PlanDetail = (props: PlanDetailProps) => {
                 <Menu.Item
                   color="red"
                   leftSection={<Ban size={14} />}
-                  onClick={() => setTransitionMode("cancel")}
+                  onClick={() => {
+                    setTransitionRevision(
+                      outcomeDraft.success ? outcomeDraft.data.revision : plan.revision,
+                    );
+                    setTransitionMode("cancel");
+                  }}
                 >
                   Отменить план
                 </Menu.Item>
@@ -239,6 +277,12 @@ export const PlanDetail = (props: PlanDetailProps) => {
           {error}
         </Alert>
       )}
+      {hasDivergence && (
+        <Alert color="orange" title="Состав изменился после завершения" mb="md">
+          Сохранённый итог остаётся историческим фактом. Текущие обязательства задач больше не
+          выполнены; подробности доступны в задачах этапов.
+        </Alert>
+      )}
 
       <div className={styles.layout}>
         <div className={styles.main}>
@@ -260,14 +304,14 @@ export const PlanDetail = (props: PlanDetailProps) => {
           >
             <Tabs.List aria-label="Содержание плана">
               <Tabs.Tab value="stages" leftSection={<Layers3 size={14} />}>
-                Этапы и задачи<span className={styles.tabCount}>{plan.stages.length}</span>
+                Этапы и задачи<span className={styles.tabCount}>{plan.stageCount}</span>
               </Tabs.Tab>
               <Tabs.Tab value="overview" leftSection={<FileText size={14} />}>
                 Описание
               </Tabs.Tab>
             </Tabs.List>
             <Tabs.Panel value="stages" pt="lg">
-              <PlanStages plan={plan} data={demoData} onSave={onSave} />
+              <PlanStages plan={plan} />
             </Tabs.Panel>
             <Tabs.Panel value="overview" pt="lg">
               <PlanOverview plan={plan} />
@@ -325,7 +369,8 @@ export const PlanDetail = (props: PlanDetailProps) => {
               </div>
               <div>
                 <dt>
-                  <span className={styles.dot} />К выполнению
+                  <span className={styles.dot} />
+                  Остальные
                 </dt>
                 <dd>
                   {summaryData.total - summaryData.done - summaryData.active - summaryData.review}
@@ -336,7 +381,7 @@ export const PlanDetail = (props: PlanDetailProps) => {
               <div className={styles.blocker}>
                 <CircleAlert size={15} />
                 <span>
-                  Внешнее ожидание · {summaryData.blocked}
+                  Невыполненные обязательства · {summaryData.blocked}
                   <small>Подробности — в задачах этапа</small>
                 </span>
               </div>
@@ -345,7 +390,7 @@ export const PlanDetail = (props: PlanDetailProps) => {
           <section className={styles.asideSection}>
             <h2 className={styles.asideTitle}>Область изменения</h2>
             <div className={styles.scope}>
-              {plan.scope.map((scope) => (
+              {plan.scopeLabels.map((scope) => (
                 <span key={scope}>{scope}</span>
               ))}
             </div>
@@ -358,7 +403,7 @@ export const PlanDetail = (props: PlanDetailProps) => {
           </section>
           <div className={styles.updated}>
             Обновлён {dateLabel}
-            <span>Демонстрационные данные</span>
+            <span>Ревизия {plan.revision}</span>
           </div>
         </aside>
       </div>
@@ -372,10 +417,11 @@ export const PlanDetail = (props: PlanDetailProps) => {
       >
         <form onSubmit={outcomeForm.onSubmit(handleOutcome)}>
           <p className={styles.hint}>
-            Изменится состояние локального примера. Колонки задач останутся прежними.
+            Состояние и итог сохранятся в проекте. Готовность повторно проверит сервер.
           </p>
           <MarkdownField
             label={outcomeLabel}
+            disabled={outcomeForm.submitting}
             key={outcomeForm.key("result")}
             {...outcomeForm.getInputProps("result")}
           />
@@ -388,7 +434,9 @@ export const PlanDetail = (props: PlanDetailProps) => {
             <Button variant="default" onClick={() => setTransitionMode(null)}>
               Свернуть
             </Button>
-            <Button type="submit">{transitionTitle}</Button>
+            <Button type="submit" loading={outcomeForm.submitting}>
+              {transitionTitle}
+            </Button>
           </Group>
         </form>
       </Modal>

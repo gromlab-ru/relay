@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { Badge, Button, Checkbox, Select, TextInput } from "@mantine/core";
+import { Alert, Badge, Button, Checkbox, Select, TextInput } from "@mantine/core";
 import { Search } from "lucide-react";
-import { getPlanSummary, PLAN_STATUS_LABELS, PLAN_STATUS_COLORS } from "domains/planning-demo";
+import {
+  getPlanSummary,
+  PLAN_STATUS_LABELS,
+  PLAN_STATUS_COLORS,
+  usePlans,
+  planStatusFromValue,
+} from "domains/planning";
+import { useProjectId } from "domains/project";
 import { isDefined, isEmptyArray } from "shared/value-predicates";
 import type { ReleasePlanPickerProps } from "./types/release-plan-picker-props.type";
 import styles from "./styles/release-plan-picker.module.css";
@@ -13,26 +20,30 @@ import styles from "./styles/release-plan-picker.module.css";
  *  - комплектования будущего выпуска незавершёнными и готовыми планами
  */
 export const ReleasePlanPicker = (props: ReleasePlanPickerProps) => {
-  const { work, selectedIds, onChange, error } = props;
+  const { selectedIds, onChange, error } = props;
+  const projectId = useProjectId();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [limit, setLimit] = useState(12);
-  const candidateItems = work.plans.filter(
-    (plan) =>
-      (status === "all" || plan.status === status) &&
-      `${plan.title} ${plan.key}`.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru")),
+  const selectedStatus = planStatusFromValue(status);
+  const plansQuery = usePlans(
+    projectId,
+    { q: query, ...(selectedStatus === undefined ? {} : { status: selectedStatus }) },
+    limit,
   );
-  const planItems = candidateItems.slice(0, limit).map((plan) => ({
+  const planItems = (plansQuery.data?.items ?? []).map((plan) => ({
     ...plan,
     isSelected: selectedIds.includes(plan.id),
     isDisabled: plan.status === "cancelled" && !selectedIds.includes(plan.id),
-    progress: getPlanSummary(plan, work.tasks),
+    progress: getPlanSummary(plan),
   }));
   const hiddenCount = selectedIds.filter((id) => !planItems.some((plan) => plan.id === id)).length;
-  const missingIds = selectedIds.filter((id) => !work.plans.some((plan) => plan.id === id));
   const hasHidden = hiddenCount > 0;
-  const isEmpty = isEmptyArray(planItems);
-  const hasMore = candidateItems.length > limit;
+  const hasReadError = isDefined(plansQuery.error);
+  const isEmpty = !plansQuery.isLoading && !hasReadError && isEmptyArray(planItems);
+  const hasMore = isDefined(plansQuery.data?.nextOffset);
+  const total = plansQuery.data?.total ?? 0;
+  const hasSelection = !isEmptyArray(selectedIds);
   const hasError = isDefined(error);
 
   /**
@@ -81,6 +92,20 @@ export const ReleasePlanPicker = (props: ReleasePlanPickerProps) => {
         />
       </div>
       {hasHidden && <p className={styles.hidden}>Вне текущего списка выбрано: {hiddenCount}</p>}
+      {hasSelection && (
+        <Button size="xs" variant="subtle" onClick={() => onChange([])}>
+          Снять весь выбор
+        </Button>
+      )}
+      {plansQuery.isLoading && <p role="status">Загружаем планы…</p>}
+      {hasReadError && (
+        <Alert color="red">
+          {plansQuery.error?.message}
+          <Button size="xs" variant="subtle" onClick={() => void plansQuery.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
       <div className={styles.list}>
         {planItems.map((plan) => (
           <div key={plan.id} className={styles.choice} data-selected={plan.isSelected}>
@@ -108,19 +133,16 @@ export const ReleasePlanPicker = (props: ReleasePlanPickerProps) => {
           </p>
         )}
         {hasMore && (
-          <Button variant="subtle" fullWidth onClick={() => setLimit(limit + 12)}>
-            Показать ещё · {planItems.length} из {candidateItems.length}
+          <Button
+            variant="subtle"
+            fullWidth
+            loading={plansQuery.isValidating}
+            onClick={() => setLimit(limit + 12)}
+          >
+            Показать ещё · {planItems.length} из {total}
           </Button>
         )}
       </div>
-      {missingIds.map((id) => (
-        <div key={id} className={styles.missing}>
-          <span>План недоступен: {id}</span>
-          <Button size="xs" variant="subtle" onClick={() => handleSelect(id, false)}>
-            Убрать из состава
-          </Button>
-        </div>
-      ))}
       {hasError && (
         <p className={styles.error} role="alert">
           {error}

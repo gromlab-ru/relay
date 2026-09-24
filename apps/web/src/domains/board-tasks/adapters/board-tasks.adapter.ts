@@ -230,6 +230,7 @@ export const getTaskExecutionProgress = async (
     TASK_EXECUTION_SCHEMA,
   );
   return {
+    planning: progress.planning ?? null,
     isComplete: progress.completed,
     version: progress.version,
     nextOffset: progress.reasons.nextOffset,

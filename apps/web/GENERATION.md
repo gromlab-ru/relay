@@ -1,5 +1,22 @@
 # Журнал создания TSX
 
+## Постоянные планы и релизы — 24 сентября 2026
+
+Выполнены из корня:
+
+```bash
+pnpm --filter @relay/web run create ui-component stage-row src/compositions/widgets/planning-workspace/ui/plan-detail/ui/plan-stages/ui
+pnpm --filter @relay/web run create ui-component release-snapshot src/compositions/screens/releases/ui/release-detail/ui
+pnpm --filter @relay/web run create ui-unit entity-history src/compositions/widgets
+```
+
+StageRow — внутренняя часть PlanStages с собственным чтением страниц задач; использует
+существующие стили владельца. ReleaseSnapshot — внутренний читатель архивных текстов.
+EntityHistory — общий виджет чтения истории, два потребителя: план и релиз. Данные
+принадлежат доменам planning/releases/entities; подписка — существующему транспорту.
+Начальные CSS удалены как ненужные, типы и JSDoc адаптированы. Все остальные TSX
+изменены на прежних местах, включая переработку существующего PlanStages.
+
 ## Самостоятельные релизы — 24 сентября 2026
 
 Из корня выполнены:

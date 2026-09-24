@@ -1,6 +1,35 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import {
+  plansQuerySchema,
+  planningPageQuerySchema,
+  plansPageSchema,
+  planSummarySchema,
+  stagesPageSchema,
+  planningTasksPageSchema,
+  planMembershipsSchema,
+  createPlanSchema,
+  updatePlanSchema,
+  transitionPlanSchema,
+  changeStageSchema,
+  changePlanTasksSchema,
+  transferPlanTaskSchema,
+  planningSavedSchema,
+  planningCandidatesQuerySchema,
+  planningCandidatesPageSchema,
+} from "@relay/contracts/planning";
+import {
+  releasesQuerySchema,
+  releasesPageSchema,
+  releaseSummarySchema,
+  saveReleaseSchema,
+  updateReleaseSchema,
+  releaseActionSchema,
+  releasePreviewSchema,
+  releaseCompositionSchema,
+  releaseSnapshotPageSchema,
+} from "@relay/contracts/releases";
+import {
   progressQuerySchema,
   progressPageQuerySchema,
   taskProgressSchema,
@@ -9,6 +38,8 @@ import {
   featureProgressSchema,
   applicationProgressSchema,
   productProgressSchema,
+  workPlanProgressSchema,
+  releaseProgressSchema,
 } from "@relay/contracts/progress";
 import {
   entityPageQuerySchema,
@@ -190,9 +221,193 @@ export async function createHttpBackend(url: string, project?: string): Promise<
     configPath: context.configPath,
     root: context.storagePath,
   };
+  const writePlanning = async (
+    operation: () => Promise<{ ok: true; data: unknown }>,
+    requestId: string,
+  ) => decode(planningSavedSchema, await call(operation, "write", requestId));
   return {
     kind: "http",
+    plans: {
+      candidates: async (query = {}) =>
+        decode(
+          planningCandidatesPageSchema,
+          await call(() =>
+            api.plans.getPlanningCandidates(defined(planningCandidatesQuerySchema.parse(query))),
+          ),
+        ),
+      list: async (query = {}) =>
+        decode(
+          plansPageSchema,
+          await call(() => api.plans.getPlans(defined(plansQuerySchema.parse(query)))),
+        ),
+      get: async (reference) =>
+        decode(planSummarySchema, await call(() => api.plans.getPlan({ reference }))),
+      stages: async (reference, query = {}) =>
+        decode(
+          stagesPageSchema,
+          await call(() =>
+            api.plans.getPlanStages({
+              reference,
+              ...defined(planningPageQuerySchema.parse(query)),
+            }),
+          ),
+        ),
+      tasks: async (reference, stage, query = {}) =>
+        decode(
+          planningTasksPageSchema,
+          await call(() =>
+            api.plans.getPlanStageTasks({
+              reference,
+              stage,
+              ...defined(planningPageQuerySchema.parse(query)),
+            }),
+          ),
+        ),
+      memberships: async (reference, query = {}) =>
+        decode(
+          planMembershipsSchema,
+          await call(() =>
+            api.plans.getTaskPlanMemberships({
+              reference,
+              ...defined(planningPageQuerySchema.parse(query)),
+            }),
+          ),
+        ),
+      create: (input, actor) =>
+        writePlanning(
+          () =>
+            api.plans.createPlan(
+              defined(createPlanSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+      update: (reference, input, actor) =>
+        writePlanning(
+          () =>
+            api.plans.updatePlan(
+              { reference },
+              defined(updatePlanSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+      transition: (reference, input, actor) =>
+        writePlanning(
+          () =>
+            api.plans.transitionPlan(
+              { reference },
+              defined(transitionPlanSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+      changeStage: async (reference, input, actor) =>
+        decode(
+          planningSavedSchema.required({ stageId: true }),
+          await writePlanning(
+            () =>
+              api.plans.changePlanStage(
+                { reference },
+                defined(changeStageSchema.parse({ ...input, actor: input.actor ?? actor })),
+              ),
+            input.requestId,
+          ),
+        ),
+      changeTasks: (reference, input, actor) =>
+        writePlanning(
+          () =>
+            api.plans.changePlanTasks(
+              { reference },
+              defined(changePlanTasksSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+      transfer: async (reference, input, actor) =>
+        decode(
+          planningSavedSchema.required({ targetRevision: true }),
+          await writePlanning(
+            () =>
+              api.plans.transferPlanTask(
+                { reference },
+                defined(transferPlanTaskSchema.parse({ ...input, actor: input.actor ?? actor })),
+              ),
+            input.requestId,
+          ),
+        ),
+    },
+    releases: {
+      list: async (query = {}) =>
+        decode(
+          releasesPageSchema,
+          await call(() => api.releases.getReleases(defined(releasesQuerySchema.parse(query)))),
+        ),
+      get: async (reference) =>
+        decode(releaseSummarySchema, await call(() => api.releases.getRelease({ reference }))),
+      composition: async (reference, query = {}) =>
+        decode(
+          releaseCompositionSchema,
+          await call(() =>
+            api.releases.getReleasePlans({
+              reference,
+              ...defined(planningPageQuerySchema.parse(query)),
+            }),
+          ),
+        ),
+      preview: async (input) =>
+        decode(
+          releaseCompositionSchema,
+          await call(() => api.releases.previewRelease(defined(releasePreviewSchema.parse(input)))),
+        ),
+      snapshot: async (reference, query = {}) =>
+        decode(
+          releaseSnapshotPageSchema,
+          await call(() =>
+            api.releases.getReleaseSnapshot({
+              reference,
+              ...defined(planningPageQuerySchema.parse(query)),
+            }),
+          ),
+        ),
+      create: (input, actor) =>
+        writePlanning(
+          () =>
+            api.releases.createRelease(
+              defined(saveReleaseSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+      update: (reference, input, actor) =>
+        writePlanning(
+          () =>
+            api.releases.updateRelease(
+              { reference },
+              defined(updateReleaseSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+      transition: (reference, input, actor) =>
+        writePlanning(
+          () =>
+            api.releases.transitionRelease(
+              { reference },
+              defined(releaseActionSchema.parse({ ...input, actor: input.actor ?? actor })),
+            ),
+          input.requestId,
+        ),
+    },
     progress: {
+      workPlan: async (input) =>
+        decode(
+          workPlanProgressSchema,
+          await call(() =>
+            api.progress.getWorkPlanProgress(defined(progressQuerySchema.parse(input))),
+          ),
+        ),
+      release: async (input) =>
+        decode(
+          releaseProgressSchema,
+          await call(() =>
+            api.progress.getReleaseProgress(defined(progressQuerySchema.parse(input))),
+          ),
+        ),
       task: async (input) =>
         decode(
           taskProgressSchema,

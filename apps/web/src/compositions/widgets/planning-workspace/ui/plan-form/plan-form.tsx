@@ -9,9 +9,12 @@ import {
   TagsInput,
   Textarea,
   TextInput,
+  Pill,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { MarkdownField } from "ui/markdown-field";
+import { EntityPicker } from "compositions/widgets/entity-picker";
+import { isPlanScope } from "domains/planning";
 import { isDefined } from "shared/value-predicates";
 import { clearPlanDraft, readPlanDraft, writePlanDraft } from "./helpers/plan-form-draft";
 import type { PlanFormProps, PlanFormValues } from "./types/plan-form-props.type";
@@ -26,14 +29,17 @@ import styles from "./styles/plan-form.module.css";
  */
 export const PlanForm = (props: PlanFormProps) => {
   const { plan, isNew, projectId, onSave, onClose } = props;
-  const draftKey = `relay:planning-form:v2:${projectId}:${isNew ? "new" : plan.id}`;
+  const draftKey = `relay:planning-form:server-v1:${projectId}:${isNew ? "new" : plan.id}`;
   const [initialDraft] = useState(() =>
     readPlanDraft(draftKey, {
+      revision: plan.revision,
       title: plan.title,
       summary: plan.summary,
       goal: plan.goal,
       rationale: plan.rationale,
       boundaries: plan.boundaries,
+      expectedResult: plan.expectedResult,
+      participants: plan.participants,
       scope: plan.scope,
     }),
   );
@@ -44,6 +50,10 @@ export const PlanForm = (props: PlanFormProps) => {
     initialValues: initialDraft.values,
     validateInputOnBlur: true,
     validate: {
+      scope: (scope) =>
+        scope.every(isPlanScope)
+          ? null
+          : "Областью может быть проект, продукт, приложение, фича, сценарий или реализация",
       title: (title) =>
         title.trim() === ""
           ? "Назовите результат плана"
@@ -61,16 +71,21 @@ export const PlanForm = (props: PlanFormProps) => {
   const submitLabel = isNew ? "Создать план" : "Сохранить изменения";
   const hasError = isDefined(error);
   const hasDraftError = isDefined(draftError);
+  const scopeIds = form.useWatchValue("scope");
+  const scopeItems = scopeIds.map((ref) => ({
+    ref,
+    label: plan.scopeLabels[plan.scope.indexOf(ref)] ?? ref,
+  }));
 
   /**
-   * Сохраняет предметно названный локальный результат и очищает ввод только после успеха.
+   * Очищает ввод только после серверной квитанции; исходная ревизия принадлежит черновику.
    */
-  const handleSubmit = (values: PlanFormValues) => {
+  const handleSubmit = async (values: PlanFormValues) => {
     if (initialDraft.error !== null) {
       setError("Сначала сбросьте повреждённый черновик.");
       return;
     }
-    const outcome = onSave({
+    const outcome = await onSave({
       ...plan,
       ...values,
       title: values.title.trim(),
@@ -167,19 +182,50 @@ export const PlanForm = (props: PlanFormProps) => {
                 </Accordion.Control>
                 <Accordion.Panel>
                   <Stack gap="md">
-                    <TagsInput
+                    <EntityPicker
                       label="Область изменения"
                       placeholder="Приложение, фича или весь проект"
-                      data={[
-                        "Весь проект",
-                        "Web",
-                        "API",
-                        "Инфраструктура",
-                        "Каталог",
-                        "Бронирование",
-                      ]}
-                      key={form.key("scope")}
-                      {...form.getInputProps("scope")}
+                      projectId={projectId}
+                      value={null}
+                      error={form.errors.scope}
+                      onChange={(ref) => {
+                        if (ref !== null && !isPlanScope(ref)) {
+                          form.setFieldError(
+                            "scope",
+                            "Выберите проект, продукт, приложение, фичу, сценарий или реализацию",
+                          );
+                          return;
+                        }
+                        form.clearFieldError("scope");
+                        if (ref !== null && !scopeIds.includes(ref))
+                          form.setFieldValue("scope", [...scopeIds, ref]);
+                      }}
+                    />
+                    <Pill.Group>
+                      {scopeItems.map((scope) => (
+                        <Pill
+                          key={scope.ref}
+                          withRemoveButton
+                          removeButtonProps={{
+                            tabIndex: 0,
+                            "aria-hidden": false,
+                            "aria-label": `Убрать область ${scope.label}`,
+                          }}
+                          onRemove={() =>
+                            form.setFieldValue(
+                              "scope",
+                              scopeIds.filter((ref) => ref !== scope.ref),
+                            )
+                          }
+                        >
+                          {scope.label}
+                        </Pill>
+                      ))}
+                    </Pill.Group>
+                    <TagsInput
+                      label="Участники"
+                      key={form.key("participants")}
+                      {...form.getInputProps("participants")}
                     />
                     <MarkdownField
                       label="Почему начинаем"
@@ -191,6 +237,11 @@ export const PlanForm = (props: PlanFormProps) => {
                       key={form.key("boundaries")}
                       {...form.getInputProps("boundaries")}
                     />
+                    <MarkdownField
+                      label="Ожидаемый результат"
+                      key={form.key("expectedResult")}
+                      {...form.getInputProps("expectedResult")}
+                    />
                   </Stack>
                 </Accordion.Panel>
               </Accordion.Item>
@@ -200,6 +251,16 @@ export const PlanForm = (props: PlanFormProps) => {
         {hasError && (
           <Alert color="red" title="Не удалось сохранить">
             {error}
+            <Button
+              size="xs"
+              variant="subtle"
+              onClick={() => {
+                clearPlanDraft(draftKey);
+                onClose();
+              }}
+            >
+              Отбросить черновик и перечитать
+            </Button>
           </Alert>
         )}
         <footer className={styles.footer}>

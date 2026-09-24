@@ -1,4 +1,4 @@
-import type { PlanningPlan } from "domains/planning-demo";
+import type { PlanningPlan } from "domains/planning";
 
 /** Параметры визуальной области. */
 export type PlanFormProps = {
@@ -9,13 +9,15 @@ export type PlanFormProps = {
   /** ID проекта для изоляции ввода. */
   projectId: string;
   /** Сохранение с сообщением ожидаемой ошибки. */
-  onSave: (plan: PlanningPlan) => string | null;
+  onSave: (plan: PlanningPlan) => Promise<string | null>;
   /** Сворачивание без потери ввода. */
   onClose: () => void;
 };
 
 /** Ввод компактной формы; не является транспортным DTO. */
 export type PlanFormValues = {
+  /** Ревизия исходной записи; SSE и reload не подменяют её. */
+  revision: number;
   /** Однострочное название. */
   title: string;
   /** Краткий обычный текст. */
@@ -26,6 +28,10 @@ export type PlanFormValues = {
   rationale: string;
   /** Границы Markdown. */
   boundaries: string;
-  /** Область изменения примера. */
+  /** Ожидаемый результат Markdown. */
+  expectedResult: string;
+  /** Участники плана. */
+  participants: string[];
+  /** Постоянные адреса областей. */
   scope: string[];
 };

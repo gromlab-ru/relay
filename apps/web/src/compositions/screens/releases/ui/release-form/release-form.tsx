@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Accordion, Alert, Button, Group, Modal, Select, Textarea, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { getReleaseSummary, RELEASE_STATUS_OPTIONS } from "domains/releases-demo";
+import { useReleasePreview, RELEASE_STATUS_OPTIONS } from "domains/releases";
 import { MarkdownField } from "ui/markdown-field";
 import { isDefined, isEmptyArray } from "shared/value-predicates";
 import { ReleasePlanPicker } from "./ui/release-plan-picker";
@@ -18,14 +18,15 @@ import styles from "./styles/release-form.module.css";
  *
  * Используется для:
  *  - планирования будущего выпуска и изменения его состава
- *  - явной фиксации локального примера готового выпуска
+ *  - явной фиксации готового выпуска серверной операцией
  */
 export const ReleaseForm = (props: ReleaseFormProps) => {
-  const { release, work, projectId, isNew, onSave, onClose } = props;
+  const { release, projectId, isNew, onSave, onClose } = props;
   const scope = isNew ? "new" : release.id;
-  const draftKey = `relay:release-form:v1:${projectId}:${scope}`;
+  const draftKey = `relay:release-form:server-v1:${projectId}:${scope}`;
   const [draft] = useState(() =>
-    readReleaseDraft(draftKey, projectId, scope, {
+    readReleaseDraft(draftKey, {
+      revision: release.revision,
       title: release.title,
       version: release.version,
       summary: release.summary,
@@ -50,7 +51,12 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
             : null,
       version: (version) =>
         version.trim() === "" ? "Укажите версию или обозначение выпуска" : null,
-      planIds: (ids) => (isEmptyArray(ids) ? "Выберите хотя бы один план" : null),
+      planIds: (ids) =>
+        isEmptyArray(ids)
+          ? "Выберите хотя бы один план"
+          : ids.length > 200
+            ? "В одном релизе допускается до 200 планов"
+            : null,
     },
     onValuesChange: (values) => {
       if (draft.error === null) setDraftError(writeReleaseDraft(draftKey, values));
@@ -59,11 +65,17 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
   });
   const status = form.useWatchValue("status");
   const selectedIds = form.useWatchValue("planIds");
-  const summary = getReleaseSummary(
-    { ...release, planIds: selectedIds, status, snapshot: null },
-    work,
-  );
+  const preview = useReleasePreview(projectId, selectedIds);
+  const summary = preview.data?.readiness;
+  const hasPreviewError = isDefined(preview.error);
+  const readinessLabel = preview.isLoading
+    ? "Проверяем готовность выбранных планов…"
+    : isDefined(summary)
+      ? `Готово планов: ${summary.ready} из ${summary.total}.`
+      : "Готовность пока недоступна.";
   const isReleasing = status === "released";
+  const canSubmit =
+    !isReleasing || (summary?.canRelease === true && !hasPreviewError && !preview.isLoading);
   const hasError = isDefined(error);
   const hasDraftError = isDefined(draftError);
   const title = isNew ? "Создать релиз" : "Изменить релиз";
@@ -76,18 +88,18 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
   /**
    * Сохраняет весь состав; не запускает и не завершает включённые планы.
    */
-  const handleSubmit = (values: ReleaseFormValues) => {
+  const handleSubmit = async (values: ReleaseFormValues) => {
     if (draft.error !== null) {
       setError("Сначала сбросьте повреждённый черновик.");
       return;
     }
-    const result = onSave({ ...release, ...values });
+    const result = await onSave({ ...release, ...values });
     if (result !== null) {
       setError(result);
       return;
     }
     try {
-      clearReleaseDraft(draftKey, projectId, scope);
+      clearReleaseDraft(draftKey);
     } catch {
       /* Подтверждённый релиз уже сохранён. */
     }
@@ -133,7 +145,7 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
               mt="sm"
               onClick={() => {
                 try {
-                  clearReleaseDraft(draftKey, projectId, scope);
+                  clearReleaseDraft(draftKey);
                   onClose();
                 } catch {
                   setDraftError("Не удалось очистить черновик. Повторите действие позже.");
@@ -189,15 +201,14 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
             {...form.getInputProps("summary")}
           />
           <ReleasePlanPicker
-            work={work}
             selectedIds={selectedIds}
             onChange={(ids) => form.setFieldValue("planIds", ids)}
             error={form.errors.planIds}
           />
           {isReleasing && (
             <Alert color="gray" title="Явная фиксация выпуска">
-              Готово планов: {summary.ready} из {summary.total}. При сохранении будет зафиксирован
-              локальный снимок состава. Незавершённые планы препятствуют статусу «Выпущен».
+              {readinessLabel} При сохранении будет зафиксирован самодостаточный снимок состава.
+              Незавершённые планы препятствуют статусу «Выпущен».
             </Alert>
           )}
           <Accordion variant="separated">
@@ -213,9 +224,27 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
             </Accordion.Item>
           </Accordion>
         </fieldset>
+        {hasPreviewError && (
+          <Alert color="orange" title="Готовность состава недоступна">
+            {preview.error?.message}
+            <Button size="xs" variant="subtle" onClick={() => void preview.mutate()}>
+              Повторить проверку
+            </Button>
+          </Alert>
+        )}
         {hasError && (
           <Alert color="red" title="Релиз не сохранён">
             {error}
+            <Button
+              size="xs"
+              variant="subtle"
+              onClick={() => {
+                clearReleaseDraft(draftKey);
+                onClose();
+              }}
+            >
+              Отбросить черновик и перечитать
+            </Button>
           </Alert>
         )}
         <footer className={styles.footer}>
@@ -224,7 +253,7 @@ export const ReleaseForm = (props: ReleaseFormProps) => {
             <Button variant="default" onClick={onClose}>
               Свернуть
             </Button>
-            <Button type="submit" loading={form.submitting}>
+            <Button type="submit" loading={form.submitting} disabled={!canSubmit}>
               {saveLabel}
             </Button>
           </Group>

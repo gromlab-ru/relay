@@ -39,7 +39,7 @@ for (const scoped of [false, true])
           );
       }
     }
-    assert.equal(operations.size, 115);
+    assert.equal(operations.size, 159);
     for (const path of [
       "/api/v1/tasks",
       "/api/v1/board",

@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Alert, Button, Group, Menu, Modal } from "@mantine/core";
-import { ChevronDown, FlaskConical, RotateCcw, SquareDashed } from "lucide-react";
+import { Alert, Button } from "@mantine/core";
 import { useProjectBasePath, useProjectId } from "domains/project";
-import { createDemoPlan, usePlanningDemo } from "domains/planning-demo";
-import type { PlanningPlan } from "domains/planning-demo";
+import {
+  createPlanDraft,
+  usePlan,
+  savePlan,
+  usePlanningRefresh,
+  PlanningError,
+} from "domains/planning";
+import type { PlanningPlan } from "domains/planning";
 import { StatePanel } from "ui/state-panel";
 import { isDefined } from "shared/value-predicates";
 import { PlanCatalog } from "./ui/plan-catalog";
@@ -21,7 +26,7 @@ type EditorState = {
 };
 
 /**
- * Соединяет каталог и подробности интерактивного прототипа планирования.
+ * Соединяет серверный каталог, подробности и независимый черновик плана.
  *
  * Используется для:
  *  - работы с целями, этапами и задачами в общем каркасе проекта
@@ -31,25 +36,19 @@ export const PlanningWorkspace = () => {
   const projectId = useProjectId();
   const navigate = useNavigate();
   const { planId } = useParams();
-  const demo = usePlanningDemo(projectId);
+  const planQuery = usePlan(projectId, planId ?? null);
+  const refresh = usePlanningRefresh(projectId);
   const [editor, setEditor] = useState<EditorState | null>(null);
-  const [resetMode, setResetMode] = useState<"empty" | "examples" | null>(null);
-  const [resetError, setResetError] = useState<string | null>(null);
-  const demoData = demo.data;
-  const planData = demoData?.plans.find((plan) => plan.id === planId);
-  const hasUnknownPlan = isDefined(planId) && !isDefined(planData);
-  const hasResetError = isDefined(resetError);
-  const hasReset = isDefined(resetMode);
-  const resetTitle = resetMode === "empty" ? "Начать с пустого каталога?" : "Восстановить примеры?";
-  const resetLabel = resetMode === "empty" ? "Очистить локальный каталог" : "Восстановить примеры";
+  const planData = planQuery.data;
+  const hasUnknownPlan =
+    planQuery.error instanceof PlanningError && planQuery.error.code === "ENTITY_NOT_FOUND";
 
   /**
    * Открывает компактное создание без записи пустой сущности.
    */
   const handleCreate = () => {
-    if (!isDefined(demoData)) return;
     setEditor({
-      plan: createDemoPlan(demoData.plans),
+      plan: createPlanDraft(),
       isNew: true,
     });
   };
@@ -57,49 +56,43 @@ export const PlanningWorkspace = () => {
   /**
    * После сохранения открывает адрес созданного или изменённого плана.
    */
-  const handleFormSave = (plan: PlanningPlan) => {
-    const error = demo.savePlan(plan);
-    if (error !== null) return error;
-    navigate(`${basePath}/plans/${plan.id}`);
-    return null;
+  const handleFormSave = async (plan: PlanningPlan): Promise<string | null> => {
+    try {
+      const saved = await savePlan(projectId, plan);
+      void refresh().catch(() => undefined);
+      navigate(`${basePath}/plans/${saved.id}`);
+      return null;
+    } catch (error) {
+      if (error instanceof PlanningError) return error.message;
+      throw error;
+    }
   };
 
-  /**
-   * Подтверждает замену исключительно локального набора.
-   */
-  const handleReset = () => {
-    const error = demo.reset(resetMode === "empty");
-    setResetError(error);
-    if (error !== null) return;
-    setResetMode(null);
-    navigate(`${basePath}/plans`);
-  };
-
-  if (!isDefined(demoData)) {
+  if (isDefined(planId) && planQuery.isLoading)
     return (
       <StatePanel
-        title="Прототип не удалось открыть"
+        title="Загружаем план"
         titleAs="h1"
-        description={resetError ?? demo.error ?? "Локальное хранилище недоступно."}
-        action={
-          <Button
-            onClick={() => {
-              setResetError(demo.reset(false));
-            }}
-          >
-            Восстановить примеры
-          </Button>
-        }
+        description="Читаем постоянные данные проекта."
+      />
+    );
+  if (isDefined(planQuery.error) && !hasUnknownPlan && !isDefined(planData)) {
+    return (
+      <StatePanel
+        title="Не удалось прочитать план"
+        titleAs="h1"
+        description={planQuery.error.message}
+        action={<Button onClick={() => void planQuery.mutate()}>Повторить чтение</Button>}
       />
     );
   }
 
-  if (hasUnknownPlan) {
+  if (hasUnknownPlan && !isDefined(planData)) {
     return (
       <StatePanel
         title="План не найден"
         titleAs="h1"
-        description="В этом примере нет плана с таким адресом."
+        description="В выбранном проекте нет плана с таким адресом."
         action={
           <Button component={Link} to={`${basePath}/plans`}>
             К планам
@@ -111,46 +104,21 @@ export const PlanningWorkspace = () => {
 
   return (
     <section className={styles.root}>
-      <div className={styles.preview}>
-        <FlaskConical size={14} aria-hidden="true" />
-        <strong>Прототип</strong>
-        <span className={styles.previewText}>
-          Пример сервиса аренды · изменения только в этой вкладке
-        </span>
-        <Menu position="bottom-end">
-          <Menu.Target>
-            <button type="button" className={styles.examples}>
-              Примеры
-              <ChevronDown size={12} />
-            </button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<SquareDashed size={14} />}
-              onClick={() => setResetMode("empty")}
-            >
-              Начать с пустого каталога
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<RotateCcw size={14} />}
-              onClick={() => setResetMode("examples")}
-            >
-              Восстановить примеры
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      </div>
-      {!isDefined(planId) && (
-        <PlanCatalog data={demoData} basePath={basePath} onCreate={handleCreate} />
+      {isDefined(planQuery.error) && (
+        <Alert color="red" title="Не удалось обновить план">
+          {planQuery.error.message}
+          <Button size="xs" onClick={() => void planQuery.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
       )}
+      {!isDefined(planId) && <PlanCatalog basePath={basePath} onCreate={handleCreate} />}
       {isDefined(planData) && (
         <PlanDetail
           key={`detail-${planData.id}`}
           plan={planData}
-          data={demoData}
           basePath={basePath}
           onEdit={() => setEditor({ plan: planData, isNew: false })}
-          onSave={demo.savePlan}
         />
       )}
       {isDefined(editor) && (
@@ -163,25 +131,6 @@ export const PlanningWorkspace = () => {
           onClose={() => setEditor(null)}
         />
       )}
-      <Modal
-        attributes={{ header: { role: "presentation" } }}
-        opened={hasReset}
-        onClose={() => setResetMode(null)}
-        title={resetTitle}
-        closeButtonProps={{ "aria-label": "Отменить замену примеров" }}
-      >
-        <p className={styles.resetText}>
-          Изменения планов в этом прототипе будут заменены. Данные проекта и его задач останутся
-          прежними.
-        </p>
-        {hasResetError && <Alert color="red">{resetError}</Alert>}
-        <Group justify="flex-end" mt="lg">
-          <Button variant="default" onClick={() => setResetMode(null)}>
-            Отмена
-          </Button>
-          <Button onClick={handleReset}>{resetLabel}</Button>
-        </Group>
-      </Modal>
     </section>
   );
 };

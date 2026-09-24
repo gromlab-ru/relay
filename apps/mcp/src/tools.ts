@@ -49,6 +49,7 @@ import { checked, page, paging, response } from "./output.js";
 import type { Result } from "./output.js";
 import { documentToolSchema } from "./schema-documentation.js";
 import { entityTools } from "./entity-tools.js";
+import { planningTools } from "./planning-tools.js";
 import { lintProduct, productContentQuerySchema } from "@relay/core/application/product/content";
 import {
   productWriteTools,
@@ -170,7 +171,7 @@ export function createTools(projects: Projects): Server {
     });
   }
 
-  for (const tool of entityTools)
+  for (const tool of [...entityTools, ...planningTools])
     projectTool(
       tool.name,
       tool.description,

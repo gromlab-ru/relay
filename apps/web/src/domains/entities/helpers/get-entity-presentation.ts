@@ -8,6 +8,8 @@ import {
   ListTodo,
   Puzzle,
   Route,
+  Flag,
+  Rocket,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { EntityKind } from "@relay/contracts/entities";
@@ -33,6 +35,9 @@ export const ENTITY_PRESENTATION = {
   document: { label: "Документ", icon: FileText, color: "orange" },
   board: { label: "Доска", icon: Kanban, color: "gray" },
   task: { label: "Задача", icon: ListTodo, color: "cyan" },
+  "work-plan": { label: "План работ", icon: Flag, color: "blue" },
+  "plan-stage": { label: "Этап плана", icon: Layers, color: "indigo" },
+  release: { label: "Релиз", icon: Rocket, color: "teal" },
 } satisfies Record<EntityKind, EntityPresentation>;
 
 /**

@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Button, TextInput } from "@mantine/core";
+import { Alert, Button, TextInput } from "@mantine/core";
 import { Flag, Plus, Search, X } from "lucide-react";
-import { isEmptyArray } from "shared/value-predicates";
+import { isDefined, isEmptyArray } from "shared/value-predicates";
+import { usePlans, planStatusFromValue } from "domains/planning";
+import { useProjectId } from "domains/project";
 import { PlanCard } from "./ui/plan-card/plan-card";
 import type { PlanCatalogProps } from "./types/plan-catalog-props.type";
 import styles from "./styles/plan-catalog.module.css";
@@ -15,49 +17,52 @@ import styles from "./styles/plan-catalog.module.css";
  *  - открытия плана из общего списка
  */
 export const PlanCatalog = (props: PlanCatalogProps) => {
-  const { data: demoData, basePath, onCreate } = props;
+  const { basePath, onCreate } = props;
+  const projectId = useProjectId();
   const [searchParams, setSearchParams] = useSearchParams();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const title = "Планы";
   const description = "От намерения — к понятному следующему шагу.";
   const createLabel = "Новый план";
   const query = searchParams.get("q") ?? "";
-  const state = searchParams.get("status") ?? "all";
+  const state = planStatusFromValue(searchParams.get("status")) ?? "all";
   const limit = Math.max(12, Number(searchParams.get("limit")) || 12);
-  const catalogItems = demoData.plans;
+  const plansQuery = usePlans(
+    projectId,
+    { q: query, ...(state === "all" ? {} : { status: state }) },
+    limit,
+  );
+  const counts = plansQuery.data?.statusCounts;
   const filterItems = [
-    { value: "all", label: "Все", count: catalogItems.length },
+    { value: "all", label: "Все", count: counts?.all ?? "…" },
     {
       value: "active",
       label: "В работе",
-      count: catalogItems.filter((plan) => plan.status === "active").length,
+      count: counts?.active ?? "…",
     },
     {
       value: "draft",
       label: "Черновики",
-      count: catalogItems.filter((plan) => plan.status === "draft").length,
+      count: counts?.draft ?? "…",
     },
     {
       value: "completed",
       label: "Завершённые",
-      count: catalogItems.filter((plan) => plan.status === "completed").length,
+      count: counts?.completed ?? "…",
     },
     {
       value: "cancelled",
       label: "Отменённые",
-      count: catalogItems.filter((plan) => plan.status === "cancelled").length,
+      count: counts?.cancelled ?? "…",
     },
   ];
-  const matchedItems = catalogItems.filter((plan) => {
-    const matchesQuery = `${plan.title} ${plan.key} ${plan.summary}`
-      .toLocaleLowerCase("ru")
-      .includes(query.toLocaleLowerCase("ru"));
-    return matchesQuery && (state === "all" || plan.status === state);
-  });
-  const planItems = matchedItems.slice(0, limit);
+  const planItems = plansQuery.data?.items ?? [];
+  const total = plansQuery.data?.total ?? 0;
+  const hasError = isDefined(plansQuery.error);
+  const resultLabel = plansQuery.isLoading ? "Ищем…" : `Найдено: ${total}`;
   const hasFilters = query !== "" || state !== "all";
-  const isEmpty = isEmptyArray(planItems);
-  const hasMore = matchedItems.length > limit;
+  const isEmpty = !plansQuery.isLoading && !hasError && isEmptyArray(planItems);
+  const hasMore = isDefined(plansQuery.data?.nextOffset);
   const emptyTitle = hasFilters ? "Подходящих планов нет" : "Большие результаты начинаются с плана";
   const emptyDescription = hasFilters
     ? "Попробуйте другой запрос или сбросьте фильтры."
@@ -137,11 +142,20 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
             }
           />
           <span className={styles.resultCount} role="status">
-            Найдено: {matchedItems.length}
+            {resultLabel}
           </span>
         </div>
       </div>
 
+      {hasError && (
+        <Alert color="red" title="Планы не удалось прочитать">
+          {plansQuery.error?.message}
+          <Button size="xs" variant="subtle" onClick={() => void plansQuery.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
+      {plansQuery.isLoading && <p role="status">Загружаем планы…</p>}
       {isEmpty && (
         <div className={styles.empty}>
           <span className={styles.emptyIcon}>
@@ -163,16 +177,17 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
 
       <div className={styles.grid}>
         {planItems.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} tasks={demoData.tasks} basePath={basePath} />
+          <PlanCard key={plan.id} plan={plan} basePath={basePath} />
         ))}
       </div>
       {hasMore && (
         <Button
           variant="default"
           className={styles.more}
+          loading={plansQuery.isValidating}
           onClick={() => handleFilter("limit", String(limit + 12))}
         >
-          Показать ещё · {planItems.length} из {matchedItems.length}
+          Показать ещё · {planItems.length} из {total}
         </Button>
       )}
       <footer className={styles.footer}>

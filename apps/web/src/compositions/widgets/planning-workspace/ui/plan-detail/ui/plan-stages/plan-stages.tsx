@@ -1,108 +1,159 @@
 import { useState } from "react";
-import { ActionIcon, Alert, Button, Drawer, Group } from "@mantine/core";
+import { Link } from "react-router-dom";
+import { Alert, Button, Drawer, Group } from "@mantine/core";
+import { Layers3, Plus } from "lucide-react";
+import { useProjectId, useProjectBasePath } from "domains/project";
 import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  ChevronDown,
-  Layers3,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { PLANNING_TASK_LABELS } from "domains/planning-demo";
-import type { PlanningTask, PlanStage } from "domains/planning-demo";
-import { useProjectId } from "domains/project";
+  usePlanStages,
+  usePlanningRefresh,
+  changePlanStage,
+  PlanningError,
+  EMPTY_PLAN_SUMMARY,
+  PLANNING_TASK_LABELS,
+} from "domains/planning";
+import type { PlanStage } from "domains/planning";
+import { useBoardTask, useTaskExecutionProgress } from "domains/board-tasks";
 import { MarkdownView } from "ui/markdown-view";
 import { isDefined, isEmptyArray } from "shared/value-predicates";
-import { PlanTask } from "./ui/plan-task/plan-task";
+import { StageRow } from "./ui/stage-row/stage-row";
 import { TaskPicker } from "./ui/task-picker";
 import { StageForm } from "./ui/stage-form";
 import type { PlanStagesProps } from "./types/plan-stages-props.type";
 import styles from "./styles/plan-stages.module.css";
 
+/** Зафиксированный источник редактора этапа. */
+type StageEditor = {
+  /** Этап из прочитанной страницы. */
+  stage: PlanStage;
+  /** Ревизия той же страницы. */
+  revision: number;
+  /** Создание нового этапа. */
+  isNew: boolean;
+};
+
 /**
- * Организует последовательное чтение этапов и существующих задач.
+ * Организует реальные этапы с независимыми страницами задач и адресным чтением.
  *
  * Используется для:
- *  - раскрытия промежуточного результата и актуального состава
- *  - просмотра задачи рядом с её этапом
+ *  - управления составом и порядком без передачи усечённого массива
+ *  - просмотра актуальной задачи рядом с её этапом
  */
 export const PlanStages = (props: PlanStagesProps) => {
-  const { plan, data: demoData, onSave } = props;
+  const { plan } = props;
   const projectId = useProjectId();
-  const [selectedTask, setSelectedTask] = useState<PlanningTask | null>(null);
-  const [pickerStageId, setPickerStageId] = useState<string | null>(null);
-  const [editingStage, setEditingStage] = useState<PlanStage | null>(null);
+  const basePath = useProjectBasePath();
+  const refresh = usePlanningRefresh(projectId);
+  const [limit, setLimit] = useState(12);
+  const query = usePlanStages(projectId, plan.id, limit);
+  const [editor, setEditor] = useState<StageEditor | null>(null);
+  const [picker, setPicker] = useState<StageEditor | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [taskLimits, setTaskLimits] = useState<Record<string, number>>({});
-  const [expandedById, setExpandedById] = useState<Record<string, boolean>>({});
-  const [stageLimit, setStageLimit] = useState(12);
-  const pickerStage = plan.stages.find((stage) => stage.id === pickerStageId);
-  const isNewStage =
-    isDefined(editingStage) && !plan.stages.some((stage) => stage.id === editingStage.id);
-  const draftKey = `relay:planning-stage:v1:${projectId}:${plan.id}:${isNewStage ? "new" : editingStage?.id}`;
-  const hasError = isDefined(error);
+  const [isBusy, setIsBusy] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [reasonPage, setReasonPage] = useState<{ offset: number; version?: string }>({ offset: 0 });
+  const taskQuery = useBoardTask(projectId, selectedTaskId);
+  const progressQuery = useTaskExecutionProgress(
+    projectId,
+    selectedTaskId,
+    reasonPage.offset,
+    reasonPage.version,
+  );
+  const stageItems = query.data?.items ?? [];
+  const total = query.data?.total ?? plan.stageCount;
+  const hasMore = isDefined(query.data?.nextOffset);
+  const hasReadError = isDefined(query.error);
+  const isEmpty = !query.isLoading && !hasReadError && isEmptyArray(stageItems);
   const canEdit = plan.status === "draft" || plan.status === "active";
-  const stageItems = plan.stages.map((stage, index) => {
-    const taskItems = stage.taskIds.flatMap((id) => {
-      const taskData = demoData.tasks.find((task) => task.id === id);
-      return isDefined(taskData) ? [taskData] : [];
+  const hasError = isDefined(error);
+  const taskData = taskQuery.data;
+  const isTaskOpen = selectedTaskId !== null;
+  const taskTitle = taskData?.title || "Задача";
+  const taskStatus = isDefined(taskData) ? PLANNING_TASK_LABELS[taskData.column] : "";
+  const taskHref = isDefined(taskData)
+    ? `${basePath}/boards/${taskData.boardSlug}/${taskData.id}`
+    : basePath;
+  const reasonItems = progressQuery.data?.reasons ?? [];
+  const hasMoreReasons = isDefined(progressQuery.data?.nextOffset);
+  const hasTaskError = isDefined(taskQuery.error);
+  const hasProgressError = isDefined(progressQuery.error);
+  const stageDraftKey = `relay:planning-stage:server-v1:${projectId}:${plan.id}:${editor?.isNew ? "new" : editor?.stage.id}`;
+
+  /**
+   * Создаёт ввод этапа без предварительной записи пустой сущности.
+   */
+  const handleCreate = (): void =>
+    setEditor({
+      revision: plan.revision,
+      isNew: true,
+      stage: {
+        id: "new",
+        key: "",
+        title: "",
+        summary: "",
+        outcome: "",
+        completionConditions: "",
+        rank: total,
+        taskIds: [],
+        progress: { ...EMPTY_PLAN_SUMMARY },
+      },
     });
-    const done = taskItems.filter((task) => task.status === "done").length;
-    const isDone = !isEmptyArray(taskItems) && done === taskItems.length;
-    const isActive = taskItems.some((task) => task.status === "active" || task.status === "review");
-    const label = isDone ? "Задачи готовы" : isActive ? "В работе" : "Предстоит";
-    const limit = taskLimits[stage.id] ?? 12;
-    return {
-      ...stage,
-      taskItems: taskItems.slice(0, limit),
-      total: taskItems.length,
-      hasMore: taskItems.length > limit,
-      done,
-      isDone,
-      isActive,
-      label,
-      index: String(index + 1).padStart(2, "0"),
-      isEmpty: isEmptyArray(taskItems),
-      isExpanded: expandedById[stage.id] ?? (isActive || isEmptyArray(taskItems)),
-      isFirst: index === 0,
-      isLast: index === plan.stages.length - 1,
-    };
-  });
-  const isEmpty = isEmptyArray(stageItems);
-  const visibleStageItems = stageItems.slice(0, stageLimit);
-  const hasMoreStages = stageItems.length > stageLimit;
-  const hasSelectedTask = isDefined(selectedTask);
-  const taskStatus = isDefined(selectedTask) ? PLANNING_TASK_LABELS[selectedTask.status] : "";
 
   /**
-   * Открывает новый этап, не добавляя пустую запись в состав.
+   * Сохраняет текст по исходной ревизии редактора, независимо от SSE.
    */
-  const handleNewStage = () =>
-    setEditingStage({ id: crypto.randomUUID(), title: "", outcome: "", taskIds: [] });
-
-  /**
-   * Сохраняет состав через одного владельца локального плана.
-   */
-  const handleStages = (stages: PlanStage[]) => {
-    const outcome = onSave({ ...plan, stages });
-    setError(outcome);
-    return outcome;
+  const handleSave = async (stage: PlanStage, revision: number): Promise<string | null> => {
+    try {
+      await changePlanStage(
+        projectId,
+        plan.id,
+        revision,
+        editor?.isNew ? "create" : "update",
+        stage,
+      );
+      void refresh().catch(() => undefined);
+      return null;
+    } catch (error) {
+      if (error instanceof PlanningError) return error.message;
+      throw error;
+    }
   };
 
   /**
-   * Меняет только порядок отображения, без изменения статусов задач.
+   * Изменяет положение относительно полного серверного списка либо удаляет пустой этап.
    */
-  const handleReorder = (id: string, direction: number) => {
-    const index = plan.stages.findIndex((stage) => stage.id === id);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= plan.stages.length) return;
-    const stages = [...plan.stages];
-    const [moved] = stages.splice(index, 1);
-    if (!isDefined(moved)) return;
-    stages.splice(target, 0, moved);
-    handleStages(stages);
+  const handleAction = async (
+    stage: PlanStage,
+    action: "remove" | "move",
+    direction?: "up" | "down",
+  ): Promise<void> => {
+    if (!isDefined(query.data)) return;
+    setIsBusy(true);
+    setError(null);
+    try {
+      await changePlanStage(
+        projectId,
+        plan.id,
+        query.data.planRevision,
+        action,
+        stage,
+        undefined,
+        direction,
+      );
+      void refresh().catch(() => undefined);
+    } catch (error) {
+      if (error instanceof PlanningError) setError(error.message);
+      else throw error;
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  /**
+   * Новая задача начинает адресное чтение причин с первой страницы.
+   */
+  const handleOpenTask = (id: string): void => {
+    setReasonPage({ offset: 0 });
+    setSelectedTaskId(id);
   };
 
   return (
@@ -114,7 +165,7 @@ export const PlanStages = (props: PlanStagesProps) => {
             variant="subtle"
             size="xs"
             leftSection={<Plus size={13} />}
-            onClick={handleNewStage}
+            onClick={handleCreate}
           >
             Добавить этап
           </Button>
@@ -125,6 +176,15 @@ export const PlanStages = (props: PlanStagesProps) => {
           {error}
         </Alert>
       )}
+      {hasReadError && (
+        <Alert color="red">
+          {query.error?.message}
+          <Button size="xs" variant="subtle" onClick={() => void query.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
+      {query.isLoading && <p role="status">Загружаем этапы…</p>}
       {isEmpty && (
         <div className={styles.empty}>
           <Layers3 size={28} strokeWidth={1.3} />
@@ -133,192 +193,123 @@ export const PlanStages = (props: PlanStagesProps) => {
         </div>
       )}
       <div className={styles.timeline}>
-        {visibleStageItems.map((stage) => (
-          <details
+        {stageItems.map((stage, index) => (
+          <StageRow
             key={stage.id}
-            className={styles.stage}
-            open={stage.isExpanded}
-            data-done={stage.isDone}
-            data-active={stage.isActive}
-            onToggle={(event) => {
-              const isOpen = event.currentTarget.open;
-              setExpandedById((previous) =>
-                previous[stage.id] === isOpen ? previous : { ...previous, [stage.id]: isOpen },
-              );
-            }}
-          >
-            <summary className={styles.stageHeader}>
-              <span className={styles.marker} data-done={stage.isDone} data-active={stage.isActive}>
-                {stage.isDone && <Check size={17} />}
-                {!stage.isDone && <span>{stage.index}</span>}
-              </span>
-              <span className={styles.stageIdentity}>
-                <span className={styles.stageTitle}>{stage.title}</span>
-                <span className={styles.stageMeta}>
-                  {stage.label}
-                  <span className={styles.metaDivider} aria-hidden="true">
-                    ·
-                  </span>
-                  {stage.done} из {stage.total} задач
-                </span>
-              </span>
-              <span className={styles.miniProgress} aria-hidden="true">
-                <span style={{ width: `${(stage.done / Math.max(stage.total, 1)) * 100}%` }} />
-              </span>
-              <ChevronDown
-                size={16}
-                className={styles.chevron}
-                data-open={stage.isExpanded}
-                aria-hidden="true"
-              />
-            </summary>
-            <div className={styles.stageBody}>
-              <div className={styles.outcome}>
-                <span className={styles.outcomeLabel}>РЕЗУЛЬТАТ ЭТАПА</span>
-                <MarkdownView
-                  text={stage.outcome}
-                  compact
-                  emptyText="Результат этапа ещё не описан."
-                />
-              </div>
-              <div
-                className={styles.taskList}
-                role="group"
-                aria-label={`Задачи этапа «${stage.title}»`}
-              >
-                {stage.taskItems.map((task) => (
-                  <PlanTask key={task.id} task={task} onOpen={() => setSelectedTask(task)} />
-                ))}
-              </div>
-              {stage.isEmpty && (
-                <p className={styles.noTasks}>
-                  Задач пока нет. Выберите существующие задачи с любой доски.
-                </p>
-              )}
-              {stage.hasMore && (
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  fullWidth
-                  onClick={() =>
-                    setTaskLimits((previous) => ({
-                      ...previous,
-                      [stage.id]: (previous[stage.id] ?? 12) + 12,
-                    }))
-                  }
-                >
-                  Показать ещё · {stage.taskItems.length} из {stage.total}
-                </Button>
-              )}
-              {canEdit && (
-                <div className={styles.stageActions}>
-                  <Button
-                    variant="subtle"
-                    size="xs"
-                    leftSection={<Plus size={13} />}
-                    onClick={() => setPickerStageId(stage.id)}
-                  >
-                    Выбрать задачи
-                  </Button>
-                  <Group gap={2}>
-                    <ActionIcon
-                      aria-label={`Изменить этап «${stage.title}»`}
-                      onClick={() => setEditingStage(stage)}
-                    >
-                      <Pencil size={13} />
-                    </ActionIcon>
-                    <ActionIcon
-                      disabled={stage.isFirst}
-                      aria-label={`Поднять этап «${stage.title}»`}
-                      onClick={() => handleReorder(stage.id, -1)}
-                    >
-                      <ArrowUp size={13} />
-                    </ActionIcon>
-                    <ActionIcon
-                      disabled={stage.isLast}
-                      aria-label={`Опустить этап «${stage.title}»`}
-                      onClick={() => handleReorder(stage.id, 1)}
-                    >
-                      <ArrowDown size={13} />
-                    </ActionIcon>
-                    {stage.isEmpty && (
-                      <ActionIcon
-                        aria-label={`Удалить пустой этап «${stage.title}»`}
-                        color="red"
-                        onClick={() =>
-                          handleStages(plan.stages.filter((candidate) => candidate.id !== stage.id))
-                        }
-                      >
-                        <Trash2 size={13} />
-                      </ActionIcon>
-                    )}
-                  </Group>
-                </div>
-              )}
-            </div>
-          </details>
+            planId={plan.id}
+            stage={stage}
+            index={index}
+            total={total}
+            canEdit={canEdit}
+            isBusy={isBusy}
+            onOpenTask={handleOpenTask}
+            onEdit={() =>
+              setEditor({
+                stage,
+                revision: query.data?.planRevision ?? plan.revision,
+                isNew: false,
+              })
+            }
+            onChoose={() =>
+              setPicker({
+                stage,
+                revision: query.data?.planRevision ?? plan.revision,
+                isNew: false,
+              })
+            }
+            onRemove={() => void handleAction(stage, "remove")}
+            onMove={(direction) => void handleAction(stage, "move", direction)}
+          />
         ))}
       </div>
-      {hasMoreStages && (
-        <Button variant="default" fullWidth mt="md" onClick={() => setStageLimit(stageLimit + 12)}>
-          Показать ещё этапы · {visibleStageItems.length} из {stageItems.length}
+      {hasMore && (
+        <Button
+          variant="default"
+          fullWidth
+          mt="md"
+          loading={query.isValidating}
+          onClick={() => setLimit(limit + 12)}
+        >
+          Показать ещё этапы · {stageItems.length} из {total}
         </Button>
       )}
-      <p className={styles.footnote}>
-        Порядок этапов показывает маршрут. Он не запрещает параллельную работу.
-      </p>
-      {isDefined(pickerStage) && (
-        <TaskPicker
-          key={`picker-${pickerStage.id}`}
-          plan={plan}
-          stage={pickerStage}
-          data={demoData}
-          onClose={() => setPickerStageId(null)}
-          onApply={(taskIds) =>
-            handleStages(
-              plan.stages.map((stage) =>
-                stage.id === pickerStage.id ? { ...stage, taskIds } : stage,
-              ),
-            )
-          }
+      {isDefined(editor) && (
+        <StageForm
+          key={editor.stage.id}
+          stage={editor.stage}
+          revision={editor.revision}
+          isNew={editor.isNew}
+          draftKey={stageDraftKey}
+          onSave={handleSave}
+          onClose={() => setEditor(null)}
         />
       )}
-      {isDefined(editingStage) && (
-        <StageForm
-          key={`editor-${editingStage.id}`}
-          stage={editingStage}
-          isNew={isNewStage}
-          draftKey={draftKey}
-          onClose={() => setEditingStage(null)}
-          onSave={(stage) =>
-            handleStages(
-              isNewStage
-                ? [...plan.stages, stage]
-                : plan.stages.map((candidate) => (candidate.id === stage.id ? stage : candidate)),
-            )
-          }
+      {isDefined(picker) && (
+        <TaskPicker
+          key={picker.stage.id}
+          plan={{ ...plan, revision: picker.revision }}
+          stage={picker.stage}
+          onClose={() => setPicker(null)}
         />
       )}
       <Drawer
-        attributes={{ header: { role: "presentation" } }}
-        opened={hasSelectedTask}
-        onClose={() => setSelectedTask(null)}
+        opened={isTaskOpen}
+        onClose={() => setSelectedTaskId(null)}
+        title={taskTitle}
         position="right"
         size="lg"
-        title="Задача в плане"
-        closeButtonProps={{ "aria-label": "Закрыть задачу" }}
+        closeButtonProps={{ "aria-label": "Закрыть просмотр задачи" }}
       >
-        {isDefined(selectedTask) && (
-          <div className={styles.taskPreview}>
-            <div className={styles.previewMeta}>
-              {selectedTask.key} · {selectedTask.board} · {taskStatus}
-            </div>
-            <h2>{selectedTask.title}</h2>
-            <MarkdownView text={selectedTask.description} />
-            <p className={styles.footnote}>
-              Пример задачи для оценки интерфейса. Исходная доска и колонка сохраняются при
-              включении в план.
-            </p>
+        {taskQuery.isLoading && <p role="status">Загружаем задачу…</p>}
+        {hasTaskError && (
+          <Alert color="red">
+            {taskQuery.error?.message}
+            <Button onClick={() => void taskQuery.mutate()}>Повторить</Button>
+          </Alert>
+        )}
+        {isDefined(taskData) && (
+          <div>
+            <Group mb="md">
+              <strong>{taskData.key}</strong>
+              <span>{taskData.boardSlug}</span>
+              <span>{taskStatus}</span>
+            </Group>
+            <MarkdownView text={taskData.description} emptyText="Описание ещё не заполнено." />
+            {hasProgressError && (
+              <Alert color="red">
+                {progressQuery.error?.message}
+                <Button
+                  size="xs"
+                  onClick={() => {
+                    setReasonPage({ offset: 0 });
+                    void progressQuery.mutate();
+                  }}
+                >
+                  Перечитать прогресс
+                </Button>
+              </Alert>
+            )}
+            {reasonItems.map((reason, index) => (
+              <p key={`${reason.path}:${index}`}>
+                <Link to={`${basePath}${reason.path}`}>{reason.message}</Link>
+              </p>
+            ))}
+            {hasMoreReasons && (
+              <Button
+                variant="subtle"
+                onClick={() =>
+                  setReasonPage({
+                    offset: progressQuery.data?.nextOffset ?? 0,
+                    version: progressQuery.data?.version,
+                  })
+                }
+              >
+                Следующая страница причин · всего {progressQuery.data?.reasonCount}
+              </Button>
+            )}
+            <Button component={Link} to={taskHref} variant="default" mt="lg">
+              Открыть задачу на доске
+            </Button>
           </div>
         )}
       </Drawer>

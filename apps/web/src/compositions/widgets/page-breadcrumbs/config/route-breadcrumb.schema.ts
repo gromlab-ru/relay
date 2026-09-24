@@ -7,7 +7,17 @@ export const ROUTE_BREADCRUMB_SCHEMA = z.object({
   source: z
     .object({
       kind: z
-        .enum(["feature", "scenario", "application", "implementation", "document", "board", "task"])
+        .enum([
+          "feature",
+          "scenario",
+          "application",
+          "implementation",
+          "document",
+          "board",
+          "task",
+          "work-plan",
+          "release",
+        ])
         .describe("Вид адресно читаемой записи"),
       param: z.string().describe("Имя параметра маршрута с ключом, ID или slug"),
     })

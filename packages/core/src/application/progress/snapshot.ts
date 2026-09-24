@@ -18,6 +18,7 @@ import { resolveAddress } from "../entities/resolver.js";
 import { taskCompletions } from "../board-tasks/completion.js";
 import { productTaskStatuses, productTaskTargets } from "../product/task-progress.js";
 import { validateProduct } from "../product/model.js";
+import { planningRecords } from "../../storage/planning.js";
 
 /** Согласованное предметное чтение и небольшие общие операции, без универсальных формул. */
 export async function readProgressSnapshot(
@@ -125,6 +126,12 @@ export async function readProgressSnapshot(
         records,
         tasks,
         boards,
+        ...(kind === "task"
+          ? [
+              await planningRecords(workspace, "work-plan"),
+              await planningRecords(workspace, "plan-stage"),
+            ]
+          : []),
       ]),
     )
     .digest("hex");

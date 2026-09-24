@@ -1,5 +1,5 @@
 import { Check, Circle, CircleAlert, CircleDot, ScanEye } from "lucide-react";
-import { PLANNING_TASK_LABELS } from "domains/planning-demo";
+import { PLANNING_TASK_LABELS } from "domains/planning";
 import { isDefined } from "shared/value-predicates";
 import type { PlanTaskProps } from "./types/plan-task-props.type";
 import styles from "./styles/plan-task.module.css";
@@ -12,11 +12,21 @@ import styles from "./styles/plan-task.module.css";
  */
 export const PlanTask = (props: PlanTaskProps) => {
   const { task, onOpen } = props;
-  const Icon = { done: Check, active: CircleDot, review: ScanEye, todo: Circle }[task.status];
+  const Icon = task.isCompleted
+    ? Check
+    : {
+        done: CircleAlert,
+        "in-progress": CircleDot,
+        review: ScanEye,
+        inbox: Circle,
+        ready: Circle,
+        cancelled: Circle,
+      }[task.status];
+  const colorStatus = task.status === "in-progress" ? "active" : task.status;
   const hasBlocker = isDefined(task.blocker);
   return (
     <button className={styles.root} type="button" onClick={onOpen}>
-      <span className={styles.statusIcon} data-status={task.status}>
+      <span className={styles.statusIcon} data-status={colorStatus}>
         <Icon size={15} aria-hidden="true" />
       </span>
       <span className={styles.body}>
@@ -32,7 +42,7 @@ export const PlanTask = (props: PlanTaskProps) => {
           </span>
         )}
       </span>
-      <span className={styles.status} data-status={task.status}>
+      <span className={styles.status} data-status={colorStatus}>
         {PLANNING_TASK_LABELS[task.status]}
       </span>
     </button>

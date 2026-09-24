@@ -13,6 +13,28 @@ import { WorkspaceService } from "../workspace/workspace.module.js";
 class ProgressController {
   constructor(@Inject(WorkspaceService) private readonly workspace: WorkspaceService) {}
 
+  @Get("work-plan")
+  @ApiEndpoint({
+    id: "getWorkPlanProgress",
+    summary: "Прочитать выполнение плана, этапы, препятствия и условия переходов",
+    response: "WorkPlanProgress",
+    query: "ProgressQuery",
+  })
+  async workPlan(@Query(new ZodValidationPipe(progressQuerySchema)) query: ProgressQuery) {
+    return success(await new ProgressService(await this.workspace.open()).workPlan(query));
+  }
+
+  @Get("release")
+  @ApiEndpoint({
+    id: "getReleaseProgress",
+    summary: "Прочитать готовность релиза либо исторический результат его снимка",
+    response: "ReleaseProgress",
+    query: "ProgressQuery",
+  })
+  async release(@Query(new ZodValidationPipe(progressQuerySchema)) query: ProgressQuery) {
+    return success(await new ProgressService(await this.workspace.open()).release(query));
+  }
+
   @Get("task")
   @ApiEndpoint({
     id: "getTaskProgress",

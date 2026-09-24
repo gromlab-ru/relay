@@ -1,4 +1,4 @@
-import type { PlanningPlan } from "domains/planning-demo";
+import type { PlanningPlan } from "domains/planning";
 
 /** Параметры визуальной области. */
 export type PlanOverviewProps = {

@@ -64,13 +64,13 @@ export const useApplicationTaskProgress = (
  */
 export const useTaskExecutionProgress = (
   project: string,
-  reference: string,
+  reference: string | null,
   offset = 0,
   version?: string,
 ): SWRResponse<TaskExecutionProgress, Error> => {
   const query = useSWR<TaskExecutionProgress, Error>(
-    ["task-execution-progress", project, reference, offset, version],
-    () => getTaskExecutionProgress(project, reference, offset, version),
+    reference === null ? null : ["task-execution-progress", project, reference, offset, version],
+    () => getTaskExecutionProgress(project, reference ?? "", offset, version),
   );
   useKanbanSync(project, query.mutate);
   return query;

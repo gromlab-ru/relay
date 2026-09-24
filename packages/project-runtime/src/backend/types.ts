@@ -7,6 +7,8 @@ import type { BoardsService } from "@relay/core/application/boards/service";
 import type { GraphService } from "@relay/core/application/graph/service";
 import type { EntityEngine } from "@relay/core/application/entities/service";
 import type { ProgressService } from "@relay/core/application/progress/service";
+import type { PlanningService } from "@relay/core/application/planning/service";
+import type { ReleasesService } from "@relay/core/application/releases/service";
 
 export interface WorkspaceInfo {
   config: Config;
@@ -14,9 +16,35 @@ export interface WorkspaceInfo {
   root: string;
 }
 export interface Backend {
+  plans: Pick<
+    PlanningService,
+    | "list"
+    | "get"
+    | "stages"
+    | "tasks"
+    | "memberships"
+    | "candidates"
+    | "create"
+    | "update"
+    | "transition"
+    | "changeStage"
+    | "changeTasks"
+    | "transfer"
+  >;
+  releases: Pick<
+    ReleasesService,
+    "list" | "get" | "composition" | "preview" | "snapshot" | "create" | "update" | "transition"
+  >;
   progress: Pick<
     ProgressService,
-    "task" | "implementation" | "scenario" | "feature" | "application" | "product"
+    | "task"
+    | "implementation"
+    | "scenario"
+    | "feature"
+    | "application"
+    | "product"
+    | "workPlan"
+    | "release"
   >;
   entities: Pick<
     EntityEngine,

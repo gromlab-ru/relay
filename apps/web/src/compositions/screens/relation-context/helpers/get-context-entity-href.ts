@@ -14,6 +14,8 @@ export const getContextEntityHref = (
   if (kind === "product") return `${base}/product/passport`;
   if (kind === "document") return `${base}/documents/${address}`;
   if (kind === "task") return `${base}/tasks/${address}`;
+  if (kind === "work-plan") return `${base}/plans/${address}`;
+  if (kind === "release") return `${base}/releases/${address}`;
   if (kind === "feature") return `${base}/product/features/${address}`;
   if (kind === "scenario") return `${base}/product/scenarios/${address}`;
   if (kind === "application") return `${base}/product/applications/${address}`;

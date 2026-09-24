@@ -7,6 +7,7 @@ import { registerBoardTasks } from "./commands/board-tasks.js";
 import { registerGraph } from "./commands/graph.js";
 import { registerEntities } from "./commands/entities.js";
 import { registerStorage } from "./commands/storage.js";
+import { registerPlanning } from "./commands/planning.js";
 import type { Runtime } from "./context.js";
 import { integer } from "./options.js";
 import { packageVersion } from "./package-info.js";
@@ -45,6 +46,7 @@ export function createProgram(runtime: Runtime): Command {
   registerProjects(program, runtime);
   registerProduct(program, runtime);
   registerProgress(program, runtime);
+  registerPlanning(program, runtime);
   registerBoardTasks(program, runtime);
   registerGraph(program, runtime);
   registerEntities(program, runtime);

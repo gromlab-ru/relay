@@ -2,11 +2,13 @@ import { Link } from "react-router-dom";
 import { Badge, Progress } from "@mantine/core";
 import { ArrowUpRight, CalendarDays, Flag, Rocket } from "lucide-react";
 import {
-  getReleasePlans,
+  useReleasePlans,
   getReleaseSummary,
   RELEASE_STATUS_COLORS,
   RELEASE_STATUS_LABELS,
-} from "domains/releases-demo";
+} from "domains/releases";
+import { useProjectId } from "domains/project";
+import { isDefined } from "shared/value-predicates";
 import type { ReleaseCardProps } from "./types/release-card-props.type";
 import styles from "./styles/release-card.module.css";
 
@@ -17,11 +19,13 @@ import styles from "./styles/release-card.module.css";
  *  - просмотра версии, плановой даты и состава в каталоге релизов
  */
 export const ReleaseCard = (props: ReleaseCardProps) => {
-  const { release, work, basePath } = props;
-  const summary = getReleaseSummary(release, work);
-  const allPlans = getReleasePlans(release, work);
-  const planItems = allPlans.slice(0, 2);
-  const hasMorePlans = allPlans.length > 2;
+  const { release, basePath } = props;
+  const projectId = useProjectId();
+  const summary = getReleaseSummary(release);
+  const composition = useReleasePlans(projectId, release.id, 2);
+  const planItems = composition.data?.items ?? [];
+  const hasMorePlans = summary.total > 2;
+  const hasCompositionError = isDefined(composition.error);
   const isReleased = release.status === "released";
   const rawDate = isReleased ? release.releasedAt : release.plannedFor;
   const dateLabel = rawDate
@@ -60,7 +64,8 @@ export const ReleaseCard = (props: ReleaseCardProps) => {
             {plan.title}
           </span>
         ))}
-        {hasMorePlans && <span>Ещё планов: {allPlans.length - 2}</span>}
+        {hasMorePlans && <span>Ещё планов: {summary.total - 2}</span>}
+        {hasCompositionError && <span>Состав временно недоступен</span>}
       </div>
       <div className={styles.progress}>
         <span>{progressLabel}</span>

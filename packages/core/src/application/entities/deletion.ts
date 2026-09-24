@@ -100,6 +100,23 @@ export class EntityDeletionService {
         }
       }
     }
+    for (const entry of catalog.entries) {
+      const data = entry.data;
+      if (data.kind === "plan-stage")
+        invariant(
+          !data.taskIds.some((id) => has("task", id)),
+          "PLANNING_REFERENCE_IN_USE",
+          `Удаление затрагивает задачи этапа ${entry.key}. Сначала явно пересмотрите состав плана; историческое участие сохраняется.`,
+          4,
+        );
+      if (data.kind === "work-plan")
+        invariant(
+          !data.scope.some((ref) => has(ref.kind, ref.id)),
+          "PLANNING_REFERENCE_IN_USE",
+          `Область используется планом ${entry.key}. Сначала явно пересмотрите область плана.`,
+          4,
+        );
+    }
     const detached = new Set<string>();
     for (const entry of catalog.entries) {
       if (deleted.has(entityAddress(entry.ref))) continue;

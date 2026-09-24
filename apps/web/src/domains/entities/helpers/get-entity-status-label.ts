@@ -13,6 +13,8 @@ const ENTITY_STATUS_LABELS: Record<string, string> = {
   progress: "В работе",
   review: "На проверке",
   done: "Готово",
+  completed: "Завершён",
+  released: "Выпущен",
   cancelled: "Отменено",
   archived: "В архиве",
   outdated: "Устарело",

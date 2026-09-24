@@ -147,7 +147,7 @@ async function productFixture(t: TestContext) {
   };
 }
 
-test("движок: девять определений и типизированные схемы из общего источника", async (t) => {
+test("движок: определения и типизированные схемы из общего источника", async (t) => {
   const { workspace } = await fixture(t);
   const engine = new EntityEngine(workspace);
   const types = await engine.types();
@@ -156,7 +156,10 @@ test("движок: девять определений и типизирова�
     const definition = await engine.describe({ kind });
     assert.ok(definition.description);
     assert.equal(definition.schema.type, "object");
-    assert.ok(definition.actions.includes("rename"));
+    if (["work-plan", "plan-stage", "release"].includes(kind)) {
+      assert.equal(definition.createSchema, null);
+      assert.ok(definition.actions.includes(kind === "release" ? "releases" : "planning"));
+    } else assert.ok(definition.actions.includes("rename"));
   }
   const task = await engine.describe({ kind: "task" });
   assert.ok(task.filters.includes("board"));
@@ -170,7 +173,10 @@ test("движок: все виды, вложенные ссылки ключ/ID
   const app = await productFixture(t);
   const { engine } = app;
   const all = await engine.list();
-  assert.deepEqual(new Set(all.items.map((entry) => entry.ref.kind)), new Set(entityKinds));
+  assert.deepEqual(
+    new Set(all.items.map((entry) => entry.ref.kind)),
+    new Set(entityKinds.filter((kind) => !["work-plan", "plan-stage", "release"].includes(kind))),
+  );
   for (const item of all.items) {
     assert.deepEqual(await engine.get({ ref: item.key }), await engine.get({ ref: item.ref.id }));
     assert.deepEqual(await engine.resolve({ ref: `${item.ref.kind}:${item.ref.id}` }), item);
@@ -224,7 +230,7 @@ test("движок: все виды, вложенные ссылки ключ/ID
 test("движок: смена формата ключей всех видов, алиасы, точный повтор и сохранность ссылок", async (t) => {
   const { engine, task, implementation } = await productFixture(t);
   const all = await engine.list();
-  for (const kind of entityKinds) {
+  for (const kind of new Set(all.items.map((entry) => entry.ref.kind))) {
     const entry = all.items.find((item) => item.ref.kind === kind)!;
     const command = {
       ref: entry.key,

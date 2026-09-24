@@ -5,10 +5,12 @@ import {
   entitySummarySchema,
   entityDefinitions,
   entityDetailSchema,
+  entityHistorySchema,
 } from "@relay/contracts/entities";
 import type { EntitiesQuery, EntitiesPage, EntitySummary } from "@relay/contracts/entities";
-import { getProjectApi, ApiError } from "infra/tasks-api";
+import { getProjectApi, ApiError, readApiPages } from "infra/tasks-api";
 import type { EntityContent } from "../types/entity-content.type";
+import type { EntityHistoryPage } from "../types/entity-history.type";
 
 const FAILURE_SCHEMA = z.object({ error: z.object({ message: z.string() }) });
 
@@ -72,7 +74,17 @@ export const getEntityContent = async (projectId: string, ref: string): Promise<
     const entry = entityDetailSchema.parse(response.data);
     const fields = entry.data;
     const markdown =
-      fields.kind === "document" ? fields.body : "description" in fields ? fields.description : "";
+      fields.kind === "document"
+        ? fields.body
+        : fields.kind === "work-plan"
+          ? [fields.goal, fields.rationale, fields.boundaries, fields.expectedResult, fields.result]
+              .filter(Boolean)
+              .join("\n\n")
+          : fields.kind === "plan-stage"
+            ? [fields.outcome, fields.completionConditions].filter(Boolean).join("\n\n")
+            : "description" in fields
+              ? fields.description
+              : "";
     return {
       title: entry.title,
       markdown,
@@ -88,3 +100,54 @@ export const getEntityContent = async (projectId: string, ref: string): Promise<
  */
 export const entityKindLabel = (kind: string): string =>
   entityDefinitions.find((definition) => definition.kind === kind)?.title ?? kind;
+
+/**
+ * Читает фактическую историю выбранной записи, сохраняя пояснения владельца.
+ */
+export const getEntityHistory = async (
+  projectId: string,
+  ref: string,
+  count = 12,
+): Promise<EntityHistoryPage> => {
+  try {
+    const page = await readApiPages(count, async (offset, limit, version) =>
+      entityHistorySchema.parse(
+        (
+          await getProjectApi(projectId).entities.getEntityHistory({
+            ref,
+            offset,
+            limit,
+            ...(version === undefined ? {} : { version }),
+          })
+        ).data,
+      ),
+    );
+    const labels: Record<string, string> = {
+      create: "Создано",
+      update: "Содержание изменено",
+      start: "План начат",
+      complete: "План завершён",
+      cancel: "Отменено",
+      plan: "Релиз перепланирован",
+      release: "Выпуск зафиксирован",
+      tasks: "Состав задач изменён",
+      transfer: "Задача перенесена",
+      "stage-create": "Этап создан",
+      "stage-update": "Этап изменён",
+      "stage-remove": "Этап удалён",
+      "stage-move": "Порядок этапов изменён",
+    };
+    return {
+      ...page,
+      items: page.items.map((event) => ({
+        revision: event.revision,
+        actor: event.actor,
+        at: event.at,
+        title: labels[event.action] ?? `Сохранено действие: ${event.action}`,
+        description: event.description ?? "",
+      })),
+    };
+  } catch (failure) {
+    return throwEntityFailure(failure);
+  }
+};

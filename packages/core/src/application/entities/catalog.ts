@@ -21,8 +21,15 @@ import { EntityDeletionRepository } from "../../storage/entity-deletion.js";
 import { defaultDocumentSections } from "@relay/contracts/entities";
 import { storedProjectSettingsSchema } from "../../domain/project-settings.js";
 import { relative } from "node:path";
+import { planningRecords, planningHistory } from "../../storage/planning.js";
 
-export type EntityEvent = { revision: number; actor: string; at: string; action: string };
+export type EntityEvent = {
+  revision: number;
+  actor: string;
+  at: string;
+  action: string;
+  description?: string | undefined;
+};
 export type EntityEntry = Omit<EntityDetail, "references"> & {
   aliases: string[];
   selectors: string[];
@@ -335,16 +342,38 @@ export async function readEntityCatalog(
       },
     );
   }
+  if (workspace.storageSession) {
+    for (const kind of ["work-plan", "plan-stage", "release"] as const) {
+      for (const record of await planningRecords(workspace, kind)) {
+        const {
+          id,
+          key,
+          revision,
+          createdAt: _createdAt,
+          updatedAt: _updatedAt,
+          createdBy: _createdBy,
+          updatedBy: _updatedBy,
+          ...data
+        } = record;
+        add(kind, id, key, record.title, record.summary, revision, data, {
+          status: "status" in record ? record.status : null,
+          events: await planningHistory(workspace, kind, id),
+        });
+      }
+    }
+  }
   for (const entry of entries) {
     const data = entry.data;
     const parentId =
-      data.kind === "implementation"
-        ? data.applicationId
-        : data.kind === "task"
-          ? data.boardId
-          : data.kind === "scenario"
-            ? data.featureId
-            : null;
+      data.kind === "plan-stage"
+        ? data.planId
+        : data.kind === "implementation"
+          ? data.applicationId
+          : data.kind === "task"
+            ? data.boardId
+            : data.kind === "scenario"
+              ? data.featureId
+              : null;
     const parent = entries.find((candidate) => candidate.ref.id === parentId);
     if (parent) entry.context = `${parent.key} · ${parent.title}`;
   }

@@ -65,6 +65,7 @@ export const TaskEditor = (props: TaskEditorProps) => {
     executionData?.reasons.map((reason) => ({ ...reason, href: `${base}${reason.path}` })) ?? [];
   const hasMoreExecutionReasons = isDefined(executionData) && executionData.nextOffset !== null;
   const canResetExecution = progressOffset > 0;
+  const planningData = executionData?.planning;
   /**
    * Раскрывает следующую страницу причин того же снимка.
    */
@@ -369,6 +370,11 @@ export const TaskEditor = (props: TaskEditorProps) => {
               </section>
               <Stack gap="xs" className={styles.section}>
                 <Text fw={600}>Фактическое выполнение</Text>
+                {isDefined(planningData) && (
+                  <Anchor component={Link} to={`${base}/plans/${planningData.planId}`} size="sm">
+                    План {planningData.planKey} · {planningData.stageTitle}
+                  </Anchor>
+                )}
                 {execution.isLoading && (
                   <Text size="sm" role="status">
                     Считаем выполнение…

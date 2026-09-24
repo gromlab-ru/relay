@@ -83,7 +83,7 @@ test("HTTP движка: ключи/ID, вложенные ссылки, гра�
     await backend.entities.get({ ref: task.key }),
     await engine.get({ ref: task.ref.id }),
   );
-  assert.equal((await backend.entities.types()).total, 9);
+  assert.equal((await backend.entities.types()).total, 12);
   assert.equal((await backend.graph.context({ root: task.key })).complete, true);
 });
 

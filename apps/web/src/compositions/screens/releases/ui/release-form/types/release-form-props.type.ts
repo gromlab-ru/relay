@@ -1,24 +1,23 @@
-import type { PlanningData } from "domains/planning-demo";
-import type { Release, ReleaseStatus } from "domains/releases-demo";
+import type { Release, ReleaseStatus } from "domains/releases";
 
 /** Параметры визуальной области. */
 export type ReleaseFormProps = {
   /** Исходная запись либо новый релиз. */
   release: Release;
-  /** Каталог планов для выбора состава. */
-  work: PlanningData;
   /** Изоляция черновика. */
   projectId: string;
   /** Создаётся новый релиз. */
   isNew: boolean;
   /** Сохранить одним действием запись, статус и состав. */
-  onSave: (release: Release) => string | null;
+  onSave: (release: Release) => Promise<string | null>;
   /** Свернуть с сохранением черновика. */
   onClose: () => void;
 };
 
 /** Ввод формы релиза без технических полей снимка. */
 export type ReleaseFormValues = {
+  /** Ревизия исходной записи; фоновые ответы не заменяют её. */
+  revision: number;
   /** Название выпуска. */
   title: string;
   /** Версия или обозначение. */

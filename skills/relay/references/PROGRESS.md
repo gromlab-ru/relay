@@ -2,7 +2,14 @@
 
 Прогресс вычисляется при чтении из согласованных данных выбранного проекта. Он не меняет
 колонки, критерии, историю или связи. Поддержаны задача, реализация, сценарий, фича,
-приложение и продукт. Планы подключаются после реализации планирования.
+приложение, продукт, план работ и релиз.
+
+`work-plan` возвращает состояние, этапы, задачи, полные счётчики, `canStart/canComplete`
+и `diverged`. `release` возвращает планы, готовность, `historical` и `snapshotId`;
+после выпуска результат читается из неизменяемого снимка. У задачи `planning` содержит
+текущее участие либо null. Предметные команды проверяют те же правила под блокировкой.
+CLI: `progress work-plan <ref>`, `progress release <ref>`; MCP: `work_plan_progress`,
+`release_progress`. Параметры страниц общие с остальными прогрессами.
 
 ## Выполнение и состав
 
@@ -37,9 +44,12 @@ Local: `GET /api/v1/progress/<вид>`; workspace:
 | `feature`        | `FeatureProgress`        | tasks, scenarios, implementations                                               |
 | `application`    | `ApplicationProgress`    | implementations, businessTasks, allTasks                                        |
 | `product`        | `ProductProgress`        | features                                                                        |
+| `work-plan`      | `WorkPlanProgress`       | status, stages, tasks, canStart, canComplete, diverged                          |
+| `release`        | `ReleaseProgress`        | status, plans, readiness, historical, snapshotId                                |
 
 Все ответы содержат `kind`, `entity` (kind/id/key/title), `completed`, `version`, `reasons`.
-Все, кроме задачи, содержат `counts`. Для всех, кроме продукта, требуется query `ref` —
+Все, кроме задачи и релиза, содержат `counts`; релиз считает планы через `readiness`.
+Для всех, кроме продукта, требуется query `ref` —
 ключ, ID либо `kind:ID`. Продукт выбирается областью проекта и не принимает `ref`.
 Используется обычный конверт `{ok:true,data}`. Схемы находятся в OpenAPI и
 `packages/contracts/src/progress.ts`.
@@ -54,12 +64,15 @@ Local: `GET /api/v1/progress/<вид>`; workspace:
 Для следующей страницы передайте `version`
 первой страницы, тот же вид, сущность и limit. Версия привязана к проекту и всему снимку.
 При изменении данных или области — `PROGRESS_CHANGED` (HTTP 409), чтение начать заново.
-Продолжение без версии — `INVALID_ARGUMENT` (400). Полный исторический снимок не хранится.
+Продолжение без версии — `INVALID_ARGUMENT` (400). Снимок текущего прогресса не хранится;
+исторический результат выпущенного релиза читается из постоянного снимка владельца релизов.
 
 Причина содержит `code`, русское `message`, адрес `source`, при необходимости `criterionId`.
 Коды: `NOT_DONE`, `CRITERION_INCOMPLETE`, `CHILD_INCOMPLETE`, `DEPENDENCY_INCOMPLETE`,
 `COMPONENT_INCOMPLETE`, `NO_WORK`, `INACTIVE`. Раскрывайте прогресс источника отдельным
 запросом. Полные Markdown читаются штатными операциями сущности/критерия.
+Планирование добавляет `PLAN_NOT_COMPLETED`, `PLAN_CANCELLED`, `STATE_DIVERGED`,
+`MISSING_PLAN`; они различают состояние, актуальную готовность и недоступный состав.
 
 Неизвестный адрес — `ENTITY_NOT_FOUND` (404), неверный вид — `ENTITY_KIND_MISMATCH` (409),
 неоднозначный ключ — `AMBIGUOUS_ENTITY_REFERENCE` (409). Потерянная обязательная ссылка —

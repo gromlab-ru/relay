@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Button } from "@mantine/core";
-import { FlaskConical } from "lucide-react";
+import { Alert, Button } from "@mantine/core";
 import { useProjectBasePath, useProjectId } from "domains/project";
-import { usePlanningDemo } from "domains/planning-demo";
-import { createRelease, useReleasesDemo } from "domains/releases-demo";
-import type { Release, ReleaseStatus } from "domains/releases-demo";
+import {
+  createReleaseDraft,
+  useRelease,
+  saveRelease,
+  useReleasesRefresh,
+  ReleaseError,
+} from "domains/releases";
+import type { Release, ReleaseStatus } from "domains/releases";
 import { isDefined } from "shared/value-predicates";
 import { StatePanel } from "ui/state-panel";
 import { ReleaseCatalog } from "../release-catalog";
@@ -24,31 +28,34 @@ export const ReleasesView = () => {
   const basePath = useProjectBasePath();
   const navigate = useNavigate();
   const { releaseId } = useParams();
-  const plans = usePlanningDemo(projectId);
-  const releases = useReleasesDemo(projectId, plans.data);
+  const releaseQuery = useRelease(projectId, releaseId ?? null);
+  const refresh = useReleasesRefresh(projectId);
   const [editor, setEditor] = useState<Release | null>(null);
-  const workData = plans.data;
-  const releasesData = releases.data;
-  const releaseData = releasesData?.releases.find((release) => release.id === releaseId);
-  const hasUnknownRelease = isDefined(releaseId) && !isDefined(releaseData);
-  const isNew =
-    isDefined(editor) && !releasesData?.releases.some((release) => release.id === editor.id);
+  const releaseData = releaseQuery.data;
+  const hasUnknownRelease =
+    releaseQuery.error instanceof ReleaseError && releaseQuery.error.code === "ENTITY_NOT_FOUND";
+  const isNew = editor?.revision === 0;
 
   /**
    * Открывает новую сущность с пустым составом и статусом «Запланирован».
    */
   const handleCreate = () => {
-    if (isDefined(releasesData)) setEditor(createRelease(releasesData.releases));
+    setEditor(createReleaseDraft());
   };
 
   /**
    * Сохраняет релиз, затем открывает его постоянный адрес.
    */
-  const handleSave = (release: Release) => {
-    const error = releases.saveRelease(release);
-    if (error !== null) return error;
-    navigate(`${basePath}/releases/${release.id}`);
-    return null;
+  const handleSave = async (release: Release): Promise<string | null> => {
+    try {
+      const saved = await saveRelease(projectId, release);
+      void refresh().catch(() => undefined);
+      navigate(`${basePath}/releases/${saved.id}`);
+      return null;
+    } catch (error) {
+      if (error instanceof ReleaseError) return error.message;
+      throw error;
+    }
   };
 
   /**
@@ -58,16 +65,24 @@ export const ReleasesView = () => {
     if (isDefined(releaseData)) setEditor({ ...releaseData, status: status ?? releaseData.status });
   };
 
-  if (!isDefined(workData) || !isDefined(releasesData))
+  if (isDefined(releaseId) && releaseQuery.isLoading)
+    return (
+      <StatePanel
+        title="Загружаем релиз"
+        titleAs="h1"
+        description="Читаем постоянные данные проекта."
+      />
+    );
+  if (isDefined(releaseQuery.error) && !isDefined(releaseData) && !hasUnknownRelease)
     return (
       <StatePanel
         title="Релизы недоступны"
         titleAs="h1"
-        description={plans.error ?? releases.error ?? "Не удалось прочитать локальные данные."}
-        action={<Button onClick={() => window.location.reload()}>Повторить чтение</Button>}
+        description={releaseQuery.error.message}
+        action={<Button onClick={() => void releaseQuery.mutate()}>Повторить чтение</Button>}
       />
     );
-  if (hasUnknownRelease)
+  if (hasUnknownRelease && !isDefined(releaseData))
     return (
       <StatePanel
         title="Релиз не найден"
@@ -83,24 +98,19 @@ export const ReleasesView = () => {
 
   return (
     <section className={styles.root}>
-      <div className={styles.preview}>
-        <FlaskConical size={14} aria-hidden="true" />
-        <strong>Прототип</strong>
-        <span>Самостоятельные релизы · изменения только в этой вкладке</span>
-      </div>
-      {!isDefined(releaseId) && (
-        <ReleaseCatalog
-          releases={releasesData.releases}
-          work={workData}
-          basePath={basePath}
-          onCreate={handleCreate}
-        />
+      {isDefined(releaseQuery.error) && (
+        <Alert color="red" title="Не удалось обновить релиз">
+          {releaseQuery.error.message}
+          <Button size="xs" onClick={() => void releaseQuery.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
       )}
+      {!isDefined(releaseId) && <ReleaseCatalog basePath={basePath} onCreate={handleCreate} />}
       {isDefined(releaseData) && (
         <ReleaseDetail
           key={`release-${releaseData.id}`}
           release={releaseData}
-          work={workData}
           basePath={basePath}
           onEdit={handleEdit}
         />
@@ -109,7 +119,6 @@ export const ReleasesView = () => {
         <ReleaseForm
           key={`editor-${editor.id}`}
           release={editor}
-          work={workData}
           projectId={projectId}
           isNew={isNew}
           onSave={handleSave}

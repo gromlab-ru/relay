@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { Badge, Progress } from "@mantine/core";
-import { ArrowUpRight, Ban, Check, CircleDashed, Flag, Layers3 } from "lucide-react";
-import { getPlanSummary, PLAN_STATUS_COLORS, PLAN_STATUS_LABELS } from "domains/planning-demo";
-import { isEmptyArray } from "shared/value-predicates";
+import { ArrowUpRight, Ban, Check, CircleAlert, CircleDashed, Flag, Layers3 } from "lucide-react";
+import { getPlanSummary, PLAN_STATUS_COLORS, PLAN_STATUS_LABELS } from "domains/planning";
 import type { PlanCardProps } from "./types/plan-card-props.type";
 import styles from "./styles/plan-card.module.css";
 
@@ -13,32 +12,34 @@ import styles from "./styles/plan-card.module.css";
  *  - сравнения объёма работ без открытия подробностей
  */
 export const PlanCard = (props: PlanCardProps) => {
-  const { plan, tasks, basePath } = props;
-  const summaryData = getPlanSummary(plan, tasks);
+  const { plan, basePath } = props;
+  const summaryData = getPlanSummary(plan);
   const isCompleted = plan.status === "completed";
+  const hasDivergence = isCompleted && !plan.isReady;
   const isCancelled = plan.status === "cancelled";
   const statusLabel = PLAN_STATUS_LABELS[plan.status];
   const href = `${basePath}/plans/${plan.id}`;
-  const stageData = plan.stages.find((stage) =>
-    stage.taskIds.some((id) => tasks.find((task) => task.id === id)?.status !== "done"),
-  );
   const nextLabel = isCancelled
     ? "Работа отменена"
-    : isCompleted
-      ? "Результат зафиксирован"
-      : (stageData?.title ?? "Добавьте первый этап");
-  const StageIcon = isCancelled ? Ban : isCompleted ? Check : CircleDashed;
+    : hasDivergence
+      ? "Состав изменился после завершения"
+      : isCompleted
+        ? "Результат зафиксирован"
+        : (plan.nextStageTitle ??
+          (plan.stageCount === 0 ? "Добавьте первый этап" : "Состав готов к завершению"));
+  const StageIcon = isCancelled
+    ? Ban
+    : hasDivergence
+      ? CircleAlert
+      : isCompleted
+        ? Check
+        : CircleDashed;
   const nextPrefix = isCompleted || isCancelled ? "" : "Далее: ";
   const progressLabel = "Выполнение задач";
-  const progressColor = isCompleted ? "teal" : "var(--tasks-muted)";
-  const scopeItems = plan.scope.slice(0, 3);
+  const progressColor = hasDivergence ? "orange" : isCompleted ? "teal" : "var(--tasks-muted)";
+  const scopeItems = plan.scopeLabels.slice(0, 3);
   const hasExtraScopes = plan.scope.length > 3;
-  const stageItems = plan.stages.map((stage) => ({
-    ...stage,
-    isDone:
-      !isEmptyArray(stage.taskIds) &&
-      stage.taskIds.every((id) => tasks.find((task) => task.id === id)?.status === "done"),
-  }));
+  const stageItems = plan.stagePreview;
 
   return (
     <article className={styles.root}>
@@ -98,11 +99,11 @@ export const PlanCard = (props: PlanCardProps) => {
         <span className={styles.key}>{plan.key}</span>
         <span className={styles.stageCount}>
           <Layers3 size={12} aria-hidden="true" />
-          Этапов: {plan.stages.length}
+          Этапов: {plan.stageCount}
         </span>
         <span className={styles.stageDots} aria-hidden="true">
           {stageItems.map((stage) => (
-            <span key={stage.id} className={styles.stageDot} data-done={stage.isDone} />
+            <span key={stage.id} className={styles.stageDot} data-done={stage.completed} />
           ))}
         </span>
       </footer>

@@ -24,6 +24,8 @@ export function registerProgress(program: Command, runtime: Runtime): void {
     feature: "фичи",
     application: "приложения",
     product: "продукта",
+    "work-plan": "плана работ",
+    release: "релиза",
   };
   for (const kind of [
     "task",
@@ -32,6 +34,8 @@ export function registerProgress(program: Command, runtime: Runtime): void {
     "feature",
     "application",
     "product",
+    "work-plan",
+    "release",
   ] as const) {
     registerCommand<Omit<ProgressPageQuery, "version"> & { snapshotVersion?: string }>(
       group,
@@ -71,7 +75,10 @@ export function registerProgress(program: Command, runtime: Runtime): void {
           const data =
             kind === "product"
               ? await context.backend.progress.product(query)
-              : await context.backend.progress[kind]({ ...query, ref: input.argument() });
+              : await context.backend.progress[kind === "work-plan" ? "workPlan" : kind]({
+                  ...query,
+                  ref: input.argument(),
+                });
           return { data, text: (options) => progressText(data, query, options, context.globals) };
         },
       },

@@ -2,9 +2,16 @@ import { useState } from "react";
 import { Alert, Button, Checkbox, Group, Modal, Select, Switch, TextInput } from "@mantine/core";
 import { Search } from "lucide-react";
 import { z } from "zod";
-import { PLANNING_TASK_LABELS } from "domains/planning-demo";
+import {
+  PLANNING_TASK_LABELS,
+  usePlanningCandidates,
+  changePlanTasks,
+  usePlanningRefresh,
+  PlanningError,
+} from "domains/planning";
+import { useBoards } from "domains/boards";
 import { useProjectId } from "domains/project";
-import { readSessionStored, removeSessionStored, writeSessionStored } from "infra/browser-storage";
+import { readSessionValue, removeSessionStored, writeSessionStored } from "infra/browser-storage";
 import { isDefined, isEmptyArray } from "shared/value-predicates";
 import type { TaskPickerProps } from "./types/task-picker-props.type";
 import styles from "./styles/task-picker.module.css";
@@ -14,59 +21,69 @@ import styles from "./styles/task-picker.module.css";
  *
  * Используется для:
  *  - комплектования этапа задачами нескольких досок
- *  - явного подтверждения локального состава
+ *  - явного подтверждения состава с исходной ревизией плана
  */
 export const TaskPicker = (props: TaskPickerProps) => {
-  const { plan, stage, data: demoData, onClose, onApply } = props;
+  const { plan, stage, onClose } = props;
   const projectId = useProjectId();
-  const storageKey = `relay:planning-selection:v1:${projectId}:${plan.id}:${stage.id}`;
-  const [selectedIds, setSelectedIds] = useState(() => {
-    const parsed = z.array(z.string()).safeParse(readSessionStored(storageKey));
-    return parsed.success ? parsed.data : stage.taskIds;
+  const refresh = usePlanningRefresh(projectId);
+  const boardsQuery = useBoards(projectId);
+  const storageKey = `relay:planning-selection:server-v1:${projectId}:${plan.id}:${stage.id}`;
+  const [draft] = useState(() => {
+    const stored = readSessionValue(storageKey);
+    const raw = stored.value;
+    const parsed = z
+      .object({
+        selectedIds: z.array(z.string()),
+        baseIds: z.array(z.string()),
+        revision: z.number(),
+      })
+      .safeParse(raw);
+    return {
+      values: parsed.success
+        ? parsed.data
+        : { selectedIds: stage.taskIds, baseIds: stage.taskIds, revision: plan.revision },
+      error:
+        stored.error ??
+        (!parsed.success && isDefined(raw)
+          ? "Черновик выбора повреждён. Отбросьте его явно и перечитайте этап."
+          : null),
+    };
   });
+  const [selectedIds, setSelectedIds] = useState(draft.values.selectedIds);
   const [query, setQuery] = useState("");
   const [board, setBoard] = useState("all");
   const [isAvailableOnly, setAvailableOnly] = useState(true);
   const [limit, setLimit] = useState(12);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(draft.error);
+  const [isSaving, setIsSaving] = useState(false);
   const [canPersist, setCanPersist] = useState(true);
-  const assignments = new Map(
-    demoData.plans
-      .filter((candidate) => candidate.status !== "cancelled")
-      .flatMap((candidate) =>
-        candidate.stages
-          .filter((candidateStage) => candidate.id !== plan.id || candidateStage.id !== stage.id)
-          .flatMap((candidateStage) =>
-            candidateStage.taskIds.map(
-              (id) => [id, `${candidate.key} · ${candidateStage.title}`] as const,
-            ),
-          ),
-      ),
+  const candidates = usePlanningCandidates(
+    projectId,
+    { q: query, stage: stage.id, isAvailableOnly, ...(board === "all" ? {} : { board }) },
+    limit,
   );
+  const boards = boardsQuery.data?.flatMap((page) => page.items) ?? [];
+  const hasMoreBoards = isDefined(boardsQuery.data?.at(-1)?.nextOffset);
   const boardItems = [
     { value: "all", label: "Все доски" },
-    ...Array.from(new Set(demoData.tasks.map((task) => task.board))).map((name) => ({
-      value: name,
-      label: name,
-    })),
+    ...boards.map((entry) => ({ value: entry.slug, label: entry.name })),
   ];
-  const filteredItems = demoData.tasks.filter(
-    (task) =>
-      (board === "all" || task.board === board) &&
-      `${task.title} ${task.key}`.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru")) &&
-      (!isAvailableOnly || !assignments.has(task.id)),
-  );
-  const taskItems = filteredItems.slice(0, limit).map((task) => ({
+  const taskItems = (candidates.data?.items ?? []).map((task) => ({
     ...task,
     isSelected: selectedIds.includes(task.id),
-    isUnavailable: assignments.has(task.id),
-    assignment: assignments.get(task.id),
+    isUnavailable:
+      (isDefined(task.assignment) && task.assignment.stageId !== stage.id) ||
+      (task.status === "cancelled" && !draft.values.baseIds.includes(task.id)),
+    assignment: task.assignment?.label,
     statusLabel: PLANNING_TASK_LABELS[task.status],
   }));
   const hiddenCount = selectedIds.filter((id) => !taskItems.some((task) => task.id === id)).length;
   const hasHiddenSelection = hiddenCount > 0;
-  const hasMore = filteredItems.length > limit;
-  const isEmpty = isEmptyArray(taskItems);
+  const total = candidates.data?.total ?? 0;
+  const hasMore = isDefined(candidates.data?.nextOffset);
+  const hasReadError = isDefined(candidates.error) || isDefined(boardsQuery.error);
+  const isEmpty = !candidates.isLoading && !hasReadError && isEmptyArray(taskItems);
   const hasError = isDefined(error);
   const hasSelection = !isEmptyArray(selectedIds);
 
@@ -74,22 +91,45 @@ export const TaskPicker = (props: TaskPickerProps) => {
    * Изменяет полный выбор, а не только видимую страницу.
    */
   const handleSelection = (nextIds: string[]) => {
+    if (draft.error !== null) {
+      setError(draft.error);
+      return;
+    }
     setSelectedIds(nextIds);
-    setCanPersist(writeSessionStored(storageKey, nextIds));
+    setCanPersist(writeSessionStored(storageKey, { ...draft.values, selectedIds: nextIds }));
     setError(null);
   };
 
   /**
-   * Подтверждает весь выбранный набор одним локальным действием владельца этапа.
+   * Применяет разницу относительно исходного состава, не подменяя ревизию после SSE.
    */
-  const handleApply = () => {
-    const outcome = onApply(selectedIds);
-    if (outcome !== null) {
-      setError(outcome);
+  const handleApply = async () => {
+    if (draft.error !== null) {
+      setError(draft.error);
       return;
     }
-    removeSessionStored(storageKey);
-    onClose();
+    if (selectedIds.length > 2000) {
+      setError("В этапе допускается до 2000 задач. Уточните выбор.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await changePlanTasks(
+        projectId,
+        plan.id,
+        draft.values.revision,
+        { ...stage, taskIds: draft.values.baseIds },
+        selectedIds,
+      );
+      void refresh().catch(() => undefined);
+      removeSessionStored(storageKey);
+      onClose();
+    } catch (error) {
+      if (error instanceof PlanningError) setError(error.message);
+      else throw error;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -132,6 +172,15 @@ export const TaskPicker = (props: TaskPickerProps) => {
             allowDeselect={false}
           />
         </div>
+        {hasMoreBoards && (
+          <Button
+            variant="subtle"
+            size="xs"
+            onClick={() => void boardsQuery.setSize(boardsQuery.size + 1)}
+          >
+            Показать ещё доски
+          </Button>
+        )}
         <div className={styles.options}>
           <Switch
             label="Только свободные задачи"
@@ -142,8 +191,24 @@ export const TaskPicker = (props: TaskPickerProps) => {
               setLimit(12);
             }}
           />
-          <span role="status">Найдено: {filteredItems.length}</span>
+          <span role="status">Найдено: {total}</span>
         </div>
+        {candidates.isLoading && <p role="status">Загружаем задачи…</p>}
+        {hasReadError && (
+          <Alert color="red">
+            {candidates.error?.message ?? boardsQuery.error?.message}
+            <Button
+              size="xs"
+              variant="subtle"
+              onClick={() => {
+                void candidates.mutate();
+                void boardsQuery.mutate();
+              }}
+            >
+              Повторить чтение
+            </Button>
+          </Alert>
+        )}
         <div className={styles.list}>
           {taskItems.map((task) => (
             <label
@@ -154,7 +219,7 @@ export const TaskPicker = (props: TaskPickerProps) => {
             >
               <Checkbox
                 checked={task.isSelected}
-                disabled={task.isUnavailable}
+                disabled={task.isUnavailable || isSaving}
                 aria-label={`Выбрать ${task.key}`}
                 size="xs"
                 onChange={(event) =>
@@ -186,8 +251,13 @@ export const TaskPicker = (props: TaskPickerProps) => {
             </div>
           )}
           {hasMore && (
-            <Button variant="subtle" fullWidth onClick={() => setLimit(limit + 12)}>
-              Показать ещё · {taskItems.length} из {filteredItems.length}
+            <Button
+              variant="subtle"
+              fullWidth
+              loading={candidates.isValidating}
+              onClick={() => setLimit(limit + 12)}
+            >
+              Показать ещё · {taskItems.length} из {total}
             </Button>
           )}
         </div>
@@ -196,7 +266,21 @@ export const TaskPicker = (props: TaskPickerProps) => {
             Выбор не удалось сохранить в черновике. Примените его, прежде чем закрыть окно.
           </Alert>
         )}
-        {hasError && <Alert color="red">{error}</Alert>}
+        {hasError && (
+          <Alert color="red">
+            {error}
+            <Button
+              size="xs"
+              variant="subtle"
+              onClick={() => {
+                removeSessionStored(storageKey);
+                onClose();
+              }}
+            >
+              Отбросить выбор и перечитать
+            </Button>
+          </Alert>
+        )}
         <footer className={styles.footer}>
           <div className={styles.selection} role="status">
             <strong>Выбрано: {selectedIds.length}</strong>
@@ -211,7 +295,9 @@ export const TaskPicker = (props: TaskPickerProps) => {
             <Button variant="default" onClick={onClose}>
               Свернуть
             </Button>
-            <Button onClick={handleApply}>Применить</Button>
+            <Button onClick={handleApply} loading={isSaving}>
+              Применить
+            </Button>
           </Group>
         </footer>
       </div>

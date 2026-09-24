@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { workPlanDataSchema, planStageDataSchema } from "./planning.js";
+import { releaseDataSchema } from "./releases.js";
 import {
   actorSchema,
   entityKeySchema,
@@ -21,9 +23,19 @@ import {
 } from "./entities/board-task.js";
 import { boardSchema } from "./entities/board.js";
 import { projectDisplayNameSchema, projectSettingsSchema } from "./entities/project-settings.js";
-import { documentKindSchema, documentStatusSchema, documentSectionsSchema } from "./entities/document-library.js";
-export { documentKindSchema, documentStatusSchema, documentSectionsSchema, documentRelationSchema,
-  documentRelationsSchema, defaultDocumentSections } from "./entities/document-library.js";
+import {
+  documentKindSchema,
+  documentStatusSchema,
+  documentSectionsSchema,
+} from "./entities/document-library.js";
+export {
+  documentKindSchema,
+  documentStatusSchema,
+  documentSectionsSchema,
+  documentRelationSchema,
+  documentRelationsSchema,
+  defaultDocumentSections,
+} from "./entities/document-library.js";
 
 /** Основные виды; расширение происходит регистрацией определения и предметного обработчика. */
 export const entityKinds = [
@@ -36,6 +48,9 @@ export const entityKinds = [
   "board",
   "task",
   "document",
+  "work-plan",
+  "plan-stage",
+  "release",
 ] as const;
 export const entityKindSchema = z.enum(entityKinds).describe("Вид основной сущности");
 export type EntityKind = z.infer<typeof entityKindSchema>;
@@ -51,6 +66,9 @@ export type EntityRef = z.infer<typeof entityRefSchema>;
 
 const [passport, feature, scenario, application, , document] = productFieldsSchema.options;
 export const entityDataSchemas = {
+  "work-plan": workPlanDataSchema,
+  "plan-stage": planStageDataSchema,
+  release: releaseDataSchema,
   project: projectSettingsSchema
     .omit({ revision: true })
     .extend({ kind: z.literal("project").describe("Настройки выбранного проекта") }),
@@ -83,6 +101,9 @@ export const entityDataSchemas = {
   document,
 };
 export const entityDataSchema = z.discriminatedUnion("kind", [
+  workPlanDataSchema,
+  planStageDataSchema,
+  releaseDataSchema,
   entityDataSchemas.project,
   entityDataSchemas.product,
   feature,
@@ -102,16 +123,25 @@ export const entitySummarySchema = z.strictObject({
   revision: z.number().int().nonnegative().describe("Ревизия записи для следующего изменения"),
   status: z.string().nullable().describe("Текущее предметное состояние; null, когда неприменимо"),
   active: z.boolean().describe("Активная запись; снятая реализация сохраняет адрес"),
-  context: z.string().optional().describe("Приложение, доска или родитель для различения одинаковых названий"),
-  document: z.strictObject({
-    kind: documentKindSchema,
-    status: documentStatusSchema,
-    sectionId: z.string().nullable().describe("Эффективный раздел; удалённый раздел отображается как null"),
-    pinned: z.boolean().describe("Закрепление в проекте"),
-    updatedAt: timestampSchema,
-    linkCount: z.number().int().nonnegative().describe("Количество прямых отношений документа"),
-    excerpt: z.string().optional().describe("Фрагмент совпадения полнотекстового поиска"),
-  }).optional().describe("Компактные свойства документа без полного Markdown"),
+  context: z
+    .string()
+    .optional()
+    .describe("Приложение, доска или родитель для различения одинаковых названий"),
+  document: z
+    .strictObject({
+      kind: documentKindSchema,
+      status: documentStatusSchema,
+      sectionId: z
+        .string()
+        .nullable()
+        .describe("Эффективный раздел; удалённый раздел отображается как null"),
+      pinned: z.boolean().describe("Закрепление в проекте"),
+      updatedAt: timestampSchema,
+      linkCount: z.number().int().nonnegative().describe("Количество прямых отношений документа"),
+      excerpt: z.string().optional().describe("Фрагмент совпадения полнотекстового поиска"),
+    })
+    .optional()
+    .describe("Компактные свойства документа без полного Markdown"),
 });
 export const entityDetailSchema = entitySummarySchema.extend({
   data: entityDataSchema.describe("Полные типизированные данные; Markdown передаётся строками"),
@@ -216,8 +246,14 @@ export const entitiesQuerySchema = entityPageQuerySchema.extend({
     .describe("Активность реализации; прежние ссылки доступны без фильтра"),
   section: z.string().max(64).optional().describe("Раздел документов; none — без раздела"),
   documentKind: documentKindSchema.optional(),
-  pinned: z.enum(["true", "false"]).optional().describe("Только закреплённые либо незакреплённые документы"),
-  archived: z.enum(["true", "false"]).optional().describe("Включить только архив либо исключить архивные документы"),
+  pinned: z
+    .enum(["true", "false"])
+    .optional()
+    .describe("Только закреплённые либо незакреплённые документы"),
+  archived: z
+    .enum(["true", "false"])
+    .optional()
+    .describe("Включить только архив либо исключить архивные документы"),
   sort: z
     .enum(["key", "title", "updated"])
     .default("key")
@@ -226,8 +262,12 @@ export const entitiesQuerySchema = entityPageQuerySchema.extend({
 export type EntitiesQuery = z.input<typeof entitiesQuerySchema>;
 export const entitiesPageSchema = z.strictObject({
   items: z.array(entitySummarySchema).describe("Страница кратких карточек"),
-  libraryCounts: z.record(z.string(), z.number().int().nonnegative()).optional()
-    .describe("Счётчики библиотеки без поисковых фильтров: all, draft, pinned, archived, none и section:ID"),
+  libraryCounts: z
+    .record(z.string(), z.number().int().nonnegative())
+    .optional()
+    .describe(
+      "Счётчики библиотеки без поисковых фильтров: all, draft, pinned, archived, none и section:ID",
+    ),
   ...pageShape,
 });
 export type EntitiesPage = z.infer<typeof entitiesPageSchema>;
@@ -416,6 +456,9 @@ export const entityEventSchema = z.strictObject({
   actor: actorSchema,
   at: timestampSchema,
   action: z.string().describe("Действие, создавшее ревизию"),
+  description: text(64 * 1024)
+    .optional()
+    .describe("Пояснение предметного действия в Markdown, если сохранено владельцем"),
 });
 export const entityHistorySchema = z.strictObject({
   items: z.array(entityEventSchema).describe("События записи, доступные у её владельца"),
@@ -451,6 +494,32 @@ export const entityTypeQuerySchema = z.strictObject({ kind: entityKindSchema });
 
 /** Назначение вида и его возможности принадлежат тому же контракту, что поля. */
 export const entityDefinitions: readonly EntityType[] = [
+  {
+    kind: "work-plan",
+    title: "План работ",
+    description:
+      "Цель, этапы и состав существующих задач; переходы выполняются предметными операциями планирования",
+    keyPolicy: "PLN-<номер>; постоянный ID, прежние ключи резервируются",
+    filters: ["status"],
+    actions: ["planning"],
+  },
+  {
+    kind: "plan-stage",
+    title: "Этап плана",
+    description:
+      "Промежуточный результат и ссылки на задачи одного плана; изменяется через владельца плана",
+    keyPolicy: "STG-<номер>; ключ не зависит от порядка",
+    filters: [],
+    actions: ["planning"],
+  },
+  {
+    kind: "release",
+    title: "Релиз",
+    description: "Самостоятельный выпуск выбранных планов с неизменяемым снимком результатов",
+    keyPolicy: "REL-<номер>; обозначение версии не является идентичностью",
+    filters: ["status"],
+    actions: ["releases"],
+  },
   {
     kind: "project",
     title: "Проект",

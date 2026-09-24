@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Button, TextInput } from "@mantine/core";
+import { Alert, Button, TextInput } from "@mantine/core";
 import { Plus, Rocket, Search } from "lucide-react";
-import { isEmptyArray } from "shared/value-predicates";
+import { isDefined, isEmptyArray } from "shared/value-predicates";
+import { useReleases, releaseStatusFromValue } from "domains/releases";
+import { useProjectId } from "domains/project";
 import { ReleaseCard } from "./ui/release-card/release-card";
 import type { ReleaseCatalogProps } from "./types/release-catalog-props.type";
 import styles from "./styles/release-catalog.module.css";
@@ -14,41 +16,44 @@ import styles from "./styles/release-catalog.module.css";
  *  - выбора релиза по версии, статусу и готовности его состава
  */
 export const ReleaseCatalog = (props: ReleaseCatalogProps) => {
-  const { releases, work, basePath, onCreate } = props;
+  const { basePath, onCreate } = props;
+  const projectId = useProjectId();
   const [searchParams, setSearchParams] = useSearchParams();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const query = searchParams.get("q") ?? "";
-  const status = searchParams.get("status") ?? "all";
+  const status = releaseStatusFromValue(searchParams.get("status")) ?? "all";
   const limit = Math.max(12, Number(searchParams.get("limit")) || 12);
+  const releasesQuery = useReleases(
+    projectId,
+    { q: query, ...(status === "all" ? {} : { status }) },
+    limit,
+  );
+  const counts = releasesQuery.data?.statusCounts;
   const filterItems = [
-    { value: "all", label: "Все релизы", count: releases.length },
+    { value: "all", label: "Все релизы", count: counts?.all ?? "…" },
     {
       value: "planned",
       label: "Запланированные",
-      count: releases.filter((release) => release.status === "planned").length,
+      count: counts?.planned ?? "…",
     },
     {
       value: "released",
       label: "Выпущенные",
-      count: releases.filter((release) => release.status === "released").length,
+      count: counts?.released ?? "…",
     },
     {
       value: "cancelled",
       label: "Отменённые",
-      count: releases.filter((release) => release.status === "cancelled").length,
+      count: counts?.cancelled ?? "…",
     },
   ];
-  const matchedItems = releases.filter(
-    (release) =>
-      (status === "all" || release.status === status) &&
-      `${release.title} ${release.version} ${release.key}`
-        .toLocaleLowerCase("ru")
-        .includes(query.toLocaleLowerCase("ru")),
-  );
-  const releaseItems = matchedItems.slice(0, limit);
-  const isEmpty = isEmptyArray(releaseItems);
+  const releaseItems = releasesQuery.data?.items ?? [];
+  const total = releasesQuery.data?.total ?? 0;
+  const hasError = isDefined(releasesQuery.error);
+  const isEmpty = !releasesQuery.isLoading && !hasError && isEmptyArray(releaseItems);
   const hasFilters = query !== "" || status !== "all";
-  const hasMore = matchedItems.length > limit;
+  const hasMore = isDefined(releasesQuery.data?.nextOffset);
+  const countLabel = releasesQuery.isLoading ? "Ищем…" : `Найдено: ${total}`;
   const emptyTitle = hasFilters ? "Релизы не найдены" : "Запланируйте первый выпуск";
   const emptyDescription = hasFilters
     ? "Измените запрос или сбросьте фильтры."
@@ -112,9 +117,18 @@ export const ReleaseCatalog = (props: ReleaseCatalogProps) => {
           onChange={(event) => handleFilter("q", event.currentTarget.value)}
         />
         <span className={styles.count} role="status">
-          Найдено: {matchedItems.length}
+          {countLabel}
         </span>
       </div>
+      {releasesQuery.isLoading && <p role="status">Загружаем релизы…</p>}
+      {hasError && (
+        <Alert color="red">
+          {releasesQuery.error?.message}
+          <Button size="xs" variant="subtle" onClick={() => void releasesQuery.mutate()}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
       {isEmpty && (
         <div className={styles.empty}>
           <Rocket size={30} strokeWidth={1.4} />
@@ -133,16 +147,17 @@ export const ReleaseCatalog = (props: ReleaseCatalogProps) => {
       )}
       <div className={styles.grid}>
         {releaseItems.map((release) => (
-          <ReleaseCard key={release.id} release={release} work={work} basePath={basePath} />
+          <ReleaseCard key={release.id} release={release} basePath={basePath} />
         ))}
       </div>
       {hasMore && (
         <Button
           variant="default"
           className={styles.more}
+          loading={releasesQuery.isValidating}
           onClick={() => handleFilter("limit", String(limit + 12))}
         >
-          Показать ещё · {releaseItems.length} из {matchedItems.length}
+          Показать ещё · {releaseItems.length} из {total}
         </Button>
       )}
     </div>

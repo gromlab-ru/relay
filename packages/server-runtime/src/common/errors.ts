@@ -5,6 +5,20 @@ import type { ApiFailure } from "@relay/contracts";
 import { AppError, asAppError } from "@relay/core/shared/errors";
 
 const conflicts = new Set([
+  "STORAGE_MIGRATION_REQUIRED",
+  "PLANNING_CHANGED",
+  "PLAN_CLOSED",
+  "TASK_IN_PLAN",
+  "TASK_CANCELLED",
+  "STAGE_NOT_EMPTY",
+  "ENTITY_HAS_RELATIONS",
+  "PLANNING_LIMIT",
+  "INVALID_PLAN_TRANSITION",
+  "INVALID_RELEASE_TRANSITION",
+  "PLANNING_REFERENCE_IN_USE",
+  "RELEASE_IMMUTABLE",
+  "RELEASE_NOT_PUBLISHED",
+  "SNAPSHOT_TOO_LARGE",
   "PROGRESS_CHANGED",
   "ENTITIES_CHANGED",
   "ENTITY_KEY_CONFLICT",

@@ -386,7 +386,20 @@ async function saveMetadataRecord(
 }
 
 /** Явная регистрация предметных обработчиков; движок исполняет общий контракт по виду. */
+const planningHandler: EntityHandler = {
+  rename: async () => {
+    invariant(
+      false,
+      "UNSUPPORTED_ENTITY_ACTION",
+      "Используйте предметные операции планов и релизов; их ключи назначаются при создании",
+      2,
+    );
+  },
+};
 export const entityHandlers: Readonly<Record<EntityKind, EntityHandler>> = {
+  "work-plan": planningHandler,
+  "plan-stage": planningHandler,
+  release: planningHandler,
   project: {
     update: (entry, changes, revision, context) => {
       invariant(
