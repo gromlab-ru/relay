@@ -1,0 +1,112 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Badge, Button, Progress } from "@mantine/core";
+import { ArrowUpRight, CheckCircle2, Flag, Pencil, Rocket } from "lucide-react";
+import { PLAN_STATUS_LABELS, PLAN_STATUS_COLORS } from "domains/planning-demo";
+import { getReleasePlans, getReleaseSummary } from "domains/releases-demo";
+import { MarkdownView } from "ui/markdown-view";
+import { isEmptyArray } from "shared/value-predicates";
+import type { ReleaseContentProps } from "./types/release-content-props.type";
+import styles from "./styles/release-content.module.css";
+
+/**
+ * Показывает готовность самостоятельных планов, включённых в выпуск.
+ *
+ * Используется для:
+ *  - чтения текущего либо зафиксированного состава самостоятельного релиза
+ */
+export const ReleaseContent = (props: ReleaseContentProps) => {
+  const { release, work, basePath, onEdit } = props;
+  const [limit, setLimit] = useState(12);
+  const allPlans = getReleasePlans(release, work);
+  const summary = getReleaseSummary(release, work);
+  const planItems = allPlans.slice(0, limit).map((plan) => ({
+    ...plan,
+    canOpen: work.plans.some((candidate) => candidate.id === plan.id),
+    hasResult: plan.result !== "",
+  }));
+  const isEmpty = isEmptyArray(allPlans);
+  const canEdit = release.status !== "released";
+  const hasMore = allPlans.length > limit;
+  const hasSnapshot = release.snapshot !== null;
+  const heading = hasSnapshot ? "Состав на момент выпуска" : "Состав релиза";
+  return (
+    <div className={styles.root}>
+      <div className={styles.heading}>
+        <div>
+          <h2>{heading}</h2>
+          <p>Выбранные планы входят целиком и остаются самостоятельными.</p>
+        </div>
+        {canEdit && (
+          <Button variant="default" size="xs" leftSection={<Pencil size={13} />} onClick={onEdit}>
+            Изменить состав
+          </Button>
+        )}
+      </div>
+      <div className={styles.readiness}>
+        <CheckCircle2 size={17} />
+        <strong>
+          {summary.ready} из {summary.total}
+        </strong>
+        <span>планов завершено</span>
+      </div>
+      {isEmpty && (
+        <div className={styles.empty}>
+          <Rocket size={26} strokeWidth={1.3} />
+          <h3>Выберите результаты для выпуска</h3>
+          <p>Добавьте планы работ. Их задачи останутся на своих местах.</p>
+        </div>
+      )}
+      {planItems.map((included) => (
+        <article key={included.id} className={styles.plan}>
+          <div className={styles.planHeader}>
+            <span className={styles.key}>
+              <Flag size={13} />
+              {included.key}
+            </span>
+            <Badge
+              size="sm"
+              color={PLAN_STATUS_COLORS[included.status]}
+              variant="light"
+              className={styles.badge}
+            >
+              {PLAN_STATUS_LABELS[included.status]}
+            </Badge>
+          </div>
+          <h3 className={styles.planTitle}>{included.title}</h3>
+          {included.canOpen && (
+            <Link to={`${basePath}/plans/${included.id}`} className={styles.currentLink}>
+              Открыть план
+              <ArrowUpRight size={13} />
+            </Link>
+          )}
+          <p className={styles.summary}>{included.summary}</p>
+          <div className={styles.progress}>
+            <Progress
+              value={included.percent}
+              size={4}
+              color="teal"
+              className={styles.track}
+              aria-label={`Завершено ${included.done} из ${included.total}`}
+            />
+            <span>
+              {included.done} / {included.total} задач
+            </span>
+          </div>
+          {hasSnapshot && (
+            <details className={styles.snapshot}>
+              <summary>Сохранённые цель и результат</summary>
+              <MarkdownView text={included.goal} compact />
+              <MarkdownView text={included.result} compact emptyText="Итог не указан." />
+            </details>
+          )}
+        </article>
+      ))}
+      {hasMore && (
+        <Button variant="default" fullWidth onClick={() => setLimit(limit + 12)}>
+          Показать ещё · {planItems.length} из {allPlans.length}
+        </Button>
+      )}
+    </div>
+  );
+};

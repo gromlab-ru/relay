@@ -1,11 +1,13 @@
-import { StatePanel } from "ui/state-panel";
+import { PlanningWorkspace } from "compositions/widgets/planning-workspace";
+import { useProjectId } from "domains/project";
 
 /**
- * Показывает статус раздела планов.
+ * Открывает пространство планов выбранного проекта.
  *
  * Используется для:
- *  - перехода к разрабатываемому разделу из навигации
+ *  - просмотра каталога и адресных подробностей прототипа
  */
-export const PlansScreen = () => (
-  <StatePanel title="Планы" titleAs="h1" description="В разработке" />
-);
+export const PlansScreen = () => {
+  const projectId = useProjectId();
+  return <PlanningWorkspace key={projectId} />;
+};

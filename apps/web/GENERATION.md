@@ -1,5 +1,53 @@
 # Журнал создания TSX
 
+## Самостоятельные релизы — 24 сентября 2026
+
+Из корня выполнены:
+
+```bash
+pnpm --filter @relay/web run create ui-unit release-catalog src/compositions/screens/releases/ui
+pnpm --filter @relay/web run create ui-unit release-detail src/compositions/screens/releases/ui
+pnpm --filter @relay/web run create ui-unit release-form src/compositions/screens/releases/ui
+pnpm --filter @relay/web run create ui-component release-card src/compositions/screens/releases/ui/release-catalog/ui
+pnpm --filter @relay/web run create ui-unit release-plan-picker src/compositions/screens/releases/ui/release-form/ui
+pnpm --filter @relay/web run create ui-component releases-view src/compositions/screens/releases/ui
+```
+
+Созданы одноимённые TSX, типы и CSS Modules внутри папки каждого компонента.
+`releases-view` — внутренняя координация экрана без фасета, изолированная по проекту;
+каталог, подробности и форма — вложенные юниты. `release-content` перенесён из
+planning-workspace в `releases/ui/release-detail/ui` вместе с типами/стилями и адаптирован
+к самостоятельному Release. Это перенос прежнего TSX, повторная генерация не нужна.
+Неиспользуемые исходные RootAttrs/children удалены. Планы больше не импортируют UI релизов;
+`domains/releases-demo` использует публичное чтение планов односторонне.
+
+## Первоначальный прототип планов и релизов — 24 сентября 2026
+
+Из корня выполнены команды:
+
+```bash
+pnpm --filter @relay/web run create ui-unit planning-workspace src/compositions/widgets
+pnpm --filter @relay/web run create ui-unit plan-catalog src/compositions/widgets/planning-workspace/ui
+pnpm --filter @relay/web run create ui-unit plan-detail src/compositions/widgets/planning-workspace/ui
+pnpm --filter @relay/web run create ui-unit plan-form src/compositions/widgets/planning-workspace/ui
+pnpm --filter @relay/web run create ui-component plan-card src/compositions/widgets/planning-workspace/ui/plan-catalog/ui
+pnpm --filter @relay/web run create ui-unit plan-stages src/compositions/widgets/planning-workspace/ui/plan-detail/ui
+pnpm --filter @relay/web run create ui-component plan-overview src/compositions/widgets/planning-workspace/ui/plan-detail/ui
+pnpm --filter @relay/web run create ui-component release-content src/compositions/widgets/planning-workspace/ui/plan-detail/ui
+pnpm --filter @relay/web run create ui-component plan-task src/compositions/widgets/planning-workspace/ui/plan-detail/ui/plan-stages/ui
+pnpm --filter @relay/web run create ui-unit task-picker src/compositions/widgets/planning-workspace/ui/plan-detail/ui/plan-stages/ui
+pnpm --filter @relay/web run create ui-unit stage-form src/compositions/widgets/planning-workspace/ui/plan-detail/ui/plan-stages/ui
+```
+
+Каждая команда создала `<имя>/<имя>.tsx`, `types/<имя>-props.type.ts` и
+`styles/<имя>.module.css`. У самостоятельных областей сохранён `index.ts`;
+внутренние plan-card, plan-task, plan-overview и release-content фасета не имеют.
+Общий widget нужен обоим существующим screens. Модель примеров и действия находятся
+в `domains/planning-demo`; дети не импортируют родителя. Начальные children/RootAttrs
+заменены фактическими контрактами; фиктивных DOM-атрибутов у форм нет.
+Существующие экраны plans/releases изменены без перегенерации.
+[Результат и проверки](../../docs/work/planning/README.md).
+
 ## Дерево контекста — 23 сентября 2026
 
 Из корня выполнена команда:

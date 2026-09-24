@@ -1,11 +1,13 @@
-import { StatePanel } from "ui/state-panel";
+import { useProjectId } from "domains/project";
+import { ReleasesView } from "./ui/releases-view/releases-view";
 
 /**
- * Показывает статус раздела релизов.
+ * Открывает самостоятельные релизы в изолированной области выбранного проекта.
  *
  * Используется для:
- *  - перехода к разрабатываемому разделу из навигации
+ *  - выбора состава и состояния будущего выпуска
  */
-export const ReleasesScreen = () => (
-  <StatePanel title="Релизы" titleAs="h1" description="В разработке" />
-);
+export const ReleasesScreen = () => {
+  const projectId = useProjectId();
+  return <ReleasesView key={projectId} />;
+};

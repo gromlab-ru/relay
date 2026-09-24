@@ -242,6 +242,11 @@ export const appRouter = createBrowserRouter([
             handle: breadcrumbHandle({ label: "Планы" }),
           },
           {
+            path: "plans/:planId",
+            lazy: () => import("compositions/screens/plans/lazy"),
+            handle: breadcrumbHandle({ label: "Планы", path: "/plans" }, { label: "План" }),
+          },
+          {
             lazy: () => import("compositions/screens/project-board/lazy"),
             children: [
               { path: "boards", element: null, handle: breadcrumbHandle(PRODUCT_CRUMBS.BOARDS) },
@@ -272,6 +277,11 @@ export const appRouter = createBrowserRouter([
             path: "releases",
             lazy: () => import("compositions/screens/releases/lazy"),
             handle: breadcrumbHandle({ label: "Релизы" }),
+          },
+          {
+            path: "releases/:releaseId",
+            lazy: () => import("compositions/screens/releases/lazy"),
+            handle: breadcrumbHandle({ label: "Релизы", path: "/releases" }, { label: "Релиз" }),
           },
           {
             path: "history",
